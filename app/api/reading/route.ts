@@ -73,11 +73,11 @@ Style: Editorial, precise, warm but not effusive. No emojis. Short paragraphs. U
 
         // Stream via Gemini
         const response = await ai.models.generateContentStream({
-            model: "gemini-2.0-flash-lite",
+            model: "gemini-3.1-flash-lite-preview",
             contents: [{ role: "user", parts: [{ text: prompt }] }],
             config: {
                 maxOutputTokens: 800,
-                temperature: 0.7,
+                temperature: 0.75,
             },
         });
 

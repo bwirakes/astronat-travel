@@ -13,6 +13,7 @@ import {
     MOCK_TRANSITS,
     MOCK_HOROSCOPE,
     MOCK_12_MONTH_WINDOWS,
+    generateTravelWindows,
     PLANET_COLORS,
     PLANET_GLYPHS,
     PLANET_EMOJI,
@@ -104,7 +105,10 @@ export default function FlowPage() {
         ]);
 
         const lines: PlanetLine[] = acRes.lines || MOCK_PLANET_LINES;
-        const windows: TravelWindow[] = trRes.windows || MOCK_12_MONTH_WINDOWS;
+        // Use real transit windows if available, otherwise generate mock from travel date
+        const windows: TravelWindow[] = trRes.windows?.length > 0
+            ? trRes.windows
+            : generateTravelWindows(travel.travelDate || today);
         setPlanetLines(lines);
         setTravelWindows(windows);
         setLoadingResults(false);

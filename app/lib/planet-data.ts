@@ -182,17 +182,35 @@ export interface TravelWindow {
     house: string;
 }
 
-export const MOCK_12_MONTH_WINDOWS: TravelWindow[] = [
-    { month: "Apr 2026", quality: "excellent", reason: "Venus trine natal Jupiter — social expansion", house: "9th House (Travel)" },
-    { month: "May 2026", quality: "good", reason: "Sun sextile natal Venus — pleasant, low-friction", house: "9th House (Travel)" },
-    { month: "Jun 2026", quality: "caution", reason: "Mars square natal Saturn — low energy, delays", house: "6th House (Health)" },
-    { month: "Jul 2026", quality: "good", reason: "Mercury trine natal Mercury — clear communication", house: "3rd House (Learning)" },
-    { month: "Aug 2026", quality: "excellent", reason: "Jupiter conjunct natal MC — career visibility abroad", house: "10th House (Career)" },
-    { month: "Sep 2026", quality: "good", reason: "Venus sextile natal Moon — emotional ease", house: "4th House (Home)" },
-    { month: "Oct 2026", quality: "caution", reason: "Saturn opposite natal Sun — heavy, restrictive", house: "7th House (Relationships)" },
-    { month: "Nov 2026", quality: "good", reason: "Sun trine natal Jupiter — expansive mood", house: "9th House (Travel)" },
-    { month: "Dec 2026", quality: "excellent", reason: "Venus conjunct natal Venus return — peak harmony", house: "5th House (Pleasure)" },
-    { month: "Jan 2027", quality: "good", reason: "Mercury sextile natal Sun — mental clarity", house: "3rd House (Learning)" },
-    { month: "Feb 2027", quality: "caution", reason: "Mars opposition natal Moon — emotional friction", house: "1st House (Self)" },
-    { month: "Mar 2027", quality: "excellent", reason: "Jupiter trine natal Sun — best window of the year", house: "9th House (Travel)" },
+// Pattern that cycles through 12 months of transit quality & reasons
+const WINDOW_PATTERNS: Array<Omit<TravelWindow, "month">> = [
+    { quality: "excellent", reason: "Venus trine natal Jupiter — social expansion", house: "9th House (Travel)" },
+    { quality: "good", reason: "Sun sextile natal Venus — pleasant, low-friction", house: "9th House (Travel)" },
+    { quality: "caution", reason: "Mars square natal Saturn — low energy, delays", house: "6th House (Health)" },
+    { quality: "good", reason: "Mercury trine natal Mercury — clear communication", house: "3rd House (Learning)" },
+    { quality: "excellent", reason: "Jupiter conjunct natal MC — career visibility abroad", house: "10th House (Career)" },
+    { quality: "good", reason: "Venus sextile natal Moon — emotional ease", house: "4th House (Home)" },
+    { quality: "caution", reason: "Saturn opposite natal Sun — heavy, restrictive", house: "7th House (Relationships)" },
+    { quality: "good", reason: "Sun trine natal Jupiter — expansive mood", house: "9th House (Travel)" },
+    { quality: "excellent", reason: "Venus conjunct natal Venus return — peak harmony", house: "5th House (Pleasure)" },
+    { quality: "good", reason: "Mercury sextile natal Sun — mental clarity", house: "3rd House (Learning)" },
+    { quality: "caution", reason: "Mars opposition natal Moon — emotional friction", house: "1st House (Self)" },
+    { quality: "excellent", reason: "Jupiter trine natal Sun — best window of the year", house: "9th House (Travel)" },
 ];
+
+/**
+ * Generate 12 travel windows starting from any given date string (YYYY-MM-DD).
+ * Defaults to today if no date given.
+ */
+export function generateTravelWindows(startDateStr?: string): TravelWindow[] {
+    const start = startDateStr ? new Date(startDateStr + "T00:00:00") : new Date();
+    const base = new Date(start.getFullYear(), start.getMonth(), 1);
+    return WINDOW_PATTERNS.map((pattern, i) => {
+        const d = new Date(base.getFullYear(), base.getMonth() + i, 1);
+        const month = d.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+        return { month, ...pattern };
+    });
+}
+
+// Static default — used as fallback when no date is available
+export const MOCK_12_MONTH_WINDOWS: TravelWindow[] = generateTravelWindows();
