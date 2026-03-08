@@ -62,7 +62,7 @@ export default function Home() {
               </p>
 
               <Link href="/flow" className={styles.ctaBtn} id="cta-celestial-start">
-                Begin your reading <ArrowRight size={15} />
+                Begin your Travels <ArrowRight size={15} />
               </Link>
 
               {/* Trust line */}

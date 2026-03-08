@@ -17,8 +17,10 @@
   --accent-soft: rgba(255, 64, 64, 0.12);
   --cyan: #00E5FF;
   --cyan-soft: rgba(0, 229, 255, 0.08);
-  --gold: #FADA5E;
-  --gold-soft: rgba(250, 218, 94, 0.08);
+
+  /* Celestial Editorial Gold Palette */
+  --gold: #C9A96E;
+  --gold-soft: rgba(201, 169, 110, 0.12);
 
   --text-primary: #E8E6E1;
   --text-secondary: #8A8A8F;
@@ -51,8 +53,13 @@
   --surface-border: rgba(0, 0, 0, 0.08);
 
   --accent: #D93030;
+  --accent-soft: rgba(217, 48, 48, 0.08);
   --cyan: #0098A6;
-  --gold: #B8910A;
+  --cyan-soft: rgba(0, 152, 166, 0.08);
+
+  /* Celestial Editorial Gold Palette (Light Mode) */
+  --gold: #A3824A;
+  --gold-soft: rgba(163, 130, 74, 0.12);
 
   --text-primary: #1A1A1F;
   --text-secondary: #6B6B70;

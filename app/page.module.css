@@ -12,9 +12,17 @@
 .radialGlow {
     position: absolute;
     inset: 0;
+    transition: opacity var(--duration) var(--ease);
     background: radial-gradient(ellipse 120% 80% at 65% 15%,
             rgba(74, 40, 110, 0.22) 0%,
             rgba(20, 12, 40, 0.15) 45%,
+            transparent 75%);
+}
+
+:global([data-theme="light"]) .radialGlow {
+    background: radial-gradient(ellipse 120% 80% at 65% 15%,
+            rgba(163, 130, 74, 0.12) 0%,
+            rgba(163, 130, 74, 0.05) 45%,
             transparent 75%);
 }
 
@@ -27,12 +35,21 @@
     mix-blend-mode: overlay;
 }
 
+:global([data-theme="light"]) .grainOverlay {
+    opacity: 0.25;
+}
+
 /* ── Starfield (inline, no hydration issues) ─────────────────────── */
 .starField {
     position: fixed;
     inset: 0;
     pointer-events: none;
     z-index: 0;
+    transition: opacity var(--duration) var(--ease);
+}
+
+:global([data-theme="light"]) .starField {
+    opacity: 0;
 }
 
 .star {
@@ -57,7 +74,7 @@
     width: 100%;
     max-width: 980px;
     margin: 0 auto;
-    padding: 0 2rem;
+    padding: 0 var(--space-lg);
 }
 
 /* ── Hero ────────────────────────────────────────────────────────── */
@@ -107,39 +124,37 @@
     font-weight: 500;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: #B8956A;
-    /* warm copper tone */
+    color: var(--gold);
     margin-bottom: 1.4rem;
 }
 
 .headline {
-    font-family: 'Cormorant Garamond', serif;
+    font-family: var(--font-display);
     font-size: clamp(2.8rem, 5.5vw, 4.8rem);
     font-weight: 400;
     line-height: 1.08;
     letter-spacing: -0.02em;
-    color: #E8E4DC;
+    color: var(--text-primary);
     margin-bottom: 1.8rem;
 }
 
 .headline em {
     font-style: italic;
-    color: #C9A96E;
-    /* brushed gold for italic emphasis */
+    color: var(--gold);
 }
 
 .subline {
     font-family: var(--font-body);
     font-size: 1rem;
     line-height: 1.82;
-    color: rgba(232, 228, 220, 0.55);
+    color: var(--text-secondary);
     max-width: 420px;
     margin-bottom: 2.4rem;
 }
 
 .subline em {
     font-style: italic;
-    color: rgba(201, 169, 110, 0.75);
+    color: var(--text-primary);
 }
 
 /* ── Gold CTA Button ─────────────────────────────────────────────── */
@@ -182,15 +197,15 @@
     font-size: 0.72rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: rgba(232, 228, 220, 0.3);
+    color: var(--text-tertiary);
 }
 
 .trustDot {
     width: 4px;
     height: 4px;
     border-radius: 50%;
-    background: #C9A96E;
-    opacity: 0.6;
+    background: var(--gold);
+    opacity: 0.8;
 }
 
 /* ── Archway Image Frame ─────────────────────────────────────────── */
@@ -250,12 +265,19 @@
     pointer-events: none;
 }
 
+:global([data-theme="light"]) .imageGradient {
+    background: linear-gradient(to top,
+            rgba(245, 243, 238, 0.9) 0%,
+            rgba(245, 243, 238, 0.4) 50%,
+            transparent 100%);
+}
+
 /* Decorative orbital ring around the image */
 .orbitalRing {
     position: absolute;
     inset: -16px;
     border-radius: 200px 200px 24px 24px;
-    border: 1px solid rgba(201, 169, 110, 0.12);
+    border: 1px solid var(--gold-soft);
     pointer-events: none;
     animation: rotateSlow 60s linear infinite;
 }
@@ -275,7 +297,7 @@
     position: relative;
     z-index: 1;
     padding: 5rem 0;
-    border-top: 1px solid rgba(201, 169, 110, 0.1);
+    border-top: 1px solid var(--surface-border);
 }
 
 .sectionLabel {
@@ -284,7 +306,7 @@
     font-weight: 500;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: #B8956A;
+    color: var(--gold);
     margin-bottom: 3rem;
 }
 
@@ -307,27 +329,27 @@
 
 .stepNum {
     display: block;
-    font-family: 'Cormorant Garamond', serif;
+    font-family: var(--font-display);
     font-size: 3.2rem;
     font-weight: 300;
     font-style: italic;
-    color: rgba(201, 169, 110, 0.2);
+    color: var(--gold-soft);
     margin-bottom: 0.8rem;
     line-height: 1;
 }
 
 .stepTitle {
-    font-family: 'Cormorant Garamond', serif;
+    font-family: var(--font-display);
     font-size: 1.9rem;
     font-weight: 400;
-    color: #E8E4DC;
+    color: var(--text-primary);
     margin-bottom: 0.8rem;
 }
 
 .stepDesc {
     font-size: 0.88rem;
     line-height: 1.85;
-    color: rgba(232, 228, 220, 0.45);
+    color: var(--text-secondary);
 }
 
 /* ── Quote ───────────────────────────────────────────────────────── */
@@ -344,18 +366,18 @@
 }
 
 .blockquote p {
-    font-family: 'Cormorant Garamond', serif;
+    font-family: var(--font-display);
     font-size: 1.7rem;
     font-style: italic;
     font-weight: 400;
     line-height: 1.5;
-    color: #E8E4DC;
+    color: var(--text-primary);
     margin-bottom: 1.4rem;
 }
 
 .cite {
     font-size: 0.75rem;
-    color: #B8956A;
+    color: var(--gold);
     font-style: normal;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -366,13 +388,13 @@
     position: relative;
     z-index: 1;
     padding: 2rem 0;
-    border-top: 1px solid rgba(201, 169, 110, 0.1);
+    border-top: 1px solid var(--surface-border);
 }
 
 .footerInner {
     display: flex;
     justify-content: space-between;
     font-size: 0.75rem;
-    color: rgba(232, 228, 220, 0.25);
+    color: var(--text-tertiary);
     letter-spacing: 0.04em;
 }
