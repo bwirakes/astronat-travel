@@ -85,7 +85,7 @@ export default function NatalChart({ natalPlanets, sunSign, name }: Props) {
         const loadChart = async () => {
             try {
                 // Dynamically import to bypass Next.js SSR issues
-                const astroModule = await import("@astrodraw/astrochart");
+                const astroModule: any = await import("@astrodraw/astrochart");
 
                 let ChartClass = null;
                 if (astroModule.default && astroModule.default.Chart) {
