@@ -516,13 +516,13 @@
     font-size: 0.82rem;
     color: var(--text-tertiary);
     margin-top: 0.25rem;
-    margin-bottom: var(--space-lg);
+    margin-bottom: var(--space-sm);
 }
 
 .natalChartWrap {
     max-width: 480px;
     margin: 0 auto;
-    padding: var(--space-md) 0;
+    padding: 0.25rem 0;
 }
 
 /* ── Reading subtitle ─────────────────────────────────────────── */
