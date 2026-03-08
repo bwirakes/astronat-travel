@@ -1,6 +1,6 @@
 /**
  * POST /api/reading
- * Stream a personalized travel reading via Gemini Flash Lite.
+ * Stream a personalized travel reading via Gemini 3.1 Flash-Lite Preview.
  * Returns a ReadableStream so the client can display text as it arrives.
  */
 import { NextRequest } from "next/server";
@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
             planetLines,
             transits,
             natalPlanets,
+            currentEphemeris,
         } = body;
 
         // Build a rich astrological prompt
@@ -30,54 +31,60 @@ export async function POST(req: NextRequest) {
             .join("\n");
 
         const transitsSummary = (transits || [])
-            .slice(0, 4)
+            .slice(0, 6)
             .map((t: { planets: string; type: string }) => `${t.planets} (${t.type})`)
             .join(", ");
 
         const natalSummary = (natalPlanets || [])
-            .slice(0, 5)
+            .slice(0, 6)
             .map((p: { planet: string; sign: string; house: number }) =>
                 `${p.planet} in ${p.sign} (House ${p.house})`
             )
             .join(", ");
 
+        // Current sky positions (ephemeris) sent from the client
+        const ephemerisSummary = (currentEphemeris || []).join(", ");
+
         const travelDateNote = travelDate
             ? `The user plans to travel on ${travelDate}.`
-            : "No specific travel date was given — provide a general analysis.";
+            : "No specific travel date was given — provide a general seasonal analysis.";
 
-        const prompt = `You are Astro Nat — a precise, thoughtful astrocartography and transit astrologer. Your readings are direct, deeply informed, and never generic. You avoid vague spiritual language. You speak to the real mechanics of what the chart is saying.
+        const prompt = `You are Astro Nat — a precise, thoughtful astrocartography and transit astrologer. Your readings are direct, deeply informed, and never generic. You speak to the real mechanics of what the chart is saying. No vague spiritual language, no clichés.
 
 Write a personalised travel reading for ${name}${sunSign ? ` (${sunSign} Sun)` : ""} who is planning to travel to ${destination}.
 
 ${travelDateNote}
 
-Astrological data:
-
+---
 PLANETARY LINES NEAR ${destination.toUpperCase()}:
-${planetLinesSummary || "No planetary line data available — write a general destination reading."}
+${planetLinesSummary || "No planetary line data — write a general destination reading."}
+
+CURRENT SKY (Ephemeris at time of travel):
+${ephemerisSummary || "March 2026: Sun in Pisces, Mars in Cancer (retrograde), Jupiter in Gemini, Saturn in Pisces"}
 
 NATAL CHART (key placements):
-${natalSummary || "Natal chart not available."}
+${natalSummary || "Natal chart not provided."}
 
-ACTIVE TRANSITS AT TIME OF TRAVEL:
-${transitsSummary || "No transit data available."}
+ACTIVE NATAL TRANSITS:
+${transitsSummary || "Transit data not available."}
+---
 
-Write 4–5 paragraphs covering:
-1. The dominant planetary line and what it means in practice for this person in ${destination}
-2. What the transits are doing at the time of travel and how that affects the trip
-3. Practical guidance — what to lean into, what to be mindful of
-4. The optimal energy this location activates in the natal chart
-5. A brief summary sentence at the end
+Write 4–5 short paragraphs covering:
+1. The dominant planetary line and what it means for this specific person in ${destination}
+2. What the current sky (ephemeris) is doing at the time of travel and how it interacts with the trip
+3. How the active transits affect this journey — the opportunities and the friction points
+4. Practical guidance — what to lean into, what to watch for, timing advice
+5. A single clear closing sentence summing up the verdict on this trip
 
-Style: Editorial, precise, warm but not effusive. No emojis. Short paragraphs. Use **bold** for planet names and key concepts.`;
+Style rules: editorial tone, precise, warm but never effusive. Short paragraphs. No emojis. Bold planet names and key concepts with **asterisks**.`;
 
-        // Stream via Gemini
+        // Stream via Gemini 3.1 Flash-Lite Preview
         const response = await ai.models.generateContentStream({
             model: "gemini-3.1-flash-lite-preview",
             contents: [{ role: "user", parts: [{ text: prompt }] }],
             config: {
-                maxOutputTokens: 800,
-                temperature: 0.75,
+                maxOutputTokens: 900,
+                temperature: 0.7,
             },
         });
 
@@ -93,6 +100,10 @@ Style: Editorial, precise, warm but not effusive. No emojis. Short paragraphs. U
                     }
                 } catch (err) {
                     console.error("[/api/reading stream]", err);
+                    // Send fallback text inline so the frontend always shows something
+                    controller.enqueue(encoder.encode(
+                        "Reading temporarily unavailable. The planetary data has been calculated — please try again in a moment."
+                    ));
                 } finally {
                     controller.close();
                 }
@@ -102,13 +113,23 @@ Style: Editorial, precise, warm but not effusive. No emojis. Short paragraphs. U
         return new Response(stream, {
             headers: {
                 "Content-Type": "text/plain; charset=utf-8",
-                "Transfer-Encoding": "chunked",
-                "Cache-Control": "no-cache",
+                "Cache-Control": "no-cache, no-store",
                 "X-Accel-Buffering": "no",
             },
         });
     } catch (err) {
-        console.error("[/api/reading]", err);
-        return new Response("Error generating reading.", { status: 500 });
+        console.error("[/api/reading] outer error:", err);
+        // Return 200 with a graceful message so the frontend streams it as text
+        const encoder = new TextEncoder();
+        const msg = "Your planetary line data has been calculated. The AI reading is temporarily unavailable — the astrological picture is clear from the data above.";
+        return new Response(
+            new ReadableStream({
+                start(c) { c.enqueue(encoder.encode(msg)); c.close(); }
+            }),
+            {
+                status: 200,
+                headers: { "Content-Type": "text/plain; charset=utf-8" },
+            }
+        );
     }
 }

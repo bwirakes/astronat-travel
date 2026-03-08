@@ -118,6 +118,15 @@ export default function FlowPage() {
         const abort = new AbortController();
         abortRef.current = abort;
 
+        // Current planetary ephemeris (March 2026) for Gemini context
+        const currentEphemeris = [
+            "Sun in Pisces ♓", "Moon transiting Gemini ♊",
+            "Mercury in Pisces ♓", "Venus in Aries ♈",
+            "Mars in Cancer ♋ (retrograde)", "Jupiter in Gemini ♊",
+            "Saturn in Pisces ♓", "Uranus in Taurus ♉",
+            "Neptune in Aries ♈", "Pluto in Aquarius ♒",
+        ];
+
         try {
             const readRes = await fetch("/api/reading", {
                 method: "POST",
@@ -130,11 +139,15 @@ export default function FlowPage() {
                     planetLines: lines,
                     transits: MOCK_TRANSITS,
                     natalPlanets,
+                    currentEphemeris,
                 }),
                 signal: abort.signal,
             });
 
-            if (!readRes.body) return;
+            if (!readRes.ok || !readRes.body) {
+                setReading(MOCK_HOROSCOPE);
+                return;
+            }
             const reader = readRes.body.getReader();
             const decoder = new TextDecoder();
             let acc = "";

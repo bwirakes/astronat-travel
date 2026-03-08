@@ -4,11 +4,14 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { get12MonthTransits } from "@/app/lib/astro-client";
-import { MOCK_12_MONTH_WINDOWS, TravelWindow } from "@/app/lib/planet-data";
+import { generateTravelWindows, TravelWindow } from "@/app/lib/planet-data";
 
 export async function POST(req: NextRequest) {
+    let start_date = "";
     try {
-        const { user_id, start_date } = await req.json();
+        const body = await req.json();
+        const { user_id } = body;
+        start_date = body.start_date || "";
 
         if (!user_id || !start_date) {
             return NextResponse.json({ error: "Missing user_id or start_date" }, { status: 400 });
@@ -17,7 +20,8 @@ export async function POST(req: NextRequest) {
         const result = await get12MonthTransits(user_id, start_date);
 
         if (!result) {
-            return NextResponse.json({ windows: MOCK_12_MONTH_WINDOWS, mock: true });
+            // Generate windows starting from the actual travel date
+            return NextResponse.json({ windows: generateTravelWindows(start_date), mock: true });
         }
 
         // Convert raw aspect hits to TravelWindow format
@@ -39,14 +43,15 @@ export async function POST(req: NextRequest) {
                 } satisfies TravelWindow;
             });
 
-        // Pad with mock data if fewer than 12 real windows
+        // Pad with date-anchored mock if fewer than 12 real windows
+        const mock = generateTravelWindows(start_date);
         const padded = windows.length >= 12
             ? windows.slice(0, 12)
-            : [...windows, ...MOCK_12_MONTH_WINDOWS.slice(windows.length)];
+            : [...windows, ...mock.slice(windows.length)];
 
         return NextResponse.json({ windows: padded, raw: result });
     } catch (err) {
         console.error("[/api/transits]", err);
-        return NextResponse.json({ windows: MOCK_12_MONTH_WINDOWS, mock: true });
+        return NextResponse.json({ windows: generateTravelWindows(start_date), mock: true });
     }
 }
