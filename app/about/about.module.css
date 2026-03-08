@@ -1,0 +1,171 @@
+/* ═══ About — about.module.css ════════════════════════════════ */
+
+.nav {
+    position: relative;
+    z-index: 10;
+    padding: var(--space-lg) 0;
+}
+
+.navInner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+}
+
+.navRight {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.navLinks {
+    display: flex;
+    gap: var(--space-lg);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.navLinks a {
+    color: var(--text-secondary);
+    transition: color var(--duration) var(--ease);
+}
+
+.navLinks a:hover,
+.navActive {
+    color: var(--text-primary) !important;
+}
+
+/* ── Hero ─────────────────────────────────────────────────────── */
+.hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3xl);
+    align-items: center;
+    min-height: 480px;
+    padding: var(--space-2xl) 0 var(--space-3xl);
+}
+
+@media (max-width: 768px) {
+    .hero {
+        grid-template-columns: 1fr;
+        min-height: auto;
+    }
+
+    .heroImage {
+        height: 300px !important;
+        order: -1;
+    }
+}
+
+.heroText h5 {
+    margin-bottom: var(--space-sm);
+}
+
+.headline {
+    font-size: clamp(2.4rem, 5vw, 4rem);
+    margin-bottom: var(--space-lg);
+    line-height: 1.1;
+}
+
+.intro {
+    font-size: 1.05rem;
+    line-height: 1.8;
+    max-width: 440px;
+}
+
+.heroImage {
+    position: relative;
+    height: 440px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.heroImg {
+    object-fit: cover;
+    object-position: center top;
+}
+
+/* ── Story ──────────────────────────────────────────────────── */
+.story {
+    padding: var(--space-3xl) 0;
+    border-top: 1px solid var(--surface-border);
+}
+
+.storyContent {
+    max-width: 720px;
+}
+
+.storyHeading {
+    font-size: 2.5rem;
+    margin-bottom: var(--space-2xl);
+}
+
+.storyBody {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
+.storyBody p {
+    font-size: 1.05rem;
+    line-height: 1.9;
+}
+
+.storyBody em {
+    color: var(--text-primary);
+    font-style: italic;
+}
+
+/* ── Values ─────────────────────────────────────────────────── */
+.values {
+    padding-bottom: var(--space-3xl);
+}
+
+.valueCard {
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg) var(--space-xl);
+    max-width: 720px;
+}
+
+.valueHeading {
+    font-size: 1.8rem;
+    margin-bottom: var(--space-md);
+}
+
+.valueCard p {
+    font-size: 1rem;
+    line-height: 1.8;
+    max-width: 540px;
+}
+
+/* ── CTA ─────────────────────────────────────────────────────── */
+.cta {
+    display: flex;
+    gap: var(--space-md);
+    padding-bottom: var(--space-3xl);
+    flex-wrap: wrap;
+}
+
+/* ── Footer ─────────────────────────────────────────────────── */
+.footer {
+    padding: var(--space-xl) 0;
+    border-top: 1px solid var(--surface-border);
+}
+
+.footerInner {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+}

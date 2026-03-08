@@ -1,0 +1,438 @@
+/* ═══ Flow — flow.module.css ══════════════════════════════════ */
+
+.page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 1;
+}
+
+/* ── Header ──────────────────────────────────────────────────── */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-lg) var(--space-xl);
+}
+
+.logo {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.headerRight {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.progress {
+    display: flex;
+    gap: var(--space-lg);
+}
+
+.progressItem {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--surface-border);
+    transition: all var(--duration) var(--ease);
+}
+
+.dot.active {
+    background: var(--accent);
+    box-shadow: 0 0 8px rgba(255, 64, 64, 0.4);
+}
+
+.dot.done {
+    background: var(--text-secondary);
+}
+
+.progressLabel {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    letter-spacing: 0.04em;
+}
+
+/* ── Main ────────────────────────────────────────────────────── */
+.main {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: var(--space-xl) var(--space-md);
+}
+
+.stepWrap {
+    width: 100%;
+    max-width: 520px;
+}
+
+.stepIntro {
+    margin-bottom: var(--space-xl);
+}
+
+.stepIntro h5 {
+    margin-bottom: var(--space-xs);
+}
+
+.stepHeading {
+    font-size: 2.5rem;
+    margin-bottom: var(--space-sm);
+}
+
+.stepIntro p {
+    font-size: 0.95rem;
+    max-width: 420px;
+}
+
+.formStack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.formRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+}
+
+@media (max-width: 500px) {
+    .formRow {
+        grid-template-columns: 1fr;
+    }
+}
+
+.signHint {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--gold-soft);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(250, 218, 94, 0.15);
+}
+
+.signGlyph {
+    font-size: 2rem;
+    line-height: 1;
+    color: var(--gold);
+    font-family: serif;
+}
+
+.signInline {
+    font-size: 1.1rem;
+    font-family: serif;
+}
+
+.optional {
+    font-size: 0.65rem;
+    color: var(--text-tertiary);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.signName {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--gold);
+}
+
+.signNote {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+    margin-top: var(--space-xl);
+}
+
+/* ── Results ─────────────────────────────────────────────────── */
+.resultsWrap {
+    width: 100%;
+    max-width: 900px;
+    padding-bottom: var(--space-3xl);
+}
+
+.resultsHeader {
+    margin-bottom: var(--space-2xl);
+}
+
+.resultsHeader h5 {
+    margin-bottom: var(--space-xs);
+}
+
+.resultsHeading {
+    font-size: 3rem;
+    margin-bottom: var(--space-xs);
+}
+
+.resultsHeader p {
+    font-size: 0.9rem;
+}
+
+.mapPlaceholder {
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: var(--radius-lg);
+    height: 320px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-xl);
+    color: var(--text-tertiary);
+    font-size: 0.85rem;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+}
+
+@media (max-width: 768px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.fullSpan {
+    grid-column: 1 / -1;
+}
+
+/* Planet lines */
+.lineList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: var(--space-md);
+}
+
+.lineRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 1rem;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+}
+
+.lineInfo {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.planetEmoji {
+    font-size: 1rem;
+    line-height: 1;
+    width: 1.4rem;
+    text-align: center;
+}
+
+.planetGlyph {
+    width: 1.6rem;
+    font-size: 1.1rem;
+    font-family: serif;
+    text-align: center;
+    line-height: 1;
+}
+
+
+.lineAngle {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.lineDist {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    color: var(--accent);
+}
+
+/* Transits */
+.transitList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: var(--space-md);
+}
+
+.transitRow {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 1rem;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+}
+
+.aspectDot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.aspect_trine {
+    background: #4ade80;
+}
+
+.aspect_square {
+    background: #ef4444;
+}
+
+.aspect_conjunction {
+    background: var(--gold);
+}
+
+.aspect_sextile {
+    background: var(--cyan);
+}
+
+.transitName {
+    flex: 1;
+    font-weight: 500;
+}
+
+.transitType {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+/* 12-month windows */
+.windowsNote {
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+    margin-bottom: var(--space-lg);
+}
+
+.windowsGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.6rem;
+}
+
+@media (max-width: 800px) {
+    .windowsGrid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 500px) {
+    .windowsGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.windowItem {
+    padding: 1rem;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    border-left: 3px solid transparent;
+}
+
+.q_excellent {
+    border-color: #4ade80;
+}
+
+.q_good {
+    border-color: var(--cyan);
+}
+
+.q_caution {
+    border-color: #ef4444;
+}
+
+.windowMonth {
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 0.3rem;
+}
+
+.windowQuality {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-tertiary);
+    font-weight: 500;
+    margin-bottom: 0.6rem;
+}
+
+.qDot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+}
+
+.qd_excellent {
+    background: #4ade80;
+}
+
+.qd_good {
+    background: var(--cyan);
+}
+
+.qd_caution {
+    background: #ef4444;
+}
+
+.windowReason {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.windowHouse {
+    font-size: 0.65rem;
+    color: var(--text-tertiary);
+    margin-top: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+/* Reading */
+.readingCard {
+    border-left: 3px solid var(--accent);
+}
+
+.readingText {
+    margin-top: var(--space-md);
+    font-size: 1rem;
+    line-height: 1.9;
+    color: var(--text-secondary);
+}
+
+.readingText p {
+    margin-bottom: var(--space-md);
+}
+
+.readingText strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
