@@ -24,6 +24,8 @@ import styles from "./flow.module.css";
 
 // Lazy load the map to avoid SSR issues with Leaflet
 const AstroMap = dynamic(() => import("../components/AstroMap"), { ssr: false });
+// Lazy load natal chart (SVG, fine with SSR but keep consistent with map)
+const NatalChart = dynamic(() => import("../components/NatalChart"), { ssr: false });
 
 const variants = {
     enter: (d: number) => ({ x: d > 0 ? 60 : -60, opacity: 0 }),
@@ -34,6 +36,7 @@ const variants = {
 interface BirthData { name: string; date: string; time: string; city: string; }
 interface TravelData { destination: string; travelDate: string; }
 interface PlanetLine { planet: string; angle: string; distance_km: number; meaning?: { badge: string } }
+interface NatalPlanet { planet: string; sign: string; degree: number; longitude: number; retrograde: boolean; house: number; }
 
 export default function FlowPage() {
     const [step, setStep] = useState(0);
@@ -45,8 +48,8 @@ export default function FlowPage() {
     // We keep BOTH a state (for renders) and a ref (for immediate access in callbacks)
     const [userId, setUserId] = useState<string>("");
     const userIdRef = useRef<string>("");
-    const [natalPlanets, setNatalPlanets] = useState<object[]>([]);
-    const natalPlanetsRef = useRef<object[]>([]);
+    const [natalPlanets, setNatalPlanets] = useState<NatalPlanet[]>([]);
+    const natalPlanetsRef = useRef<NatalPlanet[]>([]);
     const [planetLines, setPlanetLines] = useState<PlanetLine[]>([]);
     const [travelWindows, setTravelWindows] = useState<TravelWindow[]>([]);
     const [reading, setReading] = useState<string>("");
@@ -266,7 +269,7 @@ export default function FlowPage() {
                                     <h5>Step 2</h5>
                                     <h2 className={styles.stepHeading}>Where are you going</h2>
                                     <p>
-                                        Enter your destination. Travel dates are optional — we{`'`}ll show you the full 12-month transit picture either way.
+                                        Enter your destination and a rough target date — we'll surface the best windows around that period and the full 12-month picture.
                                     </p>
                                     {isMock && (
                                         <p className={styles.mockNote}>⚠ Engine offline — using sample chart data</p>
@@ -281,9 +284,10 @@ export default function FlowPage() {
                                                 value={travel.destination} onChange={(e) => setTravel(p => ({ ...p, destination: e.target.value }))} />
                                         </div>
                                         <div className="input-group">
-                                            <label className="input-label">Travel date <span className={styles.optional}>(optional)</span></label>
+                                            <label className="input-label">Target date <span className={styles.optional}>(optional)</span></label>
                                             <input className="input-field" type="date" value={travel.travelDate}
                                                 onChange={(e) => setTravel(p => ({ ...p, travelDate: e.target.value }))} />
+                                            <p className={styles.dateHint}>Dates are flexible — we'll identify the best windows around this period.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -329,6 +333,19 @@ export default function FlowPage() {
                                         />
                                     </div>
                                 )}
+
+                                {/* ── Natal Chart Wheel ── */}
+                                <div className={`card ${styles.natalChartCard}`}>
+                                    <h5>Natal Chart</h5>
+                                    <p className={styles.natalChartNote}>Your birth chart is the foundation of every transit and line reading below.</p>
+                                    <div className={styles.natalChartWrap}>
+                                        <NatalChart
+                                            natalPlanets={(natalPlanetsRef.current.length > 0 ? natalPlanetsRef.current : natalPlanets) as NatalPlanet[]}
+                                            sunSign={sunSign?.name}
+                                            name={birth.name}
+                                        />
+                                    </div>
+                                </div>
 
                                 <div className={styles.grid}>
                                     {/* Planet lines */}
@@ -384,9 +401,10 @@ export default function FlowPage() {
                                         </div>
                                     </div>
 
-                                    {/* Gemini streaming reading */}
+                                    {/* Gemini streaming reading — structured 3-section */}
                                     <div className={`card ${styles.fullSpan} ${styles.readingCard}`}>
-                                        <h5>Your travel reading</h5>
+                                        <h5>Astro Nat Travel Reading</h5>
+                                        <p className={styles.readingSubtitle}>{birth.name} · {travel.destination}{sunSign ? ` · ${SIGN_GLYPHS[sunSign.name]} ${sunSign.name} Sun` : ""}</p>
                                         {reading === "" ? (
                                             <div className={styles.readingLoading}>
                                                 <Loader2 size={20} className={styles.spin} />
@@ -394,13 +412,40 @@ export default function FlowPage() {
                                             </div>
                                         ) : (
                                             <div className={styles.readingText}>
-                                                {reading.split("\n\n").filter(Boolean).map((para, i) => (
-                                                    <p key={i} dangerouslySetInnerHTML={{
-                                                        __html: para.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                                                    }} />
-                                                ))}
+                                                {/* Parse reading into sections split by ## headers */}
+                                                {(() => {
+                                                    const sections = reading.split(/(?=##\s)/g).filter(Boolean);
+                                                    return sections.map((section, si) => {
+                                                        const lines = section.split("\n");
+                                                        const firstLine = lines[0].trim();
+                                                        const isHeader = firstLine.startsWith("## ");
+                                                        const headerText = isHeader ? firstLine.replace(/^##\s+/, "") : null;
+                                                        const body = isHeader ? lines.slice(1).join("\n") : section;
+                                                        const sectionIcons: Record<string, string> = {
+                                                            "Next 30 Days": "◎",
+                                                            "Rest of Year Outlook": "◉",
+                                                            "House Activations": "⬡",
+                                                        };
+                                                        const icon = headerText ? (sectionIcons[headerText] || "◈") : null;
+                                                        return (
+                                                            <div key={si} className={headerText ? styles.readingSection : ""}>
+                                                                {headerText && (
+                                                                    <div className={styles.readingSectionHeader}>
+                                                                        <span className={styles.readingSectionIcon}>{icon}</span>
+                                                                        <h6 className={styles.readingSectionTitle}>{headerText}</h6>
+                                                                    </div>
+                                                                )}
+                                                                {body.split("\n\n").filter(p => p.trim()).map((para, i) => (
+                                                                    <p key={i} dangerouslySetInnerHTML={{
+                                                                        __html: para.trim().replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                                                                    }} />
+                                                                ))}
+                                                            </div>
+                                                        );
+                                                    });
+                                                })()}
                                                 {/* Blinking cursor while streaming */}
-                                                {reading.length < 800 && <span className={styles.cursor} />}
+                                                {reading.length < 1200 && <span className={styles.cursor} />}
                                             </div>
                                         )}
                                     </div>

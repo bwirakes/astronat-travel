@@ -46,12 +46,16 @@ export async function POST(req: NextRequest) {
         const ephemerisSummary = (currentEphemeris || []).join(", ");
 
         const travelDateNote = travelDate
-            ? `The user plans to travel on ${travelDate}.`
-            : "No specific travel date was given — provide a general seasonal analysis.";
+            ? `The user is targeting travel around ${travelDate}, but their dates are flexible. They want to identify the best windows within roughly 30 days of this date — treat it as a planning anchor, not a fixed departure.`
+            : "No specific travel date was given — provide a general seasonal analysis based on current transits.";
 
-        const prompt = `You are Astro Nat — a precise, thoughtful astrocartography and transit astrologer. Your readings are direct, deeply informed, and never generic. You speak to the real mechanics of what the chart is saying. No vague spiritual language, no clichés.
+        const next30DaysInstruction = travelDate
+            ? `Write 2–3 sharp paragraphs covering the transit picture around the target date of ${travelDate}. Name the transits that are peaking and how they interact with this chart. Then recommend 1–2 specific windows within 30 days of ${travelDate} when the transits align most favourably — give approximate date ranges (e.g. "the window of April 18–23") and explain why that window is superior to the target date. Flag any short windows to avoid and why. Be concrete: name the planets, the natal houses they are crossing, and what that means experientially.`
+            : `Write 2–3 sharp paragraphs covering the dominant planetary energy in the immediate window. Name the transiting planets, what natal houses they are activating, and what that means experientially. Identify which periods this month favour travel and which to avoid.`;
 
-Write a personalised travel reading for ${name}${sunSign ? ` (${sunSign} Sun)` : ""} who is planning to travel to ${destination}.
+        const prompt = `You are Astro Nat — a precise, incisive astrocartography and transit astrologer. Your readings are editorial, deeply technical, and never generic. You speak to the real mechanics of what the chart is doing — how planets activate houses, create energetic corridors, and shift the quality of a person's experience on the ground. No vague spiritual language, no clichés.
+
+Write a comprehensive personalised travel reading for ${name}${sunSign ? ` (${sunSign} Sun)` : ""} planning to travel to ${destination}.
 
 ${travelDateNote}
 
@@ -69,21 +73,25 @@ ACTIVE NATAL TRANSITS:
 ${transitsSummary || "Transit data not available."}
 ---
 
-Write 4–5 short paragraphs covering:
-1. The dominant planetary line and what it means for this specific person in ${destination}
-2. What the current sky (ephemeris) is doing at the time of travel and how it interacts with the trip
-3. How the active transits affect this journey — the opportunities and the friction points
-4. Practical guidance — what to lean into, what to watch for, timing advice
-5. A single clear closing sentence summing up the verdict on this trip
+Structure your reading with these exact three section headers (use ## for headers):
 
-Style rules: editorial tone, precise, warm but never effusive. Short paragraphs. No emojis. Bold planet names and key concepts with **asterisks**.`;
+## Next 30 Days
+${next30DaysInstruction}
+
+## Rest of Year Outlook
+Write 2–3 paragraphs covering the broader year-long transit picture as it relates to travel, place, and movement. Identify the big turning points — Jupiter ingresses, Saturn milestones, any outer planet shifts — and describe what they open or close in terms of travel energy and geographic pull. Discuss how this destination fits into the longer arc.
+
+## House Activations
+Write 2–3 paragraphs specifically about which natal houses are being lit up by the current transits, and what that means for travel. Go deep here — explain the difference between a 9th house activation (long-distance, philosophy, foreign culture) vs a 3rd house activation (short trips, mental stimulation, local exploration) vs a 12th house activation (retreat, solitude, spiritual immersion). Talk about which houses are dormant vs electrically alive right now, and what kind of trip would serve this chart. End with a single clear verdict sentence about whether ${destination} serves this chart right now.
+
+Style rules: editorial tone, precise, warm but authoritative. Dense with astrological intelligence. No emojis. Bold planet names and key astrological concepts with **asterisks**.`;
 
         // Stream via Gemini 3.1 Flash-Lite Preview
         const response = await ai.models.generateContentStream({
             model: "gemini-3.1-flash-lite-preview",
             contents: [{ role: "user", parts: [{ text: prompt }] }],
             config: {
-                maxOutputTokens: 900,
+                maxOutputTokens: 1800,
                 temperature: 0.7,
             },
         });
