@@ -58,15 +58,43 @@
   min-height: 520px;
 }
 
+/* ── Mobile hero: content first, compact image below ── */
 @media (max-width: 768px) {
+  .hero {
+    padding: var(--space-md) 0 var(--space-xl);
+  }
+
   .heroGrid {
     grid-template-columns: 1fr;
     min-height: auto;
+    gap: var(--space-lg);
   }
 
   .heroImage {
-    height: 340px !important;
+    height: 200px !important;
+    order: 1;
+    border-radius: var(--radius-md);
+  }
+
+  /* Center crop on mobile so Astro Nat's face is visible */
+  .heroImg {
+    object-position: center 40%;
+  }
+
+  .heroContent {
     order: -1;
+  }
+
+  .headline {
+    font-size: clamp(2rem, 9vw, 2.8rem);
+    margin-bottom: var(--space-sm);
+  }
+
+  .subline {
+    font-size: 0.95rem;
+    line-height: 1.65;
+    margin-bottom: var(--space-md);
+    max-width: 100%;
   }
 }
 
