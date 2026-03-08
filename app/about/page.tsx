@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import StarBackground from "../components/StarBackground";
-import ThemeToggle from "../components/ThemeToggle";
+import Navbar from "../components/Navbar";
 import styles from "./about.module.css";
 
 export default function AboutPage() {
@@ -12,20 +12,7 @@ export default function AboutPage() {
         <>
             <StarBackground />
 
-            <nav className={styles.nav}>
-                <div className="container">
-                    <div className={styles.navInner}>
-                        <Link href="/" className={styles.logo}>Astro Nat</Link>
-                        <div className={styles.navRight}>
-                            <div className={styles.navLinks}>
-                                <Link href="/about" className={styles.navActive}>About</Link>
-                                <a href="https://calendly.com/astronat/60min-acg-reading" target="_blank" rel="noopener noreferrer">Book a reading</a>
-                            </div>
-                            <ThemeToggle />
-                        </div>
-                    </div>
-                </div>
-            </nav>
+            <Navbar activeHref="/about" />
 
             <main>
                 <div className="container">

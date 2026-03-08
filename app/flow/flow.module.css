@@ -436,3 +436,72 @@
     color: var(--text-primary);
     font-weight: 600;
 }
+
+/* Reading loading state */
+.readingLoading {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: var(--space-lg) 0;
+    color: var(--text-tertiary);
+    font-size: 0.9rem;
+}
+
+/* Blinking cursor while streaming */
+.cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: var(--accent);
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    animation: blink 0.8s step-end infinite;
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
+    }
+}
+
+/* Spinning loader icon */
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Map container */
+.mapContainer {
+    margin-bottom: var(--space-xl);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    height: 320px;
+    border: 1px solid var(--surface-border);
+}
+
+/* Mock data notice */
+.mockNote {
+    display: inline-block;
+    margin-top: var(--space-sm);
+    font-size: 0.8rem;
+    color: var(--gold);
+    background: var(--gold-soft);
+    padding: 0.35rem 0.8rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(250, 218, 94, 0.2);
+}

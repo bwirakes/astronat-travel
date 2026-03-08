@@ -2,11 +2,11 @@
 
 import { useState, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, Globe, Loader2 } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import StarBackground from "../components/StarBackground";
-import ThemeToggle from "../components/ThemeToggle";
+import Navbar from "../components/Navbar";
 import {
     getSunSign,
     MOCK_PLANET_LINES,
@@ -42,8 +42,11 @@ export default function FlowPage() {
     const [travel, setTravel] = useState<TravelData>({ destination: "", travelDate: "" });
 
     // API state
+    // We keep BOTH a state (for renders) and a ref (for immediate access in callbacks)
     const [userId, setUserId] = useState<string>("");
+    const userIdRef = useRef<string>("");
     const [natalPlanets, setNatalPlanets] = useState<object[]>([]);
+    const natalPlanetsRef = useRef<object[]>([]);
     const [planetLines, setPlanetLines] = useState<PlanetLine[]>([]);
     const [travelWindows, setTravelWindows] = useState<TravelWindow[]>([]);
     const [reading, setReading] = useState<string>("");
@@ -69,8 +72,13 @@ export default function FlowPage() {
                 body: JSON.stringify(birth),
             });
             const data = await res.json();
-            setUserId(data.user_id || "");
-            setNatalPlanets(data.natal_planets || []);
+            const uid = data.user_id || "";
+            const planets = data.natal_planets || [];
+            // Update BOTH state and refs so handleAnalyze can read immediately
+            setUserId(uid);
+            userIdRef.current = uid;
+            setNatalPlanets(planets);
+            natalPlanetsRef.current = planets;
             setIsMock(data.mock === true);
         } catch {
             setIsMock(true);
@@ -86,7 +94,9 @@ export default function FlowPage() {
         setStep(2);
         setReading("");
 
-        const uid = userId || `guest_${Date.now()}`;
+        // Use refs for immediate access — state updates from handleChartSubmit may not be
+        // visible yet because React batches state updates between renders
+        const uid = userIdRef.current || userId || `guest_${Date.now()}`;
         const today = new Date().toISOString().split("T")[0];
 
         // Parallel: astrocarto + transits
@@ -127,6 +137,9 @@ export default function FlowPage() {
             "Neptune in Aries ♈", "Pluto in Aquarius ♒",
         ];
 
+        // Use ref for natal planets for same reason as userId
+        const planets = natalPlanetsRef.current.length > 0 ? natalPlanetsRef.current : natalPlanets;
+
         try {
             const readRes = await fetch("/api/reading", {
                 method: "POST",
@@ -137,8 +150,8 @@ export default function FlowPage() {
                     destination: travel.destination,
                     travelDate: travel.travelDate || null,
                     planetLines: lines,
-                    transits: MOCK_TRANSITS,
-                    natalPlanets,
+                    transits: trRes.raw?.major_aspects || MOCK_TRANSITS,
+                    natalPlanets: planets,
                     currentEphemeris,
                 }),
                 signal: abort.signal,
@@ -172,9 +185,9 @@ export default function FlowPage() {
         <>
             <StarBackground />
             <div className={styles.page}>
-                <header className={styles.header}>
-                    <Link href="/" className={styles.logo}>Astro Nat</Link>
-                    <div className={styles.headerRight}>
+                <Navbar
+                    logoHref="/"
+                    centerContent={
                         <div className={styles.progress}>
                             {["Chart", "Destination", "Analysis"].map((label, i) => (
                                 <div key={i} className={styles.progressItem}>
@@ -183,9 +196,8 @@ export default function FlowPage() {
                                 </div>
                             ))}
                         </div>
-                        <ThemeToggle />
-                    </div>
-                </header>
+                    }
+                />
 
                 <main className={styles.main}>
                     <AnimatePresence mode="wait" custom={dir}>
