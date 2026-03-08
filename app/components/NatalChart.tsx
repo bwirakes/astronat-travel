@@ -2,12 +2,11 @@
 
 /**
  * NatalChart.tsx
- * Renders a minimal but beautiful natal chart wheel as an SVG.
- * Works from the natal_planets array returned by the astro engine.
- * Falls back to mock data gracefully if planets are empty.
+ * Renders a full astrology wheel using @astrodraw/astrochart.
+ * dynamically imports the library to avoid SSR issues with SVG/window APIs.
  */
 
-import { useMemo } from "react";
+import { useMemo, useEffect, useRef, useState, useId } from "react";
 import { PLANET_GLYPHS, PLANET_COLORS, SIGN_GLYPHS } from "../lib/planet-data";
 
 interface NatalPlanet {
@@ -25,29 +24,6 @@ interface Props {
     name?: string;
 }
 
-const SIGNS = [
-    "Aries", "Taurus", "Gemini", "Cancer",
-    "Leo", "Virgo", "Libra", "Scorpio",
-    "Sagittarius", "Capricorn", "Aquarius", "Pisces",
-];
-
-const SIGN_COLORS: Record<string, string> = {
-    Aries: "#e85d4a", Taurus: "#4ade80", Gemini: "#f5c542", Cancer: "#c4c9d4",
-    Leo: "#f5a623", Virgo: "#7ecbf5", Libra: "#f5a0c8", Scorpio: "#9b6bff",
-    Sagittarius: "#f5c542", Capricorn: "#8b8fa3", Aquarius: "#42d4c8", Pisces: "#6b7cff",
-};
-
-const ELEMENT_COLORS: Record<string, string> = {
-    // Fire: Aries, Leo, Sagittarius
-    Aries: "rgba(232,93,74,0.08)", Leo: "rgba(245,166,35,0.08)", Sagittarius: "rgba(245,197,66,0.08)",
-    // Earth: Taurus, Virgo, Capricorn
-    Taurus: "rgba(74,222,128,0.06)", Virgo: "rgba(126,203,245,0.06)", Capricorn: "rgba(139,143,163,0.06)",
-    // Air: Gemini, Libra, Aquarius
-    Gemini: "rgba(245,197,66,0.06)", Libra: "rgba(245,160,200,0.06)", Aquarius: "rgba(66,212,200,0.06)",
-    // Water: Cancer, Scorpio, Pisces
-    Cancer: "rgba(196,201,212,0.06)", Scorpio: "rgba(155,107,255,0.06)", Pisces: "rgba(107,124,255,0.06)",
-};
-
 // Mock natal data for demonstration when engine is offline
 const MOCK_NATAL: NatalPlanet[] = [
     { planet: "Sun", sign: "Scorpio", degree: 14, longitude: 224, retrograde: false, house: 8 },
@@ -62,21 +38,6 @@ const MOCK_NATAL: NatalPlanet[] = [
     { planet: "Pluto", sign: "Scorpio", degree: 22, longitude: 232, retrograde: false, house: 8 },
 ];
 
-function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
-    const rad = ((angleDeg - 90) * Math.PI) / 180;
-    return {
-        x: cx + r * Math.cos(rad),
-        y: cy + r * Math.sin(rad),
-    };
-}
-
-function describeArc(cx: number, cy: number, r: number, startAngle: number, endAngle: number): string {
-    const start = polarToCartesian(cx, cy, r, endAngle);
-    const end = polarToCartesian(cx, cy, r, startAngle);
-    const largeArc = endAngle - startAngle <= 180 ? 0 : 1;
-    return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 0 ${end.x} ${end.y}`;
-}
-
 export default function NatalChart({ natalPlanets, sunSign, name }: Props) {
     const planets = useMemo(
         () => (natalPlanets && natalPlanets.length > 0 ? natalPlanets : MOCK_NATAL),
@@ -85,33 +46,84 @@ export default function NatalChart({ natalPlanets, sunSign, name }: Props) {
 
     const isMock = !natalPlanets || natalPlanets.length === 0;
 
-    const SIZE = 400;
-    const cx = SIZE / 2;
-    const cy = SIZE / 2;
+    // Unique ID for the chart wrapper since AstroChart mounts by ID
+    const chartIdPrefix = useId().replace(/:/g, ""); // Safe for HTML IDs
+    const chartId = `astro-chart-${chartIdPrefix}`;
+    const containerRef = useRef<HTMLDivElement>(null);
 
-    // Radii
-    const R_OUTER = 180;   // outer wheel edge
-    const R_SIGN = 162;    // sign band outer
-    const R_SIGN_IN = 140; // sign band inner
-    const R_HOUSE = 125;   // house ring
-    const R_PLANET = 100;  // planet placement ring
+    // Track rendering status
+    const [renderError, setRenderError] = useState<string | null>(null);
 
-    // House cusp angles — simplified equal houses starting from ASC at 180° (left)
-    // In a real chart these come from the engine; we approximate with equal 30° houses
-    // where H1 starts at 180° (the left / Ascendant position)
-    const ascAngle = 180; // Ascendant on the left
+    useEffect(() => {
+        if (!containerRef.current) return;
 
-    // Sign sector for each sign: Aries = 0°, Taurus = 30°, etc.
-    // In a Western chart displayed with Aries at the bottom-left typically,
-    // here we fix Aries start at 0° (top = Aries start) for simplicity
-    const signStartAngle = (signIndex: number) => signIndex * 30; // 0–330°
+        // Clear old chart if reacting hooks trigger multiple times
+        containerRef.current.innerHTML = "";
+
+        // Prepare data for AstroChart
+        const chartData = {
+            planets: planets.reduce((acc, p) => {
+                acc[p.planet] = [p.longitude];
+                return acc;
+            }, {} as Record<string, number[]>),
+            // Default 12-house equal system cusps
+            cusps: [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330]
+        };
+
+        const settings = {
+            SYMBOL_SCALE: 1,
+            // Styling to match Astro Nat theme
+            COLOR_BACKGROUND: "transparent",
+            POINTS_COLOR: "#fafafa",
+            SIGNS_COLOR: "rgba(255, 255, 255, 0.4)",
+            CIRCLE_COLOR: "rgba(255, 255, 255, 0.15)",
+            LINE_COLOR: "rgba(255, 255, 255, 0.15)",
+            MARGIN: 10, // tighter margin
+            ADD_CLICK_AREA: false
+        };
+
+        const loadChart = async () => {
+            try {
+                // Dynamically import to bypass Next.js SSR issues
+                const astroModule: any = await import("@astrodraw/astrochart");
+
+                let ChartClass = null;
+                if (astroModule.default && astroModule.default.Chart) {
+                    ChartClass = astroModule.default.Chart;
+                } else if (astroModule.Chart) {
+                    ChartClass = astroModule.Chart;
+                } else if (typeof astroModule.default === 'function') {
+                    ChartClass = astroModule.default;
+                } else {
+                    setRenderError("AstroChart engine not found");
+                    return;
+                }
+
+                // Initialise and render
+                if (typeof ChartClass === "function") {
+                    const chart = new ChartClass(chartId, 400, 400, settings);
+                    chart.radix(chartData);
+                } else {
+                    const AstroNs = astroModule.default || astroModule;
+                    const chart = new AstroNs.Chart(chartId, 400, 400, settings);
+                    chart.radix(chartData);
+                }
+            } catch (err: any) {
+                console.error("[NatalChart] failed to render chart:", err);
+                setRenderError("Error rendering chart graphic.");
+            }
+        };
+
+        loadChart();
+
+    }, [planets]);
 
     return (
         <div style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: "0.75rem",
+            gap: "0.5rem", // tight spacing to fix Problem A
         }}>
             {/* Label */}
             <div style={{
@@ -123,6 +135,7 @@ export default function NatalChart({ natalPlanets, sunSign, name }: Props) {
                 letterSpacing: "0.1em",
                 textTransform: "uppercase",
                 fontWeight: 500,
+                marginTop: "0.5rem"
             }}>
                 <span style={{ color: "var(--gold)", fontFamily: "serif", fontSize: "0.85rem" }}>
                     {sunSign ? SIGN_GLYPHS[sunSign] : "☽"}
@@ -143,181 +156,25 @@ export default function NatalChart({ natalPlanets, sunSign, name }: Props) {
                 )}
             </div>
 
-            <svg
-                viewBox={`0 0 ${SIZE} ${SIZE}`}
-                width="100%"
-                style={{ maxWidth: 380, overflow: "visible" }}
+            {renderError && (
+                <div style={{ fontSize: "0.8rem", color: "var(--accent)", padding: "2rem" }}>
+                    {renderError}
+                </div>
+            )}
+
+            {/* AstroChart Canvas mounts here */}
+            <div
+                id={chartId}
+                ref={containerRef}
                 aria-label="Natal chart wheel"
-            >
-                {/* ── Background ── */}
-                <circle cx={cx} cy={cy} r={R_OUTER + 4} fill="var(--surface)" stroke="var(--surface-border)" strokeWidth="1" />
-
-                {/* ── 12 Sign Sectors (coloured band) ── */}
-                {SIGNS.map((sign, i) => {
-                    const startDeg = signStartAngle(i);
-                    const endDeg = startDeg + 30;
-                    return (
-                        <path
-                            key={`sector-${sign}`}
-                            d={`
-                                ${describeArc(cx, cy, R_SIGN, startDeg, endDeg)}
-                                L ${polarToCartesian(cx, cy, R_SIGN_IN, endDeg).x} ${polarToCartesian(cx, cy, R_SIGN_IN, endDeg).y}
-                                ${describeArc(cx, cy, R_SIGN_IN, endDeg, startDeg)}
-                                Z
-                            `}
-                            fill={ELEMENT_COLORS[sign] || "rgba(255,255,255,0.03)"}
-                            stroke="var(--surface-border)"
-                            strokeWidth="0.5"
-                        />
-                    );
-                })}
-
-                {/* ── Sign Divider Lines (outer spokes) ── */}
-                {SIGNS.map((_, i) => {
-                    const angle = signStartAngle(i);
-                    const inner = polarToCartesian(cx, cy, R_SIGN_IN, angle);
-                    const outer = polarToCartesian(cx, cy, R_OUTER, angle);
-                    return (
-                        <line key={`div-${i}`}
-                            x1={inner.x} y1={inner.y}
-                            x2={outer.x} y2={outer.y}
-                            stroke="var(--surface-border)" strokeWidth="0.8" />
-                    );
-                })}
-
-                {/* ── Sign Glyphs ── */}
-                {SIGNS.map((sign, i) => {
-                    const midAngle = signStartAngle(i) + 15;
-                    const r = (R_SIGN + R_SIGN_IN) / 2;
-                    const pos = polarToCartesian(cx, cy, r, midAngle);
-                    return (
-                        <text key={`glyph-${sign}`}
-                            x={pos.x} y={pos.y}
-                            textAnchor="middle" dominantBaseline="middle"
-                            fontSize="10"
-                            fontFamily="serif"
-                            fill={SIGN_COLORS[sign] || "var(--text-tertiary)"}
-                            opacity="0.9"
-                        >
-                            {SIGN_GLYPHS[sign]}
-                        </text>
-                    );
-                })}
-
-                {/* ── House Dividers (12 equal houses from ascendant) ── */}
-                {Array.from({ length: 12 }, (_, i) => {
-                    const angle = ascAngle + i * 30;
-                    const inner = polarToCartesian(cx, cy, 40, angle);
-                    const outer = polarToCartesian(cx, cy, R_SIGN_IN, angle);
-                    const isCardinal = i % 3 === 0;
-                    return (
-                        <line key={`house-${i}`}
-                            x1={inner.x} y1={inner.y}
-                            x2={outer.x} y2={outer.y}
-                            stroke={isCardinal ? "var(--text-tertiary)" : "var(--surface-border)"}
-                            strokeWidth={isCardinal ? 1 : 0.5}
-                            opacity={isCardinal ? 0.6 : 0.3}
-                        />
-                    );
-                })}
-
-                {/* ── House Numbers ── */}
-                {Array.from({ length: 12 }, (_, i) => {
-                    const houseNum = i + 1;
-                    const midAngle = ascAngle + i * 30 + 15;
-                    const pos = polarToCartesian(cx, cy, R_HOUSE, midAngle);
-                    return (
-                        <text key={`hnum-${houseNum}`}
-                            x={pos.x} y={pos.y}
-                            textAnchor="middle" dominantBaseline="middle"
-                            fontSize="8" fill="var(--text-tertiary)"
-                            opacity="0.5" fontWeight="500"
-                        >
-                            {houseNum}
-                        </text>
-                    );
-                })}
-
-                {/* ── Inner Circle (chart core) ── */}
-                <circle cx={cx} cy={cy} r={R_PLANET - 12}
-                    fill="var(--bg)" stroke="var(--surface-border)" strokeWidth="0.5" opacity="0.7" />
-
-                {/* ── Planets ── */}
-                {planets.map((p, idx) => {
-                    // Place planet using ecliptic longitude (0 = Aries start)
-                    // We map longitude directly to angle on the wheel
-                    const angle = p.longitude ?? (SIGNS.indexOf(p.sign) * 30 + p.degree);
-                    const pos = polarToCartesian(cx, cy, R_PLANET - 16, angle);
-                    const color = PLANET_COLORS[p.planet] || "#fff";
-
-                    return (
-                        <g key={`planet-${p.planet}-${idx}`}>
-                            {/* dot on ecliptic ring */}
-                            <circle
-                                cx={polarToCartesian(cx, cy, R_SIGN_IN - 8, angle).x}
-                                cy={polarToCartesian(cx, cy, R_SIGN_IN - 8, angle).y}
-                                r="2.5" fill={color} opacity="0.8"
-                            />
-                            {/* line from dot to glyph */}
-                            <line
-                                x1={polarToCartesian(cx, cy, R_SIGN_IN - 12, angle).x}
-                                y1={polarToCartesian(cx, cy, R_SIGN_IN - 12, angle).y}
-                                x2={pos.x} y2={pos.y}
-                                stroke={color} strokeWidth="0.6" opacity="0.3"
-                            />
-                            {/* Planet glyph */}
-                            <text
-                                x={pos.x} y={pos.y}
-                                textAnchor="middle" dominantBaseline="middle"
-                                fontSize="11" fontFamily="serif"
-                                fill={color} opacity="0.95"
-                            >
-                                <title>{`${p.planet} in ${p.sign} ${p.degree}° H${p.house}${p.retrograde ? " Rx" : ""}`}</title>
-                                {PLANET_GLYPHS[p.planet] || p.planet[0]}
-                            </text>
-                            {/* Retrograde indicator */}
-                            {p.retrograde && (
-                                <text
-                                    x={pos.x + 8} y={pos.y - 6}
-                                    textAnchor="middle" dominantBaseline="middle"
-                                    fontSize="5.5" fill={color} opacity="0.7"
-                                >
-                                    Rx
-                                </text>
-                            )}
-                        </g>
-                    );
-                })}
-
-                {/* ── Centre: sun/ASC indicator ── */}
-                <circle cx={cx} cy={cy} r="22"
-                    fill="var(--surface)" stroke="var(--surface-border)" strokeWidth="0.8" />
-                <text x={cx} y={cy - 4}
-                    textAnchor="middle" dominantBaseline="middle"
-                    fontSize="14" fontFamily="serif"
-                    fill="var(--gold)" opacity="0.9"
-                >
-                    {sunSign ? SIGN_GLYPHS[sunSign] : "☉"}
-                </text>
-                <text x={cx} y={cy + 10}
-                    textAnchor="middle" dominantBaseline="middle"
-                    fontSize="5.5" fill="var(--text-tertiary)"
-                    letterSpacing="0.05em" style={{ textTransform: "uppercase" }}
-                >
-                    {sunSign || "NATAL"}
-                </text>
-
-                {/* ── ASC marker ── */}
-                <text
-                    x={polarToCartesian(cx, cy, R_OUTER - 8, ascAngle).x}
-                    y={polarToCartesian(cx, cy, R_OUTER - 8, ascAngle).y}
-                    textAnchor="middle" dominantBaseline="middle"
-                    fontSize="6" fill="var(--accent)" opacity="0.8"
-                    fontWeight="700" letterSpacing="0.05em"
-                >
-                    ASC
-                </text>
-            </svg>
+                style={{
+                    width: "100%",
+                    maxWidth: "400px",
+                    aspectRatio: "1",
+                    display: renderError ? "none" : "block",
+                    opacity: 0.95 // subtle blend
+                }}
+            />
 
             {/* ── Planet Legend ── */}
             <div style={{
@@ -325,7 +182,7 @@ export default function NatalChart({ natalPlanets, sunSign, name }: Props) {
                 gridTemplateColumns: "repeat(5, 1fr)",
                 gap: "0.4rem 0.8rem",
                 width: "100%",
-                marginTop: "0.5rem",
+                marginTop: "0.25rem", // reduced to help fix Problem A
             }}>
                 {planets.map((p) => (
                     <div key={p.planet} style={{

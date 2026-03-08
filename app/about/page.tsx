@@ -101,14 +101,14 @@ export default function AboutPage() {
 
                     {/* CTA */}
                     <div className={styles.cta}>
-                        <Link href="/flow" className="btn btn-primary">
+                        <Link href="/flow" className={styles.ctaBtn}>
                             Start planning your next trip
                         </Link>
                         <a
                             href="https://calendly.com/astronat/60min-acg-reading"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="btn btn-secondary"
+                            className={styles.ctaBtnSecondary}
                         >
                             Book a 1:1 reading with Astro Nat
                         </a>

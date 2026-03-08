@@ -5,6 +5,7 @@
     "": {
       "name": "golden-omega",
       "dependencies": {
+        "@astrodraw/astrochart": "^3.0.2",
         "@google/genai": "^1.44.0",
         "framer-motion": "^12.35.1",
         "leaflet": "^1.9.4",
@@ -30,6 +31,8 @@
     "unrs-resolver",
   ],
   "packages": {
+    "@astrodraw/astrochart": ["@astrodraw/astrochart@3.0.2", "", {}, "sha512-LopHZSXjL4FZm5xLeti6kp9z+x08vte8yA+imstZu5c1XpGyU0YR7cdML56FY594AWvNfafN8fkt2YNtwo2pzQ=="],
+
     "@babel/code-frame": ["@babel/code-frame@7.29.0", "", { "dependencies": { "@babel/helper-validator-identifier": "^7.28.5", "js-tokens": "^4.0.0", "picocolors": "^1.1.1" } }, "sha512-9NhCeYjq9+3uxgdtp20LSiJXJvN0FeCtNGpJxuMFZ1Kv3cWUNb6DOhJwUvcVCzKGR66cw4njwM6hrJLqgOwbcw=="],
 
     "@babel/compat-data": ["@babel/compat-data@7.29.0", "", {}, "sha512-T1NCJqT/j9+cn8fvkt7jtwbLBfLC/1y1c7NtCeXFRgzGTsafi68MRv8yzkYSapBnFA6L3U2VSc02ciDzoAJhJg=="],
