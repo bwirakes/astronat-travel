@@ -27,7 +27,7 @@ export default function Home() {
             >
               <h1 className={styles.headline}>
                 Where should<br />
-                you travel next
+                you travel next?
               </h1>
               <p className={styles.subline}>
                 You deserve the best possible environment to thrive in and fulfil your natal promise.

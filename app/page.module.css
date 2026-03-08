@@ -76,9 +76,9 @@
     border-radius: var(--radius-md);
   }
 
-  /* Center crop on mobile so Astro Nat's face is visible */
+  /* Center on mobile so image isn't cut off at the top */
   .heroImg {
-    object-position: center 40%;
+    object-position: center center;
   }
 
   .heroContent {
@@ -123,7 +123,7 @@
 
 .heroImg {
   object-fit: cover;
-  object-position: center top;
+  object-position: center center;
 }
 
 /* ── Process ─────────────────────────────────────────────────── */
