@@ -149,20 +149,29 @@ export function getSunSign(month: number, day: number): { name: string; emoji: s
     return null;
 }
 
+export function getDistanceRanking(distanceKm: number): string {
+    const miles = distanceKm / 1.60934;
+    if (miles <= 100) return "Strongest Influence";
+    if (miles <= 300) return "Moderate Influence";
+    if (miles <= 500) return "Weak Influence";
+    return "Negligible Influence";
+}
+
 // Mock data for results page
 export const MOCK_PLANET_LINES = [
-    { planet: "Venus", angle: "MC", distance_km: 142, meaning: PLANET_MEANINGS.Venus.MC },
-    { planet: "Jupiter", angle: "ASC", distance_km: 387, meaning: PLANET_MEANINGS.Jupiter.ASC },
-    { planet: "Sun", angle: "MC", distance_km: 521, meaning: PLANET_MEANINGS.Sun.MC },
-    { planet: "Moon", angle: "IC", distance_km: 789, meaning: PLANET_MEANINGS.Moon.IC },
-    { planet: "Saturn", angle: "DSC", distance_km: 1204, meaning: PLANET_MEANINGS.Saturn.DSC },
+    { planet: "Venus", angle: "MC", distance_km: 142, orb: 1, is_paran: false, meaning: PLANET_MEANINGS.Venus.MC },
+    { planet: "Jupiter", angle: "ASC", distance_km: 387, orb: 3, is_paran: false, meaning: PLANET_MEANINGS.Jupiter.ASC },
+    { planet: "Sun", angle: "MC", distance_km: 521, orb: 4, is_paran: false, meaning: PLANET_MEANINGS.Sun.MC },
+    { planet: "Moon", angle: "IC", distance_km: 789, orb: 6, is_paran: false, meaning: PLANET_MEANINGS.Moon.IC },
+    { planet: "Saturn", angle: "DSC", distance_km: 1204, orb: 10, is_paran: false, meaning: PLANET_MEANINGS.Saturn.DSC },
+    { planet: "Saturn-Uranus", angle: "Paran", distance_km: 10, orb: 0, is_paran: true, meaning: { badge: "Challenging Karma" } },
 ];
 
 export const MOCK_TRANSITS = [
-    { planets: "Venus △ natal Jupiter", type: "Trine", aspect: "trine" },
-    { planets: "Mars □ natal Saturn", type: "Square", aspect: "square" },
-    { planets: "Sun ☌ natal Mercury", type: "Conjunction", aspect: "conjunction" },
-    { planets: "Moon ⚹ natal Venus", type: "Sextile", aspect: "sextile" },
+    { planets: "Venus △ natal Jupiter", type: "Trine", aspect: "trine", system: "natal", orb: 1 },
+    { planets: "Mars □ geodetic Saturn", type: "Square", aspect: "square", system: "geodetic", orb: 2 },
+    { planets: "Sun ☌ natal Mercury", type: "Conjunction", aspect: "conjunction", system: "natal", orb: 0.5 },
+    { planets: "Moon ⚹ geodetic Venus", type: "Sextile", aspect: "sextile", system: "geodetic", orb: 4 },
 ];
 
 export const MOCK_HOROSCOPE = `Your **Venus MC line** runs 142km from this destination — close enough to feel it. Venus on the Midheaven means this is a place where you're seen, appreciated, and where social connections happen naturally. Good city for creative work and meeting people.
@@ -200,17 +209,25 @@ const WINDOW_PATTERNS: Array<Omit<TravelWindow, "month">> = [
 
 /**
  * Generate 12 travel windows starting from any given date string (YYYY-MM-DD).
- * Defaults to today if no date given.
+ * Each window maps to a successive calendar month (Mar 2026, Apr 2026, etc.).
+ * Defaults to current month if no date given.
  */
 export function generateTravelWindows(startDateStr?: string): TravelWindow[] {
-    const start = startDateStr ? new Date(startDateStr + "T00:00:00") : new Date();
-    const base = new Date(start.getFullYear(), start.getMonth(), 1);
+    const start = startDateStr ? new Date(startDateStr + "T12:00:00") : new Date();
+    // Normalise to first of the month to avoid DST edge cases
+    const baseYear = start.getFullYear();
+    const baseMonth = start.getMonth(); // 0-indexed
     return WINDOW_PATTERNS.map((pattern, i) => {
-        const d = new Date(base.getFullYear(), base.getMonth() + i, 1);
+        // Explicit date construction so months always tick forward correctly
+        const d = new Date(baseYear, baseMonth + i, 1);
         const month = d.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
         return { month, ...pattern };
     });
 }
 
-// Static default — used as fallback when no date is available
+/**
+ * Static default — call as a function so it always returns current-month-relative windows.
+ * Stored as a function call at import time only for initial render; the flow page
+ * always calls generateTravelWindows(travelDate) for real data.
+ */
 export const MOCK_12_MONTH_WINDOWS: TravelWindow[] = generateTravelWindows();

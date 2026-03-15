@@ -31,6 +31,8 @@ export async function POST(req: NextRequest) {
             planet: line.planet,
             angle: line.angle,
             distance_km: Math.round(line.distance_km),
+            orb: line.orb,
+            is_paran: line.is_paran,
             meaning: PLANET_MEANINGS[line.planet]?.[line.angle] ?? { badge: `${line.planet} ${line.angle}` },
         }));
 

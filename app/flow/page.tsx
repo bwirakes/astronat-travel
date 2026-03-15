@@ -19,6 +19,7 @@ import {
     PLANET_EMOJI,
     SIGN_GLYPHS,
     TravelWindow,
+    getDistanceRanking,
 } from "../lib/planet-data";
 import styles from "./flow.module.css";
 
@@ -26,6 +27,8 @@ import styles from "./flow.module.css";
 const AstroMap = dynamic(() => import("../components/AstroMap"), { ssr: false });
 // Lazy load natal chart (SVG, fine with SSR but keep consistent with map)
 const NatalChart = dynamic(() => import("../components/NatalChart"), { ssr: false });
+// Verdict card (summary + best/avoid windows)
+const VerdictCard = dynamic(() => import("../components/VerdictCard"), { ssr: false });
 
 const variants = {
     enter: (d: number) => ({ x: d > 0 ? 60 : -60, opacity: 0 }),
@@ -35,8 +38,8 @@ const variants = {
 
 interface BirthData { name: string; date: string; time: string; city: string; }
 interface TravelData { destination: string; travelDate: string; }
-interface PlanetLine { planet: string; angle: string; distance_km: number; meaning?: { badge: string } }
-interface NatalPlanet { planet: string; sign: string; degree: number; longitude: number; retrograde: boolean; house: number; }
+interface PlanetLine { planet: string; angle: string; distance_km: number; orb?: number; is_paran?: boolean; meaning?: { badge: string } }
+interface NatalPlanet { planet: string; sign: string; degree: number; longitude: number; retrograde: boolean; house: number; condition?: string; dignity?: string; }
 
 export default function FlowPage() {
     const [step, setStep] = useState(0);
@@ -57,6 +60,8 @@ export default function FlowPage() {
     const [loadingResults, setLoadingResults] = useState(false);
     const [isMock, setIsMock] = useState(false);
     const abortRef = useRef<AbortController | null>(null);
+    const [summary, setSummary] = useState<import("../components/VerdictCard").Summary | null>(null);
+    const [loadingSummary, setLoadingSummary] = useState(false);
 
     const sunSign = useMemo(() => {
         if (!birth.date) return null;
@@ -88,6 +93,24 @@ export default function FlowPage() {
         }
         setLoadingChart(false);
         setStep(1);
+
+        // Fire /api/natal in background to get real planetary data
+        if (birth.date && birth.city) {
+            const [year, month, day] = birth.date.split("-");
+            fetch("/api/natal", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ dob: birth.date, time: birth.time, birthplace: birth.city }),
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.planets && data.planets.length > 0) {
+                        setNatalPlanets(data.planets);
+                        natalPlanetsRef.current = data.planets;
+                    }
+                })
+                .catch(() => {}); // fail silently, fallback to mock
+        }
     }, [birth]);
 
     // Step 1 → Step 2: fetch planet lines, transits, then stream reading
@@ -126,6 +149,27 @@ export default function FlowPage() {
         setTravelWindows(windows);
         setLoadingResults(false);
 
+        // Fire /api/summary in parallel with reading
+        const planets = natalPlanetsRef.current.length > 0 ? natalPlanetsRef.current : natalPlanets;
+        setLoadingSummary(true);
+        setSummary(null);
+        fetch("/api/summary", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                name: birth.name,
+                sunSign: sunSign?.name,
+                destination: travel.destination,
+                travelDate: travel.travelDate || null,
+                planetLines: lines,
+                transits: trRes.raw?.major_aspects || MOCK_TRANSITS,
+                natalPlanets: planets,
+            }),
+        })
+            .then(r => r.json())
+            .then(data => { setSummary(data); setLoadingSummary(false); })
+            .catch(() => setLoadingSummary(false));
+
         // Stream the Gemini reading
         if (abortRef.current) abortRef.current.abort();
         const abort = new AbortController();
@@ -140,8 +184,7 @@ export default function FlowPage() {
             "Neptune in Aries ♈", "Pluto in Aquarius ♒",
         ];
 
-        // Use ref for natal planets for same reason as userId
-        const planets = natalPlanetsRef.current.length > 0 ? natalPlanetsRef.current : natalPlanets;
+        // planets already declared above for summary call — reuse it
 
         try {
             const readRes = await fetch("/api/reading", {
@@ -334,6 +377,13 @@ export default function FlowPage() {
                                     </div>
                                 )}
 
+                                {/* ── Verdict Summary Card ── */}
+                                <VerdictCard
+                                    summary={summary}
+                                    loading={loadingSummary}
+                                    destination={travel.destination}
+                                />
+
                                 {/* ── Natal Chart Wheel ── */}
                                 <div className={`card ${styles.natalChartCard}`}>
                                     <h5>Natal Chart</h5>
@@ -348,39 +398,74 @@ export default function FlowPage() {
                                 </div>
 
                                 <div className={styles.grid}>
-                                    {/* Planet lines */}
+                                    {/* Planet lines — ACG Lines + Paran Lines separated */}
                                     <div className="card">
                                         <h5>Planetary lines near {travel.destination}</h5>
-                                        <div className={styles.lineList}>
-                                            {(planetLines.length > 0 ? planetLines : MOCK_PLANET_LINES).map((line, i) => (
+                                        {(() => {
+                                            const allLines = planetLines.length > 0 ? planetLines : MOCK_PLANET_LINES;
+                                            const acgLines = allLines.filter((l) => !l.is_paran);
+                                            const paranLines = allLines.filter((l) => l.is_paran);
+                                            const renderLine = (line: PlanetLine, i: number) => (
                                                 <div key={i} className={styles.lineRow}>
                                                     <div className={styles.lineInfo}>
-                                                        <span className={styles.planetEmoji}>{PLANET_EMOJI[line.planet]}</span>
-                                                        <span className={styles.planetGlyph} style={{ color: PLANET_COLORS[line.planet] }}>
-                                                            {PLANET_GLYPHS[line.planet]}
+                                                        <span className={styles.planetEmoji}>{PLANET_EMOJI[line.planet] || "⭐"}</span>
+                                                        <span className={styles.planetGlyph} style={{ color: PLANET_COLORS[line.planet] || "#ffffff" }}>
+                                                            {PLANET_GLYPHS[line.planet?.split("-")[0]] || PLANET_GLYPHS[line.planet]}
                                                         </span>
                                                         <span>{line.planet}</span>
                                                         <span className={styles.lineAngle}>{line.angle}</span>
                                                     </div>
-                                                    <span className={styles.lineDist}>{line.distance_km} km</span>
+                                                    <div className={styles.lineMeta}>
+                                                        <span className={styles.lineDistRanking}>{getDistanceRanking(line.distance_km)}</span>
+                                                        <span className={styles.lineDist}>({line.distance_km} km)</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                            return (
+                                                <>
+                                                    {acgLines.length > 0 && (
+                                                        <div className={styles.lineSection}>
+                                                            <span className={styles.lineSectionLabel}>ACG Lines</span>
+                                                            <div className={styles.lineList} id="lineList">
+                                                                {acgLines.map(renderLine)}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {paranLines.length > 0 && (
+                                                        <div className={styles.lineSection}>
+                                                            <span className={styles.lineSectionLabel} style={{ color: "var(--cyan)" }}>⊕ Paran Lines (Latitude Crossings)</span>
+                                                            <p className={styles.paranNote}>Parans mark where two planetary lines cross at your latitude — they activate regardless of longitude and have a world-wide effect at that parallel.</p>
+                                                            <div className={styles.lineList} id="paranList">
+                                                                {paranLines.map(renderLine)}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
+
+                                    {/* Active transits — with Natal vs Geodetic legend */}
+                                    <div className="card">
+                                        <h5>{travel.travelDate ? "Active transits at time of travel" : "Current active transits"}</h5>
+                                        <div className={styles.transitLegend} id="transitList">
+                                            <span className={`${styles.systemBadge} ${styles.sys_natal}`}>Natal</span>
+                                            <span className={styles.legendDesc}>Personal — from your birth chart</span>
+                                            <span className={`${styles.systemBadge} ${styles.sys_geodetic}`}>Geodetic</span>
+                                            <span className={styles.legendDesc}>Location-fixed — Earth&apos;s longitude grid</span>
+                                        </div>
+                                        <div className={styles.transitList}>
+                                            {(MOCK_TRANSITS as Array<{ planets: string; type: string; aspect: string; system?: string; orb?: number }>).map((t, i) => (
+                                                <div key={i} className={styles.transitRow}>
+                                                    <span className={`${styles.aspectDot} ${styles[`aspect_${t.aspect}`]}`} />
+                                                    <span className={styles.transitName}>{t.planets}</span>
+                                                    <span className={styles.transitType}>{t.type} {t.orb !== undefined ? `(${t.orb}°)` : ""}</span>
+                                                    {t.system && <span className={`${styles.systemBadge} ${styles[`sys_${t.system}`]}`}>{t.system === "geodetic" ? "Geodetic" : "Natal"}</span>}
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
 
-                                    {/* Active transits */}
-                                    <div className="card">
-                                        <h5>{travel.travelDate ? "Active transits at time of travel" : "Current active transits"}</h5>
-                                        <div className={styles.transitList}>
-                                            {MOCK_TRANSITS.map((t, i) => (
-                                                <div key={i} className={styles.transitRow}>
-                                                    <span className={`${styles.aspectDot} ${styles[`aspect_${t.aspect}`]}`} />
-                                                    <span className={styles.transitName}>{t.planets}</span>
-                                                    <span className={styles.transitType}>{t.type}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
 
                                     {/* 12-month windows */}
                                     <div className={`card ${styles.fullSpan}`}>
@@ -414,19 +499,70 @@ export default function FlowPage() {
                                             <div className={styles.readingText}>
                                                 {/* Parse reading into sections split by ## headers */}
                                                 {(() => {
+                                                    // Helper: render a markdown table string → HTML table
+                                                    const renderMarkdownTable = (tableText: string) => {
+                                                        const rows = tableText.trim().split("\n").filter(r => r.trim().startsWith("|"));
+                                                        if (rows.length < 2) return null;
+                                                        const headerCells = rows[0].split("|").filter((_, i, a) => i > 0 && i < a.length - 1);
+                                                        const bodyRows = rows.slice(2); // skip header + separator row
+                                                        return (
+                                                            <div className={styles.tableWrap}>
+                                                                <table className={styles.readingTable}>
+                                                                    <thead>
+                                                                        <tr>
+                                                                            {headerCells.map((cell, ci) => (
+                                                                                <th key={ci} dangerouslySetInnerHTML={{ __html: cell.trim().replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") }} />
+                                                                            ))}
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {bodyRows.map((row, ri) => {
+                                                                            const cells = row.split("|").filter((_, i, a) => i > 0 && i < a.length - 1);
+                                                                            return (
+                                                                                <tr key={ri}>
+                                                                                    {cells.map((cell, ci) => (
+                                                                                        <td key={ci} dangerouslySetInnerHTML={{ __html: cell.trim().replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") }} />
+                                                                                    ))}
+                                                                                </tr>
+                                                                            );
+                                                                        })}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        );
+                                                    };
+
+                                                    // Helper: render a body block that may contain a table
+                                                    const renderBody = (body: string, sectionKey: number) => {
+                                                        // Split on table blocks (starts with |)
+                                                        const parts = body.split(/((?:^|\n)\|.+(?:\n\|.+)*)/m);
+                                                        return parts.map((part, pi) => {
+                                                            if (part.trim().startsWith("|")) {
+                                                                return <div key={`${sectionKey}-t-${pi}`}>{renderMarkdownTable(part)}</div>;
+                                                            }
+                                                            return part.split("\n\n").filter(p => p.trim()).map((para, pi2) => (
+                                                                <p key={`${sectionKey}-p-${pi}-${pi2}`} dangerouslySetInnerHTML={{
+                                                                    __html: para.trim().replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                                                                }} />
+                                                            ));
+                                                        });
+                                                    };
+
                                                     const sections = reading.split(/(?=##\s)/g).filter(Boolean);
                                                     return sections.map((section, si) => {
-                                                        const lines = section.split("\n");
-                                                        const firstLine = lines[0].trim();
+                                                        const sectionLines = section.split("\n");
+                                                        const firstLine = sectionLines[0].trim();
                                                         const isHeader = firstLine.startsWith("## ");
                                                         const headerText = isHeader ? firstLine.replace(/^##\s+/, "") : null;
-                                                        const body = isHeader ? lines.slice(1).join("\n") : section;
+                                                        const body = isHeader ? sectionLines.slice(1).join("\n") : section;
                                                         const sectionIcons: Record<string, string> = {
                                                             "Next 30 Days": "◎",
                                                             "Rest of Year Outlook": "◉",
                                                             "House Activations": "⬡",
+                                                            "House Activations & Dignities": "⬡",
+                                                            "Example of Natal Chart and ACG Lines based on real-time transits": "◈",
                                                         };
-                                                        const icon = headerText ? (sectionIcons[headerText] || "◈") : null;
+                                                        const icon = headerText ? (sectionIcons[headerText.trim()] || "◈") : null;
                                                         return (
                                                             <div key={si} className={headerText ? styles.readingSection : ""}>
                                                                 {headerText && (
@@ -435,11 +571,7 @@ export default function FlowPage() {
                                                                         <h6 className={styles.readingSectionTitle}>{headerText}</h6>
                                                                     </div>
                                                                 )}
-                                                                {body.split("\n\n").filter(p => p.trim()).map((para, i) => (
-                                                                    <p key={i} dangerouslySetInnerHTML={{
-                                                                        __html: para.trim().replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                                                                    }} />
-                                                                ))}
+                                                                {renderBody(body, si)}
                                                             </div>
                                                         );
                                                     });

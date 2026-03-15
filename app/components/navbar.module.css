@@ -28,6 +28,8 @@
 /* ── Center slot ─────────────────────────────────────────── */
 .center {
     flex: 1;
+    min-width: 0;
+    overflow: hidden;
     display: flex;
     justify-content: center;
 }
@@ -96,7 +98,13 @@
     .logo {
         font-size: 1.3rem;
     }
+
+    /* Hide progress on very small screens to avoid overflow */
+    .center {
+        display: none;
+    }
 }
+
 
 /* ── Mobile Drawer ───────────────────────────────────────── */
 .drawer {
