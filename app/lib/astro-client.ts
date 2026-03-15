@@ -32,6 +32,8 @@ export interface NatalPlanet {
     longitude: number;
     retrograde: boolean;
     house: number;
+    condition?: string;
+    dignity?: string;
 }
 
 export interface RegisterResult {
@@ -46,6 +48,7 @@ export interface AspectHit {
     natal_planet: string;
     aspect: string;
     orb: number;
+    system?: "natal" | "geodetic";
 }
 
 export interface TransitResult {
@@ -64,6 +67,8 @@ export interface PlanetLine {
     distance_km: number;
     latitude?: number;
     longitude?: number;
+    orb?: number;
+    is_paran?: boolean;
 }
 
 export interface AstrocartoResult {

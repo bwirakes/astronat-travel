@@ -169,7 +169,7 @@
 }
 
 .resultsHeader {
-    margin-bottom: var(--space-2xl);
+    margin-bottom: var(--space-lg);
 }
 
 .resultsHeader h5 {
@@ -189,13 +189,13 @@
     background: var(--surface);
     border: 1px solid var(--surface-border);
     border-radius: var(--radius-lg);
-    height: 320px;
+    height: 360px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     gap: var(--space-sm);
-    margin-bottom: var(--space-xl);
+    margin-bottom: 1rem;
     color: var(--text-tertiary);
     font-size: 0.85rem;
 }
@@ -203,7 +203,7 @@
 .grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: var(--space-md);
+    gap: 1rem;
 }
 
 @media (max-width: 768px) {
@@ -263,6 +263,20 @@
     letter-spacing: 0.05em;
 }
 
+.lineMeta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.2rem;
+}
+
+.lineDistRanking {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+}
+
 .lineDist {
     font-family: var(--font-display);
     font-size: 0.95rem;
@@ -320,6 +334,25 @@
     color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.06em;
+}
+
+.systemBadge {
+    font-size: 0.6rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+.sys_geodetic {
+    background: rgba(66, 212, 200, 0.15); /* Match Uranus blue-green */
+    color: var(--cyan);
+}
+
+.sys_natal {
+    background: rgba(245, 160, 200, 0.15); /* Match Venus pink */
+    color: #f5a0c8;
 }
 
 /* 12-month windows */
@@ -579,4 +612,91 @@
     margin-top: 0.4rem;
     font-style: italic;
     line-height: 1.4;
+}
+
+/* ── Planet line sub-sections (ACG / Paran) ─────────────────── */
+.lineSection {
+    margin-top: var(--space-md);
+}
+
+.lineSectionLabel {
+    display: block;
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-tertiary);
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--surface-border);
+}
+
+.paranNote {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    line-height: 1.5;
+    margin-bottom: var(--space-sm);
+    font-style: italic;
+}
+
+/* ── Transit legend ─────────────────────────────────────────── */
+.transitLegend {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-bottom: var(--space-sm);
+    padding: 0.5rem 0.75rem;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--surface-border);
+}
+
+.legendDesc {
+    font-size: 0.68rem;
+    color: var(--text-tertiary);
+    margin-right: 0.75rem;
+}
+
+/* ── Reading Markdown Table ─────────────────────────────────── */
+.tableWrap {
+    overflow-x: auto;
+    margin: var(--space-md) 0;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--surface-border);
+}
+
+.readingTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.readingTable th {
+    background: var(--surface);
+    color: var(--text-primary);
+    font-weight: 600;
+    padding: 0.6rem 0.9rem;
+    text-align: left;
+    border-bottom: 1px solid var(--surface-border);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.readingTable td {
+    padding: 0.6rem 0.9rem;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--surface-border);
+    vertical-align: top;
+}
+
+.readingTable tr:last-child td {
+    border-bottom: none;
+}
+
+.readingTable tr:nth-child(even) td {
+    background: rgba(255, 255, 255, 0.02);
 }

@@ -23,24 +23,37 @@ export async function POST(req: NextRequest) {
         } = body;
 
         // Build a rich astrological prompt
+        const getDistanceRanking = (km: number) => {
+            const miles = km / 1.60934;
+            if (miles <= 100) return "Strongest Influence";
+            if (miles <= 300) return "Moderate Influence";
+            if (miles <= 500) return "Weak Influence";
+            return "Negligible Influence";
+        };
+
         const planetLinesSummary = (planetLines || [])
-            .slice(0, 5)
-            .map((l: { planet: string; angle: string; distance_km: number }) =>
-                `${l.planet} ${l.angle} — ${l.distance_km}km from ${destination}`
-            )
+            .slice(0, 8)
+            .map((l: { planet: string; angle: string; distance_km: number; orb?: number; is_paran?: boolean }) => {
+                const type = l.is_paran ? "Paran Line (latitude)" : "ACG Line";
+                const ranking = getDistanceRanking(l.distance_km);
+                return `${l.planet} ${l.angle} (${type}) — ${l.distance_km}km from ${destination}. ${ranking}. Orb: ${l.orb ?? "?"} degrees.`;
+            })
             .join("\n");
 
         const transitsSummary = (transits || [])
-            .slice(0, 6)
-            .map((t: { planets: string; type: string }) => `${t.planets} (${t.type})`)
-            .join(", ");
+            .slice(0, 8)
+            .map((t: { planets: string; type: string; system?: string; orb?: number }) => 
+                `${t.planets} (${t.type}, ${Math.abs(t.orb || 0)}° orb, System: ${t.system || "natal" })`
+            )
+            .join("\n");
 
         const natalSummary = (natalPlanets || [])
-            .slice(0, 6)
-            .map((p: { planet: string; sign: string; house: number }) =>
-                `${p.planet} in ${p.sign} (House ${p.house})`
-            )
-            .join(", ");
+            .slice(0, 8)
+            .map((p: { planet: string; sign: string; house: number; condition?: string; dignity?: string }) => {
+                const extras = [p.condition, p.dignity].filter(Boolean).join(", ");
+                return `${p.planet} in ${p.sign} (House ${p.house}) ${extras ? `[${extras}]` : ""}`;
+            })
+            .join("\n");
 
         // Current sky positions (ephemeris) sent from the client
         const ephemerisSummary = (currentEphemeris || []).join(", ");
@@ -50,14 +63,16 @@ export async function POST(req: NextRequest) {
             : "No specific travel date was given — provide a general seasonal analysis based on current transits.";
 
         const next30DaysInstruction = travelDate
-            ? `Write 2–3 sharp paragraphs covering the transit picture around the target date of ${travelDate}. Name the transits that are peaking and how they interact with this chart. Then recommend 1–2 specific windows within 30 days of ${travelDate} when the transits align most favourably — give approximate date ranges (e.g. "the window of April 18–23") and explain why that window is superior to the target date. Flag any short windows to avoid and why. Be concrete: name the planets, the natal houses they are crossing, and what that means experientially.`
-            : `Write 2–3 sharp paragraphs covering the dominant planetary energy in the immediate window. Name the transiting planets, what natal houses they are activating, and what that means experientially. Identify which periods this month favour travel and which to avoid.`;
+            ? `Write an incisive assessment covering the transit picture around the target date of ${travelDate}. Name the transits that are peaking, including their natal or geodetic system distinction, tight orbs, and how they interact with the chart's dignities. Recommend 1–2 specific windows within 30 days.`
+            : `Write an incisive assessment covering the dominant planetary energy in the immediate window, differentiating geodetic vs natal lines. Call out tight orbs and planetary dignities.`;
 
-        const prompt = `You are Astro Nat — a precise, incisive astrocartography and transit astrologer. Your readings are editorial, deeply technical, and never generic. You speak to the real mechanics of what the chart is doing — how planets activate houses, create energetic corridors, and shift the quality of a person's experience on the ground. No vague spiritual language, no clichés.
+        const prompt = `You are Astro Nat — a precise, incisive astrocartography and transit astrologer. Your readings are editorial, deeply technical, and never generic. 
 
 Write a comprehensive personalised travel reading for ${name}${sunSign ? ` (${sunSign} Sun)` : ""} planning to travel to ${destination}.
 
 ${travelDateNote}
+
+Take into consideration the tightness of the orb (0-5 degrees is strongest), planetary conditions/dignities (like detriment or unaspected planets), and the different weights of Geodetic vs Natal transits. Clearly differentiate if a line is a transit to a geodetic point or a personal natal line.
 
 ---
 PLANETARY LINES NEAR ${destination.toUpperCase()}:
@@ -78,20 +93,26 @@ Structure your reading with these exact three section headers (use ## for header
 ## Next 30 Days
 ${next30DaysInstruction}
 
-## Rest of Year Outlook
-Write 2–3 paragraphs covering the broader year-long transit picture as it relates to travel, place, and movement. Identify the big turning points — Jupiter ingresses, Saturn milestones, any outer planet shifts — and describe what they open or close in terms of travel energy and geographic pull. Discuss how this destination fits into the longer arc.
+## House Activations & Dignities
+Write 2–3 paragraphs about which natal houses and planetary dignities are activated. Explain the condition of the chart ruler vs the lines present. Is the destination activating an unaspected or detriment planet? 
 
-## House Activations
-Write 2–3 paragraphs specifically about which natal houses are being lit up by the current transits, and what that means for travel. Go deep here — explain the difference between a 9th house activation (long-distance, philosophy, foreign culture) vs a 3rd house activation (short trips, mental stimulation, local exploration) vs a 12th house activation (retreat, solitude, spiritual immersion). Talk about which houses are dormant vs electrically alive right now, and what kind of trip would serve this chart. End with a single clear verdict sentence about whether ${destination} serves this chart right now.
+## Example of Natal Chart and ACG Lines based on real-time transits
+Include a bulleted summary of the most important angles and chart ruler dynamics, then provide a Markdown table EXACTLY structured like this:
 
-Style rules: editorial tone, precise, warm but authoritative. Dense with astrological intelligence. No emojis. Bold planet names and key astrological concepts with **asterisks**.`;
+| **Planetary Transit & Dates** | **Aspects to ${name}'s Chart Placements** | **ACG lines to avoid** | **Paran (latitude) lines to avoid** |
+| --- | --- | --- | --- |
+| (Fill this with the most active transits from the context, including the date if known) | (e.g., Square Natal Venus in Cancer at 9 degrees in 3rd) | (Name the corresponding lines based on the transit tension) | (List any challenging Parans) |
+
+Make sure the table maps directly to the active transits and planetary lines provided.
+
+Style rules: editorial tone, precise, authoritative. Dense with astrological intelligence. No emojis. Bold planet names.`;
 
         // Stream via Gemini 3.1 Flash-Lite Preview
         const response = await ai.models.generateContentStream({
             model: "gemini-3.1-flash-lite-preview",
             contents: [{ role: "user", parts: [{ text: prompt }] }],
             config: {
-                maxOutputTokens: 1800,
+                maxOutputTokens: 3200,
                 temperature: 0.7,
             },
         });
