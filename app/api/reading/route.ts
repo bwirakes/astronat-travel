@@ -6,9 +6,24 @@
 import { NextRequest } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+const MODEL_NAME = "gemini-2.0-flash";
 
 export async function POST(req: NextRequest) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        console.error("[/api/reading] Missing GEMINI_API_KEY environment variable.");
+        // We return a stream with an error message so the UI can show it nicely
+        const encoder = new TextEncoder();
+        return new Response(new ReadableStream({
+            start(c) { 
+                c.enqueue(encoder.encode("API configuration missing: GEMINI_API_KEY not found.")); 
+                c.close(); 
+            }
+        }), { status: 200 });
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+
     try {
         const body = await req.json();
         const {
@@ -183,7 +198,7 @@ Style rules: editorial, precise. Bold each header exactly as shown. No emojis.`;
 
         // Stream via Gemini 3.1 Flash-Lite Preview
         const response = await ai.models.generateContentStream({
-            model: "gemini-3.1-flash-lite-preview",
+            model: MODEL_NAME,
             contents: [{ role: "user", parts: [{ text: prompt }] }],
             config: {
                 maxOutputTokens: 4000,

@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+const MODEL_NAME = "gemini-2.0-flash";
 
 function ordinal(n: number): string {
     const s = ["th", "st", "nd", "rd"];
@@ -35,6 +35,14 @@ const HOUSE_THEMES: Record<number, string> = {
 };
 
 export async function POST(req: NextRequest) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        console.error("[/api/summary] Missing GEMINI_API_KEY environment variable.");
+        return NextResponse.json({ error: "API configuration missing" }, { status: 500 });
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+
     try {
         const body = await req.json();
         const {
@@ -334,7 +342,7 @@ TONE AND STYLE GUIDELINES (do NOT copy these patterns literally — vary them ev
 - If timing is bad, do not soften the warning with excessive positivity. Be honest and direct.`;
 
         const response = await ai.models.generateContent({
-            model: "gemini-3.1-flash-lite-preview",
+            model: MODEL_NAME,
             contents: [{ role: "user", parts: [{ text: prompt }] }],
             config: {
                 maxOutputTokens: 800,
