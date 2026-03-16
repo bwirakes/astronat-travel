@@ -34,10 +34,21 @@ export async function POST(req: NextRequest) {
 
                 const date = new Date(a.date);
                 const month = date.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+                const quality = isChallenging ? "caution" : isBenefic ? "excellent" : "good";
+                
+                let score = 70;
+                if (quality === "excellent") score = 85;
+                if (quality === "caution") score = 45;
+                
+                const pScore = Math.round(score * 0.7);
+                const cScore = score - pScore;
 
                 return {
                     month,
-                    quality: isChallenging ? "caution" : isBenefic ? "excellent" : "good",
+                    quality,
+                    score,
+                    personalScore: pScore,
+                    collectiveScore: cScore,
                     reason: `${a.transit_planet} ${a.aspect} natal ${a.natal_planet}`,
                     house: "9th House (Travel)",
                 } satisfies TravelWindow;
