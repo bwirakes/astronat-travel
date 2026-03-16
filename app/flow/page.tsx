@@ -208,7 +208,7 @@ function FlowPageInner() {
     useEffect(() => {
         if (step >= 2 && !autoAnalyzedRef.current && birth.name && birth.date && travel.destination) {
             autoAnalyzedRef.current = true;
-            if (natalPlanets.length === 0) {
+            if ((natalPlanets?.length ?? 0) === 0) {
                 handleChartSubmit().then(() => {
                     setTimeout(() => handleAnalyze(), 200);
                 });
@@ -703,7 +703,7 @@ function FlowPageInner() {
                                 {/* World Sky / Mundane */}
                                 {mundane && (
                                     <ExpandableCard title="World Sky" tag="Mundane"
-                                        summary={`${mundane.worldTransits.length} transits · ${mundane.angularPlanets.length} angular`}
+                                    summary={`${mundane.worldTransits?.length ?? 0} transits · ${mundane.angularPlanets?.length ?? 0} angular`}
                                         description="Global planetary aspects active on your travel date. Tense aspects (squares, oppositions) can bring disruption; harmonious ones (trines, sextiles) bring ease.">
                                         <WorldSkyCard
                                             worldTransits={mundane.worldTransits}
@@ -726,9 +726,9 @@ function FlowPageInner() {
                                 )}
 
                                 {/* Personal Transits */}
-                                {realTransits.length > 0 && (
+                                { (realTransits?.length ?? 0) > 0 && (
                                     <ExpandableCard title="Personal Transits" tag="Personal"
-                                        summary={`${realTransits.length} active`}
+                                        summary={`${realTransits.length ?? 0} active`}
                                         description="Transits hitting your natal chart right now. These are personal to you and shape your subjective experience at any location.">
                                         <ActiveTransitsCard
                                             transits={realTransits}
@@ -749,7 +749,7 @@ function FlowPageInner() {
                                             birthDate={birth.date}
                                             birthTime={birth.time}
                                             birthPlace={birth.city}
-                                            cusps={natalCuspsRef.current.length === 12 ? natalCuspsRef.current : natalCusps.length === 12 ? natalCusps : undefined}
+                                            cusps={(natalCuspsRef.current?.length ?? 0) === 12 ? natalCuspsRef.current : (natalCusps?.length ?? 0) === 12 ? natalCusps : undefined}
                                         />
                                     </div>
                                 </ExpandableCard>
@@ -761,7 +761,7 @@ function FlowPageInner() {
                                         description="How your chart axes and house cusps shift at this destination. A new rising sign means a different planetary ruler governs your experience there.">
                                         <div className={styles.natalChartWrap}>
                                             {(() => {
-                                                const basePlanets = (natalPlanetsRef.current.length > 0 ? natalPlanetsRef.current : natalPlanets) as NatalPlanet[];
+                                                const basePlanets = ((natalPlanetsRef.current?.length ?? 0) > 0 ? natalPlanetsRef.current : natalPlanets) as NatalPlanet[];
                                                 const finalCusps = relocatedCusps || computeRelocatedCusps(destLat || 25, destLon || 55);
                                                 const planetsWithRelocatedHouses = basePlanets.map(p => {
                                                     let house = 1;

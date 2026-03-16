@@ -38,7 +38,13 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
         console.error("[/api/summary] Missing GEMINI_API_KEY environment variable.");
-        return NextResponse.json({ error: "API configuration missing" }, { status: 500 });
+        return NextResponse.json({ 
+            error: "API configuration missing",
+            verdict: "caution",
+            headline: "AI Summary is currently unavailable due to missing API configuration.",
+            bestWindows: [],
+            avoidWindows: [],
+        }, { status: 500 });
     }
 
     const ai = new GoogleGenAI({ apiKey });

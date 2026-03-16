@@ -145,7 +145,7 @@ export default function TripScoreCard({
                         <BreakdownBar label="Collective" value={mundaneScore} max={30} color="#a78bfa" />
                     </div>
                     {/* Tense transit warning pills */}
-                    {summary && summary.avoidWindows.length > 0 && (
+                    {summary && (summary.avoidWindows?.length ?? 0) > 0 && (
                         <div className={styles.warningPills}>
                             {summary.avoidWindows.map((w, i) => (
                                 <span key={i} className={styles.warningPill}>
@@ -161,12 +161,12 @@ export default function TripScoreCard({
                 <p className={styles.scoreHeadline}>{summary.headline}</p>
             )}
 
-            {summary && (summary.bestWindows.length > 0 || summary.avoidWindows.length > 0) && (
+            {summary && ((summary.bestWindows?.length ?? 0) > 0 || (summary.avoidWindows?.length ?? 0) > 0) && (
                 <div className={styles.windowsRow}>
-                    {summary.bestWindows.length > 0 && (
+                    {(summary.bestWindows?.length ?? 0) > 0 && (
                         <WindowCol title="Go" windows={summary.bestWindows} accent="var(--sage)" />
                     )}
-                    {summary.avoidWindows.length > 0 && (
+                    {(summary.avoidWindows?.length ?? 0) > 0 && (
                         <WindowCol title="Avoid" windows={summary.avoidWindows} accent="var(--accent)" />
                     )}
                 </div>
