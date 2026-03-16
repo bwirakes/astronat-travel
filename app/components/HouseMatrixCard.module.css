@@ -74,7 +74,7 @@
 /* Mirrors the desktop grid template exactly */
 .colLabels {
     display: grid;
-    grid-template-columns: 1.8rem 4.2rem 1fr 6.5rem 7rem 7.5rem;
+    grid-template-columns: 1.8rem 5.5rem 1fr 6.5rem 7rem 7.5rem;
     gap: 0.5rem;
     padding: 0 0.25rem 0.35rem;
     font-family: var(--font-mono);
@@ -103,7 +103,7 @@
    ──────────────────────────────────────────────────────────── */
 .row {
     display: grid;
-    grid-template-columns: 1.8rem 4.2rem 1fr 6.5rem 7rem 7.5rem;
+    grid-template-columns: 1.8rem 5.5rem 1fr 6.5rem 7rem 7.5rem;
     grid-template-areas: "rank house sphere ruler score status";
     grid-template-rows: auto;
     align-items: center;
@@ -136,6 +136,16 @@
 
 /* ── house ── */
 .gHouse {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+}
+.signIcon {
+    flex-shrink: 0;
+    opacity: 0.65;
+}
+.houseText {
     display: flex;
     flex-direction: column;
     gap: 0.05rem;
@@ -307,10 +317,19 @@
     .gHouse {
         grid-area: house;
         flex-direction: row;
-        align-items: baseline;
-        gap: 0.25rem;
+        align-items: center;
+        gap: 0.45rem;
         flex-wrap: nowrap;
         white-space: nowrap;
+    }
+    .signIcon {
+        width: 14px;
+        height: 14px;
+    }
+    .houseText {
+        flex-direction: row;
+        align-items: baseline;
+        gap: 0.25rem;
     }
     .houseNum { font-size: 0.86rem; }
     .signName { font-size: 0.58rem; opacity: 0.65; }

@@ -34,6 +34,9 @@ import {
     geodeticASCLongitude,
 } from "./geodetic";
 
+// ── Shared classifications for scoring (subset) ───────────────────────────
+const MALEFIC_NAMES = ["mars", "saturn", "pluto", "uranus"];
+
 // ── Input types ───────────────────────────────────────────────────────────
 
 export interface MatrixNatalPlanet {
@@ -405,4 +408,110 @@ export function computeHouseMatrix(params: {
     else macroVerdict = "Hostile";
 
     return { houses, macroScore, macroVerdict, personalScore, collectiveScore };
+}
+
+/**
+ * Maps raw transit objects (from api/mundane or api/transits) into the format
+ * required by the computeHouseMatrix engine.
+ */
+export function mapTransitsToMatrix(
+    transits: any[],
+    natalPlanets: MatrixNatalPlanet[],
+    relocatedCusps: number[]
+): MatrixTransit[] {
+    const ascLon = relocatedCusps[0] ?? 0;
+    return transits.map((t) => {
+        const transitPlanetName = (
+            t.transit_planet ||
+            t.p1 ||
+            (t.planets ? t.planets.split(" ")[0] : "")
+        ).toLowerCase();
+        
+        const natalPlanetName = (
+            t.natal_planet ||
+            t.p2 ||
+            (t.planets && t.planets.includes("natal")
+                ? t.planets.split("natal ")[1]
+                : "")
+        ).toLowerCase();
+
+        // Find which relocated house the natal planet aspect targets
+        const natalP = natalPlanets.find(
+            (p) => p.planet.toLowerCase() === natalPlanetName
+        );
+        const targetHouse = natalP
+            ? houseFromLongitude(natalP.longitude, ascLon)
+            : undefined;
+
+        const aspectStr = (t.aspect || t.type || "").toLowerCase();
+        const isSoft = ["trine", "sextile", "△", "⚹"].some((a) =>
+            aspectStr.includes(a)
+        );
+        const isConj = ["conjunction", "☌"].some((a) =>
+            aspectStr.includes(a)
+        );
+
+        const isBeneficPlanet = BENEFIC_PLANETS.includes(transitPlanetName);
+        let benefic = false;
+        // Simplified benefic logic: soft aspect with benefic planet OR just soft aspect
+        if (isSoft || (isConj && isBeneficPlanet)) {
+            benefic = true;
+        }
+
+        // Determine if the transit planet rules any relocated house
+        let rulerOf: number | undefined;
+        for (let h = 0; h < 12; h++) {
+            const cSign = signFromLongitude(relocatedCusps[h] ?? 0);
+            const cRuler = SIGN_RULERS[cSign] || "";
+            if (cRuler.toLowerCase() === transitPlanetName) {
+                rulerOf = h + 1;
+                break;
+            }
+        }
+
+        return {
+            targetHouse,
+            transitPlanet: transitPlanetName,
+            natalPlanet: natalPlanetName,
+            aspect: aspectStr,
+            orb: t.orb,
+            applying: t.applying ?? true,
+            benefic,
+            transitRx: t.retrograde ?? t.transitRx ?? false,
+            rulerOf,
+        };
+    });
+}
+
+/**
+ * Computes a global timing penalty based on tense applying hard transits.
+ */
+export function computeGlobalPenalty(transits: any[]): number {
+    let penalty = 0;
+    for (const t of transits) {
+        const aspectStr = (t.aspect || t.type || "").toLowerCase();
+        const isHardTransit = ["square", "opposition", "□", "☍"].some((a) =>
+            aspectStr.includes(a)
+        );
+        if (!isHardTransit) continue;
+        
+        const applying = t.applying ?? true;
+        if (!applying) continue;
+
+        const tPlanet = (
+            t.transit_planet ||
+            t.p1 ||
+            (t.planets ? t.planets.split(" ")[0] : "")
+        ).toLowerCase();
+        
+        const isMalefic = MALEFIC_NAMES.some((m) => tPlanet.includes(m));
+        const orb = t.orb ?? 5;
+
+        if (orb <= 1 && isMalefic)      penalty += 14;
+        else if (orb <= 2 && isMalefic) penalty += 10;
+        else if (orb <= 3 && isMalefic) penalty += 6;
+        else if (orb <= 1)              penalty += 8;
+        else if (orb <= 3)              penalty += 4;
+    }
+    return Math.min(25, penalty);
 }

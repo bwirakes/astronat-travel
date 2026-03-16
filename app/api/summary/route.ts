@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
             worldTransits = [],
             angularPlanets = [],
             travelWindows = [],
+            macroScore,
         } = body;
 
         // Build concise data summaries for the AI (no km distances — just planet + house info)
@@ -290,6 +291,7 @@ YOUR TASK: Return ONLY valid JSON with this exact structure. No markdown, no exp
 
 SCORING RULES:
 - The score should primarily reflect the TIMING (travel date) quality, not just the permanent ACG lines.
+- **IMPORTANT**: If macroScore is provided (${macroScore}), use it as your definitive baseline score before applying overrides for specific timing conflicts.
 - If strong benefic transits (Jupiter trines, Venus sextiles, Sun-Jupiter conjunctions) are active on the travel date → score 75-95.
 - If mixed — some benefic support offset by a hard aspect → score 55-74.
 - If challenging transits dominate (Saturn squares, Mars oppositions, tense world transits) → score 30-54.
