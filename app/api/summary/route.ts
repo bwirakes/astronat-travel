@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 
-const MODEL_NAME = "gemini-2.0-flash";
+const MODEL_NAME = "gemini-3.1-flash-lite-preview";
 
 function ordinal(n: number): string {
     const s = ["th", "st", "nd", "rd"];

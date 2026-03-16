@@ -6,7 +6,7 @@
 import { NextRequest } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 
-const MODEL_NAME = "gemini-2.0-flash";
+const MODEL_NAME = "gemini-3.1-flash-lite-preview";
 
 export async function POST(req: NextRequest) {
     const apiKey = process.env.GEMINI_API_KEY;
