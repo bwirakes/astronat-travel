@@ -1,0 +1,390 @@
+/* ═══ HouseMatrixCard.module.css ═══════════════════════════════════ */
+
+/* ─── Card ───────────────────────────────────────────────────── */
+.card { margin-bottom: var(--space-lg); }
+
+/* ─── Header ─────────────────────────────────────────────────── */
+.header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: var(--space-md);
+    flex-wrap: wrap;
+}
+
+.headerLeft {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.title {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.subtitle {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+}
+
+.macroChip {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.7rem;
+    border: 1px solid var(--surface-border);
+    border-radius: var(--radius-md);
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.macroLabel { opacity: 0.6; }
+.macroScore {
+    font-size: 1.05rem;
+    font-weight: 600;
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+}
+.macroMax { opacity: 0.35; }
+
+/* ─── Skeleton ───────────────────────────────────────────────── */
+.skeletonList { display: flex; flex-direction: column; gap: 0.5rem; }
+.skeletonRow {
+    height: 40px;
+    border-radius: var(--radius-sm);
+    background: rgba(255,255,255,0.04);
+    animation: shimmer 1.5s ease-in-out infinite;
+}
+@keyframes shimmer {
+    0%, 100% { opacity: 0.4; }
+    50%       { opacity: 0.8; }
+}
+
+/* ─── Desktop column labels ──────────────────────────────────── */
+/* Mirrors the desktop grid template exactly */
+.colLabels {
+    display: grid;
+    grid-template-columns: 1.8rem 4.2rem 1fr 6.5rem 7rem 7.5rem;
+    gap: 0.5rem;
+    padding: 0 0.25rem 0.35rem;
+    font-family: var(--font-mono);
+    font-size: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-tertiary);
+    font-weight: 500;
+}
+.colLabels span:last-child { text-align: right; }
+
+.divider {
+    height: 1px;
+    background: var(--surface-border);
+}
+
+/* ─── List ───────────────────────────────────────────────────── */
+.list { display: flex; flex-direction: column; }
+
+.rowWrap { border-bottom: 1px solid rgba(255,255,255,0.03); }
+.rowWrap:last-child { border-bottom: none; }
+
+/* ═══ DESKTOP ROW: explicit named grid-template-areas ════════
+   Single row, 6 named columns.
+   gBar and gDot occupy zero space (display:none).
+   ──────────────────────────────────────────────────────────── */
+.row {
+    display: grid;
+    grid-template-columns: 1.8rem 4.2rem 1fr 6.5rem 7rem 7.5rem;
+    grid-template-areas: "rank house sphere ruler score status";
+    grid-template-rows: auto;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.25rem;
+    cursor: pointer;
+    transition: background 0.15s var(--ease);
+    min-width: 0;
+}
+.row:hover { background: rgba(255,255,255,0.018); }
+
+/* Named area assignments */
+.gRank   { grid-area: rank; }
+.gHouse  { grid-area: house; }
+.gSphere { grid-area: sphere; }
+.gRuler  { grid-area: ruler; }
+.gScore  { grid-area: score; }
+.gStatus { grid-area: status; }
+.gBar    { display: none; }   /* mobile-only — hidden on desktop */
+.gDot    { display: none; }   /* mobile-only — hidden on desktop */
+
+/* ── rank ── */
+.gRank {
+    font-family: var(--font-mono);
+    font-size: 0.56rem;
+    color: var(--text-tertiary);
+    opacity: 0.4;
+    text-align: center;
+}
+
+/* ── house ── */
+.gHouse {
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+    min-width: 0;
+}
+.houseNum {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: var(--text-primary);
+    line-height: 1;
+}
+.signName {
+    font-family: var(--font-mono);
+    font-size: 0.54rem;
+    color: var(--text-tertiary);
+    letter-spacing: 0.03em;
+}
+
+/* ── sphere ── */
+.gSphere {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── ruler ── */
+.gRuler {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+}
+.rulerName {
+    font-size: 0.74rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+.rulerSep {
+    color: var(--text-tertiary);
+    opacity: 0.35;
+    font-size: 0.6rem;
+}
+.rulerCond {
+    font-family: var(--font-mono);
+    font-size: 0.52rem;
+    color: var(--text-tertiary);
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
+/* ── desktop score (bar + number) ── */
+.gScore {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+}
+.scoreTrack {
+    flex: 1;
+    height: 4px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 2px;
+    overflow: hidden;
+    min-width: 0;
+}
+.scoreFill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 1s cubic-bezier(0.34,1.56,0.64,1);
+}
+.scoreVal {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    min-width: 20px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+/* ── desktop status pill ── */
+.gStatus {
+    font-family: var(--font-mono);
+    font-size: 0.48rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 0.18rem 0.5rem;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    justify-self: end;
+    display: inline-block;
+}
+.statusPeak        { background: var(--sage-soft);           color: var(--sage);          border: 1px solid rgba(123,158,135,0.3);  }
+.statusHighly      { background: rgba(123,158,135,0.07);     color: var(--sage);          border: 1px solid rgba(123,158,135,0.18); }
+.statusFavorable   { background: var(--cyan-soft);           color: var(--cyan);          border: 1px solid rgba(127,181,193,0.22); }
+.statusNeutral     { background: rgba(255,255,255,0.04);     color: var(--text-tertiary); border: 1px solid var(--surface-border);  }
+.statusChallenging { background: var(--amber-soft);          color: var(--amber);         border: 1px solid rgba(193,123,63,0.28);  }
+.statusSevere      { background: var(--accent-soft);         color: var(--accent);        border: 1px solid rgba(196,98,45,0.28);   }
+
+/* ─── Expanded breakdown ─────────────────────────────────────── */
+.breakdownRow {
+    background: rgba(255,255,255,0.012);
+    padding: 0.45rem 0.25rem 0.6rem 2.3rem;
+}
+.breakdownGrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.9rem;
+}
+.chip {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    color: var(--text-tertiary);
+    letter-spacing: 0.04em;
+}
+.chipLabel    { text-transform: uppercase; opacity: 0.65; }
+.chipVal      { font-weight: 600; }
+.breakdownPos { color: var(--sage); }
+.breakdownNeg { color: var(--accent); }
+
+
+/* ═══ MOBILE (≤ 600px) ═══════════════════════════════════════════
+   Redefine to a 2-row grid:
+
+   Row 1: rank | house | sphere | dot
+   Row 2: rank | ruler (span 2) | bar (span 1 = auto)
+
+   Desktop-only children (gScore, gStatus) → display:none
+   Mobile-only children (gBar, gDot) → visible
+
+   Visual result:
+     1   H11 · Leo   Networks & Community   ●
+         ⊙ Sun · Domicile   [═══════════  81]
+============================================================== */
+@media (max-width: 600px) {
+    .colLabels { display: none; }
+    .divider   { display: none; }
+
+    .row {
+        /* 4-column × 2-row grid */
+        grid-template-columns: 1.25rem 1fr 1fr auto;
+        grid-template-rows: auto auto;
+        grid-template-areas:
+            "rank house sphere dot"
+            "rank ruler bar    bar";
+        gap: 0;
+        column-gap: 0.4rem;
+        row-gap: 0.3rem;
+        padding: 0.65rem 0;
+        align-items: center;
+    }
+
+    /* col labels hidden already */
+
+    /* rank: spans both rows */
+    .gRank {
+        grid-area: rank;
+        align-self: center;
+        font-size: 0.52rem;
+        opacity: 0.35;
+    }
+
+    /* house: row 1, inline layout */
+    .gHouse {
+        grid-area: house;
+        flex-direction: row;
+        align-items: baseline;
+        gap: 0.25rem;
+        flex-wrap: nowrap;
+        white-space: nowrap;
+    }
+    .houseNum { font-size: 0.86rem; }
+    .signName { font-size: 0.58rem; opacity: 0.65; }
+
+    /* sphere: row 1 middle — greedy */
+    .gSphere {
+        grid-area: sphere;
+        font-size: 0.65rem;
+        color: var(--text-tertiary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* ruler: row 2, cols 2 (house col only — ruler spans cols 2-3 via bar) */
+    .gRuler {
+        grid-area: ruler;
+        align-self: center;
+        gap: 0.28rem;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+    .rulerName { font-size: 0.67rem; }
+    .rulerSep  { font-size: 0.52rem; }
+    .rulerCond { font-size: 0.5rem; }
+
+    /* desktop score + status: hidden */
+    .gScore  { display: none; }
+    .gStatus { display: none; }
+
+    /* mobile bar: row 2, fills remaining space */
+    .gBar {
+        grid-area: bar;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        min-width: 0;
+    }
+
+    .mScoreTrack {
+        flex: 1;
+        height: 3px;
+        background: rgba(255,255,255,0.07);
+        border-radius: 2px;
+        overflow: hidden;
+        min-width: 0;
+    }
+
+    .mScoreVal {
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        font-weight: 700;
+        flex-shrink: 0;
+        min-width: 18px;
+        text-align: right;
+    }
+
+    /* mobile status dot: row 1 far-right */
+    .gDot {
+        grid-area: dot;
+        display: block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        justify-self: end;
+        align-self: center;
+    }
+    .dotGreen { background: var(--sage); }
+    .dotCyan  { background: var(--cyan); }
+    .dotAmber { background: var(--amber); }
+    .dotRed   { background: var(--accent); }
+    .dotGray  { background: var(--text-tertiary); opacity: 0.4; }
+
+    /* breakdown */
+    .breakdownRow { padding-left: 1.65rem; }
+    .macroChip    { padding: 0.28rem 0.5rem; }
+}
