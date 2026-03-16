@@ -1,0 +1,389 @@
+/* ═══ TripScoreCard.module.css ═════════════════════════════════════ */
+
+.scoreCard {
+    margin-bottom: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
+.scoreTop {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-xl);
+}
+
+/* ─── Ring ───────────────────────────────────────────────────── */
+.ringWrap {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 18px var(--ring-glow, rgba(201,169,110,0.2)));
+}
+
+.ringSvg {
+    display: block;
+}
+
+.ringCenter {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.ringScore {
+    font-family: var(--font-display);
+    font-size: 2.6rem;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: -0.04em;
+}
+
+.ringLabel {
+    font-family: var(--font-mono);
+    font-size: 0.52rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-top: 0.2rem;
+}
+
+/* ─── Score details panel ────────────────────────────────────── */
+.scoreDetails {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.scoreDestLabel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.scoreDestTag {
+    font-family: var(--font-mono);
+    font-size: 0.52rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+}
+
+.scoreDestName {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    line-height: 1.1;
+}
+
+.scoreHeadline {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* ─── Breakdown bars ─────────────────────────────────────────── */
+.breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    margin-top: var(--space-xs);
+}
+
+/* ─── Tense transit warning pills ──────────────────────────── */
+.warningPills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.6rem;
+}
+
+.warningPill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 3px;
+    background: rgba(196, 98, 45, 0.12);
+    border: 1px solid rgba(196, 98, 45, 0.35);
+    color: #C4622D;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.breakdownRow {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    cursor: default;
+}
+
+.breakdownLabel {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.breakdownTrack {
+    flex: 1;
+    min-width: 0;
+    height: 4px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.breakdownFill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 1.1s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.breakdownVal {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.breakdownMax {
+    font-size: 0.55rem;
+    opacity: 0.4;
+    font-weight: 400;
+}
+
+/* ─── Best/Avoid windows ─────────────────────────────────────── */
+.windowsRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--surface-border);
+}
+
+@media (max-width: 640px) {
+    .windowsRow { grid-template-columns: 1fr; }
+    .scoreTop { flex-direction: column; align-items: center; gap: var(--space-lg); }
+}
+
+
+.windowColTitle {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.6rem;
+    font-weight: 600;
+}
+
+.windowList {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.windowItem {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--surface-border);
+}
+.windowItem:last-child { border-bottom: none; padding-bottom: 0; }
+
+.windowDates {
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: var(--text-primary);
+}
+
+.windowTransit {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.windowWhy {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+/* ─── Loading skeleton ───────────────────────────────────────── */
+.loading {
+    pointer-events: none;
+}
+
+.skeletonRing {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+    flex-shrink: 0;
+    animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.skeletonLines {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.skeletonLine {
+    border-radius: var(--radius-sm);
+    background: rgba(255,255,255,0.04);
+    animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { opacity: 0.4; }
+    50%       { opacity: 0.8; }
+}
+
+/* ─── Chart ruler relocation note ────────────────────────────── */
+.rulerNote {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(201, 169, 110, 0.2);
+    border-radius: var(--radius-md);
+    background: var(--gold-soft);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.rulerIcon {
+    font-size: 1rem;
+    color: var(--gold);
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+}
+
+/* ─── Best / Avoid timing strip ──────────────────────────────── */
+.timingStrip {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--surface-border);
+}
+
+@media (max-width: 640px) {
+    .timingStrip { grid-template-columns: 1fr; }
+}
+
+.timingCol {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.timingLabel {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+}
+
+.timingItem {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    font-size: 0.82rem;
+}
+
+.timingItem strong {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.timingReason {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    line-height: 1.4;
+}
+
+/* ─── AI Verdict section ─────────────────────────────────────── */
+.aiVerdictSection {
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--surface-border);
+}
+
+.aiVerdictLabel {
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--gold);
+    font-weight: 600;
+    margin-bottom: 0.6rem;
+}
+
+.aiVerdictText {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.65;
+    margin: 0 0 0.5rem 0;
+}
+
+/* Match insight paragraphs/lists to same size/style as summary headline */
+.aiVerdictSection p,
+.aiVerdictSection li {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.65;
+    margin: 0 0 0.4rem 0;
+}
+
+.aiVerdictSection ul,
+.aiVerdictSection ol {
+    margin: 0.25rem 0 0.5rem 0;
+    padding-left: 1.2rem;
+}
+
+.aiVerdictText strong,
+.aiVerdictSection strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+@media (max-width: 640px) {
+    .aiVerdictSection p,
+    .aiVerdictSection li {
+        font-size: 0.85rem;
+    }
+    .scoreHeadline {
+        font-size: 0.85rem;
+    }
+}
