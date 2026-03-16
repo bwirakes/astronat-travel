@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+const MODEL_NAME = "gemini-3.1-flash-lite-preview";
 
 function ordinal(n: number): string {
     const s = ["th", "st", "nd", "rd"];
@@ -35,6 +35,20 @@ const HOUSE_THEMES: Record<number, string> = {
 };
 
 export async function POST(req: NextRequest) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        console.error("[/api/summary] Missing GEMINI_API_KEY environment variable.");
+        return NextResponse.json({ 
+            error: "API configuration missing",
+            verdict: "caution",
+            headline: "AI Summary is currently unavailable due to missing API configuration.",
+            bestWindows: [],
+            avoidWindows: [],
+        }, { status: 500 });
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+
     try {
         const body = await req.json();
         const {
@@ -49,6 +63,7 @@ export async function POST(req: NextRequest) {
             worldTransits = [],
             angularPlanets = [],
             travelWindows = [],
+            macroScore,
         } = body;
 
         // Build concise data summaries for the AI (no km distances — just planet + house info)
@@ -290,6 +305,7 @@ YOUR TASK: Return ONLY valid JSON with this exact structure. No markdown, no exp
 
 SCORING RULES:
 - The score should primarily reflect the TIMING (travel date) quality, not just the permanent ACG lines.
+- **IMPORTANT**: If macroScore is provided (${macroScore}), use it as your definitive baseline score before applying overrides for specific timing conflicts.
 - If strong benefic transits (Jupiter trines, Venus sextiles, Sun-Jupiter conjunctions) are active on the travel date → score 75-95.
 - If mixed — some benefic support offset by a hard aspect → score 55-74.
 - If challenging transits dominate (Saturn squares, Mars oppositions, tense world transits) → score 30-54.
@@ -332,7 +348,7 @@ TONE AND STYLE GUIDELINES (do NOT copy these patterns literally — vary them ev
 - If timing is bad, do not soften the warning with excessive positivity. Be honest and direct.`;
 
         const response = await ai.models.generateContent({
-            model: "gemini-3.1-flash-lite-preview",
+            model: MODEL_NAME,
             contents: [{ role: "user", parts: [{ text: prompt }] }],
             config: {
                 maxOutputTokens: 800,

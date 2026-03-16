@@ -22,7 +22,6 @@ import {
     SIGN_GLYPHS,
     TravelWindow,
 } from "../lib/planet-data";
-import { computeTripScore } from "../lib/scoring";
 import { computeChartRulerContext } from "../lib/chart-ruler";
 import styles from "./flow.module.css";
 
@@ -127,7 +126,7 @@ function FlowPageInner() {
     const [chartRulerNote, setChartRulerNote] = useState<string>("");
 
     // Scoring & summary
-    const [tripScore, setTripScore] = useState({ total: 0, acg: 0, mundane: 0, personal: 0 });
+    const [tripScore, setTripScore] = useState({ total: 0, acg: 0, mundane: 0 });
     const [summary, setSummary] = useState<{ verdict: "excellent" | "caution" | "avoid"; headline: string; bestWindows: { dates: string; transit: string; why: string }[]; avoidWindows: { dates: string; transit: string; why: string }[] } | null>(null);
     const [loadingSummary, setLoadingSummary] = useState(false);
 
@@ -137,6 +136,7 @@ function FlowPageInner() {
 
     // AI reading
     const [reading, setReading] = useState("");
+    const [loadingReading, setLoadingReading] = useState(false);
     const abortRef = useRef<AbortController | null>(null);
 
     // Transits state (real data from API)
@@ -208,7 +208,7 @@ function FlowPageInner() {
     useEffect(() => {
         if (step >= 2 && !autoAnalyzedRef.current && birth.name && birth.date && travel.destination) {
             autoAnalyzedRef.current = true;
-            if (natalPlanets.length === 0) {
+            if ((natalPlanets?.length ?? 0) === 0) {
                 handleChartSubmit().then(() => {
                     setTimeout(() => handleAnalyze(), 200);
                 });
@@ -285,18 +285,28 @@ function FlowPageInner() {
         setDestLon(dLon);
 
         const lines: PlanetLine[] = acRes.lines || [];
-        // Store real transits early so window derivation can use them
+        setPlanetLines(lines);
+
         const transitData = trRes.raw?.major_aspects || [];
         setRealTransits(transitData);
 
-        // Derive 12-month windows from real transit data when available,
-        // falling back to static pattern only when no real data exists
-        const windows: TravelWindow[] = transitData.length >= 3
-            ? generateWindowsFromTransits(transitData, travel.travelDate || today)
-            : trRes.windows?.length > 0
-                ? trRes.windows
-                : generateTravelWindows(travel.travelDate || today);
-        setPlanetLines(lines);
+        // Fetch unified 12-month windows (accurate scoring methodology)
+        const twRes = await fetch("/api/travel-windows", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                startDate: travel.travelDate || today,
+                lat: dLat,
+                lon: dLon,
+                natalPlanets: natalPlanetsRef.current.length > 0 ? natalPlanetsRef.current : natalPlanets,
+                acgLines: lines,
+            }),
+        }).then(r => r.json()).catch(() => ({ windows: [] }));
+
+        const windows: TravelWindow[] = twRes.windows?.length > 0
+            ? twRes.windows
+            : generateTravelWindows(travel.travelDate || today);
+
         setTravelWindows(windows);
         setLoadingResults(false);
 
@@ -325,7 +335,7 @@ function FlowPageInner() {
         setLoadingMatrix(true);
         setHouseMatrix(null);
         const finalCusps = relocatedRes?.cusps || computeRelocatedCusps(dLat, dLon);
-        fetch("/api/house-matrix", {
+        const matrixPromise = fetch("/api/house-matrix", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -342,47 +352,60 @@ function FlowPageInner() {
             .then(data => {
                 setHouseMatrix(data);
                 setLoadingMatrix(false);
-            })
-            .catch(() => setLoadingMatrix(false));
-
-        // Fire /api/summary
-        setLoadingSummary(true);
-        setSummary(null);
-        fetch("/api/summary", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                name: birth.name,
-                sunSign: sunSign?.name,
-                destination: travel.destination,
-                travelDate: travel.travelDate || null,
-                planetLines: lines,
-                transits: transitData,
-                natalPlanets: planets,
-                chartRuler: chartRulerCtx,
-                worldTransits: (mundaneRes?.worldTransits || mundaneRes?.major_aspects || []).slice(0, 8),
-                angularPlanets: (mundaneRes?.angularPlanets || mundaneRes?.angular_planets || []).slice(0, 4),
-                travelWindows: windows?.slice(0, 6) || [],
-            }),
-        })
-            .then(r => r.json())
-            .then(data => {
-                setSummary(data);
-                setLoadingSummary(false);
-                // The houseMatrix useEffect will set personal/collective correctly.
-                // Only update total from aiScore if houseMatrix hasn't arrived yet.
-                if (typeof data?.aiScore === 'number' && data.aiScore > 0 && !houseMatrix) {
-                    const score = computeTripScore(lines, mundaneRes, data?.verdict ?? null, planets, dLat, dLon, transitData, windows, travel.travelDate);
-                    setTripScore(score);
-                }
+                return data;
             })
             .catch(() => {
-                setLoadingSummary(false);
-                const score = computeTripScore(lines, mundaneRes, null, planets, dLat, dLon, transitData, windows, travel.travelDate);
-                setTripScore(score);
+                setLoadingMatrix(false);
+                return null;
             });
 
+        // Fire /api/summary AFTER matrix
+        setLoadingSummary(true);
+        setSummary(null);
+        matrixPromise.then(matrixData => {
+            fetch("/api/summary", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: birth.name,
+                    sunSign: sunSign?.name,
+                    destination: travel.destination,
+                    travelDate: travel.travelDate || null,
+                    planetLines: lines,
+                    transits: transitData,
+                    natalPlanets: planets,
+                    chartRuler: chartRulerCtx,
+                    worldTransits: (mundaneRes?.worldTransits || mundaneRes?.major_aspects || []).slice(0, 8),
+                    angularPlanets: (mundaneRes?.angularPlanets || mundaneRes?.angular_planets || []).slice(0, 4),
+                    travelWindows: windows?.slice(0, 6) || [],
+                    macroScore: matrixData?.macroScore,
+                }),
+            })
+                .then(r => r.json())
+                .then(data => {
+                    setSummary(data);
+                    setLoadingSummary(false);
+                    // Sync trip score
+                    const finalScore = matrixData?.macroScore ?? data?.aiScore ?? 50;
+                    setTripScore({
+                        total: finalScore,
+                        acg: matrixData?.personalScore ?? Math.round(finalScore * 0.7),
+                        mundane: matrixData?.collectiveScore ?? (finalScore - Math.round(finalScore * 0.7)),
+                    });
+                })
+                .catch(() => {
+                    setLoadingSummary(false);
+                    const score = matrixData?.macroScore ?? 50;
+                    setTripScore({
+                        total: score,
+                        acg: matrixData?.personalScore ?? 35,
+                        mundane: matrixData?.collectiveScore ?? 15,
+                    });
+                });
+        });
+
         // ── Stream Gemini reading ──────────────────────────────────────────
+        setLoadingReading(true);
         if (abortRef.current) abortRef.current.abort();
         const abort = new AbortController();
         abortRef.current = abort;
@@ -425,7 +448,9 @@ function FlowPageInner() {
                 acc += decoder.decode(value, { stream: true });
                 setReading(acc);
             }
+            setLoadingReading(false);
         } catch (err: unknown) {
+            setLoadingReading(false);
             if ((err as Error).name !== "AbortError") {
                 setReading("Unable to generate reading at this time.");
             }
@@ -613,6 +638,7 @@ function FlowPageInner() {
                                     acgScore={tripScore.acg}
                                     mundaneScore={tripScore.mundane}
                                     readingMap={readingMap}
+                                    loadingReading={loadingReading}
                                 />
 
                                 {/* ════ HOUSE PLACEMENTS ════ */}
@@ -677,7 +703,7 @@ function FlowPageInner() {
                                 {/* World Sky / Mundane */}
                                 {mundane && (
                                     <ExpandableCard title="World Sky" tag="Mundane"
-                                        summary={`${mundane.worldTransits.length} transits · ${mundane.angularPlanets.length} angular`}
+                                    summary={`${mundane.worldTransits?.length ?? 0} transits · ${mundane.angularPlanets?.length ?? 0} angular`}
                                         description="Global planetary aspects active on your travel date. Tense aspects (squares, oppositions) can bring disruption; harmonious ones (trines, sextiles) bring ease.">
                                         <WorldSkyCard
                                             worldTransits={mundane.worldTransits}
@@ -700,9 +726,9 @@ function FlowPageInner() {
                                 )}
 
                                 {/* Personal Transits */}
-                                {realTransits.length > 0 && (
+                                { (realTransits?.length ?? 0) > 0 && (
                                     <ExpandableCard title="Personal Transits" tag="Personal"
-                                        summary={`${realTransits.length} active`}
+                                        summary={`${realTransits.length ?? 0} active`}
                                         description="Transits hitting your natal chart right now. These are personal to you and shape your subjective experience at any location.">
                                         <ActiveTransitsCard
                                             transits={realTransits}
@@ -723,7 +749,7 @@ function FlowPageInner() {
                                             birthDate={birth.date}
                                             birthTime={birth.time}
                                             birthPlace={birth.city}
-                                            cusps={natalCuspsRef.current.length === 12 ? natalCuspsRef.current : natalCusps.length === 12 ? natalCusps : undefined}
+                                            cusps={(natalCuspsRef.current?.length ?? 0) === 12 ? natalCuspsRef.current : (natalCusps?.length ?? 0) === 12 ? natalCusps : undefined}
                                         />
                                     </div>
                                 </ExpandableCard>
@@ -735,7 +761,7 @@ function FlowPageInner() {
                                         description="How your chart axes and house cusps shift at this destination. A new rising sign means a different planetary ruler governs your experience there.">
                                         <div className={styles.natalChartWrap}>
                                             {(() => {
-                                                const basePlanets = (natalPlanetsRef.current.length > 0 ? natalPlanetsRef.current : natalPlanets) as NatalPlanet[];
+                                                const basePlanets = ((natalPlanetsRef.current?.length ?? 0) > 0 ? natalPlanetsRef.current : natalPlanets) as NatalPlanet[];
                                                 const finalCusps = relocatedCusps || computeRelocatedCusps(destLat || 25, destLon || 55);
                                                 const planetsWithRelocatedHouses = basePlanets.map(p => {
                                                     let house = 1;

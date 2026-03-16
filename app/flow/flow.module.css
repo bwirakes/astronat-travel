@@ -616,6 +616,11 @@
     color: var(--amber);
 }
 
+.q_avoid .windowMonth,
+.q_avoid .windowQuality {
+    color: var(--accent);
+}
+
 .q_good .windowQuality {
     color: var(--text-tertiary);
 }

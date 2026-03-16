@@ -18,6 +18,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
     computeHouseMatrix,
+    mapTransitsToMatrix,
+    computeGlobalPenalty,
     type MatrixNatalPlanet,
     type MatrixACGLine,
     type MatrixTransit,
@@ -47,92 +49,8 @@ export async function POST(req: NextRequest) {
         }
 
         // Map raw transit data into per-house scoring format
-        const ascLon = relocatedCusps[0] ?? 0;
-        const mappedTransits: MatrixTransit[] = (transits as any[]).map((t) => {
-            const transitPlanetName = (
-                t.transit_planet ||
-                (t.planets ? t.planets.split(" ")[0] : "")
-            ).toLowerCase();
-            const natalPlanetName = (
-                t.natal_planet ||
-                (t.planets && t.planets.includes("natal")
-                    ? t.planets.split("natal ")[1]
-                    : "")
-            ).toLowerCase();
-
-            // Find which relocated house the natal planet aspect targets
-            const natalP = natalPlanets.find(
-                (p: MatrixNatalPlanet) =>
-                    p.planet.toLowerCase() === natalPlanetName,
-            );
-            const targetHouse = natalP
-                ? houseFromLongitude(natalP.longitude, ascLon)
-                : undefined;
-
-            const aspectStr = (t.aspect || t.type || "").toLowerCase();
-            const isHard = ["square", "opposition", "□", "☍"].some((a) =>
-                aspectStr.includes(a),
-            );
-            const isSoft = ["trine", "sextile", "△", "⚹"].some((a) =>
-                aspectStr.includes(a),
-            );
-            const isConj = ["conjunction", "☌"].some((a) =>
-                aspectStr.includes(a),
-            );
-
-            const isBeneficPlanet = BENEFIC_PLANETS.includes(transitPlanetName);
-            let benefic = false;
-            if (isSoft && isBeneficPlanet) benefic = true;
-            else if (isConj && isBeneficPlanet) benefic = true;
-            else if (isSoft) benefic = true;
-            // Hard aspects or malefic conjunctions → benefic = false (malefic)
-
-            // Determine if the transit planet rules any relocated house
-            let rulerOf: number | undefined;
-            for (let h = 0; h < 12; h++) {
-                const cSign = signFromLongitude(relocatedCusps[h] ?? 0);
-                const cRuler = SIGN_RULERS[cSign] || "";
-                if (cRuler.toLowerCase() === transitPlanetName) {
-                    rulerOf = h + 1;
-                    break;
-                }
-            }
-
-            return {
-                targetHouse,
-                transitPlanet: transitPlanetName,
-                natalPlanet: natalPlanetName,
-                aspect: aspectStr,
-                orb: t.orb,
-                applying: t.applying ?? true,
-                benefic,
-                transitRx: t.retrograde ?? false,
-                rulerOf,
-            } satisfies MatrixTransit;
-        });
-
-        // ── Compute global timing penalty from tense applying hard transits
-        const MALEFIC_NAMES = ["mars", "saturn", "pluto", "uranus"];
-        let globalPenalty = 0;
-        for (const t of (transits as any[])) {
-            const aspectStr = (t.aspect || t.type || "").toLowerCase();
-            const isHardTransit = ["square", "opposition"].some(a => aspectStr.includes(a));
-            if (!isHardTransit) continue;
-            const applying = t.applying ?? true;
-            if (!applying) continue; // Only applying hard transits affect base timing
-            const tPlanet = (
-                t.transit_planet ||
-                (t.planets ? t.planets.split(" ")[0] : "")
-            ).toLowerCase();
-            const isMalefic = MALEFIC_NAMES.some(m => tPlanet.includes(m));
-            const orb = t.orb ?? 5;
-            if (orb <= 1 && isMalefic)      globalPenalty += 14;
-            else if (orb <= 2 && isMalefic) globalPenalty += 10;
-            else if (orb <= 3 && isMalefic) globalPenalty += 6;
-            else if (orb <= 1)              globalPenalty += 8;
-            else if (orb <= 3)              globalPenalty += 4;
-        }
-        globalPenalty = Math.min(25, globalPenalty); // cap at -25 pts
+        const mappedTransits = mapTransitsToMatrix(transits, natalPlanets, relocatedCusps);
+        const globalPenalty = computeGlobalPenalty(transits);
 
         const result = computeHouseMatrix({
             natalPlanets: natalPlanets as MatrixNatalPlanet[],

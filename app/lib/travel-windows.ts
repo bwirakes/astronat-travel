@@ -1,0 +1,131 @@
+/**
+ * travel-windows.ts — Logic for computing the 12-month travel window scores
+ * based on the house-matrix scoring engine and mundane astrology.
+ */
+
+import { computeMundaneData } from "./mundane-engine";
+import { 
+    computeHouseMatrix, 
+    mapTransitsToMatrix, 
+    computeGlobalPenalty,
+    type MatrixNatalPlanet,
+    type MatrixACGLine,
+    type MatrixParan
+} from "./house-matrix";
+import { type TravelWindow } from "./planet-data";
+import { computeRelocatedAscLon } from "./geodetic";
+
+export interface ComputeWindowsParams {
+    startDateStr: string;
+    lat: number;
+    lon: number;
+    natalPlanets: MatrixNatalPlanet[];
+    acgLines: MatrixACGLine[];
+}
+
+/**
+ * Computes a score for a single month's first day.
+ */
+async function getScoreForDate(
+    date: string,
+    lat: number,
+    lon: number,
+    natalPlanets: MatrixNatalPlanet[],
+    acgLines: MatrixACGLine[]
+): Promise<TravelWindow> {
+    const mundane = await computeMundaneData({ date, time: "12:00", lat, lon });
+    
+    // Relocated cusps for house-matrix (whole sign, using relocated ASC)
+    const ascLon = computeRelocatedAscLon(lat, lon);
+    const relocatedCusps = Array.from({ length: 12 }, (_, i) => (ascLon + i * 30) % 360);
+
+    const mappedTransits = mapTransitsToMatrix(mundane.worldTransits, natalPlanets, relocatedCusps);
+    const globalPenalty = computeGlobalPenalty(mundane.worldTransits);
+
+    const matrix = computeHouseMatrix({
+        natalPlanets,
+        relocatedCusps,
+        acgLines,
+        transits: mappedTransits,
+        parans: mundane.parans as MatrixParan[],
+        destLat: lat,
+        destLon: lon,
+        globalPenalty,
+    });
+
+    const score = matrix.macroScore;
+    const personalScore = matrix.personalScore;
+    const collectiveScore = matrix.collectiveScore;
+
+    let quality: TravelWindow["quality"] = "good";
+    if (score >= 80) quality = "excellent";
+    else if (score < 35) quality = "avoid";
+    else if (score < 50) quality = "caution";
+
+    // Aggregate house summary (top 3 houses)
+    const sortedHouses = [...matrix.houses].sort((a, b) => b.score - a.score);
+    const top3 = sortedHouses.slice(0, 3).map(h => {
+        // Simple heuristic: just the first part of the theme
+        return h.sphere.split(",")[0].split("&")[0].trim();
+    });
+    const houseLabel = `Focus: ${top3.join(", ")}`;
+
+    // Reason derivation (from top transit)
+    const topTransit = mundane.worldTransits.filter(t => t.isTense).sort((a, b) => (a.orb || 5) - (b.orb || 5))[0];
+    const reason = topTransit 
+        ? `${topTransit.p1} ${topTransit.aspect} ${topTransit.p2}`
+        : "Dynamic planetary support";
+
+    // Format month label
+    const d = new Date(date + "T12:00:00");
+    const month = d.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+
+    return {
+        month,
+        quality,
+        score,
+        personalScore,
+        collectiveScore,
+        reason,
+        house: houseLabel
+    };
+}
+
+/**
+ * Main entrance point for computing 12 months of scoring.
+ */
+export async function compute12MonthWindows(params: ComputeWindowsParams): Promise<TravelWindow[]> {
+    const { startDateStr, lat, lon, natalPlanets, acgLines } = params;
+    
+    // Parse start date
+    const start = new Date(startDateStr + "T12:00:00");
+    const year = start.getFullYear();
+    const month = start.getMonth();
+
+    const results: TravelWindow[] = [];
+
+    // Loop through 12 months
+    for (let i = 0; i < 12; i++) {
+        const d = new Date(year, month + i, 1);
+        const dateStr = d.toISOString().split("T")[0];
+        
+        try {
+            const win = await getScoreForDate(dateStr, lat, lon, natalPlanets, acgLines);
+            results.push(win);
+        } catch (err) {
+            console.error(`Error computing window for ${dateStr}:`, err);
+            // Push mock/fallback for this month
+            results.push({
+                month: d.toLocaleDateString("en-GB", { month: "short", year: "numeric" }),
+                quality: "good",
+                score: 50,
+                personalScore: 35,
+                collectiveScore: 15,
+                reason: "Data unavailable",
+                house: "9th House (Travel)"
+            });
+        }
+    }
+
+    return results;
+}
