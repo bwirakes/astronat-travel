@@ -5,6 +5,8 @@
 
 const BASE = process.env.ASTRO_ENGINE_URL || "http://127.0.0.1:8788";
 
+import { find } from "geo-tz";
+
 async function post<T>(path: string, body: object): Promise<T | null> {
     try {
         const res = await fetch(`${BASE}${path}`, {
@@ -82,6 +84,7 @@ export interface GeoResult {
     lat: number;
     lon: number;
     display_name: string;
+    timezone?: string;
 }
 
 // ── Geocode a city name using Nominatim (free, no key needed) ──────────────
@@ -94,10 +97,19 @@ export async function geocodeCity(city: string): Promise<GeoResult | null> {
         });
         const data = await res.json();
         if (!data?.[0]) return null;
+
+        const lat = parseFloat(data[0].lat);
+        const lon = parseFloat(data[0].lon);
+        const display_name = data[0].display_name;
+        
+        const timezones = find(lat, lon);
+        const timezone = timezones.length > 0 ? timezones[0] : undefined;
+
         return {
-            lat: parseFloat(data[0].lat),
-            lon: parseFloat(data[0].lon),
-            display_name: data[0].display_name,
+            lat,
+            lon,
+            display_name,
+            timezone,
         };
     } catch {
         return null;

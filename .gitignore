@@ -10,6 +10,8 @@
 
 # testing
 /coverage
+/tests
+app/lib/__tests__/
 
 # next.js
 /.next/
@@ -37,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# lockfiles (generated, not needed in PRs)
+bun.lock
+
+# dev scripts and design docs
+/scripts/
+astro_layer_design.md

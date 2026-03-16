@@ -22,9 +22,9 @@ interface Props {
 }
 
 const VERDICT_CONFIG = {
-    excellent: { emoji: "🟢", label: "Excellent", accent: "#4ade80" },
-    caution:   { emoji: "🟡", label: "Caution",   accent: "#C9A96E" },
-    avoid:     { emoji: "🔴", label: "Avoid",     accent: "#FF4040" },
+    excellent: { label: "Excellent", accent: "var(--sage)",   svgIcon: `<path d='M3,9 L7,13 L13,5' stroke='currentColor' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/>` },
+    caution:   { label: "Caution",   accent: "var(--amber)",  svgIcon: `<path d='M8,3 L8,10 M8,13 L8,14' stroke='currentColor' stroke-width='1.8' fill='none' stroke-linecap='round'/>` },
+    avoid:     { label: "Avoid",     accent: "var(--accent)", svgIcon: `<path d='M4,4 L12,12 M12,4 L4,12' stroke='currentColor' stroke-width='1.8' fill='none' stroke-linecap='round'/>` },
 };
 
 export default function VerdictCard({ summary, loading, destination }: Props) {
@@ -47,10 +47,9 @@ export default function VerdictCard({ summary, loading, destination }: Props) {
     const cfg = VERDICT_CONFIG[summary.verdict];
 
     return (
-        <div className={`card ${styles.verdictCard}`} style={{ borderLeftColor: cfg.accent }}>
+        <div className={`card ${styles.verdictCard}`}>
             {/* Verdict score */}
             <div className={styles.verdictHeader}>
-                <span className={styles.verdictEmoji}>{cfg.emoji}</span>
                 <div>
                     <h5 className={styles.verdictLabel} style={{ color: cfg.accent }}>
                         {cfg.label} for {destination}
@@ -66,7 +65,6 @@ export default function VerdictCard({ summary, loading, destination }: Props) {
                     {summary.bestWindows.length > 0 && (
                         <div className={styles.windowsCol}>
                             <div className={styles.windowsColHeader}>
-                                <span className={styles.windowsColIcon} style={{ color: "#4ade80" }}>✓</span>
                                 <span className={styles.windowsColTitle}>Best Times to Visit</span>
                             </div>
                             <ul className={styles.windowList}>
@@ -85,7 +83,6 @@ export default function VerdictCard({ summary, loading, destination }: Props) {
                     {summary.avoidWindows.length > 0 && (
                         <div className={styles.windowsCol}>
                             <div className={styles.windowsColHeader}>
-                                <span className={styles.windowsColIcon} style={{ color: "#FF4040" }}>⚠</span>
                                 <span className={styles.windowsColTitle}>Times to Avoid</span>
                             </div>
                             <ul className={styles.windowList}>

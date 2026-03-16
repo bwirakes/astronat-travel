@@ -8,6 +8,34 @@
     z-index: 1;
 }
 
+/* ── Atmospheric Background (matches homepage) ─────────────── */
+.atmosphericBg {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.radialGlow {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+        ellipse 100% 70% at 60% 10%,
+        rgba(74, 40, 110, 0.18) 0%,
+        rgba(20, 12, 40, 0.1) 45%,
+        transparent 75%
+    );
+}
+
+.grainOverlay {
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    background-size: 256px 256px;
+    opacity: 0.55;
+    mix-blend-mode: overlay;
+}
+
 /* ── Header ──────────────────────────────────────────────────── */
 .header {
     display: flex;
@@ -49,9 +77,10 @@
 }
 
 .dot.active {
-    background: var(--accent);
-    box-shadow: 0 0 8px rgba(255, 64, 64, 0.4);
+    background: var(--gold);
+    box-shadow: 0 0 8px rgba(201, 169, 110, 0.5);
 }
+
 
 .dot.done {
     background: var(--text-secondary);
@@ -72,6 +101,14 @@
     padding: var(--space-xl) var(--space-md);
 }
 
+@media (max-width: 420px) {
+    .main {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+}
+
+
 .stepWrap {
     width: 100%;
     max-width: 520px;
@@ -86,8 +123,18 @@
 }
 
 .stepHeading {
-    font-size: 2.5rem;
+    font-family: var(--font-display);
+    font-size: clamp(2.2rem, 4vw, 3rem);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
     margin-bottom: var(--space-sm);
+    color: var(--text-primary);
+}
+
+.stepHeading em {
+    font-style: italic;
+    color: var(--gold);
 }
 
 .stepIntro p {
@@ -166,6 +213,7 @@
     width: 100%;
     max-width: 900px;
     padding-bottom: var(--space-3xl);
+    overflow-x: hidden;
 }
 
 .resultsHeader {
@@ -177,8 +225,18 @@
 }
 
 .resultsHeading {
-    font-size: 3rem;
+    font-family: var(--font-display);
+    font-size: clamp(2.4rem, 5vw, 3.8rem);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1.08;
     margin-bottom: var(--space-xs);
+    color: var(--text-primary);
+}
+
+.resultsHeading em {
+    font-style: italic;
+    color: var(--gold);
 }
 
 .resultsHeader p {
@@ -203,10 +261,11 @@
 .grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1rem;
+    gap: var(--space-lg, 1.5rem);
 }
 
-@media (max-width: 768px) {
+/* Fix 2: responsive — stack early enough that cards don't overflow */
+@media (max-width: 900px) {
     .grid {
         grid-template-columns: 1fr;
     }
@@ -214,244 +273,371 @@
 
 .fullSpan {
     grid-column: 1 / -1;
+    min-width: 0;
+    overflow: hidden;
 }
 
-/* Planet lines */
+/* Fix 1 — compact single-row planet line cards */
 .lineList {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
     margin-top: var(--space-md);
+    overflow-x: auto; /* Fix 2: allow scroll on tiny screens */
 }
 
 .lineRow {
     display: flex;
-    justify-content: space-between;
+    flex-direction: row;
     align-items: center;
-    padding: 0.8rem 1rem;
-    background: var(--bg);
-    border-radius: var(--radius-sm);
-    font-size: 0.9rem;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--surface-border);
+    gap: 0.5rem;
+    min-width: 0;
+    font-size: clamp(0.72rem, 1.5vw, 0.875rem);
+}
+
+.lineRow:last-child {
+    border-bottom: none;
 }
 
 .lineInfo {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.4rem;
+    min-width: 0;
+    flex: 1;
 }
 
-.planetEmoji {
-    font-size: 1rem;
-    line-height: 1;
-    width: 1.4rem;
-    text-align: center;
+.planetSvgIcon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
-
-.planetGlyph {
-    width: 1.6rem;
-    font-size: 1.1rem;
-    font-family: serif;
-    text-align: center;
-    line-height: 1;
-}
-
 
 .lineAngle {
-    font-size: 0.7rem;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
     color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    white-space: nowrap;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.06);
+    padding: 1px 4px;
+    border-radius: 3px;
 }
 
+/* Fix 1: compact right-side meta (dot + km) */
 .lineMeta {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.2rem;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* Fix 1: orb strength indicator dot (replaces bar) */
+.lineOrbDot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
 }
 
 .lineDistRanking {
-    font-size: 0.65rem;
-    font-weight: 600;
+    font-size: 0.62rem;
+    font-weight: 500;
     color: var(--text-tertiary);
     text-transform: uppercase;
+    letter-spacing: 0.06em;
 }
 
 .lineDist {
-    font-family: var(--font-display);
-    font-size: 0.95rem;
-    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--gold);
+    letter-spacing: -0.02em;
 }
 
-/* Transits */
+/* Transits — editorial ruled rows */
 .transitList {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
     margin-top: var(--space-md);
 }
 
 .transitRow {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    padding: 0.6rem 1rem;
-    background: var(--bg);
-    border-radius: var(--radius-sm);
+    gap: 0.75rem;
+    padding: 0.65rem 0;
+    border-bottom: 1px solid var(--surface-border);
     font-size: 0.85rem;
+    flex-wrap: wrap; /* Allow long aspects to flow to next line */
 }
 
+.transitRow:last-child {
+    border-bottom: none;
+}
+
+.aspectSvgIcon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Legacy dot — kept for fallback, hidden when SVG present */
 .aspectDot {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     flex-shrink: 0;
 }
 
-.aspect_trine {
-    background: #4ade80;
-}
-
-.aspect_square {
-    background: #ef4444;
-}
-
-.aspect_conjunction {
-    background: var(--gold);
-}
-
-.aspect_sextile {
-    background: var(--cyan);
-}
+.aspect_trine    { background: var(--sage); }
+.aspect_square   { background: var(--amber); }
+.aspect_conjunction { background: var(--gold); }
+.aspect_sextile  { background: var(--cyan); }
 
 .transitName {
-    flex: 1;
+    flex: 1 1 auto;
     font-weight: 500;
+    font-size: 0.85rem;
 }
 
 .transitType {
-    font-size: 0.7rem;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
     color: var(--text-tertiary);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
 }
 
 .systemBadge {
-    font-size: 0.6rem;
-    padding: 0.2rem 0.4rem;
-    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    padding: 0.18rem 0.45rem;
     text-transform: uppercase;
-    font-weight: 700;
+    font-weight: 500;
     letter-spacing: 0.05em;
+    border: 1px solid;
 }
 
 .sys_geodetic {
-    background: rgba(66, 212, 200, 0.15); /* Match Uranus blue-green */
+    border-color: rgba(127, 181, 193, 0.3);
     color: var(--cyan);
+    background: var(--cyan-soft);
 }
 
 .sys_natal {
-    background: rgba(245, 160, 200, 0.15); /* Match Venus pink */
-    color: #f5a0c8;
+    border-color: rgba(201, 169, 110, 0.25);
+    color: var(--gold);
+    background: var(--gold-soft);
 }
 
-/* 12-month windows */
+/* Mundane world transit applying/separating badges */
+.sys_applying {
+    border-color: rgba(167, 139, 250, 0.3);
+    color: #a78bfa;
+    background: rgba(167, 139, 250, 0.08);
+}
+
+.sys_separating {
+    border-color: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.3);
+    background: transparent;
+}
+
+/* Mundane card — world sky section */
+.mundaneTag {
+    margin-left: 0.6rem;
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: #a78bfa;
+    border: 1px solid rgba(167, 139, 250, 0.3);
+    background: rgba(167, 139, 250, 0.07);
+    padding: 2px 6px;
+    border-radius: 3px;
+    vertical-align: middle;
+}
+
+.mundaneNote {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    margin: 0 0 0.75rem;
+    line-height: 1.5;
+}
+
+.mundaneAngularLabel {
+    font-size: 0.62rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    margin: 0.75rem 0 0.35rem;
+}
+
+.mundaneSymbol {
+    font-size: 1rem;
+    flex-shrink: 0;
+    width: 16px;
+    text-align: center;
+}
+
+.historicalNote {
+    padding: 0.3rem 0 0.5rem 2rem;
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    font-style: italic;
+    line-height: 1.4;
+    opacity: 0.8;
+}
+
+.historicalIcon {
+    color: var(--gold);
+    margin-right: 0.2rem;
+}
+
+/* Tense world transit (square, opposition) — amber left border */
+.mundaneTense {
+    border-left: 2px solid rgba(245, 158, 11, 0.45);
+    padding-left: 0.5rem;
+}
+
+/* Easy world transit (trine, sextile, conjunction) — subtle green */
+.mundaneEasy {
+    border-left: 2px solid rgba(16, 185, 129, 0.3);
+    padding-left: 0.5rem;
+}
+
+/* 12-month windows — asymmetric editorial timeline */
 .windowsNote {
     font-size: 0.85rem;
     margin-top: 0.5rem;
     margin-bottom: var(--space-lg);
 }
 
+/* 3x4 Grid layout for 12-month windows */
 .windowsGrid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.6rem;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md);
+    margin-top: var(--space-xl);
 }
 
-@media (max-width: 800px) {
-    .windowsGrid {
-        grid-template-columns: repeat(3, 1fr);
-    }
+/* Base card */
+.windowItem {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+    border: 1px solid var(--surface-border);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.01);
+    transition: background 0.2s var(--ease), transform 0.2s var(--ease), border-color 0.2s var(--ease);
 }
 
-@media (max-width: 500px) {
+.windowItem:last-child {
+    border-bottom: 1px solid var(--surface-border);
+}
+
+.windowItem:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+/* Base typographic system */
+.windowMonth {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 1.25rem;
+    color: var(--text-primary);
+}
+
+.windowReason {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.windowHouse {
+    display: block;
+    margin-top: 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.windowRecommendation {
+    margin-top: 0.35rem;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    font-style: italic;
+    padding-top: 0.3rem;
+    border-top: 1px solid var(--surface-border);
+}
+
+.windowQuality {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+/* Quality overrides (color only, no structural/sizing shifts) */
+.q_excellent .windowMonth,
+.q_excellent .windowQuality {
+    color: var(--sage);
+}
+.q_excellent .windowReason {
+    color: var(--text-primary);
+}
+
+.q_caution .windowMonth,
+.q_caution .windowQuality {
+    color: var(--amber);
+}
+
+.q_good .windowQuality {
+    color: var(--text-tertiary);
+}
+
+@media (max-width: 900px) {
     .windowsGrid {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
-.windowItem {
-    padding: 1rem;
-    background: var(--bg);
-    border-radius: var(--radius-sm);
-    border-left: 3px solid transparent;
+@media (max-width: 600px) {
+    .windowsGrid {
+        grid-template-columns: 1fr;
+    }
+    .windowItem {
+        width: 100%;
+    }
 }
 
-.q_excellent {
-    border-color: #4ade80;
-}
-
-.q_good {
-    border-color: var(--cyan);
-}
-
-.q_caution {
-    border-color: #ef4444;
-}
-
-.windowMonth {
-    font-weight: 600;
-    font-size: 0.85rem;
-    margin-bottom: 0.3rem;
-}
-
-.windowQuality {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-tertiary);
-    font-weight: 500;
-    margin-bottom: 0.6rem;
-}
-
-.qDot {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-}
-
-.qd_excellent {
-    background: #4ade80;
-}
-
-.qd_good {
-    background: var(--cyan);
-}
-
-.qd_caution {
-    background: #ef4444;
-}
-
-.windowReason {
-    font-size: 0.78rem;
-    color: var(--text-secondary);
-    line-height: 1.5;
-}
-
-.windowHouse {
-    font-size: 0.65rem;
-    color: var(--text-tertiary);
-    margin-top: 0.4rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-}
-
-/* Reading */
+/* Reading — no border accent, use typography hierarchy */
 .readingCard {
-    border-left: 3px solid var(--accent);
+    border-left-color: var(--gold);
 }
 
 .readingText {
@@ -459,6 +645,8 @@
     font-size: 1rem;
     line-height: 1.9;
     color: var(--text-secondary);
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .readingText p {
@@ -520,11 +708,21 @@
 
 /* Map container */
 .mapContainer {
-    margin-bottom: var(--space-xl);
+    margin-bottom: var(--space-md);
     border-radius: var(--radius-lg);
     overflow: hidden;
-    height: 320px;
     border: 1px solid var(--surface-border);
+}
+
+.mapCard {
+    overflow: hidden;
+}
+
+.mapNote {
+    font-size: 0.82rem;
+    color: var(--text-tertiary);
+    margin-bottom: var(--space-md);
+    line-height: 1.5;
 }
 
 /* Mock data notice */
@@ -542,7 +740,7 @@
 /* ── Natal Chart Card ─────────────────────────────────────────── */
 .natalChartCard {
     grid-column: 1 / -1;
-    margin-bottom: 0;
+    margin-bottom: var(--space-xl);
 }
 
 .natalChartNote {
@@ -572,6 +770,8 @@
     margin-bottom: var(--space-xl);
     padding-bottom: var(--space-lg);
     border-bottom: 1px solid var(--surface-border);
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .readingSection:last-child {
@@ -699,4 +899,597 @@
 
 .readingTable tr:nth-child(even) td {
     background: rgba(255, 255, 255, 0.02);
+}
+
+/* ── Planet line badge pill ─────────────────────────────────── */
+.lineBadge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 0.18rem 0.55rem;
+    border-radius: 20px;
+    border: 1px solid;
+    flex-shrink: 0;
+}
+
+/* ── Orb strength bar ──────────────────────────────────────── */
+.orbStrengthBar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.orbBarTrack {
+    flex: 1;
+    height: 3px;
+    background: var(--surface-border);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.orbBarFill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.6s var(--ease);
+}
+
+.orbBarLabel {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ── Planet line description text ──────────────────────────── */
+.lineDescription {
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* ── East/West guidance block ──────────────────────────────── */
+.lineEastWest {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--text-tertiary);
+    padding: 0.45rem 0.7rem;
+    background: rgba(255,255,255,0.03);
+    border-left: 2px solid var(--surface-border);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.lineEastWestIcon {
+    flex-shrink: 0;
+    font-size: 0.85rem;
+    opacity: 0.5;
+    margin-top: 0.05rem;
+}
+
+/* ── Section type tag (Personal / Collective) ─────────────────── */
+.sectionTypeTag {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.52rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.18rem 0.55rem;
+    border-radius: 20px;
+    border: 1px solid;
+    vertical-align: middle;
+    margin-right: 0.55rem;
+    position: relative;
+    top: -1px;
+}
+
+.sectionTypeNote {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    margin: 0.25rem 0 0.75rem;
+    font-style: italic;
+}
+
+/* ── Show-all planet lines toggle ─────────────────────────────── */
+.showAllBtn {
+    display: inline-block;
+    margin-top: 0.6rem;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem 0;
+    transition: color 0.2s;
+}
+
+.showAllBtn:hover {
+    color: var(--text-secondary);
+}
+
+/* ── Highlighted close line row ───────────────────────────────── */
+.lineRowHighlight {
+    background: rgba(201, 169, 110, 0.04);
+    border-radius: var(--radius-sm);
+    margin: 0 -0.25rem;
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+}
+
+/* ── Transit group (Natal / Geodetic split) ───────────────────── */
+.transitGroup {
+    margin-top: var(--space-md);
+}
+
+.transitGroup + .transitGroup {
+    margin-top: var(--space-lg);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--surface-border);
+}
+
+.transitGroupHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: var(--space-sm);
+}
+
+.transitGroupDesc {
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    font-style: italic;
+}
+
+/* ── Travel date pill ─────────────────────────────────────────── */
+.travelDatePill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.25rem 0 var(--space-md);
+    padding: 0.45rem 0.9rem;
+    background: rgba(201, 169, 110, 0.08);
+    border: 1px solid rgba(201, 169, 110, 0.25);
+    border-radius: 20px;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+}
+
+.travelDateIcon {
+    color: var(--gold);
+    font-size: 0.7rem;
+}
+
+.travelDaysUntil {
+    color: var(--text-tertiary);
+    font-size: 0.8rem;
+}
+
+/* ── Window item — target month highlight ─────────────────────── */
+.windowItemTarget {
+    background: rgba(201, 169, 110, 0.06);
+    border-left: 2px solid var(--gold);
+    padding-left: calc(0.5rem - 2px);
+}
+
+.windowTargetBadge {
+    display: inline-block;
+    margin-left: 0.55rem;
+    font-family: var(--font-mono);
+    font-size: 0.52rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--gold);
+    border: 1px solid rgba(201, 169, 110, 0.3);
+    background: rgba(201, 169, 110, 0.1);
+    padding: 1px 5px;
+    border-radius: 10px;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   TAG PILL SYSTEM — full layer classification set
+   ════════════════════════════════════════════════════════════════ */
+.tagPill {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 0.52rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.18rem 0.55rem;
+    border-radius: 20px;
+    border: 1px solid;
+    flex-shrink: 0;
+    vertical-align: middle;
+    margin-right: 0.45rem;
+    position: relative;
+    top: -1px;
+    white-space: nowrap;
+    line-height: 1.6;
+}
+
+/* GEODETIC — Earth's fixed zone */
+.tag_geodetic {
+    color: var(--cyan);
+    border-color: rgba(127, 181, 193, 0.35);
+    background: rgba(127, 181, 193, 0.09);
+}
+
+/* GEODETIC TRANSIT — current sky hitting geodetic zone */
+.tag_geodeticTransit {
+    color: #4DB6C4;
+    border-color: rgba(77, 182, 196, 0.35);
+    background: rgba(77, 182, 196, 0.09);
+}
+
+/* MUNDANE — sky-to-sky aspect, affects everyone */
+.tag_mundane {
+    color: #a78bfa;
+    border-color: rgba(167, 139, 250, 0.3);
+    background: rgba(167, 139, 250, 0.08);
+}
+
+/* ANGULAR — planet angular over city */
+.tag_angular {
+    color: var(--amber);
+    border-color: rgba(193, 123, 63, 0.35);
+    background: rgba(193, 123, 63, 0.09);
+}
+
+/* NATAL ACG — your permanent birth line */
+.tag_natalAcg {
+    color: #9f87f5;
+    border-color: rgba(159, 135, 245, 0.3);
+    background: rgba(159, 135, 245, 0.08);
+}
+
+/* PARAN — latitude crossing */
+.tag_paran {
+    color: var(--cyan);
+    border-color: rgba(127, 181, 193, 0.3);
+    background: rgba(127, 181, 193, 0.08);
+}
+
+/* NATAL — transit hitting your natal planet */
+.tag_natal {
+    color: var(--gold);
+    border-color: rgba(201, 169, 110, 0.3);
+    background: rgba(201, 169, 110, 0.09);
+}
+
+/* RELOCATED — house placement in destination chart */
+.tag_relocated {
+    color: #c084fc;
+    border-color: rgba(192, 132, 252, 0.3);
+    background: rgba(192, 132, 252, 0.08);
+}
+
+/* COUNTRY CHART — national founding chart */
+.tag_countryChart {
+    color: var(--amber);
+    border-color: rgba(193, 123, 63, 0.35);
+    background: rgba(193, 123, 63, 0.09);
+}
+
+/* APL — aspect applying */
+.tag_apl {
+    color: #a78bfa;
+    border-color: rgba(167, 139, 250, 0.3);
+    background: rgba(167, 139, 250, 0.08);
+}
+
+/* SEP — aspect separating */
+.tag_sep {
+    color: rgba(255,255,255,0.25);
+    border-color: rgba(255,255,255,0.1);
+    background: transparent;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   LAYER CARD ACCENTS — top border per layer type
+   ════════════════════════════════════════════════════════════════ */
+
+/* Geodetic zone card — cyan accent */
+.geodeticCard {
+    border-top: 2px solid rgba(127, 181, 193, 0.35);
+}
+
+/* Country chart card — amber accent, collapsible */
+.countryCard {
+    border-top: 2px solid rgba(193, 123, 63, 0.35);
+}
+
+/* Collapsible section toggle */
+.collapseToggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-tertiary);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem 0;
+    margin-left: auto;
+    transition: color 0.2s;
+    flex-shrink: 0;
+}
+
+.collapseToggle:hover { color: var(--text-secondary); }
+
+.cardHeaderRow {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PERSONAL TRANSIT TABLE — spec-defined structured table
+   ════════════════════════════════════════════════════════════════ */
+
+.personalTransitTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    margin-top: var(--space-md);
+    overflow-x: auto;
+    display: block;
+}
+
+.personalTransitTable th {
+    background: rgba(255,255,255,0.03);
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--surface-border);
+    white-space: nowrap;
+}
+
+.personalTransitTable td {
+    padding: 0.65rem 0.75rem;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--surface-border);
+    vertical-align: top;
+    line-height: 1.5;
+    font-size: 0.8rem;
+}
+
+.personalTransitTable tr:last-child td { border-bottom: none; }
+.personalTransitTable tr:hover td { background: rgba(255,255,255,0.015); }
+
+/* Chart ruler relocation block */
+.chartRulerBlock {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--surface-border);
+    border: 1px solid var(--surface-border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    margin-top: var(--space-md);
+}
+
+.chartRulerCell {
+    background: var(--surface);
+    padding: 0.65rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.chartRulerCellLabel {
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-tertiary);
+}
+
+.chartRulerCellValue {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.chartRulerCellSub {
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    line-height: 1.3;
+}
+
+/* Inline Gemini card commentary */
+.cardCommentary {
+    margin-top: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    background: rgba(255,255,255,0.018);
+    border-left: 2px solid rgba(255,255,255,0.08);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.cardCommentary p {
+    font-size: 0.82rem;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.cardCommentary p + p { margin-top: 0.65rem; }
+
+.cardCommentaryLabel {
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-tertiary);
+    margin-bottom: 0.55rem;
+    display: block;
+}
+
+/* Reading section icon map — updated for 5-section reading */
+.readingSection5 {
+    margin-bottom: var(--space-xl);
+    padding-bottom: var(--space-lg);
+    border-bottom: 1px solid var(--surface-border);
+}
+.readingSection5:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* Geodetic transit warning block */
+.geodeticWarning {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.6rem 0.85rem;
+    background: rgba(77, 182, 196, 0.06);
+    border: 1px solid rgba(77, 182, 196, 0.2);
+    border-radius: var(--radius-sm);
+    margin-top: var(--space-sm);
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.geodeticWarningIcon {
+    flex-shrink: 0;
+    color: #4DB6C4;
+    font-size: 0.75rem;
+    margin-top: 0.15rem;
+}
+
+/* Country chart hidden reveal */
+.countryReveal {
+    overflow: hidden;
+    transition: max-height 0.35s var(--ease), opacity 0.3s var(--ease);
+}
+
+.countryReveal.collapsed {
+    max-height: 0;
+    opacity: 0;
+}
+
+.countryReveal.expanded {
+    max-height: 800px;
+    opacity: 1;
+}
+
+/* qDot — quality dot in windows */
+.qDot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.qd_excellent { background: var(--sage); }
+.qd_good      { background: var(--text-tertiary); }
+.qd_caution   { background: var(--amber); }
+.qd_avoid     { background: var(--accent); }
+
+/* ═══ MOBILE POLISH ≤ 600px ════════════════════════════════════
+   Consistent horizontal breathing room across ALL lower cards.
+   The global .card gets padding: var(--space-lg) 1.25rem (set
+   in globals.css). Here we refine flow-specific components.
+============================================================== */
+@media (max-width: 600px) {
+
+    /* Results wrapper — full width, no extra side margins */
+    .resultsWrap {
+        max-width: 100%;
+    }
+
+    /* ── 12-Month Windows ── */
+    /* Tighter gap between monthly mini-cards */
+    .windowsGrid {
+        gap: 0.6rem;
+        margin-top: var(--space-md);
+    }
+    /* Mini-card inner padding reduced */
+    .windowItem {
+        padding: 0.75rem;
+    }
+
+    /* ── Planet / ACG line rows ── */
+    /* Allow wrapping so km distance doesn't push off-screen */
+    .lineRow {
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        padding: 0.55rem 0;
+    }
+    .lineMeta {
+        flex-basis: 100%;
+        justify-content: flex-end;
+    }
+
+    /* ── Transit rows ── */
+    .transitRow {
+        gap: 0.5rem;
+        padding: 0.55rem 0;
+    }
+
+    /* ── Collapse toggle + card header ── */
+    .cardHeaderRow {
+        gap: 0.5rem;
+    }
+
+    /* ── Chart ruler block on mobile ── */
+    /* Stack ruler cells into 1 column instead of 3 */
+    .chartRulerBlock {
+        grid-template-columns: 1fr;
+    }
+
+    /* ── Card commentary block ── */
+    .cardCommentary {
+        padding: var(--space-xs) 0.75rem;
+    }
+
+    /* ── Personal transit table — allow horizontal scroll ── */
+    .personalTransitTable {
+        font-size: 0.72rem;
+    }
+    .personalTransitTable th,
+    .personalTransitTable td {
+        padding: 0.4rem 0.55rem;
+    }
+
+    /* ── Section notes ── */
+    .mundaneNote,
+    .mapNote,
+    .natalChartNote,
+    .readingSubtitle {
+        font-size: 0.72rem;
+    }
+
+    /* ── Grid gap between cards ── */
+    /* The 2-column results grid switches to 1-column at ≤900px.
+       On mobile, further reduce the gap so accordion headers
+       don't float far apart when collapsed. */
+    .grid {
+        gap: 0.5rem;
+    }
 }
