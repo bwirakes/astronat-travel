@@ -1,0 +1,3 @@
+# Frontend Design Rule
+Always use the `astro-design` skill when working on the frontend in this workspace. 
+Refer to `.agents/skills/astro-design/SKILL.md` for all typography, color, shape, and layout guidelines.

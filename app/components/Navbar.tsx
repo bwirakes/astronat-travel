@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import ThemeToggle from "./ThemeToggle";
 import styles from "./navbar.module.css";
 import { Menu, X } from "lucide-react";
@@ -27,7 +28,14 @@ export default function Navbar({ activeHref, centerContent, logoHref = "/" }: Na
             <div className={styles.navInner}>
                 {/* Logo */}
                 <Link href={logoHref} className={styles.logo} onClick={() => setOpen(false)}>
-                    Astro Nat
+                    <Image
+                        src="/logo-stacked.svg"
+                        alt="Astro Nat Logo"
+                        width={130}
+                        height={44}
+                        priority
+                        className={styles.logoImg}
+                    />
                 </Link>
 
                 {/* Center slot (e.g. flow progress) */}

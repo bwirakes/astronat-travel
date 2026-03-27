@@ -7,16 +7,25 @@ import Image from "next/image";
 import Navbar from "./components/Navbar";
 import styles from "./page.module.css";
 
+// ─── Astro Nat — Unified Landing Page ────────────────────────────────────────
+// Canonical: anchored on astro_brand_guidelines.md + globals.css + SKILL.md
+// Rules:
+//   - All colors via CSS vars (var(--*)). Zero hardcoded hex values.
+//   - Fonts: --font-primary (BETTER DAYS) for hero, --font-secondary (PERFECTLY
+//     NINETIES) for editorial, --font-display-alt-2 (SLOOP SCRIPT) for overlaps.
+//   - CTA: Y2K Blue (--color-y2k-blue) with asymmetric M3 cut shape (--cut-xl).
+//   - Image: M3 cut-path frame (--cut-xl) — per SKILL §3 Option B.
+//   - Process section: stark Eggshell / Charcoal color block inversion.
+
 export default function Home() {
   return (
     <>
-      {/* Grainy deep-space background layer */}
+      {/* ── Atmospheric Background ─────────────────────────────────── */}
       <div className={styles.atmosphericBg} aria-hidden="true">
-        <div className={styles.radialGlow} />
         <div className={styles.grainOverlay} />
       </div>
 
-      {/* Starfield (CSS-only, no hydration issue) */}
+      {/* ── Starfield — blocky Y2K pixel stars ───────────────────── */}
       <div className={styles.starField} aria-hidden="true">
         {Array.from({ length: 60 }).map((_, i) => (
           <div
@@ -37,69 +46,64 @@ export default function Home() {
 
       <Navbar />
 
+      {/* ── Hero ──────────────────────────────────────────────────── */}
       <main className={styles.hero}>
         <div className={styles.container}>
           <div className={styles.heroGrid}>
-            {/* Left: Content */}
+
+            {/* Left: Content — typographic hierarchy from brand guidelines */}
             <motion.div
               className={styles.heroContent}
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.9, ease: [0.4, 0, 0.2, 1] }}
             >
-              {/* Eyebrow label */}
-              <span className={styles.eyebrow}>Astrocartography · Locational Astrology</span>
-
+              {/* H1 — BETTER DAYS (--font-primary), uppercase structural text */}
               <h1 className={styles.headline}>
                 Where should you{" "}
                 <em>travel</em> next?
               </h1>
 
+              {/* Body — GARET (--font-body) */}
               <p className={styles.subline}>
                 You deserve the best possible environment to thrive in and fulfil your natal promise.
                 Use our astrocartography travel planner to figure out where to go — and{" "}
                 <em>when</em>.
               </p>
 
-              <Link href="/flow" className={styles.ctaBtn} id="cta-celestial-start">
-                Begin your Travels <ArrowRight size={15} />
+              {/* CTA — Y2K Blue + M3 asymmetric shape per SKILL §3 Option A */}
+              <Link href="/flow" className={styles.ctaBtn} id="cta-start">
+                Begin your Travels <ArrowRight className={styles.ctaIcon} />
               </Link>
 
-              {/* Trust line */}
-              <div className={styles.trustLine}>
-                <span className={styles.trustDot} />
-                <span>Swiss Ephemeris · Precision Natal Mapping</span>
-              </div>
+
             </motion.div>
 
-            {/* Right: Archway-framed image */}
+            {/* Right: M3 cut-path image frame per brand SKILL §3 Option B */}
             <motion.div
               className={styles.heroImageWrap}
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 1.1, delay: 0.2, ease: [0.4, 0, 0.2, 1] }}
             >
-              <div className={styles.archwayFrame}>
-                <div className={styles.archwayInner}>
-                  <Image
-                    src="/astronat-hero.jpg"
-                    alt="Astro Nat on a red Vespa surrounded by cypress trees"
-                    fill
-                    className={styles.heroImg}
-                    priority
-                  />
-                  {/* Bottom gradient fade */}
-                  <div className={styles.imageGradient} />
-                </div>
+
+
+              <div className={styles.astroCutout}>
+                <Image
+                  src="/astronat-hero.jpg"
+                  alt="Astro Nat on a red Vespa surrounded by cypress trees"
+                  fill
+                  className={styles.heroImg}
+                  priority
+                />
               </div>
-              {/* Decorative orbital ring */}
-              <div className={styles.orbitalRing} aria-hidden="true" />
             </motion.div>
+
           </div>
         </div>
       </main>
 
-      {/* Process section */}
+      {/* ── Process — stark Eggshell/Charcoal color block inversion ── */}
       <section className={styles.process}>
         <div className={styles.container}>
           <h5 className={styles.sectionLabel}>How it works</h5>
@@ -108,7 +112,7 @@ export default function Home() {
               {
                 number: "01",
                 title: "Your chart",
-                desc: "Enter your birth details. We calculate your natal chart and project it across the globe using Swiss Ephemeris.",
+                desc: "Enter your birth details. We calculate your natal chart and project it across the globe using high-precision data.",
               },
               {
                 number: "02",
@@ -129,7 +133,9 @@ export default function Home() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.12 }}
               >
+                {/* Step number — BETTER DAYS ghost text */}
                 <span className={styles.stepNum}>{step.number}</span>
+                {/* Step title — PERFECTLY NINETIES serif */}
                 <h3 className={styles.stepTitle}>{step.title}</h3>
                 <p className={styles.stepDesc}>{step.desc}</p>
               </motion.div>
@@ -138,6 +144,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Pull Quote ────────────────────────────────────────────── */}
       <section className={styles.quote}>
         <div className={styles.container}>
           <blockquote className={styles.blockquote}>
@@ -150,11 +157,12 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Footer ───────────────────────────────────────────────── */}
       <footer className={styles.footer}>
         <div className={styles.container}>
           <div className={styles.footerInner}>
             <span>Astro Nat © 2026</span>
-            <span>Swiss Ephemeris · Locational Astrology</span>
+            <span>Precision Natal Mapping · Locational Astrology</span>
           </div>
         </div>
       </footer>

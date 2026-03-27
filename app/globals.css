@@ -1,13 +1,9 @@
 /* ═══ Astro Nat — Elevated Editorial + 90s Vibe ════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
-
-@import "tw-animate-css";
-
-@import "shadcn/tailwind.css";
 
 :root {
   /* Astro-Brand Strategy Typography */
@@ -105,8 +101,8 @@
 [data-theme="light"] {
   --bg: var(--color-eggshell);
   --bg-raised: #FFFFFF;
-  --surface: #F0EDE4;
-  --surface-border: rgba(0, 0, 0, 0.1);
+  --surface: var(--color-eggshell);
+  --surface-border: rgba(0, 0, 0, 0.08);
 
   --accent: var(--color-spiced-life);
   --accent-soft: rgba(230, 122, 122, 0.12);
@@ -152,25 +148,58 @@ img, table, svg, canvas {
   max-width: 100%;
 }
 
-h1,
-h2,
-h3 {
+h1 {
   font-family: var(--font-display);
   font-weight: 400;
+  font-size: 4rem;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--text-primary);
+}
+
+h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 2.5rem;
   letter-spacing: -0.01em;
   line-height: 1.15;
   color: var(--text-primary);
 }
 
-h4,
-h5,
-h6 {
+h3 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.75rem;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+h4 {
   font-family: var(--font-body);
-  font-weight: 500;
-  font-size: 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-secondary);
+}
+
+h5 {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+h6 {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
 }
 
 p {
@@ -195,16 +224,11 @@ a {
 .card {
     background-color: var(--surface);
     padding: var(--space-xl);
-    border-radius: 0;
-    min-width: 0;
-    overflow-wrap: break-word;
-    word-break: break-word;
-    transition: background-color 0.2s var(--ease);
+    border: 1px solid var(--surface-border);
+    transition: background-color 0.2s var(--ease), border-color 0.2s var(--ease);
 }
 
-.card:hover {
-    background-color: var(--bg-raised);
-}
+
 
 /* Narrower card padding on small screens */
 @media (max-width: 600px) {
@@ -230,21 +254,18 @@ a {
 }
 
 .btn-primary {
-  /* Metallic brushed gold — matches homepage CTA */
-  background: linear-gradient(135deg, #C9A96E 0%, #E8C97A 45%, #B8956A 100%);
-  color: #1A1208;
-  box-shadow:
-    0 0 0 1px rgba(201, 169, 110, 0.3),
-    0 4px 20px rgba(201, 169, 110, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  /* Astro-Brand Flat & Asymmetric */
+  background: var(--color-y2k-blue);
+  color: var(--color-eggshell);
+  border-radius: var(--shape-asymmetric-md);
+  box-shadow: none;
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow:
-    0 0 0 1px rgba(201, 169, 110, 0.5),
-    0 8px 32px rgba(201, 169, 110, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  background: var(--color-y2k-blue);
+  opacity: 0.9;
+  box-shadow: none;
 }
 
 .btn-secondary {
@@ -433,87 +454,4 @@ a {
     .expandable-content {
         padding: 0 1rem 0;
     }
-}
-
-@layer base {
-  .theme {
-    --font-heading: var(--font-sans);
-    --font-sans: var(--font-sans);
-  }
-  :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
-  }
-  .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
-  }
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
-  }
 }

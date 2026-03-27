@@ -1,5 +1,5 @@
-/* ═══ V1 — Celestial Editorial ════════════════════════════════════ */
-/* Mystical & High-End. Metallic gold CTA, archway image, grainy bg  */
+/* ═══ Astro Nat — Unified Landing Page ════════════════════════════ */
+/* Single canonical stylesheet. All tokens from globals.css. No HEX. */
 
 /* ── Atmospheric Background ─────────────────────────────────────── */
 .atmosphericBg {
@@ -7,23 +7,7 @@
     inset: 0;
     pointer-events: none;
     z-index: 0;
-}
-
-.radialGlow {
-    position: absolute;
-    inset: 0;
-    transition: opacity var(--duration) var(--ease);
-    background: radial-gradient(ellipse 120% 80% at 65% 15%,
-            rgba(74, 40, 110, 0.22) 0%,
-            rgba(20, 12, 40, 0.15) 45%,
-            transparent 75%);
-}
-
-:global([data-theme="light"]) .radialGlow {
-    background: radial-gradient(ellipse 120% 80% at 65% 15%,
-            rgba(163, 130, 74, 0.12) 0%,
-            rgba(163, 130, 74, 0.05) 45%,
-            transparent 75%);
+    background-color: var(--color-black);
 }
 
 .grainOverlay {
@@ -31,12 +15,16 @@
     inset: 0;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
     background-size: 256px 256px;
-    opacity: 0.65;
+    opacity: 0.85;
     mix-blend-mode: overlay;
 }
 
+:global([data-theme="light"]) .atmosphericBg {
+    background-color: var(--color-eggshell);
+}
+
 :global([data-theme="light"]) .grainOverlay {
-    opacity: 0.25;
+    opacity: 0.4;
 }
 
 /* ── Starfield (inline, no hydration issues) ─────────────────────── */
@@ -46,6 +34,7 @@
     pointer-events: none;
     z-index: 0;
     transition: opacity var(--duration) var(--ease);
+    opacity: 0.5;
 }
 
 :global([data-theme="light"]) .starField {
@@ -54,18 +43,18 @@
 
 .star {
     position: absolute;
-    background: #fff;
-    border-radius: 50%;
-    animation: twinkle var(--animation-duration, 5s) ease-in-out infinite alternate;
+    background: var(--color-eggshell);
+    border-radius: 0; /* Blocky Y2K pixel stars */
+    animation: twinkle var(--animation-duration, 5s) steps(2, end) infinite alternate;
 }
 
 @keyframes twinkle {
     from {
-        opacity: 0.04;
+        opacity: 0;
     }
 
     to {
-        opacity: 0.35;
+        opacity: 1;
     }
 }
 
@@ -129,18 +118,26 @@
 }
 
 .headline {
-    font-family: var(--font-display);
-    font-size: clamp(2.8rem, 5.5vw, 4.8rem);
+    font-family: var(--font-primary);
+    font-size: clamp(3.2rem, 6.5vw, 6rem);
     font-weight: 400;
-    line-height: 1.08;
-    letter-spacing: -0.02em;
+    line-height: 0.82;
+    letter-spacing: -0.01em;
     color: var(--text-primary);
-    margin-bottom: 1.8rem;
+    margin-bottom: 2rem;
+    text-transform: uppercase;
 }
 
 .headline em {
     font-style: italic;
+    font-family: var(--font-display-alt-2);
+    text-transform: lowercase;
+    font-size: 1.3em;
+    position: relative;
+    top: -0.02em;
     color: var(--gold);
+    margin-left: -0.1em;
+    padding-right: 0.1em;
 }
 
 .subline {
@@ -157,35 +154,35 @@
     color: var(--text-primary);
 }
 
-/* ── Gold CTA Button ─────────────────────────────────────────────── */
+/* ── CTA Button — Y2K Blue + M3 Asymmetric Shape ────────────────── */
+/* Per brand guidelines §2 (Y2K Blue accent) + SKILL §3 Option A    */
 .ctaBtn {
     display: inline-flex;
     align-items: center;
     gap: 0.6rem;
     padding: 0.9rem 2.2rem;
-    border-radius: 10px;
+    background: var(--color-y2k-blue);
+    color: var(--color-eggshell);
+    border-radius: var(--shape-asymmetric-md);
     font-family: var(--font-body);
-    font-weight: 500;
+    font-weight: 600;
     font-size: 0.875rem;
     letter-spacing: 0.04em;
-    cursor: pointer;
     text-decoration: none;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    /* Metallic brushed gold gradient */
-    background: linear-gradient(135deg, #C9A96E 0%, #E8C97A 45%, #B8956A 100%);
-    color: #1A1208;
-    box-shadow:
-        0 0 0 1px rgba(201, 169, 110, 0.3),
-        0 4px 20px rgba(201, 169, 110, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    transition: opacity var(--duration) var(--ease), transform var(--duration) var(--ease);
+    border: none;
 }
 
 .ctaBtn:hover {
+    opacity: 0.88;
     transform: translateY(-2px);
-    box-shadow:
-        0 0 0 1px rgba(201, 169, 110, 0.5),
-        0 8px 32px rgba(201, 169, 110, 0.35),
-        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.ctaIcon {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
 }
 
 /* ── Trust Line ──────────────────────────────────────────────────── */
@@ -193,121 +190,102 @@
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    margin-top: 1.6rem;
-    font-size: 0.72rem;
-    letter-spacing: 0.1em;
+    margin-top: 1.8rem;
+    font-family: var(--font-body);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--text-tertiary);
 }
 
 .trustDot {
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: var(--gold);
-    opacity: 0.8;
+    width: 6px;
+    height: 6px;
+    background: var(--color-y2k-blue);
+    border-radius: 0; /* Blocky Y2K square dot */
+    flex-shrink: 0;
 }
 
-/* ── Archway Image Frame ─────────────────────────────────────────── */
+/* ── Sloop Script Decorative Overlay ─────────────────────────────── */
+/* Per brand guidelines §3: "Oversized SLOOP SCRIPT placed absolutely */
+/* to overlap photos or main text"                                    */
+.scriptOverlay {
+    position: absolute;
+    font-family: var(--font-display-alt-2);
+    font-size: clamp(8rem, 16vw, 14rem);
+    color: var(--color-y2k-blue);
+    opacity: 0.65;
+    z-index: 2;
+    pointer-events: none;
+    line-height: 0.7;
+    top: 50%;
+    right: -5%;
+    user-select: none;
+}
+
+
 .heroImageWrap {
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: var(--space-md);
 }
 
-.archwayFrame {
+.astroCutout {
     position: relative;
     width: 100%;
-    /* Archway clip: flat bottom, curved top */
-    clip-path: polygon(0% 8%, 6% 0%, 94% 0%, 100% 8%, 100% 100%, 0% 100%);
-    border-radius: 180px 180px 20px 20px;
+    height: 540px;
+    clip-path: var(--cut-xl);
     overflow: hidden;
-}
-
-.archwayInner {
-    position: relative;
-    height: 500px;
-    width: 100%;
-    overflow: hidden;
-    border-radius: 180px 180px 18px 18px;
+    background: var(--color-charcoal);
 }
 
 @media (max-width: 768px) {
-    .archwayInner {
-        height: 300px;
-        border-radius: 100px 100px 12px 12px;
+    .astroCutout {
+        height: 380px;
+        clip-path: var(--cut-lg);
     }
 }
 
 .heroImg {
     object-fit: cover;
     object-position: center;
-    scale: 1.04;
-    transition: scale 0.8s ease;
+    scale: 1.02;
+    transition: scale 0.8s var(--ease);
 }
 
 .heroImageWrap:hover .heroImg {
-    scale: 1.08;
+    scale: 1.06;
 }
 
-/* Gradient overlay at the bottom of the image */
-.imageGradient {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 48%;
-    background: linear-gradient(to top,
-            rgba(11, 8, 20, 0.9) 0%,
-            rgba(11, 8, 20, 0.4) 50%,
-            transparent 100%);
-    pointer-events: none;
-}
-
-:global([data-theme="light"]) .imageGradient {
-    background: linear-gradient(to top,
-            rgba(245, 243, 238, 0.9) 0%,
-            rgba(245, 243, 238, 0.4) 50%,
-            transparent 100%);
-}
-
-/* Decorative orbital ring around the image */
-.orbitalRing {
-    position: absolute;
-    inset: -16px;
-    border-radius: 200px 200px 24px 24px;
-    border: 1px solid var(--gold-soft);
-    pointer-events: none;
-    animation: rotateSlow 60s linear infinite;
-}
-
-@keyframes rotateSlow {
-    from {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-/* ── Process ─────────────────────────────────────────────────────── */
+/* ── Process Section ─────────────────────────────────────────────── */
 .process {
     position: relative;
-    z-index: 1;
-    padding: 5rem 0;
-    border-top: 1px solid var(--surface-border);
+    z-index: 10;
+    padding: 6rem 0;
+    background-color: var(--color-eggshell);
+    color: var(--color-charcoal);
+    border-top: 2px solid var(--color-charcoal);
+    border-bottom: 2px solid var(--color-charcoal);
+}
+
+:global([data-theme="light"]) .process {
+    background-color: var(--color-charcoal);
+    color: var(--color-eggshell);
 }
 
 .sectionLabel {
     font-family: var(--font-body);
-    font-size: 0.68rem;
-    font-weight: 500;
-    letter-spacing: 0.16em;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--gold);
+    color: inherit;
     margin-bottom: 3rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid currentColor;
 }
 
 .steps {
@@ -319,7 +297,7 @@
 @media (max-width: 768px) {
     .steps {
         grid-template-columns: 1fr;
-        gap: 2.5rem;
+        gap: 3.5rem;
     }
 }
 
@@ -329,27 +307,30 @@
 
 .stepNum {
     display: block;
-    font-family: var(--font-display);
-    font-size: 3.2rem;
-    font-weight: 300;
-    font-style: italic;
-    color: var(--gold-soft);
-    margin-bottom: 0.8rem;
-    line-height: 1;
+    font-family: var(--font-primary);
+    font-size: 4rem;
+    font-weight: 400;
+    color: inherit;
+    opacity: 0.15;
+    margin-bottom: 0.2rem;
+    line-height: 0.8;
 }
 
 .stepTitle {
-    font-family: var(--font-display);
-    font-size: 1.9rem;
+    font-family: var(--font-secondary);
+    font-size: 2.2rem;
     font-weight: 400;
-    color: var(--text-primary);
-    margin-bottom: 0.8rem;
+    color: inherit;
+    margin-bottom: 1rem;
+    line-height: 1.1;
 }
 
 .stepDesc {
-    font-size: 0.88rem;
-    line-height: 1.85;
-    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.8;
+    font-weight: 500;
+    color: inherit;
+    opacity: 0.85;
 }
 
 /* ── Quote ───────────────────────────────────────────────────────── */
