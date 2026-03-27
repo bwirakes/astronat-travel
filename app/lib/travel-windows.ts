@@ -21,6 +21,12 @@ export interface ComputeWindowsParams {
     lon: number;
     natalPlanets: MatrixNatalPlanet[];
     acgLines: MatrixACGLine[];
+    /** Birth latitude — determines Placidus vs Whole Sign house system */
+    birthLat?: number;
+    /** Lot of Fortune longitude (pre-computed from natal) */
+    lotOfFortuneLon?: number;
+    /** Lot of Spirit longitude (pre-computed from natal) */
+    lotOfSpiritLon?: number;
 }
 
 /**
@@ -31,7 +37,10 @@ async function getScoreForDate(
     lat: number,
     lon: number,
     natalPlanets: MatrixNatalPlanet[],
-    acgLines: MatrixACGLine[]
+    acgLines: MatrixACGLine[],
+    birthLat?: number,
+    lotOfFortuneLon?: number,
+    lotOfSpiritLon?: number,
 ): Promise<TravelWindow> {
     const mundane = await computeMundaneData({ date, time: "12:00", lat, lon });
     
@@ -39,7 +48,7 @@ async function getScoreForDate(
     const ascLon = computeRelocatedAscLon(lat, lon);
     const relocatedCusps = Array.from({ length: 12 }, (_, i) => (ascLon + i * 30) % 360);
 
-    const mappedTransits = mapTransitsToMatrix(mundane.worldTransits, natalPlanets, relocatedCusps);
+    const mappedTransits = mapTransitsToMatrix(mundane.worldTransits, natalPlanets, relocatedCusps, birthLat);
     const globalPenalty = computeGlobalPenalty(mundane.worldTransits);
 
     const matrix = computeHouseMatrix({
@@ -51,6 +60,9 @@ async function getScoreForDate(
         destLat: lat,
         destLon: lon,
         globalPenalty,
+        birthLat,
+        lotOfFortuneLon,
+        lotOfSpiritLon,
     });
 
     const score = matrix.macroScore;
@@ -95,7 +107,7 @@ async function getScoreForDate(
  * Main entrance point for computing 12 months of scoring.
  */
 export async function compute12MonthWindows(params: ComputeWindowsParams): Promise<TravelWindow[]> {
-    const { startDateStr, lat, lon, natalPlanets, acgLines } = params;
+    const { startDateStr, lat, lon, natalPlanets, acgLines, birthLat, lotOfFortuneLon, lotOfSpiritLon } = params;
     
     // Parse start date
     const start = new Date(startDateStr + "T12:00:00");
@@ -110,7 +122,7 @@ export async function compute12MonthWindows(params: ComputeWindowsParams): Promi
         const dateStr = d.toISOString().split("T")[0];
         
         try {
-            const win = await getScoreForDate(dateStr, lat, lon, natalPlanets, acgLines);
+            const win = await getScoreForDate(dateStr, lat, lon, natalPlanets, acgLines, birthLat, lotOfFortuneLon, lotOfSpiritLon);
             results.push(win);
         } catch (err) {
             console.error(`Error computing window for ${dateStr}:`, err);

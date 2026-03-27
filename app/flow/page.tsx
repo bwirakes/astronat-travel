@@ -666,6 +666,7 @@ function FlowPageInner() {
                                                 destination={travel.destination}
                                                 planetLines={planetLines}
                                                 natalPlanets={natalPlanets.length > 0 ? natalPlanets : undefined}
+                                                transitPlanets={mundane?.planets}
                                                 birthDateTimeUTC={birthDateTimeUTC}
                                                 birthLon={birthCoords?.lon}
                                             />
