@@ -1,11 +1,17 @@
 /**
- * house-matrix.ts — 12-House Matrix Scoring Engine v2.
+ * house-matrix.ts — 12-House Matrix Scoring Engine v3.
  *
  * Computes a per-house score (0–100) for every astrological house
  * based on relocated cusps, ruler dignity, occupant planets,
  * ACG line proximity (benefic boost / malefic penalty), geodetic
- * grid alignment, transits, retrogrades, parans, and a global
- * avoid-window penalty.
+ * grid alignment, transits, retrogrades, parans (nuanced), Arabic
+ * Parts, natal-relocated bridge, and a global avoid-window penalty.
+ *
+ * v3 additions:
+ *   - Latitude-aware house system (Placidus vs Whole Sign)
+ *   - Nuanced paran scoring with aspect, dignity, and angular position
+ *   - Lot of Fortune / Spirit house placement bonus
+ *   - Natal → Relocated house bridge modifier
  *
  * The macroScore decomposes cleanly into:
  *   personalScore  (0–70) — weighted avg of identity/personal houses
@@ -33,9 +39,33 @@ import {
     geodeticMCLongitude,
     geodeticASCLongitude,
 } from "./geodetic";
+import { computeHouseNumber } from "./house-system";
 
 // ── Shared classifications for scoring (subset) ───────────────────────────
 const MALEFIC_NAMES = ["mars", "saturn", "pluto", "uranus"];
+
+// ── Known paran combination ratings (from Reddit guide research) ──────────
+// Maps "p1|p2" (sorted alphabetically) to a score modifier
+const KNOWN_BENEFIC_COMBOS: Record<string, number> = {
+    "jupiter|sun": 15,   "moon|sun": 12,     "jupiter|venus": 18,
+    "sun|venus": 15,     "moon|venus": 15,    "moon|jupiter": 18,
+    "jupiter|mercury": 12, "mercury|venus": 10, "neptune|venus": 12,
+    "jupiter|neptune": 10, "moon|neptune": 8,
+    "mars|sun": 8,       "jupiter|mars": 10,  "mars|mercury": 8,
+    "neptune|sun": 8,    "mercury|uranus": 6, "sun|uranus": 6,
+    "chiron|moon": 5,    "moon|north node": 10, "north node|venus": 12,
+    "jupiter|north node": 15, "jupiter|saturn": 8,
+};
+
+const KNOWN_MALEFIC_COMBOS: Record<string, number> = {
+    "pluto|sun": -15,    "moon|pluto": -18,   "moon|saturn": -15,
+    "mars|moon": -12,    "moon|uranus": -12,  "pluto|venus": -15,
+    "mars|venus": -12,   "saturn|venus": -15, "mars|saturn": -18,
+    "mars|pluto": -18,   "mars|uranus": -12,  "mars|neptune": -10,
+    "chiron|mars": -10,  "neptune|saturn": -12, "neptune|pluto": -15,
+    "neptune|uranus": -10, "north node|saturn": -12,
+    "north node|pluto": -15, "mars|north node": -10,
+};
 
 // ── Input types ───────────────────────────────────────────────────────────
 
@@ -44,7 +74,7 @@ export interface MatrixNatalPlanet {
     sign: string;
     longitude: number;
     retrograde: boolean;
-    house?: number;
+    house?: number;        // natal house (from birth chart)
     dignity?: string;
 }
 
@@ -72,6 +102,10 @@ export interface MatrixParan {
     p1: string;
     p2: string;
     lat: number;
+    type?: string;         // e.g., "ASC/DSC" — angular positions
+    aspect?: string;       // aspect between the two planets (if available)
+    p1Dignity?: string;    // essential dignity of p1 in natal chart
+    p2Dignity?: string;    // essential dignity of p2 in natal chart
 }
 
 // ── Output types ──────────────────────────────────────────────────────────
@@ -87,6 +121,8 @@ export interface HouseBreakdown {
     retrograde: number;
     transitRx: number;
     paran: number;
+    natalBridge: number;   // NEW: natal→relocated house bridge
+    lotBonus: number;      // NEW: Lot of Fortune/Spirit placement
 }
 
 export interface HouseScore {
@@ -106,6 +142,9 @@ export interface HouseMatrixResult {
     macroVerdict: string;
     personalScore: number;   // 0–70 (personal/identity houses, weighted)
     collectiveScore: number; // 0–30 (travel/collective houses, weighted)
+    houseSystem: string;     // NEW: "placidus" | "whole-sign"
+    lotOfFortune?: { longitude: number; house: number; sign: string };
+    lotOfSpirit?: { longitude: number; house: number; sign: string };
 }
 
 // ── House weight partitions ───────────────────────────────────────────────
@@ -168,11 +207,15 @@ function occupantModifier(planetName: string, houseNum: number): number {
         case "sun":     return isTravelHouse ? 18 : 15;
         case "moon":    return 10;
         case "mercury": return 7;
-        case "saturn":  return isTravelHouse ? -30 : -25; // Delays, restriction — worse in travel houses
-        case "pluto":   return isTravelHouse ? -25 : -20; // Intense transformation
-        case "mars":    return isTravelHouse ? -22 : -18; // Disruption, conflict
-        case "uranus":  return isTravelHouse ? -18 : -14; // Erratic, unpredictable
-        case "neptune": return isTravelHouse ? 8 : -5;    // Mystical in travel; confusing elsewhere
+        case "north node": case "true node": return 8;     // Karmic direction — mildly benefic
+        case "chiron":  return isTravelHouse ? -5 : -8;    // Healing wound — challenging but not devastating
+        case "juno":    return isTravelHouse ? 10 : 8;     // Partnerships — generally positive
+        case "saturn":  return isTravelHouse ? -30 : -25;  // Delays, restriction — worse in travel houses
+        case "pluto":   return isTravelHouse ? -25 : -20;  // Intense transformation
+        case "mars":    return isTravelHouse ? -22 : -18;  // Disruption, conflict
+        case "uranus":  return isTravelHouse ? -18 : -14;  // Erratic, unpredictable
+        case "neptune": return isTravelHouse ? 8 : -5;     // Mystical in travel; confusing elsewhere
+        case "south node":  return -10;                    // Karmic past — energy drain
         default:        return 3;
     }
 }
@@ -182,6 +225,148 @@ const ANGLE_TO_HOUSE: Record<string, number> = { MC: 10, IC: 4, ASC: 1, DSC: 7 }
 
 /** Strongly malefic planet names for ACG line penalty */
 const STRONG_MALEFICS = ["mars", "saturn", "pluto", "uranus"];
+
+/**
+ * Natal→Relocated bridge modifier.
+ * When a planet occupies different houses natally vs relocated, the natal theme
+ * "channels through" the relocated house. Compatible combos boost, clashing reduce.
+ */
+function natalBridgeModifier(natalHouse: number, relocatedHouse: number, planetName: string): number {
+    if (natalHouse === relocatedHouse) return 0; // No shift, no bridge
+
+    const p = planetName.toLowerCase();
+    const isBeneficPlanet = BENEFIC_PLANETS.includes(p);
+    const isMaleficPlanet = MALEFIC_NAMES.some(m => p.includes(m));
+
+    // Travel-relevant house pairings get extra weight
+    const travelHouses = [3, 9, 12];
+    const careerHouses = [2, 6, 10];
+    const relationshipHouses = [5, 7, 11];
+
+    const natalInTravel = travelHouses.includes(natalHouse);
+    const relocInTravel = travelHouses.includes(relocatedHouse);
+    const natalInCareer = careerHouses.includes(natalHouse);
+    const relocInCareer = careerHouses.includes(relocatedHouse);
+    const natalInRelation = relationshipHouses.includes(natalHouse);
+    const relocInRelation = relationshipHouses.includes(relocatedHouse);
+
+    // Synergistic bridge: natal theme aligns with relocated context
+    const synergy = (natalInTravel && relocInTravel) ||
+                    (natalInCareer && relocInCareer) ||
+                    (natalInRelation && relocInRelation);
+
+    if (synergy && isBeneficPlanet) return 8;
+    if (synergy && !isMaleficPlanet) return 5;
+    if (synergy && isMaleficPlanet) return -3; // Malefic synergy still challenging
+
+    // Cross-context: natal theme enters different life area — mild modifier
+    if (isBeneficPlanet) return 3;
+    if (isMaleficPlanet) return -2;
+    return 1;
+}
+
+/**
+ * Nuanced paran scorer — uses aspect type, planet dignity, known combination
+ * ratings, and angular position to determine paran influence.
+ */
+function scoreParanNuanced(
+    par: MatrixParan,
+    destLat: number,
+    natalPlanets: MatrixNatalPlanet[],
+): number {
+    if (Math.abs(par.lat - destLat) > 1) return 0; // Out of range
+
+    const p1 = par.p1.toLowerCase();
+    const p2 = par.p2.toLowerCase();
+
+    // 1. Check known combination ratings first
+    const comboKey = [p1, p2].sort().join("|");
+    const knownBenefic = KNOWN_BENEFIC_COMBOS[comboKey];
+    const knownMalefic = KNOWN_MALEFIC_COMBOS[comboKey];
+
+    if (knownBenefic !== undefined || knownMalefic !== undefined) {
+        let base = knownBenefic ?? knownMalefic ?? 0;
+
+        // Modify by natal dignity if available
+        const p1Dignity = par.p1Dignity ?? findNatalDignity(p1, natalPlanets);
+        const p2Dignity = par.p2Dignity ?? findNatalDignity(p2, natalPlanets);
+
+        if (base > 0) {
+            // Benefic combo boosted by dignity
+            if (isDignified(p1Dignity) && isDignified(p2Dignity)) base = Math.round(base * 1.3);
+            else if (isAfflicted(p1Dignity) || isAfflicted(p2Dignity)) base = Math.round(base * 0.6);
+        } else {
+            // Malefic combo softened if malefic planet is dignified (Saturn exception)
+            const maleficPlanet = MALEFIC_NAMES.some(m => p1.includes(m)) ? p1 : p2;
+            const maleficDignity = maleficPlanet === p1 ? p1Dignity : p2Dignity;
+            if (isDignified(maleficDignity)) base = Math.round(base * 0.4); // Significantly softened
+        }
+
+        // Tighter latitude = stronger effect
+        const latProximity = Math.abs(par.lat - destLat);
+        if (latProximity <= 0.3) base = Math.round(base * 1.2);
+
+        return Math.max(-25, Math.min(22, base));
+    }
+
+    // 2. Generic scoring when combo isn't in lookup tables
+    const hasBenefic = BENEFIC_PLANETS.some(b => p1.includes(b) || p2.includes(b));
+    const hasMalefic = STRONG_MALEFICS.some(m => p1.includes(m) || p2.includes(m));
+
+    // Check if aspect info is available
+    const aspect = (par.aspect || "").toLowerCase();
+    const isHarmonious = aspect.includes("trine") || aspect.includes("sextile");
+    const isChallenging = aspect.includes("square") || aspect.includes("opposition");
+
+    // Check dignity
+    const p1Dignity = par.p1Dignity ?? findNatalDignity(p1, natalPlanets);
+    const p2Dignity = par.p2Dignity ?? findNatalDignity(p2, natalPlanets);
+
+    if (hasBenefic && !hasMalefic) {
+        let score = 15;
+        if (isHarmonious) score += 5;
+        if (isDignified(p1Dignity) || isDignified(p2Dignity)) score += 3;
+        return Math.min(22, score);
+    }
+
+    if (hasMalefic && !hasBenefic) {
+        let score = -18;
+        // Saturn exception: well-dignified Saturn is neutral/mildly positive
+        if ((p1.includes("saturn") || p2.includes("saturn")) &&
+            !p1.includes("pluto") && !p2.includes("pluto")) {
+            const satDignity = p1.includes("saturn") ? p1Dignity : p2Dignity;
+            if (isDignified(satDignity)) return 5; // Dignified Saturn = stability
+        }
+        if (isChallenging) score -= 5;
+        if (isAfflicted(p1Dignity) || isAfflicted(p2Dignity)) score -= 3;
+        return Math.max(-25, score);
+    }
+
+    // Mixed benefic + malefic
+    if (hasBenefic && hasMalefic) {
+        if (isHarmonious) return 5;
+        if (isChallenging) return -8;
+        return -3;
+    }
+
+    return 0; // Neutral planets
+}
+
+/** Look up a planet's dignity from natal data */
+function findNatalDignity(planetName: string, natalPlanets: MatrixNatalPlanet[]): string {
+    const np = natalPlanets.find(p => p.planet.toLowerCase() === planetName);
+    return np?.dignity || "peregrine";
+}
+
+function isDignified(dignity: string): boolean {
+    const d = (dignity || "").toLowerCase();
+    return d.includes("domicile") || d.includes("exalted") || d.includes("exaltation");
+}
+
+function isAfflicted(dignity: string): boolean {
+    const d = (dignity || "").toLowerCase();
+    return d.includes("detriment") || d.includes("fall");
+}
 
 // ── Core Engine ───────────────────────────────────────────────────────────
 
@@ -196,6 +381,12 @@ export function computeHouseMatrix(params: {
     /** Global timing penalty (0–25) applied to all house base scores.
      *  Derived from tense applying hard transits (Mars sq Uranus, etc.) */
     globalPenalty?: number;
+    /** Birth latitude — determines Placidus vs Whole Sign house system */
+    birthLat?: number;
+    /** Lot of Fortune ecliptic longitude (pre-computed) */
+    lotOfFortuneLon?: number;
+    /** Lot of Spirit ecliptic longitude (pre-computed) */
+    lotOfSpiritLon?: number;
 }): HouseMatrixResult {
     const {
         natalPlanets,
@@ -206,10 +397,37 @@ export function computeHouseMatrix(params: {
         destLat,
         destLon,
         globalPenalty = 0,
+        birthLat,
+        lotOfFortuneLon,
+        lotOfSpiritLon,
     } = params;
+
+    // Determine house system
+    const usesBirthLat = birthLat !== undefined;
+    const houseSystem = usesBirthLat
+        ? (Math.abs(birthLat) >= 66 ? "whole-sign" : "placidus")
+        : "whole-sign"; // Default to whole-sign if no birth lat
 
     // Relocated ASC longitude (cusp 1)
     const ascLon = relocatedCusps.length >= 1 ? relocatedCusps[0] : 0;
+
+    // Resolve house number for a planet using the appropriate system
+    const getHouseNum = (planetLon: number): number => {
+        if (houseSystem === "placidus" && relocatedCusps.length >= 12) {
+            return computeHouseNumber(planetLon, ascLon, relocatedCusps, birthLat!);
+        }
+        return houseFromLongitude(planetLon, ascLon);
+    };
+
+    // Compute Lot of Fortune / Spirit house placements
+    let lotFortuneHouse: number | undefined;
+    let lotSpiritHouse: number | undefined;
+    if (lotOfFortuneLon !== undefined) {
+        lotFortuneHouse = getHouseNum(lotOfFortuneLon);
+    }
+    if (lotOfSpiritLon !== undefined) {
+        lotSpiritHouse = getHouseNum(lotOfSpiritLon);
+    }
 
     // Fixed geodetic angles at destination
     const geoMC  = geodeticMCLongitude(destLon);
@@ -247,7 +465,7 @@ export function computeHouseMatrix(params: {
         // ── Step 3: Occupant Planets (granular per-planet modifier) ───
         let occupants = 0;
         for (const p of natalPlanets) {
-            const pH = houseFromLongitude(p.longitude, ascLon);
+            const pH = getHouseNum(p.longitude);
             if (pH === h) {
                 occupants += occupantModifier(p.planet, h);
             }
@@ -338,25 +556,32 @@ export function computeHouseMatrix(params: {
             }
         }
 
-        // ── Step 9: Parans ────────────────────────────────────────────
+        // ── Step 9: Parans (Nuanced — aspect, dignity, angular position) ──
         let paranPts = 0;
         for (const par of parans) {
-            if (Math.abs(par.lat - destLat) <= 1) {
-                const p1 = par.p1.toLowerCase();
-                const p2 = par.p2.toLowerCase();
-                const hasBenefic = BENEFIC_PLANETS.some(
-                    (b) => p1.includes(b) || p2.includes(b),
-                );
-                const hasMalefic = STRONG_MALEFICS.some(
-                    (m) => p1.includes(m) || p2.includes(m),
-                );
-                if (hasBenefic && !hasMalefic) paranPts += 18;
-                else if (hasMalefic) paranPts -= 20;
+            paranPts += scoreParanNuanced(par, destLat, natalPlanets);
+        }
+        paranPts = Math.max(-30, Math.min(25, paranPts));
+
+        // ── Step 10: Natal → Relocated House Bridge ───────────────────
+        let natalBridge = 0;
+        for (const p of natalPlanets) {
+            const relocH = getHouseNum(p.longitude);
+            if (relocH !== h) continue;
+            const natalH = p.house; // natal house from birth chart
+            if (natalH !== undefined && natalH !== relocH) {
+                natalBridge += natalBridgeModifier(natalH, relocH, p.planet);
             }
         }
+        natalBridge = Math.max(-15, Math.min(15, natalBridge));
 
-        // ── Step 10: Clamp per-house score ────────────────────────────
-        const raw = base + dignity + occupants + acgLine + geodetic + transitPts + retrograde + transitRx + paranPts;
+        // ── Step 11: Lot of Fortune / Spirit placement bonus ──────────
+        let lotBonus = 0;
+        if (lotFortuneHouse === h) lotBonus += 12; // Fortune in this house = auspicious
+        if (lotSpiritHouse === h)  lotBonus += 8;  // Spirit in this house = purposeful
+
+        // ── Step 12: Clamp per-house score ────────────────────────────
+        const raw = base + dignity + occupants + acgLine + geodetic + transitPts + retrograde + transitRx + paranPts + natalBridge + lotBonus;
         const score = Math.max(0, Math.min(100, raw));
 
         houses.push({
@@ -378,11 +603,13 @@ export function computeHouseMatrix(params: {
                 retrograde,
                 transitRx,
                 paran: paranPts,
+                natalBridge,
+                lotBonus,
             },
         });
     }
 
-    // ── Step 11: Weighted decomposition into personalScore + collectiveScore
+    // ── Step 13: Weighted decomposition into personalScore + collectiveScore
     //            macroScore = personalScore + collectiveScore (always holds)
     let personalRaw = 0;
     for (const [hStr, weight] of Object.entries(PERSONAL_WEIGHTS)) {
@@ -407,7 +634,28 @@ export function computeHouseMatrix(params: {
     else if (macroScore >= 35) macroVerdict = "Challenging";
     else macroVerdict = "Hostile";
 
-    return { houses, macroScore, macroVerdict, personalScore, collectiveScore };
+    const result: HouseMatrixResult = {
+        houses, macroScore, macroVerdict, personalScore, collectiveScore,
+        houseSystem,
+    };
+
+    // Add Lot positions to result if computed
+    if (lotOfFortuneLon !== undefined && lotFortuneHouse !== undefined) {
+        result.lotOfFortune = {
+            longitude: lotOfFortuneLon,
+            house: lotFortuneHouse,
+            sign: signFromLongitude(lotOfFortuneLon),
+        };
+    }
+    if (lotOfSpiritLon !== undefined && lotSpiritHouse !== undefined) {
+        result.lotOfSpirit = {
+            longitude: lotOfSpiritLon,
+            house: lotSpiritHouse,
+            sign: signFromLongitude(lotOfSpiritLon),
+        };
+    }
+
+    return result;
 }
 
 /**
@@ -417,9 +665,18 @@ export function computeHouseMatrix(params: {
 export function mapTransitsToMatrix(
     transits: any[],
     natalPlanets: MatrixNatalPlanet[],
-    relocatedCusps: number[]
+    relocatedCusps: number[],
+    birthLat?: number,
 ): MatrixTransit[] {
     const ascLon = relocatedCusps[0] ?? 0;
+
+    const getHouseNum = (planetLon: number): number => {
+        if (birthLat !== undefined && Math.abs(birthLat) < 66 && relocatedCusps.length >= 12) {
+            return computeHouseNumber(planetLon, ascLon, relocatedCusps, birthLat);
+        }
+        return houseFromLongitude(planetLon, ascLon);
+    };
+
     return transits.map((t) => {
         const transitPlanetName = (
             t.transit_planet ||
@@ -440,7 +697,7 @@ export function mapTransitsToMatrix(
             (p) => p.planet.toLowerCase() === natalPlanetName
         );
         const targetHouse = natalP
-            ? houseFromLongitude(natalP.longitude, ascLon)
+            ? getHouseNum(natalP.longitude)
             : undefined;
 
         const aspectStr = (t.aspect || t.type || "").toLowerCase();

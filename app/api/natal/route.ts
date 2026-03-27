@@ -6,6 +6,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { geocodeCity } from "@/app/lib/astro-client";
+import { getHouseSystemForLatitude } from "@/app/lib/house-system";
+import { computeLotOfFortune, computeLotOfSpirit, determineSect, longitudeToSignDegree } from "@/app/lib/arabic-parts";
 
 /** Map sign index (0=Aries) to sign name */
 const SIGNS = [
@@ -26,6 +28,8 @@ const PLANET_NAME_MAP: Record<string, string> = {
     neptune: "Neptune",
     pluto: "Pluto",
     chiron: "Chiron",
+    northnode: "North Node",
+    southnode: "South Node",
     sirius: "Sirius",
 };
 
@@ -151,9 +155,13 @@ export async function POST(req: NextRequest) {
             longitude: chartLon,
         });
 
+        // Determine house system based on birth latitude
+        const houseSystemType = getHouseSystemForLatitude(chartLat);
+        const libraryHouseSystem = houseSystemType === "whole-sign" ? "whole-sign" : "placidus";
+
         const horoscope = new Horoscope({
             origin,
-            houseSystem: "placidus",
+            houseSystem: libraryHouseSystem,
             zodiac: "tropical",
             aspectPoints: ["bodies", "points", "angles"],
             aspectWithPoints: ["bodies", "points", "angles"],
@@ -195,12 +203,36 @@ export async function POST(req: NextRequest) {
         const ascendant = horoscope.Angles?.Ascendant?.ChartPosition?.Ecliptic?.DecimalDegrees ?? null;
         const mc = horoscope.Angles?.Midheaven?.ChartPosition?.Ecliptic?.DecimalDegrees ?? null;
 
+        // Compute Lot of Fortune / Spirit
+        let lotOfFortune = null;
+        let lotOfSpirit = null;
+        const sunP = planets.find(p => p.planet === "Sun");
+        const moonP = planets.find(p => p.planet === "Moon");
+        if (ascendant !== null && sunP && moonP) {
+            const sect = determineSect(sunP.longitude, ascendant);
+            const fortuneLon = computeLotOfFortune(ascendant, sunP.longitude, moonP.longitude, sect);
+            const spiritLon = computeLotOfSpirit(ascendant, sunP.longitude, moonP.longitude, sect);
+            lotOfFortune = {
+                longitude: Math.round(fortuneLon * 10) / 10,
+                ...longitudeToSignDegree(fortuneLon),
+                sect,
+            };
+            lotOfSpirit = {
+                longitude: Math.round(spiritLon * 10) / 10,
+                ...longitudeToSignDegree(spiritLon),
+                sect,
+            };
+        }
+
         return NextResponse.json({
             planets,
             cusps,
             aspects,
             ascendant: ascendant !== null ? Math.round(ascendant * 10) / 10 : null,
             mc: mc !== null ? Math.round(mc * 10) / 10 : null,
+            houseSystem: houseSystemType,
+            lotOfFortune,
+            lotOfSpirit,
             birthplace,
             coords: { lat: chartLat, lon: chartLon },
         });

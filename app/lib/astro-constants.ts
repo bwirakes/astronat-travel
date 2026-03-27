@@ -51,6 +51,7 @@ export const ESSENTIAL_DIGNITY: Record<string, { domicile: string[]; exalted: st
     Mars:    { domicile: ["Aries", "Scorpio"],       exalted: ["Capricorn"],   detriment: ["Taurus", "Libra"],       fall: ["Cancer"] },
     Jupiter: { domicile: ["Sagittarius", "Pisces"],  exalted: ["Cancer"],      detriment: ["Gemini", "Virgo"],       fall: ["Capricorn"] },
     Saturn:  { domicile: ["Capricorn", "Aquarius"],  exalted: ["Libra"],       detriment: ["Cancer", "Leo"],         fall: ["Aries"] },
+    Chiron:  { domicile: ["Virgo"],                  exalted: ["Sagittarius"], detriment: ["Pisces"],                fall: ["Gemini"] },
 };
 
 // ── Accidental Dignity — house volume multiplier ──────────────────────────

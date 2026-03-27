@@ -1,38 +1,71 @@
-/* ═══ Astro Nat — Elevated Editorial ════════════════════════════ */
+/* ═══ Astro Nat — Elevated Editorial + 90s Vibe ════════════════════════════ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
 
+@import "tw-animate-css";
+
+@import "shadcn/tailwind.css";
+
 :root {
-  /* Fonts — Editorial serif + utilitarian sans + industrial mono */
-  --font-display: 'Cormorant Garamond', serif;
-  --font-body: 'Space Grotesk', sans-serif;
+  /* Astro-Brand Strategy Typography */
+  --font-primary: 'BETTER DAYS', 'Space Grotesk', sans-serif;
+  --font-secondary: 'PERFECTLY NINETIES', 'Cormorant Garamond', serif;
+  --font-body: 'GARET', 'Space Grotesk', sans-serif;
+  --font-display-alt-1: 'MONIGUE', 'Cormorant Garamond', serif;
+  --font-display-alt-2: 'SLOOP SCRIPT', cursive;
+
+  --font-display: var(--font-secondary);
   --font-mono: 'IBM Plex Mono', monospace;
 
-  /* Dark Theme (Default) — Deep Obsidian */
-  --bg: #0A0A0E;
-  --bg-raised: #111118;
-  --surface: #161620;
-  --surface-border: rgba(255, 255, 255, 0.055);
+  /* Astro-Brand Strategy Colors */
+  --color-charcoal: #1B1B1B;
+  --color-y2k-blue: #0456fb;
+  --color-acqua: #CAF1F0;
+  --color-black: #000000;
+  --color-eggshell: #F8F5EC;
+  --color-spiced-life: #E67A7A;
+
+  /* Dark Theme (Default) mapped to Brand Colors */
+  --bg: var(--color-charcoal);
+  --bg-raised: #212121;
+  --surface: var(--color-black);
+  --surface-border: rgba(255, 255, 255, 0.1);
 
   /* Esoteric / Atmospheric Palette */
-  --accent: #C4622D;       /* Terracotta — replaces neon red */
-  --accent-soft: rgba(196, 98, 45, 0.12);
-  --cyan: #7FB5C1;         /* Desaturated slate-blue — replaces neon cyan */
-  --cyan-soft: rgba(127, 181, 193, 0.1);
+  --accent: var(--color-spiced-life);
+  --accent-soft: rgba(230, 122, 122, 0.12);
+  --cyan: var(--color-acqua);
+  --cyan-soft: rgba(202, 241, 240, 0.1);
+  --y2k-blue: var(--color-y2k-blue);
 
-  /* Quality states — no traffic lights */
-  --sage: #7B9E87;         /* Muted sage — for excellent/positive */
-  --sage-soft: rgba(123, 158, 135, 0.12);
-  --amber: #C17B3F;        /* Warm amber — for caution */
+  /* Quality states */
+  --sage: #00FD00; /* Neon green seen in identity assets */
+  --sage-soft: rgba(0, 253, 0, 0.12);
+  --amber: #C17B3F;
   --amber-soft: rgba(193, 123, 63, 0.12);
 
   /* Celestial Editorial Gold Palette */
   --gold: #C9A96E;
   --gold-soft: rgba(201, 169, 110, 0.12);
 
-  --text-primary: #E4E2DD;
-  --text-secondary: #7C7C82;
-  --text-tertiary: #4A4A52;
+  /* Planet Palette */
+  --color-planet-sun: var(--gold);
+  --color-planet-moon: #FFFFFF;
+  --color-planet-mercury: #BDBDBD;
+  --color-planet-venus: var(--color-spiced-life);
+  --color-planet-mars: #D32F2F;
+  --color-planet-jupiter: var(--amber);
+  --color-planet-saturn: #757575;
+  --color-planet-uranus: var(--color-acqua);
+  --color-planet-neptune: var(--color-y2k-blue);
+  --color-planet-pluto: #8E24AA;
+
+  --text-primary: var(--color-eggshell);
+  --text-secondary: #AAAAAA;
+  --text-tertiary: #666666;
 
   /* Spacing */
   --space-xs: 0.5rem;
@@ -43,40 +76,54 @@
   --space-2xl: 4rem;
   --space-3xl: 6rem;
 
-  /* Radii — reduced for editorial flatness */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  /* Radii - M3 Shape Scale (Rounded) */
+  --radius-none: 0px;
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 28px;
+  --radius-full: 9999px;
+
+  /* M3 Shape Scale (Cut) */
+  --cut-sm: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  --cut-md: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  --cut-lg: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+  --cut-xl: polygon(28px 0, 100% 0, 100% calc(100% - 28px), calc(100% - 28px) 100%, 0 100%, 0 28px);
+
+  /* Astro-Organic Asymmetric Shapes */
+  --shape-organic-1: 40% 60% 70% 30% / 40% 50% 60% 50%;
+  --shape-asymmetric-md: var(--radius-xl) var(--radius-xs) var(--radius-xl) var(--radius-sm);
+  --shape-asymmetric-lg: var(--radius-full) var(--radius-md) var(--radius-full) var(--radius-sm);
 
   /* Motion */
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --duration: 0.3s;
 }
 
-/* Light Theme */
+/* Light Theme (Astro-Brand mappings) */
 [data-theme="light"] {
-  --bg: #F2F0EB;
-  --bg-raised: #FAFAF8;
-  --surface: #FAFAF8;
-  --surface-border: rgba(0, 0, 0, 0.07);
+  --bg: var(--color-eggshell);
+  --bg-raised: #FFFFFF;
+  --surface: #F0EDE4;
+  --surface-border: rgba(0, 0, 0, 0.1);
 
-  --accent: #B35520;
-  --accent-soft: rgba(179, 85, 32, 0.08);
-  --cyan: #4A8E9C;
-  --cyan-soft: rgba(74, 142, 156, 0.08);
+  --accent: var(--color-spiced-life);
+  --accent-soft: rgba(230, 122, 122, 0.12);
+  --cyan: var(--color-acqua);
+  --cyan-soft: rgba(202, 241, 240, 0.2);
 
-  --sage: #4E7A5E;
-  --sage-soft: rgba(78, 122, 94, 0.1);
-  --amber: #9E6228;
-  --amber-soft: rgba(158, 98, 40, 0.1);
+  --sage: #00FD00;
+  --sage-soft: rgba(0, 253, 0, 0.15);
+  --amber: #C17B3F;
+  --amber-soft: rgba(193, 123, 63, 0.1);
 
-  /* Celestial Editorial Gold Palette (Light Mode) */
-  --gold: #A3824A;
-  --gold-soft: rgba(163, 130, 74, 0.12);
+  --gold: #C9A96E;
+  --gold-soft: rgba(201, 169, 110, 0.12);
 
-  --text-primary: #1A1A1F;
-  --text-secondary: #5C5C62;
-  --text-tertiary: #8E8E94;
+  --text-primary: var(--color-charcoal);
+  --text-secondary: #4A4A4A;
+  --text-tertiary: #666666;
 }
 
 /* ── Reset ──────────────────────────────────────────────────── */
@@ -386,4 +433,87 @@ a {
     .expandable-content {
         padding: 0 1rem 0;
     }
+}
+
+@layer base {
+  .theme {
+    --font-heading: var(--font-sans);
+    --font-sans: var(--font-sans);
+  }
+  :root {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: oklch(0.205 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.708 0 0);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --radius: 0.625rem;
+    --sidebar: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar-primary: oklch(0.205 0 0);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.97 0 0);
+    --sidebar-accent-foreground: oklch(0.205 0 0);
+    --sidebar-border: oklch(0.922 0 0);
+    --sidebar-ring: oklch(0.708 0 0);
+  }
+  .dark {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.922 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.556 0 0);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
+  }
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }

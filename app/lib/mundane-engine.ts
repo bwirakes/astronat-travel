@@ -15,6 +15,7 @@ const PLANET_MAP: Record<string, string> = {
     sun: "Sun", moon: "Moon", mercury: "Mercury", venus: "Venus",
     mars: "Mars", jupiter: "Jupiter", saturn: "Saturn",
     uranus: "Uranus", neptune: "Neptune", pluto: "Pluto",
+    chiron: "Chiron", northnode: "North Node", southnode: "South Node",
 };
 
 const MAJOR_ASPECTS = [
