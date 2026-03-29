@@ -84,29 +84,41 @@ export function ChartWheel({ natal, size = 480 }: ChartWheelProps) {
     (async () => {
       const { Chart } = await import("@astrodraw/astrochart");
 
+      // Resolve CSS tokens to hex at render time (SSR-safe)
+      const fg      = resolveVar("--text-primary",       "#1a1a1a");
+      const fgSub   = resolveVar("--text-secondary",     "#555555");
+      const fgMuted = resolveVar("--text-tertiary",      "#999999");
+      const border  = resolveVar("--surface-border",     "#dddddd");
+      const blue    = resolveVar("--color-y2k-blue",     "#3B82F6");
+      const sage    = resolveVar("--sage",               "#5A9E78");
+      const mars    = resolveVar("--color-planet-mars",  "#D94F3D");
+      const spiced  = resolveVar("--color-spiced-life",  "#C4622D");
+      const acqua   = resolveVar("--color-acqua",        "#5CC8C8");
+
       const chart = new (Chart as any)(idRef.current, size, size, {
-        // ── Background ───────────────────────────────
-        PAPER_COLOR: "transparent",
-        // ── Circles & lines ──────────────────────────
-        CIRCLE_COLOR: resolveVar("--surface-border", "#333"),
-        LINE_COLOR: resolveVar("--surface-border", "#333"),
-        // ── Text ─────────────────────────────────────
-        SIGNS_COLOR: resolveVar("--text-secondary", "#aaa"),
-        NUMBERS_COLOR: resolveVar("--text-tertiary", "#666"),
-        POINTS_COLOR: resolveVar("--text-primary", "#fff"),
-        // ── Planet colors → brand tokens ─────────────
-        PLANETS_COLOR: {
-          Sun:     resolveVar("--gold",                "#F5C842"),
-          Moon:    resolveVar("--color-acqua",         "#5CC8C8"),
-          Mercury: resolveVar("--color-y2k-blue",      "#3B82F6"),
-          Venus:   resolveVar("--color-spiced-life",   "#C4622D"),
-          Mars:    resolveVar("--color-planet-mars",   "#D94F3D"),
-          Jupiter: resolveVar("--sage",                "#5A9E78"),
-          Saturn:  resolveVar("--text-tertiary",       "#666"),
-          Uranus:  resolveVar("--color-y2k-blue",      "#3B82F6"),
-          Neptune: resolveVar("--color-acqua",         "#5CC8C8"),
-          Pluto:   resolveVar("--color-planet-mars",   "#D94F3D"),
-          Chiron:  resolveVar("--text-secondary",      "#aaa"),
+        // ── Size & scale ─────────────────────────────
+        SYMBOL_SCALE: 1.4,           // larger planet glyphs
+        POINTS_TEXT_SIZE: 9,         // degree / retrograde label
+
+        // ── Colours ──────────────────────────────────
+        COLOR_BACKGROUND: "transparent",
+        POINTS_COLOR:  fg,           // all planet symbols
+        SIGNS_COLOR:   fgSub,        // zodiac sign glyphs
+        CIRCLE_COLOR:  border,
+        LINE_COLOR:    border,
+        CUSPS_FONT_COLOR: fgMuted,
+        SYMBOL_AXIS_FONT_COLOR: fgMuted,
+
+        // ── Aspects: 8 types ─────────────────────────
+        ASPECTS: {
+          conjunction:  { degree:   0, orbit: 10, color: blue    },
+          semisextile:  { degree:  30, orbit:  3, color: acqua   },
+          sextile:      { degree:  60, orbit:  5, color: sage     },
+          square:       { degree:  90, orbit:  8, color: mars     },
+          trine:        { degree: 120, orbit:  8, color: sage     },
+          quincunx:     { degree: 150, orbit:  3, color: spiced   },
+          opposition:   { degree: 180, orbit: 10, color: spiced   },
+          semisquare:   { degree:  45, orbit:  3, color: mars     },
         },
       } as any);
 
