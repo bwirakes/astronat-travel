@@ -22,8 +22,10 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  const isDemo = request.nextUrl.searchParams.get('demo') === 'true'
+
   // Protect all /home, /onboarding routes
-  if (!user && (request.nextUrl.pathname.startsWith('/home') || request.nextUrl.pathname.startsWith('/onboarding'))) {
+  if (!user && !isDemo && (request.nextUrl.pathname.startsWith('/home') || request.nextUrl.pathname.startsWith('/onboarding'))) {
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 

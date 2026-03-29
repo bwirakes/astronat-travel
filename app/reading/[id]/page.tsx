@@ -7,6 +7,7 @@ import Image from "next/image";
 import { useState } from "react";
 import ThemeToggle from "../../components/ThemeToggle";
 import { ScoreRing, getVerdict, BAND_CONFIG } from "../../components/ScoreRing";
+import { COUNTRY_CHARTS, type CountryChart } from "../../../lib/mundane-charts";
 
 const MOCK_READING = {
   destination: "Tokyo, Japan",
@@ -61,6 +62,7 @@ export default function ReadingPage() {
   const [expandedHouse, setExpandedHouse] = useState<number | null>(null);
 
   const verdict = getVerdict(reading.macroScore);
+  const destinationCountry = COUNTRY_CHARTS.find((c: CountryChart) => reading.destination.includes(c.name));
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text-primary)" }}>
@@ -146,6 +148,43 @@ export default function ReadingPage() {
             })}
           </div>
         </section>
+
+        {/* Mundane Layer */}
+        {destinationCountry && (
+          <section style={{ marginBottom: "var(--space-2xl)" }}>
+            <span style={{
+              display: "inline-block", fontFamily: "var(--font-mono)", fontSize: "0.55rem",
+              letterSpacing: "0.08em", textTransform: "uppercase",
+              padding: "0.2rem 0.6rem", border: "1px solid currentColor", borderRadius: "20px",
+              marginBottom: "var(--space-sm)", color: 'var(--color-acqua)'
+            }}>MUNDANE LAYER</span>
+            <h3 style={{ fontFamily: 'var(--font-secondary)', fontSize: '1.5rem', marginTop: '0', textTransform: 'uppercase' }}>
+              {destinationCountry.name}'s Chart + Yours
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--space-sm)', marginTop: 'var(--space-md)' }}>
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--surface-border)', padding: 'var(--space-md)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.55rem', color: 'var(--text-tertiary)' }}>COUNTRY SUN</span>
+                <p style={{ fontFamily: 'var(--font-secondary)', fontSize: '1.1rem', margin: '0.25rem 0 0' }}>{destinationCountry.sunSign}</p>
+              </div>
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--surface-border)', padding: 'var(--space-md)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.55rem', color: 'var(--text-tertiary)' }}>FOUNDED</span>
+                <p style={{ fontFamily: 'var(--font-secondary)', fontSize: '1.1rem', margin: '0.25rem 0 0' }}>{new Date(destinationCountry.founding).getFullYear()}</p>
+              </div>
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--surface-border)', padding: 'var(--space-md)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.55rem', color: 'var(--text-tertiary)' }}>RESONANCE</span>
+                <div style={{ marginTop: '0.25rem' }}>
+                    <VerdictLabel score={84} />
+                </div>
+              </div>
+            </div>
+            <button
+              style={{ marginTop: 'var(--space-md)', fontFamily: 'var(--font-mono)', fontSize: '0.6rem', color: 'var(--color-y2k-blue)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+              onClick={() => router.push(`/mundane?country=${destinationCountry.slug}`)}
+            >
+              See full country chart &rarr;
+            </button>
+          </section>
+        )}
 
         {/* Transit Windows */}
         <section style={{ marginBottom: "var(--space-2xl)" }}>

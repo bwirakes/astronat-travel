@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import ThemeToggle from "../components/ThemeToggle";
 import { ChartWheel, type NatalData } from "../components/ChartWheel";
+import { AcgMap } from "../components/AcgMap";
 
 // ── Mock data for ?demo=true ───────────────────────────────────
 
@@ -56,7 +57,7 @@ const ASPECT_COLORS: Record<string, string> = {
   Square:      "var(--color-spiced-life)",
 };
 
-type Tab = "wheel" | "planets" | "aspects";
+type Tab = "wheel" | "map" | "planets" | "aspects";
 
 // ── Dignity pill ───────────────────────────────────────────────
 
@@ -119,8 +120,8 @@ export default function ChartPage() {
         </div>
 
         {/* Tab Switcher */}
-        <div style={{ display: "flex", gap: "0.25rem", marginBottom: "var(--space-xl)" }}>
-          {(["wheel", "planets", "aspects"] as Tab[]).map(t => (
+        <div style={{ display: "flex", gap: "0.25rem", marginBottom: "var(--space-xl)", overflowX: "auto", paddingBottom: "4px" }}>
+          {(["wheel", "map", "planets", "aspects"] as Tab[]).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -169,6 +170,41 @@ export default function ChartPage() {
                   <a href="/chart?demo=true" style={{ color: "var(--color-y2k-blue)" }}>Try demo mode →</a>
                 </div>
               )}
+            </motion.div>
+          )}
+
+          {/* ── MAP TAB ── */}
+          {tab === "map" && (
+            <motion.div key="map"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25 }}
+            >
+              <div style={{
+                background: "var(--surface)",
+                border: "1px solid var(--surface-border)",
+                borderRadius: "var(--radius-md)",
+                padding: "var(--space-md)",
+              }}>
+                <AcgMap 
+                    natal={natal!} 
+                    interactive 
+                    onLocationClick={(lat, lon) => console.log("Map click:", lat, lon)}
+                />
+                <div style={{ 
+                    marginTop: 'var(--space-sm)', 
+                    display: 'flex', 
+                    justifyContent: 'space-between',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '0.6rem',
+                    color: 'var(--text-tertiary)',
+                    letterSpacing: '0.05em'
+                }}>
+                    <span>↑ PLANETARY CROSSINGS (ACG)</span>
+                    <span>VERTICAL LINES = PEAK POWER</span>
+                </div>
+              </div>
             </motion.div>
           )}
 

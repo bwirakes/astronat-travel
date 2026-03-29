@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Heart, Users, Star, Cake, User } from "lucide-react";
+import { Heart, Users, Star, Cake, User, Globe } from "lucide-react";
 import Image from "next/image";
 import styles from "./home.module.css";
 import { ScoreRing, getVerdict } from "../components/ScoreRing";
@@ -14,7 +14,8 @@ export default function HomeClient({ profile, sunSignData, recentSearches }: any
     const features = [
         { title: "Life Goals", icon: <Heart size={18} />, description: "What are you seeking?", url: "/goals?demo=true", accent: "var(--color-spiced-life)" },
         { title: "Couples", icon: <Users size={18} />, description: "Read for two", url: "/couples?demo=true", accent: "var(--gold)" },
-        { title: "My Chart", icon: <Star size={18} />, description: "Your natal chart", url: "/chart?demo=true", accent: "var(--color-acqua)" },
+        { title: "My Chart", icon: <Star size={18} />, description: "Your natal chart", url: "/chart?demo=true", accent: "var(--color-y2k-blue)" },
+        { title: "World Charts", icon: <Globe size={18} />, description: "Natal charts of nations", url: "/mundane?demo=true", accent: "var(--color-acqua)" },
     ];
 
     return (
