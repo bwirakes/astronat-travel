@@ -205,25 +205,78 @@ function computeAscDscCurve(
 }
 ```
 
-### Rendering as SVG `<polyline>`
+### Step 5b — Anti-Meridian Splitter
 
-```tsx
-{ascDscPoints.length > 2 && (
-  <polyline
-    points={ascDscPoints.map(p =>
-      `${projectLon(p.lon)},${projectLat(p.lat)}`
-    ).join(' ')}
-    fill="none"
-    stroke={color}
-    strokeWidth={compact ? 0.8 : 1.2}
-    strokeDasharray={dash}
-    opacity={opacity}
-  />
-)}
+When ASC/DSC curves cross the ±180° boundary, the normalised longitude jumps from ~+179° to ~−179°. Without splitting, the renderer draws a streak across the entire map. This utility detects the jump and breaks the path into safe segments.
+
+```ts
+type GeoPoint = { lat: number; lon: number };
+
+/**
+ * Splits an array of geographic coordinates into multiple segments
+ * to prevent horizontal streaking when crossing the anti-meridian.
+ *
+ * @param points    - Continuous array of calculated lat/lon points.
+ * @param threshold - Longitude jump (degrees) that triggers a split. Default 180.
+ * @returns Array of line segments (arrays of GeoPoints).
+ */
+function splitAtAntiMeridian(
+  points: GeoPoint[],
+  threshold: number = 180
+): GeoPoint[][] {
+  if (points.length === 0) return [];
+
+  const segments: GeoPoint[][] = [];
+  let currentSegment: GeoPoint[] = [points[0]];
+
+  for (let i = 1; i < points.length; i++) {
+    const prevLon = points[i - 1].lon;
+    const currLon = points[i].lon;
+
+    // If consecutive longitudes jump > threshold, the line crossed ±180°.
+    if (Math.abs(currLon - prevLon) > threshold) {
+      segments.push(currentSegment);
+      currentSegment = [];
+    }
+
+    currentSegment.push(points[i]);
+  }
+
+  if (currentSegment.length > 0) {
+    segments.push(currentSegment);
+  }
+
+  return segments;
+}
 ```
 
-> [!WARNING]
-> **Wrap-around handling**: When the curve crosses the ±180° boundary, split it into separate segments to avoid a line being drawn across the entire map. Check for jumps > 180° between consecutive points and split there.
+**Why threshold = 180?** Because latitude steps are 2°, consecutive longitude changes are only a few degrees. The only time the gap exceeds 180° is the artificial wrap from +179° → −179°.
+
+### Rendering as SVG `<polyline>` (multi-segment)
+
+```tsx
+{/* Generate raw curve, then split at anti-meridian */}
+{(() => {
+  const rawPoints = line.curve!;
+  const segments = splitAtAntiMeridian(rawPoints);
+
+  return segments.map((seg, si) =>
+    seg.length > 1 ? (
+      <polyline
+        key={`${line.planet}-${line.angle}-seg${si}`}
+        points={seg.map(p =>
+          `${projectLon(p.lon)},${projectLat(p.lat)}`
+        ).join(' ')}
+        fill="none"
+        stroke={color}
+        strokeWidth={compact ? 0.8 : 1.2}
+        strokeDasharray={dash}
+        opacity={opacity}
+      />
+    ) : null
+  );
+})()}
+```
 
 ---
 
