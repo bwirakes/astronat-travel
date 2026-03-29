@@ -266,7 +266,8 @@
 .mapPlaceholder {
     background: var(--surface);
     border: 1px solid var(--surface-border);
-    border-radius: var(--radius-lg);
+    clip-path: var(--cut-md);
+    border-radius: 0;
     height: 360px;
     display: flex;
     flex-direction: column;
@@ -731,10 +732,10 @@
     }
 }
 
-/* Map container */
 .mapContainer {
     margin-bottom: var(--space-md);
-    border-radius: var(--radius-lg);
+    clip-path: var(--cut-md);
+    border-radius: 0;
     overflow: hidden;
     border: 1px solid var(--surface-border);
 }

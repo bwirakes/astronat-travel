@@ -1,0 +1,372 @@
+/* ═══ App Home — Responsive Layout ══════════════════════════════════════════ */
+
+/* ── Page Shell ─────────────────────────────────────────── */
+.page {
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text-primary);
+    transition: background var(--duration) var(--ease), color var(--duration) var(--ease);
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+.header {
+    padding: var(--space-sm) clamp(1.25rem, 3vw, 3rem);
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--surface-border);
+}
+
+/* ── Content Grid ───────────────────────────────────────── */
+.content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--space-md) clamp(1.25rem, 3vw, 3rem) var(--space-3xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+/* ── Hero ────────────────────────────────────────────────── */
+.hero {
+    padding: var(--space-md) 0 var(--space-sm);
+}
+
+.pill {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--gold);
+}
+
+.greeting {
+    font-family: var(--font-primary);
+    font-size: clamp(2.2rem, 5vw, 3.5rem);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    margin-top: 0.4rem;
+    color: var(--text-primary);
+    text-transform: uppercase;
+}
+
+/* Italic name uses Sloop Script per SKILL.md display-alt-2 */
+.greetingName {
+    font-family: var(--font-display-alt-2);
+    font-style: italic;
+    text-transform: none;
+    color: var(--gold);
+    font-size: 1.1em;
+    position: relative;
+    top: 0.04em;
+}
+
+/* ── Birthday Optimizer Banner ──────────────────────────── */
+.banner {
+    background: var(--color-y2k-blue);
+    border-radius: var(--shape-asymmetric-md);
+    padding: var(--space-lg) var(--space-lg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    cursor: pointer;
+    transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+    box-shadow: 0 4px 16px rgba(4, 86, 251, 0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+.banner::before {
+    content: '';
+    position: absolute;
+    top: -30%;
+    right: -10%;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    pointer-events: none;
+}
+
+.banner:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(4, 86, 251, 0.25);
+}
+
+.bannerText {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.bannerTag {
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.bannerTitle {
+    font-family: var(--font-secondary);
+    font-size: clamp(1.2rem, 3vw, 1.6rem);
+    color: #fff;
+    line-height: 1.15;
+}
+
+.bannerSub {
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.65);
+    line-height: 1.4;
+    max-width: 340px;
+}
+
+.bannerRight {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.bannerEmoji {
+    font-size: 2.5rem;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.2));
+}
+
+.bannerBtn {
+    flex-shrink: 0;
+    background: #fff;
+    color: var(--color-y2k-blue);
+    border: none;
+    border-radius: var(--radius-full);
+    padding: 0.5rem 1.2rem;
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s var(--ease);
+    white-space: nowrap;
+}
+
+.bannerBtn:hover {
+    background: var(--color-eggshell);
+}
+
+/* ── Section Kicker (SKILL.md H4 pattern) ───────────────── */
+.sectionKicker {
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-sm);
+}
+
+/* ── Explore Grid ───────────────────────────────────────── */
+.exploreSection {
+    margin-top: var(--space-sm);
+}
+
+.exploreGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-xs);
+}
+
+.exploreCard {
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: var(--shape-asymmetric-md);
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    cursor: pointer;
+    transition: transform 0.15s var(--ease), background 0.15s var(--ease);
+}
+
+.exploreCard:hover {
+    transform: translateY(-2px);
+    background: var(--bg-raised);
+}
+
+.exploreIcon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+}
+
+.exploreName {
+    font-family: var(--font-secondary);
+    font-size: 1rem;
+    line-height: 1.15;
+    color: var(--text-primary);
+}
+
+.exploreDesc {
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    color: var(--text-tertiary);
+    letter-spacing: 0.05em;
+}
+
+/* ── Readings List ──────────────────────────────────────── */
+.readingsList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.readingRow {
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: var(--shape-asymmetric-md);
+    padding: 0.6rem var(--space-sm);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background 0.15s var(--ease);
+}
+
+.readingRow:hover {
+    background: var(--bg-raised);
+}
+
+.readingLeft {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.miniRing {
+    transform: scale(0.45);
+    transform-origin: left center;
+    margin-right: -40px;
+    flex-shrink: 0;
+}
+
+.readingDest {
+    display: block;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.readingDate {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    color: var(--text-tertiary);
+    letter-spacing: 0.05em;
+    margin-top: 0.1rem;
+}
+
+.viewBtn {
+    background: transparent;
+    border: 1px solid var(--surface-border);
+    color: var(--text-primary);
+    border-radius: var(--radius-full);
+    padding: 0.35rem 1rem;
+    font-size: 0.75rem;
+    font-family: var(--font-body);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s var(--ease);
+}
+
+.viewBtn:hover {
+    background: var(--text-primary);
+    color: var(--bg);
+}
+
+.emptyState {
+    background: var(--surface);
+    border: 1px dashed var(--surface-border);
+    border-radius: var(--shape-asymmetric-md);
+    padding: var(--space-lg);
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+/* ── Floating Action Button ──────────────────────────────── */
+.fab {
+    position: fixed;
+    bottom: var(--space-md);
+    left: 50%;
+    transform: translateX(-50%) !important;
+    z-index: 100;
+    background: var(--color-y2k-blue);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-full);
+    padding: 0.7rem 1.5rem;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(4, 86, 251, 0.35);
+    transition: background 0.15s var(--ease);
+}
+
+.fab:hover {
+    background: #0340c5;
+}
+
+/* ═══ RESPONSIVE — Tablet (≥768px): 2-column grid ════════ */
+@media (min-width: 768px) {
+    .content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-xl);
+        align-items: stretch;
+    }
+
+    .primary {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .exploreSection {
+        margin-top: auto;
+    }
+
+    .fab {
+        left: auto;
+        right: var(--space-lg);
+        transform: none !important;
+    }
+}
+
+/* ═══ RESPONSIVE — Desktop wide (≥1200px) ════════════════ */
+@media (min-width: 1200px) {
+    .content {
+        grid-template-columns: 3fr 2fr;
+        gap: var(--space-2xl);
+    }
+
+    .greeting {
+        font-size: 4rem;
+    }
+
+    .exploreGrid {
+        gap: var(--space-sm);
+    }
+
+    .exploreCard {
+        padding: var(--space-lg);
+    }
+}

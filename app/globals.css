@@ -391,20 +391,20 @@ a {
     font-size: 0.55rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    padding: 0.2rem 0.5rem;
-    border-radius: var(--radius-sm);
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
     border: 1px solid var(--surface-border);
     color: var(--text-secondary);
     white-space: nowrap;
 }
 
 .expandable-title {
-    font-family: var(--font-body);
-    font-weight: 500;
-    font-size: 0.72rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--text-secondary);
+    font-family: var(--font-secondary);
+    font-weight: 400;
+    font-size: 1.2rem;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--text-primary);
     white-space: nowrap;
 }
 
