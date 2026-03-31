@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Cake } from "lucide-react";
+import { Cake, ArrowLeft } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import ThemeToggle from "../components/ThemeToggle";
 import { ScoreRing, getVerdict, BAND_CONFIG } from "../components/ScoreRing";
 
@@ -16,6 +17,7 @@ const MOCK_RESULTS = [
 ];
 
 export default function BirthdayPage() {
+  const router = useRouter();
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [loading, setLoading] = useState(false);
@@ -43,6 +45,15 @@ export default function BirthdayPage() {
       </header>
 
       <div style={{ maxWidth: "800px", margin: "0 auto", padding: "var(--space-lg) clamp(1.25rem, 3vw, 3rem) var(--space-3xl)", position: "relative" }}>
+        <button onClick={() => router.push("/home")} style={{
+          background: "none", border: "none", color: "var(--text-tertiary)",
+          fontFamily: "var(--font-mono)", fontSize: "0.6rem", cursor: "pointer",
+          letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "var(--space-md)",
+          display: "flex", alignItems: "center", gap: "0.3rem",
+        }}>
+          <ArrowLeft size={12} /> Home
+        </button>
+
         {/* Decorative element */}
         <div style={{ position: "absolute", top: "-2rem", right: "-2rem", opacity: 0.04, pointerEvents: "none" }}>
           <Cake size={200} strokeWidth={0.5} />
@@ -118,11 +129,6 @@ export default function BirthdayPage() {
           })}
         </div>
       </div>
-
-      <style jsx global>{`
-        .onboarding-logo { filter: invert(1) brightness(1.2); display: block; }
-        [data-theme="light"] .onboarding-logo { filter: none; }
-      `}</style>
     </div>
   );
 }

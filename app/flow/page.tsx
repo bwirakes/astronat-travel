@@ -9,8 +9,9 @@ import ThemeToggle from "../components/ThemeToggle";
 import { useOnboardingStore } from "../../store/onboardingStore";
 import { Suspense } from "react";
 import { createClient } from '@/lib/supabase/client';
+import coupleHero from "../../public/couples_flow_hero.png";
 
-const SCREENS = ["Welcome", "Birth", "Aha", "Goals", "Destination", "Gate"];
+const SCREENS = ["Sign Up", "Pro", "Birth", "Aha", "Goals", "Destination"];
 
 const LIFE_GOALS = [
   { id: "love", label: "Love & Relationships", icon: Heart, color: "var(--color-spiced-life)", sub: "Venus lines · 5th & 7th house" },
@@ -66,12 +67,14 @@ export default function FlowPage() {
 
 function FlowPageInner() {
   const searchParams = useSearchParams();
+  const isDemo = searchParams.get("demo") === "true";
   const store = useOnboardingStore();
 
   const [screen, setScreen] = useState(0);
   const [dir, setDir] = useState(1);
   const [loadingChart, setLoadingChart] = useState(false);
   const [loadingResults, setLoadingResults] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [macroScore, setMacroScore] = useState<number | null>(null);
 
   // Auth State
@@ -80,11 +83,22 @@ function FlowPageInner() {
   const [authMessage, setAuthMessage] = useState("");
   const supabase = createClient();
 
+  useEffect(() => {
+    const stepParam = searchParams.get("step");
+    if (stepParam) {
+      const stepInt = parseInt(stepParam, 10);
+      if (!isNaN(stepInt) && stepInt >= 0 && stepInt < SCREENS.length) {
+        setScreen(stepInt);
+      }
+    }
+  }, [searchParams]);
+
   const handleGoogleSignup = async () => {
     localStorage.setItem('onboardingData', JSON.stringify(store));
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: `${origin}/auth/callback?next=/flow?step=1` },
     });
   };
 
@@ -93,9 +107,10 @@ function FlowPageInner() {
     setAuthLoading(true);
     setAuthMessage("");
     localStorage.setItem('onboardingData', JSON.stringify(store));
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { emailRedirectTo: `${origin}/auth/callback?next=/flow?step=1` },
     });
     if (error) {
       setAuthMessage(`Error: ${error.message}`);
@@ -160,6 +175,23 @@ function FlowPageInner() {
     }, 1500);
   };
 
+  const handleCheckout = async () => {
+    setCheckoutLoading(true);
+    try {
+      const res = await fetch('/api/checkout', { method: 'POST' });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || 'Failed to initialize checkout. Please ensure you are logged in.');
+        setCheckoutLoading(false);
+      }
+    } catch (err) {
+      console.error(err);
+      setCheckoutLoading(false);
+    }
+  };
+
   /* ─── Pill badge component ─── */
   const Pill = ({ label, filled = false }: { label: string; filled?: boolean }) => (
     <span style={{
@@ -168,7 +200,7 @@ function FlowPageInner() {
       fontFamily: "var(--font-mono)", fontSize: "0.55rem",
       letterSpacing: "0.12em", textTransform: "uppercase",
       color: filled ? "var(--color-eggshell)" : "var(--color-y2k-blue)",
-      background: filled ? "var(--color-y2k-blue)" : "transparent",
+      background: filled ? "var(--color-y2k-blue)" : "rgba(255, 255, 255, 0.95)",
       border: `1.5px solid var(--color-y2k-blue)`,
       borderRadius: "var(--radius-full)",
       whiteSpace: "nowrap",
@@ -220,61 +252,65 @@ function FlowPageInner() {
               transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
               style={{ flex: 1, display: "flex", flexDirection: "column" }}
             >
-              {/* Desktop: side-by-side / Mobile: stacked */}
-              <div style={{ flex: 1, display: "flex", minHeight: 0 }} className="flex-col md:flex-row">
+              {/* Mobile stacked / Desktop split layout */}
+              <div className="flex-1 flex flex-col md:flex-row items-center justify-center w-full max-w-[1080px] mx-auto min-h-0">
 
-                {/* ── Photo section with organic shape + accents ── */}
+                {/* ── Photo section with 80% aesthetic container ── */}
                 <div style={{
-                  position: "relative", overflow: "hidden",
+                  position: "relative",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   background: "var(--bg)",
-                }} className="w-full md:w-[55%] h-[44vh] md:h-auto">
+                }} className="w-full md:w-1/2 h-[32vh] md:h-[65vh] min-h-[220px] p-2 md:p-6">
 
                   {/* Photo with rounded organic border-radius */}
                   <div style={{
-                    position: "relative", width: "85%", height: "85%",
-                    borderRadius: "var(--radius-full) var(--radius-lg) var(--radius-full) var(--radius-md)",
+                    position: "relative", width: "75%", height: "90%",
+                    borderRadius: "var(--shape-organic-1)",
                     overflow: "hidden",
+                    border: "1px solid var(--surface-border)",
                   }}>
                     <Image
-                      src="/pastel_suits.png"
-                      alt="Astronat editorial"
+                      src={coupleHero}
+                      alt="Astronat couple"
                       fill
                       style={{ objectFit: "cover", objectPosition: "center top" }}
                       priority
                     />
                     <div style={{
                       position: "absolute", inset: 0,
-                      background: "linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.5) 100%)",
+                      background: "linear-gradient(to bottom, transparent 60%, rgba(0,0,0,0.4) 100%)",
                     }} />
-
-                    {/* Pill badges overlaid on photo bottom */}
-                    <div style={{
-                      position: "absolute", bottom: "1.25rem", left: "50%", transform: "translateX(-50%)",
-                      display: "flex", gap: "0.4rem", zIndex: 2,
-                    }}>
-                      <Pill label="1ST" />
-                      <Pill label="MC RULER" filled />
-                      <Pill label="SUN" />
-                    </div>
                   </div>
 
-                  {/* Starburst accent — bottom left */}
-                  <Starburst size={56} style={{ position: "absolute", bottom: "8%", left: "3%", opacity: 0.7 }} />
-                  {/* Small starburst — top right */}
-                  <Starburst size={28} color="var(--gold)" style={{ position: "absolute", top: "12%", right: "8%", opacity: 0.5 }} />
+                  {/* Venus SVG Overlay - Left */}
+                  <div style={{ position: "absolute", top: "50%", left: "6%", opacity: 0.85, color: "var(--color-y2k-blue)", transform: "translateY(-50%)" }}>
+                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0px 0px 8px rgba(4,86,251,0.3))" }}>
+                      <circle cx="12" cy="10" r="5" />
+                      <line x1="12" y1="15" x2="12" y2="21" />
+                      <line x1="9" y1="18" x2="15" y2="18" />
+                    </svg>
+                  </div>
+
+                  {/* Mars SVG Overlay - Right */}
+                  <div style={{ position: "absolute", bottom: "10%", right: "8%", opacity: 0.85, color: "var(--color-y2k-blue)" }}>
+                    <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0px 0px 8px rgba(4,86,251,0.3))" }}>
+                      <circle cx="10" cy="14" r="5" />
+                      <line x1="13.5" y1="10.5" x2="19" y2="5" />
+                      <polyline points="14 5 19 5 19 10" />
+                    </svg>
+                  </div>
                 </div>
 
                 {/* ── Content section ── */}
                 <div style={{
                   flex: 1, display: "flex", flexDirection: "column", justifyContent: "center",
-                  padding: "clamp(1.5rem, 4vw, 3.5rem) clamp(1.25rem, 4vw, 3.5rem)",
-                  gap: "1.5rem",
+                  padding: "clamp(0.8rem, 3vw, 2.5rem) clamp(1rem, 3vw, 2.5rem)",
+                  gap: "0.8rem",
                   maxWidth: "540px",
                 }}>
                   <h1 style={{
                     fontFamily: "var(--font-primary)",
-                    fontSize: "clamp(2.8rem, 5vw, 5rem)",
+                    fontSize: "clamp(2rem, 4.5vw, 4rem)",
                     color: "var(--text-primary)",
                     lineHeight: 0.82,
                     letterSpacing: "-0.01em",
@@ -290,38 +326,160 @@ function FlowPageInner() {
                   </h1>
 
                   <p style={{
-                    fontFamily: "var(--font-body)", fontSize: "1rem",
-                    lineHeight: 1.75, color: "var(--text-secondary)",
+                    fontFamily: "var(--font-body)", fontSize: "0.9rem",
+                    lineHeight: 1.6, color: "var(--text-secondary)",
                     maxWidth: "420px",
                   }}>
                     Your natal chart projected across the globe. Discover where to go — and <em style={{ color: "var(--text-primary)", fontStyle: "italic" }}>when</em>.
                   </p>
 
-                  <button
-                    className="btn btn-primary"
-                    onClick={next}
-                    style={{
-                      alignSelf: "flex-start",
-                      padding: "0.9rem 2.2rem",
-                      fontSize: "0.875rem",
-                      fontWeight: 600,
-                      letterSpacing: "0.04em",
-                    }}
-                  >
-                    Begin your Travels <ArrowRight size={15} />
-                  </button>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "1rem" }}>
+                    <button onClick={handleGoogleSignup} className="btn" style={{
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem",
+                      padding: "0.85rem", border: "1px solid var(--surface-border)", borderRadius: "var(--shape-asymmetric-md)",
+                      background: "var(--surface)", color: "var(--text-primary)",
+                      fontFamily: "var(--font-body)", fontSize: "0.85rem", cursor: "pointer", fontWeight: 600,
+                    }}>
+                      <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+                      Continue with Google
+                    </button>
+                    
+                    <div style={{ display: "flex", alignItems: "center", gap: "1rem", margin: "0.5rem 0" }}>
+                      <div style={{ flex: 1, height: "1px", background: "var(--surface-border)" }} />
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em" }}>or</span>
+                      <div style={{ flex: 1, height: "1px", background: "var(--surface-border)" }} />
+                    </div>
+
+                    <form onSubmit={handleMagicLink} style={{ display: "flex", gap: "0.5rem" }}>
+                      <input className="input-field" type="email" placeholder="your@email.com" value={email} onChange={e => setEmail(e.target.value)} required style={{ flex: 1, borderRadius: "var(--shape-asymmetric-md)" }} />
+                      <button type="submit" disabled={authLoading} className="btn btn-primary" style={{ padding: "0 1.25rem", whiteSpace: "nowrap", borderRadius: "var(--shape-asymmetric-md)" }}>
+                        {authLoading ? <Loader2 className="animate-spin" size={15}/> : "Send Link"}
+                      </button>
+                    </form>
+                    {authMessage && (
+                      <div style={{ fontSize: "0.75rem", color: "var(--color-y2k-blue)", marginTop: "0.25rem" }}>
+                        {authMessage}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </motion.div>
           )}
 
-          {/* ════════════════ SCREEN 1: BIRTH DATA ════════════════ */}
+          {/* ════════════════ SCREEN 1: PRO UPSELL ════════════════ */}
           {screen === 1 && (
+            <motion.div key="pro" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit"
+              transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+              style={{ flex: 1, display: "flex", flexDirection: "column" }}
+            >
+              <div className="flex-1 flex flex-wrap w-full h-full max-w-[1080px] mx-auto items-center">
+                {/* Left: Ebook Aesthetic Image Card */}
+                <div style={{ 
+                  flex: 1, minWidth: "300px", minHeight: "30vh", maxHeight: "100%", 
+                  background: "var(--bg)", position: "relative", 
+                  display: "flex", alignItems: "center", justifyContent: "center", 
+                  overflow: "hidden" 
+                }} className="py-2 px-4 md:py-2 md:px-8">
+                  {/* Container for Image, Overlays and Pills */}
+                  <div className="relative w-full max-w-[460px] flex flex-col h-[28vh] md:aspect-[4/5] md:h-auto md:min-h-[400px]">
+                    
+                    {/* The Image */}
+                    <div className="w-full h-full relative overflow-hidden rounded-[var(--shape-organic-1)] border border-[var(--surface-border)]">
+                      <Image src="/excited_pro_user.png" alt="Astronat Pro" fill style={{ objectFit: "cover", objectPosition: "center top" }} priority />
+                      
+                      {/* Gradient overlay to ensure overlay visibility */}
+                      <div style={{
+                        position: "absolute", inset: 0,
+                        background: "linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 40%)",
+                      }} />
+                    </div>
+                    
+                    {/* Saturn Constellation Overlay */}
+                    <span style={{
+                      position: 'absolute',
+                      top: '65%', right: '4%',
+                      fontFamily: 'var(--font-display-alt-2)', fontSize: 'clamp(5rem, 15vw, 10rem)',
+                      lineHeight: 0.5, color: "var(--color-y2k-blue)",
+                      pointerEvents: 'none', opacity: 0.85,
+                      textShadow: "0 0 30px rgba(4,86,251,0.3)"
+                    }}>♄</span>
+
+                    {/* Pills Constrained to Image Box */}
+                    <div style={{ 
+                      position: "absolute", bottom: "5%", left: "5%", 
+                      display: 'flex', gap: '0.4rem', zIndex: 10 
+                    }}>
+                      <Pill label="12-MONTH" />
+                      <Pill label="TRANSITS" filled />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Payment Logic */}
+                <div className="flex-1 flex flex-col justify-center gap-3 p-3 md:gap-5 md:p-8 md:text-left mx-auto w-full max-w-[460px]">
+                  <div className="text-center md:text-left">
+                    <h5 style={{ marginBottom: "0.35rem" }}>Step 2 of 6</h5>
+                    <h2 style={{
+                      fontFamily: "var(--font-primary)", fontSize: "clamp(1.8rem, 4vw, 3rem)",
+                      color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase",
+                    }}>
+                      Unlock <span style={{ color: "var(--color-y2k-blue)" }}>Astronat Pro</span>
+                    </h2>
+                    <p className="mx-auto md:mx-0" style={{ color: "var(--text-secondary)", fontSize: "0.85rem", lineHeight: 1.5, maxWidth: "400px" }}>
+                      Get unrestricted access to your complete astrocartography mapping, 12-month travel windows, and unlimited partner charts.
+                    </p>
+                  </div>
+
+                  <div style={{
+                    padding: "1.25rem", background: "rgba(4,86,251,0.06)",
+                    border: "1px solid rgba(4,86,251,0.12)",
+                    borderRadius: "var(--cut-md)", clipPath: "var(--cut-md)"
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.6rem" }}>
+                      <span style={{ fontFamily: "var(--font-body)", fontWeight: 600, color: "var(--text-primary)", fontSize: "1rem" }}>Astro Pro Membership</span>
+                      <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.8rem", color: "var(--color-y2k-blue)" }}>$19.99<span style={{fontSize: "0.8rem", color: "var(--text-secondary)"}}>/mo</span></span>
+                    </div>
+                    <ul style={{ listStyle: "none", padding: 0, margin: "0 0 1rem 0", display: "flex", flexDirection: "column", gap: "0.45rem" }}>
+                      {["Unlimited readings & searches across the globe", "High-fidelity precise ACG mapping", "12-month personal transit windows", "Save unlimited partner charts for couples trips"].map(item => (
+                        <li key={item} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <Starburst size={12} style={{ flexShrink: 0 }} />
+                          <span style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "var(--text-secondary)" }}>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <button 
+                      className="btn btn-primary" 
+                      style={{ width: "100%", justifyContent: "center", padding: "0.9rem", fontSize: "0.9rem", letterSpacing: "0.02em" }}
+                      onClick={handleCheckout}
+                      disabled={checkoutLoading}
+                    >
+                      {checkoutLoading ? <><Loader2 className="animate-spin" size={15}/> Redirecting to Secure Checkout...</> : "Subscribe to Pro \u2014 $19.99/mo"}
+                    </button>
+                    {isDemo && (
+                      <button 
+                        className="btn" 
+                        onClick={next}
+                        style={{ 
+                          width: "100%", justifyContent: "center", padding: "0.85rem", marginTop: "0.5rem",
+                          background: "transparent", color: "var(--text-secondary)", border: "1px dashed var(--surface-border)"
+                        }}>
+                        Skip / Continue to Chart Setup (Demo)
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ════════════════ SCREEN 2: BIRTH DATA ════════════════ */}
+          {screen === 2 && (
             <motion.div key="birth" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit"
               transition={{ duration: 0.3 }} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
               <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
                 <div style={{ maxWidth: "480px", width: "100%" }}>
-                  <h5 style={{ marginBottom: "0.35rem" }}>Step 2 of 6</h5>
+                  <h5 style={{ marginBottom: "0.35rem" }}>Step 3 of 6</h5>
                   <h2 style={{
                     fontFamily: "var(--font-primary)", fontSize: "clamp(2rem, 4vw, 3rem)",
                     color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase",
@@ -408,8 +566,8 @@ function FlowPageInner() {
             </motion.div>
           )}
 
-          {/* ════════════════ SCREEN 2: AHA MOMENT ════════════════ */}
-          {screen === 2 && (
+          {/* ════════════════ SCREEN 3: AHA MOMENT ════════════════ */}
+          {screen === 3 && (
             <motion.div key="aha" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit"
               transition={{ duration: 0.3 }} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
               <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
@@ -464,22 +622,27 @@ function FlowPageInner() {
                       ))}
                     </div>
 
-                    <button className="btn btn-primary" onClick={next} style={{ padding: "0.9rem 2.5rem" }}>
-                      Show me where <ArrowRight size={15} />
-                    </button>
+                    <div style={{ display: "flex", gap: "0.6rem", marginTop: "1.5rem", justifyContent: "center" }}>
+                      <button className="btn btn-secondary" onClick={back} style={{ padding: "0.75rem 1.25rem" }}>
+                        <ArrowLeft size={14} /> Back
+                      </button>
+                      <button className="btn btn-primary" onClick={next} style={{ padding: "0.9rem 2.5rem" }}>
+                        Show me where <ArrowRight size={15} />
+                      </button>
+                    </div>
                   </motion.div>
                 </div>
               </div>
             </motion.div>
           )}
 
-          {/* ════════════════ SCREEN 3: LIFE GOALS ════════════════ */}
-          {screen === 3 && (
+          {/* ════════════════ SCREEN 4: LIFE GOALS ════════════════ */}
+          {screen === 4 && (
             <motion.div key="goals" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit"
               transition={{ duration: 0.3 }} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
               <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
                 <div style={{ maxWidth: "540px", width: "100%" }}>
-                  <h5 style={{ marginBottom: "0.35rem" }}>Step 4 of 6</h5>
+                  <h5 style={{ marginBottom: "0.35rem" }}>Step 5 of 6</h5>
                   <h2 style={{
                     fontFamily: "var(--font-primary)", fontSize: "clamp(1.8rem, 4vw, 3rem)",
                     color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase",
@@ -531,13 +694,13 @@ function FlowPageInner() {
             </motion.div>
           )}
 
-          {/* ════════════════ SCREEN 4: DESTINATION ════════════════ */}
-          {screen === 4 && (
+          {/* ════════════════ SCREEN 5: DESTINATION ════════════════ */}
+          {screen === 5 && (
             <motion.div key="destination" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit"
               transition={{ duration: 0.3 }} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
               <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
                 <div style={{ maxWidth: "480px", width: "100%" }}>
-                  <h5 style={{ marginBottom: "0.35rem" }}>Step 5 of 6</h5>
+                  <h5 style={{ marginBottom: "0.35rem" }}>Step 6 of 6</h5>
                   <h2 style={{
                     fontFamily: "var(--font-primary)", fontSize: "clamp(2rem, 4vw, 3rem)",
                     color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase",
@@ -588,7 +751,10 @@ function FlowPageInner() {
                     <button className="btn btn-secondary" onClick={back} style={{ padding: "0.75rem 1.25rem" }}><ArrowLeft size={14} /> Back</button>
                     <button className="btn btn-primary" style={{ flex: 1, justifyContent: "center", padding: "0.75rem", opacity: store.destination ? 1 : 0.3 }}
                       disabled={!store.destination || loadingResults}
-                      onClick={handleAnalyze}>
+                      onClick={async () => {
+                        await handleAnalyze();
+                        window.location.href = "/home?reading_unlocked=true"; // Forward to home when finished
+                      }}>
                       {loadingResults ? <><Loader2 className="animate-spin" size={15}/> Computing...</> : <>See My Reading <ArrowRight size={15} /></>}
                     </button>
                   </div>
@@ -596,134 +762,8 @@ function FlowPageInner() {
               </div>
             </motion.div>
           )}
-
-          {/* ════════════════ SCREEN 5: PAY GATE ════════════════ */}
-          {screen === 5 && (
-            <motion.div key="gate" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit"
-              transition={{ duration: 0.3 }} style={{ flex: 1, display: "flex" }} className="flex-col md:flex-row">
-
-              {/* Left: Blurred preview teaser */}
-              <div style={{
-                position: "relative",
-                padding: "clamp(1.5rem, 3vw, 3rem)",
-                borderBottom: "1px solid var(--surface-border)",
-                minHeight: "200px", flexShrink: 0,
-              }} className="w-full md:w-[50%] md:border-b-0 md:border-r md:border-r-[var(--surface-border)]">
-                <h6 style={{ marginBottom: "0.75rem" }}>Your reading preview</h6>
-                {[
-                  { label: "Trip Score", value: macroScore !== null ? String(macroScore) : "87", color: "var(--sage)", tag: "Excellent" },
-                  { label: "Venus Line", value: "243km", color: "var(--color-spiced-life)", tag: "LOVE" },
-                  { label: "Jupiter MC", value: "Active", color: "var(--gold)", tag: "CAREER" },
-                ].map(({ label, value, color, tag }) => (
-                  <div key={label} style={{
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "0.6rem 0.75rem", marginBottom: "0.3rem",
-                    background: "var(--surface)",
-                    border: "1px solid var(--surface-border)",
-                    borderRadius: "var(--radius-xs)",
-                    filter: "blur(3px)", userSelect: "none",
-                  }}>
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.5rem", color: "var(--text-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</span>
-                    <span style={{ fontFamily: "var(--font-body)", fontWeight: 600, color: color, fontSize: "0.85rem" }}>{value}</span>
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.45rem", color: color, padding: "0.1rem 0.35rem", border: `1px solid ${color}`, borderRadius: "var(--radius-full)" }}>{tag}</span>
-                  </div>
-                ))}
-
-                <div style={{
-                  position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
-                  background: "radial-gradient(ellipse at center, rgba(0,0,0,0.5) 0%, transparent 70%)",
-                }}>
-                  <div style={{ textAlign: "center" }}>
-                    <Lock size={22} color="var(--gold)" style={{ margin: "0 auto 0.5rem" }} />
-                    <p style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", color: "var(--text-secondary)", lineHeight: 1.3 }}>
-                      Unlock reading for{" "}
-                      <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>
-                        {store.destination || "your destination"}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right: Signup + Pay */}
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "clamp(1.5rem, 3vw, 3rem)", gap: "1.25rem" }}>
-                <div>
-                  <h5 style={{ marginBottom: "0.35rem" }}>Step 6 of 6</h5>
-                  <h2 style={{
-                    fontFamily: "var(--font-primary)", fontSize: "clamp(2rem, 4vw, 3rem)",
-                    color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase",
-                  }}>
-                    Your reading <span style={{ color: "var(--color-y2k-blue)" }}>is ready</span>
-                  </h2>
-                  <p style={{ color: "var(--text-secondary)", fontSize: "0.8rem", lineHeight: 1.5 }}>
-                    Sign in to save your chart, then unlock the full analysis.
-                  </p>
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  <button onClick={handleGoogleSignup} style={{
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem",
-                    padding: "0.75rem", border: "1px solid var(--surface-border)", borderRadius: "var(--radius-sm)",
-                    background: "transparent", color: "var(--text-primary)",
-                    fontFamily: "var(--font-body)", fontSize: "0.8rem", cursor: "pointer",
-                  }}>
-                    <svg width="16" height="16" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
-                    Continue with Google
-                  </button>
-                  <form onSubmit={handleMagicLink} style={{ display: "flex", gap: "0.4rem" }}>
-                    <input className="input-field" type="email" placeholder="your@email.com" value={email} onChange={e => setEmail(e.target.value)} required style={{ flex: 1 }} />
-                    <button type="submit" disabled={authLoading} className="btn btn-primary" style={{ padding: "0 1rem", whiteSpace: "nowrap", borderRadius: "var(--radius-sm)" }}>
-                      {authLoading ? <Loader2 className="animate-spin" size={15}/> : "Send"}
-                    </button>
-                  </form>
-                  {authMessage && (
-                    <div style={{ fontSize: "0.75rem", color: "var(--color-eggshell)", textAlign: "center", marginTop: "0.25rem" }}>
-                      {authMessage}
-                    </div>
-                  )}
-                </div>
-
-                <div style={{
-                  padding: "1.25rem", background: "rgba(4,86,251,0.06)",
-                  border: "1px solid rgba(4,86,251,0.12)",
-                  borderRadius: "var(--radius-md)",
-                }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.6rem" }}>
-                    <span style={{ fontFamily: "var(--font-body)", fontWeight: 600, color: "var(--text-primary)", fontSize: "0.85rem" }}>Full Reading</span>
-                    <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.5rem", color: "var(--color-y2k-blue)" }}>$9</span>
-                  </div>
-                  <ul style={{ listStyle: "none", padding: 0, margin: "0 0 0.75rem 0", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-                    {["House analysis & goals scoring", "12-month transit windows", "Full editorial narrative"].map(item => (
-                      <li key={item} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                        <div style={{ width: "3px", height: "3px", borderRadius: "50%", background: "var(--color-y2k-blue)" }} />
-                        <span style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--text-secondary)" }}>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center", padding: "0.85rem" }}>
-                    Unlock Full Reading &mdash; $9
-                  </button>
-                </div>
-
-                <button onClick={back} style={{ background: "none", border: "none", color: "var(--text-tertiary)", fontFamily: "var(--font-mono)", fontSize: "0.55rem", cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase", alignSelf: "center" }}>
-                  <ArrowLeft size={12} style={{ marginRight: "0.3rem", verticalAlign: "middle" }} /> Back
-                </button>
-              </div>
-            </motion.div>
-          )}
         </AnimatePresence>
       </div>
-
-      {/* ── Global onboarding styles ── */}
-      <style jsx global>{`
-        .onboarding-logo {
-          filter: invert(1) brightness(1.2);
-          display: block;
-        }
-        [data-theme="light"] .onboarding-logo {
-          filter: none;
-        }
-      `}</style>
     </div>
   );
 }

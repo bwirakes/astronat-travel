@@ -456,3 +456,12 @@ a {
         padding: 0 1rem 0;
     }
 }
+
+/* ── Global Utility: Logo ── */
+.onboarding-logo {
+  filter: invert(1) brightness(1.2);
+  display: block;
+}
+[data-theme="light"] .onboarding-logo {
+  filter: none;
+}

@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Users, AlertTriangle } from "lucide-react";
+import { Users, AlertTriangle, ArrowLeft } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import ThemeToggle from "../components/ThemeToggle";
 import { ScoreRing, getVerdict, BAND_CONFIG } from "../components/ScoreRing";
 
@@ -26,6 +27,7 @@ const MOCK_RESULT = {
 };
 
 export default function CouplesPage() {
+  const router = useRouter();
   const [step, setStep] = useState<"input" | "result">("input");
   const [partnerName, setPartnerName] = useState("Luna");
   const [loading, setLoading] = useState(false);
@@ -53,6 +55,15 @@ export default function CouplesPage() {
       </header>
 
       <div style={{ maxWidth: "800px", margin: "0 auto", padding: "var(--space-lg) clamp(1.25rem, 3vw, 3rem) var(--space-3xl)" }}>
+        <button onClick={() => router.push("/home")} style={{
+          background: "none", border: "none", color: "var(--text-tertiary)",
+          fontFamily: "var(--font-mono)", fontSize: "0.6rem", cursor: "pointer",
+          letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "var(--space-md)",
+          display: "flex", alignItems: "center", gap: "0.3rem",
+        }}>
+          <ArrowLeft size={12} /> Home
+        </button>
+
         <div style={{ marginBottom: "var(--space-lg)" }}>
           <span style={{
             display: "inline-block", fontFamily: "var(--font-mono)", fontSize: "0.65rem",
@@ -191,11 +202,6 @@ export default function CouplesPage() {
           </motion.div>
         )}
       </div>
-
-      <style jsx global>{`
-        .onboarding-logo { filter: invert(1) brightness(1.2); display: block; }
-        [data-theme="light"] .onboarding-logo { filter: none; }
-      `}</style>
     </div>
   );
 }

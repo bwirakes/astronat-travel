@@ -73,10 +73,11 @@
     justify-content: space-between;
     gap: var(--space-md);
     cursor: pointer;
-    transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+    transition: box-shadow 0.2s var(--ease);
     box-shadow: 0 4px 16px rgba(4, 86, 251, 0.15);
     position: relative;
     overflow: hidden;
+    margin-bottom: var(--space-xl);
 }
 
 .banner::before {
@@ -92,7 +93,6 @@
 }
 
 .banner:hover {
-    transform: translateY(-2px);
     box-shadow: 0 8px 24px rgba(4, 86, 251, 0.25);
 }
 
@@ -171,7 +171,7 @@
 
 /* ── Explore Grid ───────────────────────────────────────── */
 .exploreSection {
-    margin-top: var(--space-sm);
+    margin-top: 0;
 }
 
 .exploreGrid {
@@ -189,11 +189,10 @@
     flex-direction: column;
     gap: 0.35rem;
     cursor: pointer;
-    transition: transform 0.15s var(--ease), background 0.15s var(--ease);
+    transition: background 0.15s var(--ease);
 }
 
 .exploreCard:hover {
-    transform: translateY(-2px);
     background: var(--bg-raised);
 }
 
@@ -306,8 +305,10 @@
 .fab {
     position: fixed;
     bottom: var(--space-md);
-    left: 50%;
-    transform: translateX(-50%) !important;
+    left: 0;
+    right: 0;
+    margin: 0 auto;
+    width: max-content;
     z-index: 100;
     background: var(--color-y2k-blue);
     color: #fff;
@@ -347,7 +348,7 @@
     .fab {
         left: auto;
         right: var(--space-lg);
-        transform: none !important;
+        margin: 0;
     }
 }
 

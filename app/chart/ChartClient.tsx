@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import ThemeToggle from "../components/ThemeToggle";
 import { ChartWheel, type NatalData } from "../components/ChartWheel";
 import { AcgMap } from "../components/AcgMap";
+import AcgLinesCard from "../components/AcgLinesCard";
 
 // ── Mock data for ?demo=true ───────────────────────────────────
 
@@ -57,6 +58,8 @@ const ASPECT_COLORS: Record<string, string> = {
   Square:      "var(--color-spiced-life)",
 };
 
+const DEMO_CITY = { lat: -6.2088, lon: 106.8456, name: "Jakarta" };
+
 type Tab = "wheel" | "map" | "planets" | "aspects";
 
 // ── Dignity pill ───────────────────────────────────────────────
@@ -80,6 +83,7 @@ export default function ChartPage() {
   const searchParams = useSearchParams();
   const isDemo = searchParams.get("demo") === "true";
   const [tab, setTab] = useState<Tab>("wheel");
+  const [computedLines, setComputedLines] = useState<{planet: string, angle: string, distance_km: number}[]>([]);
 
   // In real mode this would fetch from Supabase + /api/natal
   const natal = isDemo ? DEMO_NATAL : null;
@@ -188,10 +192,32 @@ export default function ChartPage() {
                 padding: "var(--space-md)",
               }}>
                 <AcgMap 
-                    natal={natal!} 
+                    natal={natal!}
+                    birthDateTimeUTC="1994-08-15T12:00:00Z"
+                    birthLon={-74.0060} /* NYC offset to show nice curves */
+                    highlightCity={DEMO_CITY}
                     interactive 
                     onLocationClick={(lat, lon) => console.log("Map click:", lat, lon)}
+                    onLinesCalculated={setComputedLines}
                 />
+
+                {/* Distance Table */}
+                {computedLines.length > 0 && (
+                   <div style={{ marginTop: 'var(--space-2xl)', paddingTop: 'var(--space-lg)', borderTop: '1px solid var(--surface-border)' }}>
+                      <h3 style={{ fontFamily: 'var(--font-primary)', fontSize: '1.2rem', textTransform: 'uppercase', marginBottom: 'var(--space-sm)' }}>
+                         Local Proximity Impact
+                      </h3>
+                      <div style={{ width: '100%' }}>
+                        <AcgLinesCard 
+                            planetLines={computedLines} 
+                            natalPlanets={MOCK_PLANETS as any}
+                            birthCity="NYC"
+                            destination="Jakarta"
+                        />
+                      </div>
+                   </div>
+                )}
+
                 <div style={{ 
                     marginTop: 'var(--space-sm)', 
                     display: 'flex', 

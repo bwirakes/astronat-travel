@@ -92,10 +92,7 @@ export default function ReadingsPage() {
         </div>
       </div>
 
-      <style jsx global>{`
-        .onboarding-logo { filter: invert(1) brightness(1.2); display: block; }
-        [data-theme="light"] .onboarding-logo { filter: none; }
-      `}</style>
+
     </div>
   );
 }

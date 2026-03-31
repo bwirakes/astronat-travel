@@ -1,6 +1,8 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useRef } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import { Heart, Users, Star, Cake, User, Globe } from "lucide-react";
 import Image from "next/image";
 import styles from "./home.module.css";
@@ -10,6 +12,7 @@ import ThemeToggle from "../components/ThemeToggle";
 
 export default function HomeClient({ profile, sunSignData, recentSearches }: any) {
     const router = useRouter();
+    const container = useRef<HTMLDivElement>(null);
 
     const features = [
         { title: "Life Goals", icon: <Heart size={18} />, description: "What are you seeking?", url: "/goals?demo=true", accent: "var(--color-spiced-life)" },
@@ -18,8 +21,91 @@ export default function HomeClient({ profile, sunSignData, recentSearches }: any
         { title: "World Charts", icon: <Globe size={18} />, description: "Natal charts of nations", url: "/mundane?demo=true", accent: "var(--color-acqua)" },
     ];
 
+    useGSAP(() => {
+        const tl = gsap.timeline({ defaults: { ease: "power4.out" } });
+
+        // Hero greeting
+        tl.fromTo(
+            ".dashboard-hero",
+            { opacity: 0, scale: 0.95, y: 20 },
+            { opacity: 1, scale: 1, y: 0, duration: 1, ease: "back.out(1.2)" }
+        );
+
+        // Character-by-character Text Animation for the name
+        tl.fromTo(
+            ".greeting-char",
+            { opacity: 0, y: 20, rotationX: -90 },
+            { opacity: 1, y: 0, rotationX: 0, duration: 0.6, stagger: 0.04, ease: "back.out(2)" },
+            "-=0.7"
+        );
+
+        // Banner
+        tl.fromTo(
+            ".dashboard-banner",
+            { opacity: 0, y: 30, rotationX: -10 },
+            { opacity: 1, y: 0, rotationX: 0, duration: 0.8 },
+            "-=0.6"
+        );
+
+        // Explore cards stagger
+        tl.fromTo(
+            ".explore-card",
+            { opacity: 0, y: 40, scale: 0.9 },
+            { opacity: 1, y: 0, scale: 1, duration: 0.8, stagger: 0.1, ease: "elastic.out(1, 0.8)" },
+            "-=0.5"
+        );
+
+        // Readings list
+        tl.fromTo(
+            ".dashboard-readings",
+            { opacity: 0, x: 20 },
+            { opacity: 1, x: 0, duration: 0.8, ease: "power3.out" },
+            "-=0.6"
+        );
+
+        // Floating Action Button (FAB)
+        tl.fromTo(
+            ".dashboard-fab",
+            { scale: 0, opacity: 0, rotation: -45 },
+            { scale: 1, opacity: 1, rotation: 0, duration: 0.8, ease: "back.out(1.7)" },
+            "-=0.4"
+        );
+
+        // ── Continuous floating animation for Birthday icon ──
+        gsap.to(".cake-anim", {
+            y: -6,
+            rotation: 4,
+            duration: 2.5,
+            repeat: -1,
+            yoyo: true,
+            ease: "sine.inOut"
+        });
+
+        // ── Interactive Hover state for Explore cards ──
+        const exploreCards = gsap.utils.toArray(".explore-card") as HTMLElement[];
+        exploreCards.forEach(card => {
+            card.addEventListener("mouseenter", () => {
+                gsap.to(card, { y: -4, scale: 1.02, duration: 0.3, ease: "power2.out" });
+            });
+            card.addEventListener("mouseleave", () => {
+                gsap.to(card, { y: 0, scale: 1, duration: 0.4, ease: "power2.out" });
+            });
+        });
+
+        // ── Interactive Hover state for Dashboard Banner ──
+        const banner = document.querySelector(".dashboard-banner");
+        if (banner) {
+             banner.addEventListener("mouseenter", () => {
+                  gsap.to(banner, { scale: 1.01, duration: 0.4, ease: "power2.out" });
+             });
+             banner.addEventListener("mouseleave", () => {
+                  gsap.to(banner, { scale: 1, duration: 0.4, ease: "power2.out" });
+             });
+        }
+    }, { scope: container });
+
     return (
-        <div className={styles.page}>
+        <div className={styles.page} ref={container}>
             {/* Header — matches onboarding pattern */}
             <header className={styles.header}>
                 <Image src="/logo-stacked.svg" alt="ASTRONAT" width={110} height={36} priority
@@ -41,19 +127,23 @@ export default function HomeClient({ profile, sunSignData, recentSearches }: any
                 {/* ── Left / Top column ── */}
                 <div className={styles.primary}>
                     {/* Compact Hero */}
-                    <motion.div className={styles.hero} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <div className={`${styles.hero} dashboard-hero`} style={{ opacity: 0 }}>
                         <span className={styles.pill}>{sunSignData?.emoji} {sunSignData?.name} Sun</span>
                         <h1 className={styles.greeting}>
-                            Hello, <em className={styles.greetingName}>{profile.first_name}</em>
+                            Hello, <em className={styles.greetingName} style={{ display: "inline-block", perspective: "400px" }}>
+                                {profile.first_name.split("").map((char: string, i: number) => (
+                                    <span key={i} className="greeting-char" style={{ display: "inline-block", opacity: 0 }}>
+                                        {char === " " ? "\u00A0" : char}
+                                    </span>
+                                ))}
+                            </em>
                         </h1>
-                    </motion.div>
+                    </div>
 
                     {/* Birthday Optimizer — slim banner */}
-                    <motion.div
-                        className={styles.banner}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.15 }}
+                    <div
+                        className={`${styles.banner} dashboard-banner`}
+                        style={{ opacity: 0 }}
                         onClick={() => router.push("/birthday?demo=true")}
                     >
                         <div className={styles.bannerText}>
@@ -62,28 +152,26 @@ export default function HomeClient({ profile, sunSignData, recentSearches }: any
                             <span className={styles.bannerSub}>Find your most cosmically aligned destination for your next solar return.</span>
                         </div>
                         <div className={styles.bannerRight}>
-                            <span className={styles.bannerEmoji}><Cake size={40} strokeWidth={1} /></span>
+                            <span className={`${styles.bannerEmoji} cake-anim`}><Cake size={40} strokeWidth={1} /></span>
                             <button className={styles.bannerBtn}>Find out &rarr;</button>
                         </div>
-                    </motion.div>
+                    </div>
 
                     {/* Explore — tight grid */}
                     <section className={styles.exploreSection}>
                         <h4 className={styles.sectionKicker}>EXPLORE</h4>
                         <div className={styles.exploreGrid}>
                             {features.map((f, i) => (
-                                <motion.div
+                                <div
                                     key={i}
-                                    className={styles.exploreCard}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.2 + i * 0.08 }}
+                                    className={`${styles.exploreCard} explore-card`}
+                                    style={{ opacity: 0 }}
                                     onClick={() => router.push(f.url)}
                                 >
                                     <div className={styles.exploreIcon} style={{ background: f.accent, color: '#fff' }}>{f.icon}</div>
                                     <span className={styles.exploreName}>{f.title}</span>
                                     <span className={styles.exploreDesc}>{f.description}</span>
-                                </motion.div>
+                                </div>
                             ))}
                         </div>
                     </section>
@@ -93,11 +181,9 @@ export default function HomeClient({ profile, sunSignData, recentSearches }: any
                 <div className={styles.secondary}>
                     <section>
                         <h4 className={styles.sectionKicker}>YOUR READINGS</h4>
-                        <motion.div
-                            className={styles.readingsList}
-                            initial={{ opacity: 0, y: 12 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.35 }}
+                        <div
+                            className={`${styles.readingsList} dashboard-readings`}
+                            style={{ opacity: 0 }}
                         >
                             {recentSearches.length > 0 ? (
                                 recentSearches.map((s: any) => (
@@ -122,32 +208,21 @@ export default function HomeClient({ profile, sunSignData, recentSearches }: any
                                     <button className="btn btn-primary" onClick={() => router.push("/flow")}>Start a reading</button>
                                 </div>
                             )}
-                        </motion.div>
+                        </div>
                     </section>
                 </div>
             </div>
 
             {/* Floating CTA */}
-            <motion.button
-                className={styles.fab}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 300, damping: 22, delay: 0.5 }}
+            <button
+                className={`${styles.fab} dashboard-fab`}
+                style={{ opacity: 0, scale: 0 }}
                 onClick={() => router.push("/flow")}
             >
                 + New Reading
-            </motion.button>
+            </button>
 
-            {/* Reuse onboarding logo filter styles */}
-            <style jsx global>{`
-                .onboarding-logo {
-                    filter: invert(1) brightness(1.2);
-                    display: block;
-                }
-                [data-theme="light"] .onboarding-logo {
-                    filter: none;
-                }
-            `}</style>
+
         </div>
     );
 }

@@ -4,13 +4,18 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  // const next = searchParams.get('next') ?? '/home'
+  const next = searchParams.get('next')
 
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     
     if (!error) {
+      // If a 'next' param was explicitly provided, respect it above all else
+      if (next) {
+        return NextResponse.redirect(`${origin}${next}`)
+      }
+
       // Check if user has a profile (returning vs new user)
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {

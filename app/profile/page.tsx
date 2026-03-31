@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { LogOut, Save } from "lucide-react";
+import { useState, useEffect } from "react";
+import { LogOut, Save, ArrowLeft, Loader2, CreditCard } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import ThemeToggle from "../components/ThemeToggle";
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [profile, setProfile] = useState({
     firstName: "Brandon",
     birthDate: "1995-08-15",
@@ -15,6 +18,28 @@ export default function ProfilePage() {
   });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState("");
+  const [subscription, setSubscription] = useState<{status: string, current_period_end: number | string} | null>(null);
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [userEmail, setUserEmail] = useState("demo@astronat.com");
+
+  useEffect(() => {
+    // Fetch subscription status directly via Supabase using our new FDW view
+    const fetchSub = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      if (user.email) setUserEmail(user.email);
+      
+      const { data } = await supabase
+        .from('user_subscription_status')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+        
+      if (data) setSubscription(data);
+    };
+    fetchSub();
+  }, []);
 
   const handleSave = () => {
     setSaving(true);
@@ -23,6 +48,28 @@ export default function ProfilePage() {
       setToast("Profile saved");
       setTimeout(() => setToast(""), 3000);
     }, 600);
+  };
+
+  const handleManageBilling = async () => {
+    setBillingLoading(true);
+    try {
+      const res = await fetch('/api/billing', { method: 'POST' });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || 'Unable to open billing portal');
+        setBillingLoading(false);
+      }
+    } catch {
+      setBillingLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/auth/login");
   };
 
   return (
@@ -38,6 +85,15 @@ export default function ProfilePage() {
       </header>
 
       <div style={{ maxWidth: "600px", margin: "0 auto", padding: "var(--space-lg) clamp(1.25rem, 3vw, 3rem) var(--space-3xl)" }}>
+        <button onClick={() => router.push("/home")} style={{
+          background: "none", border: "none", color: "var(--text-tertiary)",
+          fontFamily: "var(--font-mono)", fontSize: "0.6rem", cursor: "pointer",
+          letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "var(--space-md)",
+          display: "flex", alignItems: "center", gap: "0.3rem",
+        }}>
+          <ArrowLeft size={12} /> Home
+        </button>
+
         <div style={{ marginBottom: "var(--space-xl)" }}>
           <h1 style={{ fontFamily: "var(--font-primary)", textTransform: "uppercase", fontSize: "clamp(2rem, 5vw, 3rem)", lineHeight: 0.9 }}>
             Your Profile
@@ -49,7 +105,7 @@ export default function ProfilePage() {
 
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
           {/* Birth Data Section */}
-          <section style={{ background: "var(--surface)", padding: "var(--space-lg)", border: "1px solid var(--surface-border)", borderRadius: "var(--radius-sm)" }}>
+          <section style={{ background: "var(--surface)", padding: "var(--space-lg)", border: "1px solid var(--surface-border)", borderRadius: "var(--shape-asymmetric-md)" }}>
             <div className="input-group" style={{ marginBottom: "1.25rem" }}>
               <label className="input-label">First name</label>
               <input className="input-field" type="text" value={profile.firstName}
@@ -104,15 +160,46 @@ export default function ProfilePage() {
             </div>
           </section>
 
+          {/* Subscription Section */}
+          <section style={{ paddingTop: "var(--space-md)" }}>
+            <h3 style={{ fontFamily: "var(--font-secondary)", fontSize: "1.25rem", marginBottom: "var(--space-md)" }}>Subscription</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div style={{ padding: "1.25rem", background: "rgba(4,86,251,0.06)", border: "1px solid rgba(4,86,251,0.12)", borderRadius: "var(--radius-md)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                   <div>
+                     <span style={{ fontFamily: "var(--font-body)", fontWeight: 600, color: "var(--text-primary)", fontSize: "0.85rem" }}>Astronat Pro</span>
+                     <p style={{ margin: "0.2rem 0 0", fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--text-secondary)" }}>
+                        {subscription ? `Active — Renews ${new Date(subscription.current_period_end).toLocaleDateString()}` : "Free Tier"}
+                     </p>
+                   </div>
+                   {subscription ? (
+                     <button 
+                        className="btn" 
+                        onClick={handleManageBilling}
+                        disabled={billingLoading}
+                        style={{ padding: "0.5rem 1rem", background: "var(--surface)", border: "1px solid var(--surface-border)", fontSize: "0.75rem", borderRadius: "var(--radius-sm)" }}
+                     >
+                        {billingLoading ? <Loader2 className="animate-spin" size={14}/> : <><CreditCard size={14} style={{ marginRight: '0.3rem' }}/> Manage</>}
+                     </button>
+                   ) : (
+                     <button className="btn btn-primary" onClick={() => router.push('/flow?demo=true')} style={{ padding: "0.5rem 1rem", fontSize: "0.75rem", borderRadius: "var(--radius-sm)" }}>
+                        Upgrade
+                     </button>
+                   )}
+                </div>
+              </div>
+            </div>
+          </section>
+
           {/* Account Section */}
           <section style={{ paddingTop: "var(--space-lg)" }}>
             <h3 style={{ fontFamily: "var(--font-secondary)", fontSize: "1.25rem", marginBottom: "var(--space-md)" }}>Account</h3>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--surface)", border: "1px solid var(--surface-border)", padding: "1.25rem", borderRadius: "var(--radius-md)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--surface)", border: "1px solid var(--surface-border)", padding: "1.25rem", borderRadius: "var(--shape-asymmetric-md)" }}>
                 <div>
                    <p style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>Registered Email</p>
-                   <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "var(--text-secondary)", margin: "0.25rem 0 0", letterSpacing: "0.02em" }}>demo@astronat.com</p>
+                   <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "var(--text-secondary)", margin: "0.25rem 0 0", letterSpacing: "0.02em" }}>{userEmail}</p>
                 </div>
-                <button onClick={() => alert("Sign out (demo mode)")} style={{
+                <button onClick={handleSignOut} style={{
                     display: "flex", alignItems: "center", gap: "0.4rem",
                     background: "transparent", color: "var(--color-spiced-life)", border: "1px solid currentColor",
                     padding: "0.6rem 1.25rem", borderRadius: "var(--radius-full)",
@@ -124,11 +211,6 @@ export default function ProfilePage() {
           </section>
         </div>
       </div>
-
-      <style jsx global>{`
-        .onboarding-logo { filter: invert(1) brightness(1.2); display: block; }
-        [data-theme="light"] .onboarding-logo { filter: none; }
-      `}</style>
     </div>
   );
 }

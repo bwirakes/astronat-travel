@@ -21,10 +21,10 @@ The 80/20 for any consumer product is the **transaction loop**: a user arrives �
 |---|---|---|
 | Calculation Engine | ✅ Done | `app/lib/scoring.ts`, astrocarto, house-matrix, transits — fully built |
 | API Routes | ✅ Done | 10 endpoints under `app/api/` |
-| Design System | ⚠️ Fragmented | 3 competing versions (`v1-celestial-editorial`, `v2-modern-minimalist`, `design-system`) |
-| Auth | ❌ Missing | No auth library installed |
-| Database | ❌ Missing | No persistence layer |
-| Payments | ❌ Missing | No Stripe or billing integration |
+| Design System | ✅ Done | Unified Astro-Brand in `app/globals.css` |
+| Auth | ✅ Done | Supabase Auth (Google OAuth + Magic Link) |
+| Database | ✅ Done | Supabase PostgreSQL with Stripe FDW |
+| Payments | ✅ Done | Stripe Checkout integrated |
 | Email | ❌ Missing | No transactional email provider |
 
 ## What We're NOT Building (Musk Step 2: Delete)
@@ -47,11 +47,11 @@ The only question: **Can a stranger land on the site, sign up, pay, and get a re
 
 | # | Feature | Tool | Deadline |
 |---|---|---|---|
-| 1 | **Auth** — Google OAuth + Magic Link | Supabase Auth | April 1 |
-| 2 | **Onboarding** — 3-step wizard (Date → Time → Location) | Shadcn + existing components | April 3 |
-| 3 | **Paywall** — Gate full results behind payment | Stripe Checkout Sessions | April 6 |
+| 1 | **Auth** — Google OAuth + Magic Link | Supabase Auth | ✅ Done |
+| 2 | **Onboarding** — 6-step wizard | Next.js + Zustand | ✅ Done |
+| 3 | **Paywall** — Gate full results behind payment | Stripe Checkout Sessions | ✅ Done |
 | 4 | **Post-Purchase Email** — Send results link on payment success | Resend + Stripe Webhooks | April 8 |
-| 5 | **Profile Persistence** — Save user birth data & purchase history | Supabase PostgreSQL | April 10 |
+| 5 | **Profile Persistence** — Save user birth data & purchase history | Supabase PostgreSQL | ✅ Done |
 
 **Definition of Done:** One real human (not us) completes the full loop end-to-end.
 

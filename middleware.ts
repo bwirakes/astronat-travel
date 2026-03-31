@@ -7,7 +7,7 @@ export async function middleware(request: NextRequest) {
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder',
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY || 'placeholder',
     {
       cookies: {
         getAll: () => request.cookies.getAll(),
@@ -24,8 +24,11 @@ export async function middleware(request: NextRequest) {
 
   const isDemo = request.nextUrl.searchParams.get('demo') === 'true'
 
-  // Protect all /home, /onboarding routes
-  if (!user && !isDemo && (request.nextUrl.pathname.startsWith('/home') || request.nextUrl.pathname.startsWith('/onboarding'))) {
+  // Protect all core app routes
+  const protectedRoutes = ['/home', '/onboarding', '/profile', '/birthday', '/couples', '/goals', '/readings', '/reading', '/chart']
+  const isProtectedRoute = protectedRoutes.some(route => request.nextUrl.pathname.startsWith(route))
+
+  if (!user && !isDemo && isProtectedRoute) {
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 

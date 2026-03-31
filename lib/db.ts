@@ -77,3 +77,16 @@ export async function getPartnerProfiles(ownerId: string): Promise<PartnerProfil
     .limit(10) // added limit to prevent unbounded query
   return data ?? []
 }
+
+// Get live subscription status
+export async function getSubscriptionStatus(userId: string) {
+  const supabase = await createClient()
+  // This uses a Postgres secure view wrapping over the Stripe FDW tables
+  const { data } = await supabase
+    .from('user_subscription_status')
+    .select('status, current_period_end')
+    .eq('user_id', userId)
+    .single()
+  return data
+}
+
