@@ -170,13 +170,12 @@
     letter-spacing: 0.04em;
     text-decoration: none;
     cursor: pointer;
-    transition: opacity var(--duration) var(--ease), transform var(--duration) var(--ease);
+    transition: opacity var(--duration) var(--ease);
     border: none;
 }
 
 .ctaBtn:hover {
     opacity: 0.88;
-    transform: translateY(-2px);
 }
 
 .ctaIcon {

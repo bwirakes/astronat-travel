@@ -1,6 +1,9 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useRef } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -17,9 +20,103 @@ import styles from "./page.module.css";
 //   - Image: M3 cut-path frame (--cut-xl) — per SKILL §3 Option B.
 //   - Process section: stark Eggshell / Charcoal color block inversion.
 
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
 export default function Home() {
+  const container = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    // ── Starfield Animation ───────────────────────────────────
+    gsap.utils.toArray(".star-anim").forEach((star: any) => {
+      // Randomize initial position slightly
+      gsap.to(star, {
+        y: "random(-20, 20)",
+        x: "random(-20, 20)",
+        opacity: "random(0.1, 0.8)",
+        duration: "random(3, 7)",
+        repeat: -1,
+        yoyo: true,
+        ease: "sine.inOut"
+      });
+      // Add a subtle parallax on scroll
+      gsap.to(star, {
+        yPercent: "random(-50, 50)",
+        ease: "none",
+        scrollTrigger: {
+          trigger: container.current,
+          start: "top top",
+          end: "bottom top",
+          scrub: true
+        }
+      });
+    });
+
+    // ── Hero Timeline ──────────────────────────────────────────
+    const tl = gsap.timeline({ defaults: { ease: "power4.out" } });
+
+    // Animate the text container
+    tl.fromTo(
+      ".hero-anim",
+      { y: 60, opacity: 0, rotationX: -15, skewY: 2 },
+      { y: 0, opacity: 1, rotationX: 0, skewY: 0, duration: 1.2, stagger: 0.15 }
+    );
+
+    // Animate the image frame with levitation follow-up
+    tl.fromTo(
+      ".hero-img-anim",
+      { scale: 0.9, opacity: 0, rotation: 5, x: 20 },
+      { scale: 1, opacity: 1, rotation: 0, x: 0, duration: 1.4, ease: "elastic.out(1, 0.8)",
+        onComplete: () => {
+          gsap.to(".hero-img-anim", {
+            y: -15,
+            rotation: 1,
+            duration: 4,
+            repeat: -1,
+            yoyo: true,
+            ease: "sine.inOut"
+          });
+        }
+      },
+      "-=0.8"
+    );
+
+    // ── Hover interaction for CTA ──────────────────────────────
+    const ctaBtn = document.querySelector("#cta-start");
+    if (ctaBtn) {
+      ctaBtn.addEventListener("mouseenter", () => {
+        gsap.to(ctaBtn, { scale: 1.05, duration: 0.3, ease: "back.out(2)" });
+        gsap.to(".cta-icon", { x: 5, duration: 0.3, ease: "power2.out" });
+      });
+      ctaBtn.addEventListener("mouseleave", () => {
+        gsap.to(ctaBtn, { scale: 1, duration: 0.3, ease: "power2.out" });
+        gsap.to(".cta-icon", { x: 0, duration: 0.3, ease: "power2.out" });
+      });
+    }
+
+    // ── Animate the process steps on scroll ───────────────────
+    gsap.utils.toArray(".process-step").forEach((step: any, i) => {
+      gsap.fromTo(
+        step,
+        { opacity: 0, y: 60, scale: 0.95 },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.8,
+          ease: "back.out(1.5)",
+          scrollTrigger: {
+            trigger: step,
+            start: "top 85%",
+          }
+        }
+      );
+    });
+  }, { scope: container });
+
   return (
-    <>
+    <div ref={container}>
       {/* ── Atmospheric Background ─────────────────────────────────── */}
       <div className={styles.atmosphericBg} aria-hidden="true">
         <div className={styles.grainOverlay} />
@@ -30,14 +127,12 @@ export default function Home() {
         {Array.from({ length: 60 }).map((_, i) => (
           <div
             key={i}
-            className={styles.star}
+            className={`${styles.star} star-anim`}
             style={{
               left: `${(i * 17.3 + 11) % 100}%`,
               top: `${(i * 13.7 + 7) % 100}%`,
               width: `${(i % 3) * 0.6 + 0.4}px`,
               height: `${(i % 3) * 0.6 + 0.4}px`,
-              animationDelay: `${(i * 0.37) % 7}s`,
-              animationDuration: `${4 + (i % 5)}s`,
               opacity: 0.15 + (i % 4) * 0.08,
             }}
           />
@@ -52,42 +147,30 @@ export default function Home() {
           <div className={styles.heroGrid}>
 
             {/* Left: Content — typographic hierarchy from brand guidelines */}
-            <motion.div
-              className={styles.heroContent}
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.9, ease: [0.4, 0, 0.2, 1] }}
-            >
+            <div className={styles.heroContent} style={{ perspective: "1000px" }}>
               {/* H1 — BETTER DAYS (--font-primary), uppercase structural text */}
-              <h1 className={styles.headline}>
+              <h1 className={`${styles.headline} hero-anim`} style={{ opacity: 0 }}>
                 Where should you{" "}
                 <em>travel</em> next?
               </h1>
 
               {/* Body — GARET (--font-body) */}
-              <p className={styles.subline}>
+              <p className={`${styles.subline} hero-anim`} style={{ opacity: 0 }}>
                 You deserve the best possible environment to thrive in and fulfil your natal promise.
                 Use our astrocartography travel planner to figure out where to go — and{" "}
                 <em>when</em>.
               </p>
 
               {/* CTA — Y2K Blue + M3 asymmetric shape per SKILL §3 Option A */}
-              <Link href="/flow" className={styles.ctaBtn} id="cta-start">
-                Begin your Travels <ArrowRight className={styles.ctaIcon} />
-              </Link>
-
-
-            </motion.div>
+              <div className="hero-anim" style={{ opacity: 0 }}>
+                <Link href="/flow" className={styles.ctaBtn} id="cta-start">
+                  Begin your Travels <ArrowRight className={`${styles.ctaIcon} cta-icon`} />
+                </Link>
+              </div>
+            </div>
 
             {/* Right: M3 cut-path image frame per brand SKILL §3 Option B */}
-            <motion.div
-              className={styles.heroImageWrap}
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 1.1, delay: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            >
-
-
+            <div className={`${styles.heroImageWrap} hero-img-anim`} style={{ opacity: 0 }}>
               <div className={styles.astroCutout}>
                 <Image
                   src="/astronat-hero.jpg"
@@ -97,7 +180,7 @@ export default function Home() {
                   priority
                 />
               </div>
-            </motion.div>
+            </div>
 
           </div>
         </div>
@@ -125,20 +208,13 @@ export default function Home() {
                 desc: "See the next 12 months of transits mapped to your houses. Travel when the planets support it — not against them.",
               },
             ].map((step, i) => (
-              <motion.div
-                key={i}
-                className={styles.step}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.12 }}
-              >
+              <div key={i} className={`${styles.step} process-step`} style={{ opacity: 0 }}>
                 {/* Step number — BETTER DAYS ghost text */}
                 <span className={styles.stepNum}>{step.number}</span>
                 {/* Step title — PERFECTLY NINETIES serif */}
                 <h3 className={styles.stepTitle}>{step.title}</h3>
                 <p className={styles.stepDesc}>{step.desc}</p>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
@@ -166,6 +242,6 @@ export default function Home() {
           </div>
         </div>
       </footer>
-    </>
+    </div>
   );
 }

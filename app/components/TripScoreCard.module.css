@@ -5,6 +5,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-lg);
+    clip-path: var(--cut-md);
 }
 
 .scoreTop {
@@ -117,7 +118,7 @@
     align-items: center;
     gap: 0.25rem;
     padding: 0.2rem 0.55rem;
-    border-radius: 3px;
+    border-radius: 20px;
     background: rgba(196, 98, 45, 0.12);
     border: 1px solid rgba(196, 98, 45, 0.35);
     color: #C4622D;
