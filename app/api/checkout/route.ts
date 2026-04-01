@@ -16,33 +16,44 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Attempt to read stripe_customer_id from profiles
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('stripe_customer_id, first_name')
-      .eq('id', user.id)
-      .maybeSingle()
+    // Attempt to read stripe_customer_id from profiles - silently ignore DB errors
+    // (e.g. column not yet migrated in production) and fall through to create a new customer
+    let stripeCustomerId: string | null = null
+    let firstName: string | null = null
+    try {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('stripe_customer_id, first_name')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (profileError) {
+        console.warn('[checkout] Profile query error (non-fatal):', profileError.message)
+      } else {
+        stripeCustomerId = profile?.stripe_customer_id ?? null
+        firstName = profile?.first_name ?? null
+      }
+    } catch (e: any) {
+      console.warn('[checkout] Profile fetch threw (non-fatal):', e.message)
+    }
 
-    let stripeCustomerId = profile?.stripe_customer_id
-
-    // If they don't have one, create it on Stripe and save to Supabase
+    // If they don't have one, create a Stripe customer
     if (!stripeCustomerId) {
       const customer = await stripe.customers.create({
-        email: user.email,
-        name: profile?.first_name || '',
-        metadata: {
-          supabase_user_id: user.id,
-        },
+        email: user.email!,
+        name: firstName || '',
+        metadata: { supabase_user_id: user.id },
       })
-      
       stripeCustomerId = customer.id
 
-      // Use admin client to bypass any RLS quirks when updating secure fields, though standard client works here usually
-      const adminClient = createAdminClient();
-      await adminClient
-        .from('profiles')
-        .update({ stripe_customer_id: stripeCustomerId })
-        .eq('id', user.id)
+      // Best-effort: save back to profile (ignore failure if column missing)
+      try {
+        const adminClient = createAdminClient()
+        await adminClient
+          .from('profiles')
+          .upsert({ id: user.id, stripe_customer_id: stripeCustomerId })
+      } catch (e: any) {
+        console.warn('[checkout] Could not persist stripe_customer_id (non-fatal):', e.message)
+      }
     }
 
     // Create a Checkout Session for Subscription
@@ -58,13 +69,13 @@ export async function POST(req: Request) {
       mode: 'subscription',
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/flow?step=2`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/flow?step=1`,
-      client_reference_id: user.id, // Good backup metric
+      client_reference_id: user.id,
     })
 
     return NextResponse.json({ url: session.url })
 
   } catch (error: any) {
-    console.error('Error creating Stripe checkout session:', error)
+    console.error('[checkout] Fatal error:', error.message, error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

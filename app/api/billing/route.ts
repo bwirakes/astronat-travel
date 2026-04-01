@@ -15,19 +15,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('stripe_customer_id')
-      .eq('id', user.id)
-      .maybeSingle()
+    let stripeCustomerId: string | null = null
+    try {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('stripe_customer_id')
+        .eq('id', user.id)
+        .maybeSingle()
+      
+      if (profileError) {
+        console.warn('[billing] Profile lookup error:', profileError.message)
+      } else {
+        stripeCustomerId = profile?.stripe_customer_id ?? null
+      }
+    } catch (e: any) {
+      console.warn('[billing] DB Query threw:', e.message)
+    }
 
-    if (!profile?.stripe_customer_id) {
-       return NextResponse.json({ error: 'No active customer found' }, { status: 400 })
+    if (!stripeCustomerId) {
+       return NextResponse.json({ error: 'No active Stripe customer linked to this profile. Please initiate a checkout first.' }, { status: 400 })
     }
 
     // Create a Customer Portal session
     const session = await stripe.billingPortal.sessions.create({
-      customer: profile.stripe_customer_id,
+      customer: stripeCustomerId,
       return_url: `${process.env.NEXT_PUBLIC_APP_URL}/profile`,
     })
 
