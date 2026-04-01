@@ -10,44 +10,79 @@ import ThemeToggle from "../components/ThemeToggle";
 export default function ProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState({
-    firstName: "Brandon",
-    birthDate: "1995-08-15",
-    birthTime: "14:30",
+    firstName: "",
+    birthDate: "",
+    birthTime: "",
     birthTimeKnown: true,
-    birthCity: "Jakarta, Indonesia",
+    birthCity: "",
   });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState("");
   const [subscription, setSubscription] = useState<{status: string, current_period_end: number | string} | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
-  const [userEmail, setUserEmail] = useState("demo@astronat.com");
+  const [userEmail, setUserEmail] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch subscription status directly via Supabase using our new FDW view
-    const fetchSub = async () => {
+    // Fetch real profile and unified subscription status from our profiles table
+    const fetchProfileData = async () => {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      
+      setUserId(user.id);
       if (user.email) setUserEmail(user.email);
       
       const { data } = await supabase
-        .from('user_subscription_status')
+        .from('profiles')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single();
         
-      if (data) setSubscription(data);
+      if (data) {
+        setProfile({
+          firstName: data.first_name || "",
+          birthDate: data.birth_date || "",
+          birthTime: data.birth_time || "12:00",
+          birthTimeKnown: data.birth_time_known ?? true,
+          birthCity: data.birth_city || "",
+        });
+        
+        if (data.is_subscribed) {
+          setSubscription({
+            status: data.subscription_status || 'active',
+            current_period_end: data.subscription_ends_at || new Date().toISOString()
+          });
+        }
+      }
     };
-    fetchSub();
+    fetchProfileData();
   }, []);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!userId) return;
     setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
+    
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        first_name: profile.firstName || null,
+        birth_date: profile.birthDate || null,
+        birth_time: profile.birthTime || '12:00:00',
+        birth_time_known: profile.birthTimeKnown,
+        birth_city: profile.birthCity || null,
+      })
+      .eq('id', userId);
+      
+    setSaving(false);
+    if (error) {
+      console.error(error);
+      setToast("Error saving profile");
+    } else {
       setToast("Profile saved");
-      setTimeout(() => setToast(""), 3000);
-    }, 600);
+    }
+    setTimeout(() => setToast(""), 3000);
   };
 
   const handleManageBilling = async () => {
