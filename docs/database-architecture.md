@@ -1,30 +1,27 @@
 # Astronat Database & Architecture Overview
 
-Based on your prompt documentation, here is a comprehensive breakdown of how your authentication, database schema, and Stripe billing fit together into a cohesive system.
-
 ## 1. Authentication (Login & Logoff)
 
-Your authentication relies heavily on **Supabase Auth** working over cookies (via `@supabase/ssr`).
+Authentication is handled entirely by **Supabase Auth** over HTTP-only cookies (`@supabase/ssr`).
 
 ### The Login Flow
-1. **Initiation**: A user clicks "Sign in with Google" inside your app.
-2. **OAuth Provider**: Supabase redirects them to Google to authenticate.
-3. **The Callback**: Google redirects them back to `http://localhost:3000/auth/callback` with a unique code.
-4. **Session Creation**: Your route handler (`app/auth/callback/route.ts`) takes that code and asks Supabase for a User Session (JWT).
-5. **Cookie Storage**: The `@supabase/ssr` library safely stores that JWT in an HTTP-only browser cookie. 
-6. **The `auth.users` Table**: Under the hood, Supabase securely creates a row in a hidden system table called `auth.users` with their Google email and a unique `user.id`.
+1. User clicks "Continue with Google" → Supabase initiates the OAuth redirect.
+2. Google authenticates them and redirects back to `/auth/callback?code=...`.
+3. The callback route handler exchanges the code for a session (JWT stored in a cookie).
+4. Supabase creates (or looks up) a row in its internal `auth.users` table.
+5. The callback then checks if a `public.profiles` row exists:
+   - **New user** → redirected to `/flow` (onboarding + subscription gate).
+   - **Returning user, subscribed** → redirected to `/home`.
+   - **Returning user, not subscribed** → redirected to `/flow?step=1` (paywall).
 
 ### The Logoff Flow
-When you call `supabase.auth.signOut()` on the client:
-1. Supabase destroys the active session on its servers.
-2. The `@supabase/ssr` library immediately clears the browser cookies.
-3. The next time the user tries to load a protected route (like `/home`), your `middleware.ts` runs, fails to find the cookie, and forces them back to `/auth/login`.
+Calling `supabase.auth.signOut()` destroys the server session and clears the cookie. Middleware then redirects any protected-route access back to `/auth/login`.
 
 ---
 
-## 2. Database Schema & Profile Linkage
+## 2. Database Schema
 
-Your business logic database (the `public` schema) is built around a single, central concept: **Everything belongs to a Profile.**
+All app data hangs off a central `public.profiles` table, keyed by the `auth.users` UUID.
 
 ```mermaid
 erDiagram
@@ -34,42 +31,91 @@ erDiagram
     "public.profiles" ||--o{ "public.purchases" : "user_id (1:N)"
 ```
 
-### Profile Creation (The Missing Link)
-Because Supabase handles `auth.users` automatically, you have to manually bridge the gap to your app data.
+### Key columns on `public.profiles`
 
-1. **New User Registration**: When a user logs in for the *very first time*, they have a row in `auth.users`, but **no row** in `public.profiles`.
-2. **Onboarding**: Your callback route detects this missing profile and redirects them to finish Onboarding.
-3. **Creation**: Once they finish onboarding, your app takes their birth data (City, Time, Date) and calls the `createProfile()` helper, inserting a new row into `public.profiles` using their newly minted `user.id` as the primary key.
-
-### Row Level Security (RLS)
-Every table is locked down perfectly using RLS. For example, `USING (auth.uid() = user_id)`. This guarantees that even if a malicious user tries to query the database directly from the browser, they can physically only ever retrieve their own searches, their own partners, and their own purchases.
+| Column | Type | Purpose |
+|---|---|---|
+| `id` | UUID | PK — mirrors `auth.users.id` |
+| `stripe_customer_id` | TEXT | Stripe Customer ID — set on first checkout |
+| `is_subscribed` | BOOLEAN | **Fast subscription gate** — written by webhook |
+| `subscription_status` | TEXT | `'active'` \| `'trialing'` \| `'past_due'` \| `'canceled'` |
+| `subscription_id` | TEXT | Stripe Subscription ID — for Stripe API lookups |
+| `subscription_ends_at` | TIMESTAMPTZ | `current_period_end` — shown in billing UI |
 
 ---
 
-## 3. The Stripe Connection
+## 3. Subscription: Source of Truth
 
-Payments work via a totally asynchronous, background process using **Stripe Webhooks**.
+> **Single answer: The Stripe Webhook writes to `profiles`. That is the only source of truth.**
+
+### Why not the Stripe FDW view?
+
+The `20260331` migration installs the **Stripe Foreign Data Wrapper** (FDW), which lets Postgres query `stripe.subscriptions` as if it were a local table. A `user_subscription_status` view was originally drafted on top of it.
+
+**That view has been removed.** Here's why:
+
+| | FDW View | Webhook → `profiles` columns |
+|---|---|---|
+| Speed | ❌ Live Stripe HTTP call on every query | ✅ A local Postgres column read |
+| Edge Middleware | ❌ Middleware can't hit the DB directly | ✅ Works (read via server component before redirect) |
+| RLS | ❌ Unreliable on foreign tables | ✅ Full RLS support |
+| Renewal/cancel sync | ✅ Always live | ✅ Handled via webhook events |
+| Rate limits | ❌ Stripe API limits apply | ✅ None |
+
+The **FDW tables remain** (`stripe.subscriptions`, `stripe.customers`, etc.) — they are available in the **Supabase SQL Editor for admin auditing**, e.g. to manually inspect a user's subscription state without leaving the dashboard.
+
+### Webhook Events Handled
+
+| Event | Action |
+|---|---|
+| `checkout.session.completed` | Insert `purchases` row; retrieve subscription and sync; send welcome email |
+| `customer.subscription.created` | Sync `is_subscribed=true`, write `subscription_status`, `subscription_ends_at` |
+| `customer.subscription.updated` | Re-sync all subscription fields (handles renewals, plan changes, past_due) |
+| `customer.subscription.deleted` | Set `is_subscribed=false`, `subscription_status='canceled'` |
+
+### Reading Subscription Status in Code
+
+```ts
+// In a Server Component or API route:
+const { data: profile } = await supabase
+  .from('profiles')
+  .select('is_subscribed, subscription_status, subscription_ends_at')
+  .eq('id', user.id)
+  .single()
+
+if (!profile?.is_subscribed) redirect('/flow?step=1')
+```
+
+---
+
+## 4. The Stripe Payment Flow
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant NextJS as Next.js API
+    participant App as Next.js App
     participant Stripe
-    participant Webhook as /api/stripe-webhook
-    participant DB as Supabase DB
+    participant Webhook as /api/stripe/webhook
+    participant DB as Supabase (profiles)
+    participant Email as /api/send-welcome-email
 
-    User->>NextJS: Clicks "Upgrade to Pro"
-    NextJS->>Stripe: createCheckoutSession(userId)
-    Stripe-->>User: Redirect to Checkout URL
-    User->>Stripe: Enters Credit Card & Pays
-    Stripe-->>User: Redirect back to /home?success=true
-    
-    Note over Stripe, DB: Asynchronous Background Process
+    User->>App: Clicks "Subscribe to Pro"
+    App->>Stripe: POST /api/checkout → createCheckoutSession(userId)
+    Stripe-->>User: Redirect to Stripe Checkout
+    User->>Stripe: Enters card & pays
+    Stripe-->>User: Redirect to /flow?step=2
+
+    Note over Stripe,Email: Async background (arrives within seconds)
     Stripe->>Webhook: POST checkout.session.completed
-    Webhook->>DB: INSERT INTO public.purchases (user_id, product)
+    Webhook->>DB: INSERT purchases; UPDATE profiles SET is_subscribed=true
+    Webhook->>Stripe: Retrieve full subscription object
+    Webhook->>DB: UPDATE profiles SET subscription_status, subscription_ends_at
+    Webhook->>Email: POST /api/send-welcome-email (internal)
+    Email-->>User: Welcome email via Resend
 ```
 
-1. **Starting the Checkout**: When a user clicks "Upgrade", your backend generates a Stripe Checkout URL. Crucially, you pass the `user.id` into Stripe as `client_reference_id` or `metadata.userId`.
-2. **The Webhook**: After a successful payment, Stripe sends a secret background HTTP request to your webhook endpoint. 
-3. **Fulfillment**: Your webhook verifies Stripe's cryptographic signature, reads the `userId` attached to the payload, and inserts a row into `public.purchases`.
-4. **App Reaction**: The next time the user loads `/profile`, your app sees the new row in `public.purchases` and grants them access to Pro features!
+---
+
+## 5. Row Level Security
+
+All tables enforce RLS: `USING (auth.uid() = user_id)` / `USING (auth.uid() = id)`. Even if a user queries the database directly from the browser they can only ever read their own rows. Webhook writes use the `service_role` admin client which bypasses RLS.

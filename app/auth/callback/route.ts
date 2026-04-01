@@ -9,22 +9,36 @@ export async function GET(request: Request) {
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-    
+
     if (!error) {
-      // If a 'next' param was explicitly provided, respect it above all else
+      // If a 'next' param was explicitly provided (e.g. from /flow OAuth redirect), honour it
       if (next) {
         return NextResponse.redirect(`${origin}${next}`)
       }
 
-      // Check if user has a profile (returning vs new user)
       const { data: { user } } = await supabase.auth.getUser()
+
       if (user) {
-        const { data: profile } = await supabase.from('profiles').select('id').eq('id', user.id).single()
-        // If no profile, they are a new user who just finished Onboarding Screen 6.
-        // Route them to /home?finalize_onboarding=true so the client can read localStorage
-        // and save their collected data to the database before showing the dashboard.
-        const destination = profile ? '/home' : '/home?finalize_onboarding=true'
-        return NextResponse.redirect(`${origin}${destination}`)
+        // Fetch profile + subscription status in one query
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, is_subscribed')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (!profile) {
+          // ── Brand new user: no profile yet → send to onboarding flow (step 0)
+          return NextResponse.redirect(`${origin}/flow`)
+        }
+
+        if (!profile.is_subscribed) {
+          // ── Has a profile but never subscribed (or subscription lapsed)
+          // → Drop them at the paywall step inside the flow
+          return NextResponse.redirect(`${origin}/flow?step=1`)
+        }
+
+        // ── Fully subscribed returning user → go straight to the dashboard
+        return NextResponse.redirect(`${origin}/home`)
       }
     }
   }

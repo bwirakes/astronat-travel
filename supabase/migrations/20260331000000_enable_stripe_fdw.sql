@@ -7,7 +7,7 @@ CREATE FOREIGN DATA WRAPPER stripe_wrapper
   HANDLER stripe_fdw_handler
   VALIDATOR stripe_fdw_validator;
 
--- Add a column to profiles to link to Strip Customer
+-- Add a column to profiles to link to Stripe Customer
 ALTER TABLE public.profiles 
 ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT UNIQUE;
 
@@ -33,24 +33,35 @@ END $$;
 -- Create secure schema
 CREATE SCHEMA IF NOT EXISTS stripe;
 
--- Import foreign schema
+-- Import foreign schema (for ADMIN / SQL-editor auditing use only — NOT used for auth gating)
 IMPORT FOREIGN SCHEMA stripe 
   LIMIT TO ("customers", "subscriptions", "checkout_sessions", "products", "prices") 
   FROM SERVER stripe_server 
   INTO stripe;
 
--- Create a secure public view that joins profiles to their active subscriptions
--- This means we can query `supabase.from('user_subscription_status')` directly from our Next.js backend!
-CREATE OR REPLACE VIEW public.user_subscription_status AS
-  SELECT 
-    p.id AS user_id,
-    s.id AS subscription_id,
-    s.attrs->>'status' AS status,
-    s.current_period_end
-  FROM public.profiles p
-  JOIN stripe.subscriptions s ON s.customer = p.stripe_customer_id
-  WHERE s.attrs->>'status' IN ('active', 'trialing');
-
--- Grant select to authenticated users so they can read their own status
-GRANT SELECT ON public.user_subscription_status TO authenticated, service_role;
-
+-- ─── ARCHITECTURE DECISION: Subscription Source of Truth ─────────────────────
+--
+-- The stripe.* foreign tables above exist for ADMIN AUDITING only.
+-- You can query them via the Supabase SQL Editor to inspect live Stripe data.
+--
+-- ❌ We deliberately do NOT expose a public view over stripe.subscriptions because:
+--   1. Every query makes a live HTTP call to the Stripe API → slow & rate-limited.
+--   2. Edge middleware (middleware.ts) cannot hit the DB directly, so a view is useless
+--      for auth gating at the network edge.
+--   3. RLS policies on foreign (FDW) tables are not enforced reliably.
+--
+-- ✅ WEBHOOK IS THE SOURCE OF TRUTH
+--    The Stripe Webhook handler (app/api/stripe/webhook/route.ts) listens to:
+--      • checkout.session.completed         → subscription created, mark active
+--      • customer.subscription.created/updated → sync status + expiry
+--      • customer.subscription.deleted       → mark canceled / revoke access
+--
+--    It writes directly into native Postgres columns on public.profiles:
+--      - is_subscribed        BOOLEAN      (true when active | trialing)
+--      - subscription_status  TEXT         ('active' | 'trialing' | 'past_due' | 'canceled')
+--      - subscription_id      TEXT         (Stripe subscription ID for API lookups)
+--      - subscription_ends_at TIMESTAMPTZ  (current_period_end; shown in UI as renewal date)
+--
+--    These columns are fast, local, and can be read by anything — middleware, RSCs,
+--    client components. Added in: 20260401000000_add_subscription_fields.sql
+-- ─────────────────────────────────────────────────────────────────────────────
