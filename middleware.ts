@@ -25,19 +25,24 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const isDemo = request.nextUrl.searchParams.get('demo') === 'true'
 
+  // ── Redirects for specific routes ─────────────────────────────────────────
+  if (pathname === '/auth/signup' || pathname === '/auth/signup/') {
+    return NextResponse.redirect(new URL('/flow', request.url))
+  }
+
   // ── Routes that require login (but NOT a subscription) ──────────────────────
-  // /flow itself is the signup + paywall, so it must be publicly accessible.
   // /profile lets users manage their billing even if subscription lapsed.
-  const authOnlyRoutes = ['/profile', '/flow']
+  // Note: /flow is completely standalone and must be public, so it is NOT in this list.
+  const authOnlyRoutes = ['/profile']
   const isAuthOnlyRoute = authOnlyRoutes.some(r => pathname.startsWith(r))
 
   // ── Routes that require login AND an active subscription ────────────────────
   const subscribedRoutes = ['/home', '/onboarding', '/birthday', '/couples', '/goals', '/readings', '/reading', '/chart']
   const isSubscribedRoute = subscribedRoutes.some(r => pathname.startsWith(r))
 
-  // 1. Not logged in → bounce to login for any protected route
+  // 1. Not logged in → bounce unauthenticated traffic to /flow
   if (!user && !isDemo && (isAuthOnlyRoute || isSubscribedRoute)) {
-    return NextResponse.redirect(new URL('/auth/login', request.url))
+    return NextResponse.redirect(new URL('/flow', request.url))
   }
 
   // 2. Logged in but hitting /auth/* → redirect to home (or flow if not subscribed)
