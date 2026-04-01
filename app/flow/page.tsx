@@ -167,6 +167,26 @@ function FlowPageInner() {
       console.log("Geocode failed");
     }
     
+    // Persist all onboarding data directly to Supabase profile
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('profiles').upsert({
+          id: user.id,
+          first_name: store.firstName || null,
+          birth_date: store.birthDate || null,
+          birth_time: store.birthTime || '12:00:00',
+          birth_time_known: store.birthTimeKnown,
+          birth_city: store.birthCity || null,
+          birth_lat: store.birthLat || null,
+          birth_lon: store.birthLon || null,
+          life_goals: store.lifeGoals
+        });
+      }
+    } catch (err) {
+      console.error("Failed to sync profile:", err);
+    }
+    
     // For onboarding flow, mock the final result calculation score to create excitement before they hit the gate.
     setTimeout(() => {
       setMacroScore(87); // mocked value
