@@ -8,7 +8,10 @@
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// NOTE: do NOT instantiate Resend at module top-level.
+// Next.js evaluates module code during build-time page collection,
+// which would throw "Missing API key" if RESEND_API_KEY isn't in the
+// build environment. Lazy-init inside the handler instead.
 
 const buildHtml = (firstName: string) => `<!DOCTYPE html>
 <html>
@@ -65,6 +68,9 @@ export async function POST(req: Request) {
   if (authHeader !== process.env.INTERNAL_API_SECRET) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
+
+  // Lazy-init: only instantiated on real requests, not at build time
+  const resend = new Resend(process.env.RESEND_API_KEY)
 
   try {
     const { email, firstName } = await req.json()
