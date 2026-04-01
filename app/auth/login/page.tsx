@@ -57,18 +57,17 @@ export default function LoginPage() {
         
         <div className="mb-10 block">
           <Image 
-            src="/saturn-monogram.svg" 
+            src="/saturn-o-stars.svg" 
             alt="Saturn Monogram" 
             width={48} 
             height={48} 
-            className="invert" 
-            style={{ filter: 'invert(1)' }}
+            className="onboarding-logo" 
           />
         </div>
 
         <h1 
           className="uppercase mb-8" 
-          style={{ fontFamily: 'var(--font-primary)', fontSize: 'clamp(3rem, 5vw, 3.5rem)', lineHeight: 0.9, color: 'var(--color-eggshell)' }}
+          style={{ fontFamily: 'var(--font-primary)', fontSize: 'clamp(3rem, 5vw, 3.5rem)', lineHeight: 0.9, color: 'var(--text-primary)' }}
         >
           Welcome<br />back.
         </h1>
@@ -109,7 +108,7 @@ export default function LoginPage() {
         </form>
 
         {message && (
-          <div className="mt-4 p-3 rounded-md text-sm text-center border" style={{ borderColor: 'var(--surface-border)', color: 'var(--color-eggshell)', fontFamily: 'var(--font-body)' }}>
+          <div className="mt-4 p-3 rounded-md text-sm text-center border" style={{ borderColor: 'var(--surface-border)', color: 'var(--text-primary)', fontFamily: 'var(--font-body)' }}>
             {message}
           </div>
         )}

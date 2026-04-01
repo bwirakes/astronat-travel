@@ -57,12 +57,11 @@ export default function SignupPage() {
         
         <div className="mb-8 block">
           <Image 
-            src="/saturn-monogram.svg" 
+            src="/saturn-o-stars.svg" 
             alt="Saturn Monogram" 
             width={48} 
             height={48} 
-            className="invert" 
-            style={{ filter: 'invert(1)' }}
+            className="onboarding-logo" 
           />
         </div>
 
@@ -77,7 +76,7 @@ export default function SignupPage() {
           
           <h1 
             className="uppercase relative z-10" 
-            style={{ fontFamily: 'var(--font-primary)', fontSize: 'clamp(2.5rem, 5vw, 3rem)', lineHeight: 0.9, color: 'var(--color-eggshell)' }}
+            style={{ fontFamily: 'var(--font-primary)', fontSize: 'clamp(2.5rem, 5vw, 3rem)', lineHeight: 0.9, color: 'var(--text-primary)' }}
           >
             Begin your<br />reading.
           </h1>
@@ -119,7 +118,7 @@ export default function SignupPage() {
         </form>
 
         {message && (
-          <div className="mt-4 p-3 rounded-md text-sm text-center border relative z-10" style={{ borderColor: 'var(--surface-border)', color: 'var(--color-eggshell)', fontFamily: 'var(--font-body)' }}>
+          <div className="mt-4 p-3 rounded-md text-sm text-center border relative z-10" style={{ borderColor: 'var(--surface-border)', color: 'var(--text-primary)', fontFamily: 'var(--font-body)' }}>
             {message}
           </div>
         )}
