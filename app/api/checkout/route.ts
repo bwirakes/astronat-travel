@@ -57,10 +57,12 @@ export async function POST(req: Request) {
     }
 
     // Derive base URL from env first, then fall back to the incoming request's origin.
-    // This ensures success_url is always a valid absolute URL on preview deployments
-    // where NEXT_PUBLIC_APP_URL may not be set.
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '')
-      || new URL(req.url).origin
+    let baseUrl = process.env.NEXT_PUBLIC_APP_URL
+    if (!baseUrl || baseUrl === 'undefined') {
+      baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : new URL(req.url).origin
+    }
+    baseUrl = baseUrl.replace(/\/$/, '')
+    console.log('[checkout] Derived baseUrl for Stripe:', baseUrl)
 
     // Create a Checkout Session for Subscription
     const session = await stripe.checkout.sessions.create({
