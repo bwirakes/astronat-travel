@@ -56,6 +56,12 @@ export async function POST(req: Request) {
       }
     }
 
+    // Derive base URL from env first, then fall back to the incoming request's origin.
+    // This ensures success_url is always a valid absolute URL on preview deployments
+    // where NEXT_PUBLIC_APP_URL may not be set.
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '')
+      || new URL(req.url).origin
+
     // Create a Checkout Session for Subscription
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -67,8 +73,8 @@ export async function POST(req: Request) {
         },
       ],
       mode: 'subscription',
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/flow?step=2`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/flow?step=1`,
+      success_url: `${baseUrl}/flow?step=2`,
+      cancel_url: `${baseUrl}/flow?step=1`,
       client_reference_id: user.id,
     })
 
