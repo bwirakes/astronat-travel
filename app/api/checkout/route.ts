@@ -56,13 +56,23 @@ export async function POST(req: Request) {
       }
     }
 
-    // Derive base URL from env first, then fall back to the incoming request's origin.
-    let baseUrl = process.env.NEXT_PUBLIC_APP_URL
+    // Ensure we absolutely have a valid absolute baseUrl for Stripe
+    let baseUrl = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || ''
+    
+    // Fall back to VERCEL_URL if origin and NEXT_PUBLIC_APP_URL are somehow missing or literal 'undefined'
     if (!baseUrl || baseUrl === 'undefined') {
-      baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : new URL(req.url).origin
+      baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://astronat.vercel.app'
     }
+
+    // Strip trailing slash
     baseUrl = baseUrl.replace(/\/$/, '')
-    console.log('[checkout] Derived baseUrl for Stripe:', baseUrl)
+
+    // Forcibly inject https:// if it's completely missing (can happen with raw VERCEL_URL strings)
+    if (!baseUrl.startsWith('http')) {
+      baseUrl = `https://${baseUrl}`
+    }
+
+    console.log('[checkout] Derived baseUrl:', baseUrl, '| APP_URL:', process.env.NEXT_PUBLIC_APP_URL, '| VERCEL_URL:', process.env.VERCEL_URL, '| origin:', req.headers.get('origin'))
 
     // Create a Checkout Session for Subscription
     const session = await stripe.checkout.sessions.create({
