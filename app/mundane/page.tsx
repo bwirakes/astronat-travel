@@ -6,7 +6,7 @@ import { Search, ChevronLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import ThemeToggle from "../components/ThemeToggle";
-import { COUNTRY_CHARTS, type CountryChart } from "../../lib/mundane-charts";
+import { COUNTRY_CHARTS, type CountryChart } from "@/lib/astro/mundane-charts";
 import { MundaneCard } from "../components/MundaneCard";
 import { ChartWheel, type NatalData } from "../components/ChartWheel";
 

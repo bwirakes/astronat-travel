@@ -99,7 +99,7 @@ export default function DesignSystemPage() {
 
       <section style={{ marginBottom: 'var(--space-xl)' }}>
         <h2 style={{ marginBottom: 'var(--space-xs)' }}>Identity SVG Avatars</h2>
-        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 'var(--space-lg)' }}>Vector assets extracted from IDENTITY/EXPORTS/SVG/AVATAR</p>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 'var(--space-lg)' }}>Vector assets extracted from public/brand/EXPORTS/SVG/AVATAR</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 'var(--space-lg)', alignItems: 'center' }}>
           <div style={{ padding: 'var(--space-md)', background: 'var(--color-black)', borderRadius: '50%', display: 'flex', justifyContent: 'center' }}>
             <Image src="/avatar/logo-stacked.svg" alt="Stacked Logo" width={80} height={80} style={{ filter: theme === 'dark' ? 'invert(1)' : 'invert(1)' }}/>

@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ArrowLeft, Heart, Briefcase, Users, Clock, Sprout, Home, Lock, Sun, Moon, TrendingUp, Plane, Building, Loader2 } from "lucide-react";
 import Image from "next/image";
 import ThemeToggle from "../components/ThemeToggle";
-import { useOnboardingStore } from "../../store/onboardingStore";
+import { useOnboardingStore } from "@/lib/store/onboardingStore";
 import { Suspense } from "react";
 import { createClient } from '@/lib/supabase/client';
 import coupleHero from "../../public/couples_flow_hero.png";

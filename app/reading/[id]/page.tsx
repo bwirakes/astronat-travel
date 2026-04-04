@@ -7,7 +7,7 @@ import Image from "next/image";
 import { useState } from "react";
 import ThemeToggle from "../../components/ThemeToggle";
 import { ScoreRing, getVerdict, BAND_CONFIG } from "../../components/ScoreRing";
-import { COUNTRY_CHARTS, type CountryChart } from "../../../lib/mundane-charts";
+import { COUNTRY_CHARTS, type CountryChart } from "@/lib/astro/mundane-charts";
 
 const MOCK_READING = {
   destination: "Tokyo, Japan",
