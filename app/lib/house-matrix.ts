@@ -31,7 +31,9 @@ import {
     BENEFIC_PLANETS,
     MALEFIC_PLANETS,
     HOUSE_THEMES,
+    STRONG_MALEFICS,
 } from "./astro-constants";
+import { KNOWN_BENEFIC_COMBOS, KNOWN_MALEFIC_COMBOS, getOccupantModifier } from "./planet-library";
 import { essentialDignityScore, essentialDignityLabel, accidentalDignityMultiplier } from "./dignity";
 import {
     signFromLongitude,
@@ -41,31 +43,7 @@ import {
 } from "./geodetic";
 import { computeHouseNumber } from "./house-system";
 
-// ── Shared classifications for scoring (subset) ───────────────────────────
-const MALEFIC_NAMES = ["mars", "saturn", "pluto", "uranus"];
 
-// ── Known paran combination ratings (from Reddit guide research) ──────────
-// Maps "p1|p2" (sorted alphabetically) to a score modifier
-const KNOWN_BENEFIC_COMBOS: Record<string, number> = {
-    "jupiter|sun": 15,   "moon|sun": 12,     "jupiter|venus": 18,
-    "sun|venus": 15,     "moon|venus": 15,    "moon|jupiter": 18,
-    "jupiter|mercury": 12, "mercury|venus": 10, "neptune|venus": 12,
-    "jupiter|neptune": 10, "moon|neptune": 8,
-    "mars|sun": 8,       "jupiter|mars": 10,  "mars|mercury": 8,
-    "neptune|sun": 8,    "mercury|uranus": 6, "sun|uranus": 6,
-    "chiron|moon": 5,    "moon|north node": 10, "north node|venus": 12,
-    "jupiter|north node": 15, "jupiter|saturn": 8,
-};
-
-const KNOWN_MALEFIC_COMBOS: Record<string, number> = {
-    "pluto|sun": -15,    "moon|pluto": -18,   "moon|saturn": -15,
-    "mars|moon": -12,    "moon|uranus": -12,  "pluto|venus": -15,
-    "mars|venus": -12,   "saturn|venus": -15, "mars|saturn": -18,
-    "mars|pluto": -18,   "mars|uranus": -12,  "mars|neptune": -10,
-    "chiron|mars": -10,  "neptune|saturn": -12, "neptune|pluto": -15,
-    "neptune|uranus": -10, "north node|saturn": -12,
-    "north node|pluto": -15, "mars|north node": -10,
-};
 
 // ── Input types ───────────────────────────────────────────────────────────
 
@@ -196,35 +174,8 @@ function statusFromScore(score: number): string {
     return "Severe Friction";
 }
 
-/** Planet-specific occupant modifier — more granular than benefic/malefic binary */
-function occupantModifier(planetName: string, houseNum: number): number {
-    const p = planetName.toLowerCase();
-    // H9/H12/H3 get extra weight for travel planets
-    const isTravelHouse = [9, 12, 3].includes(houseNum);
-    switch (p) {
-        case "jupiter": return isTravelHouse ? 30 : 25;   // Best benefic, especially in travel houses
-        case "venus":   return isTravelHouse ? 20 : 18;
-        case "sun":     return isTravelHouse ? 18 : 15;
-        case "moon":    return 10;
-        case "mercury": return 7;
-        case "north node": case "true node": return 8;     // Karmic direction — mildly benefic
-        case "chiron":  return isTravelHouse ? -5 : -8;    // Healing wound — challenging but not devastating
-        case "juno":    return isTravelHouse ? 10 : 8;     // Partnerships — generally positive
-        case "saturn":  return isTravelHouse ? -30 : -25;  // Delays, restriction — worse in travel houses
-        case "pluto":   return isTravelHouse ? -25 : -20;  // Intense transformation
-        case "mars":    return isTravelHouse ? -22 : -18;  // Disruption, conflict
-        case "uranus":  return isTravelHouse ? -18 : -14;  // Erratic, unpredictable
-        case "neptune": return isTravelHouse ? 8 : -5;     // Mystical in travel; confusing elsewhere
-        case "south node":  return -10;                    // Karmic past — energy drain
-        default:        return 3;
-    }
-}
-
 /** Map angle name to its natural house */
 const ANGLE_TO_HOUSE: Record<string, number> = { MC: 10, IC: 4, ASC: 1, DSC: 7 };
-
-/** Strongly malefic planet names for ACG line penalty */
-const STRONG_MALEFICS = ["mars", "saturn", "pluto", "uranus"];
 
 /**
  * Natal→Relocated bridge modifier.
@@ -236,7 +187,7 @@ function natalBridgeModifier(natalHouse: number, relocatedHouse: number, planetN
 
     const p = planetName.toLowerCase();
     const isBeneficPlanet = BENEFIC_PLANETS.includes(p);
-    const isMaleficPlanet = MALEFIC_NAMES.some(m => p.includes(m));
+    const isMaleficPlanet = STRONG_MALEFICS.some(m => p.includes(m));
 
     // Travel-relevant house pairings get extra weight
     const travelHouses = [3, 9, 12];
@@ -297,7 +248,7 @@ function scoreParanNuanced(
             else if (isAfflicted(p1Dignity) || isAfflicted(p2Dignity)) base = Math.round(base * 0.6);
         } else {
             // Malefic combo softened if malefic planet is dignified (Saturn exception)
-            const maleficPlanet = MALEFIC_NAMES.some(m => p1.includes(m)) ? p1 : p2;
+            const maleficPlanet = STRONG_MALEFICS.some(m => p1.includes(m)) ? p1 : p2;
             const maleficDignity = maleficPlanet === p1 ? p1Dignity : p2Dignity;
             if (isDignified(maleficDignity)) base = Math.round(base * 0.4); // Significantly softened
         }
@@ -467,7 +418,7 @@ export function computeHouseMatrix(params: {
         for (const p of natalPlanets) {
             const pH = getHouseNum(p.longitude);
             if (pH === h) {
-                occupants += occupantModifier(p.planet, h);
+                occupants += getOccupantModifier(p.planet, h);
             }
         }
         // Cap occupants to reasonable range
@@ -475,33 +426,26 @@ export function computeHouseMatrix(params: {
 
         // ── Step 4: ACG Line Proximity (benefic boost / malefic penalty)
         let acgLine = 0;
+        const SIGMA_ACG = 250;
+        const SIGMA_SQ_2 = 2 * SIGMA_ACG * SIGMA_ACG;
+
         for (const line of acgLines) {
             const lineHouse = ANGLE_TO_HOUSE[line.angle];
             if (lineHouse !== h) continue;
+            
             const pName = line.planet.toLowerCase();
             const isBeneficLine = BENEFIC_PLANETS.includes(pName);
             const isMaleficLine = STRONG_MALEFICS.includes(pName);
 
-            if (line.distance_km <= 80) {
-                // Exact: strongest possible influence
-                if (isBeneficLine)       acgLine += 30;
-                else if (isMaleficLine)  acgLine -= 25;
-                else                     acgLine += 12;
-            } else if (line.distance_km <= 200) {
-                if (isBeneficLine)       acgLine += 18;
-                else if (isMaleficLine)  acgLine -= 15;
-                else                     acgLine += 8;
-            } else if (line.distance_km <= 400) {
-                if (isBeneficLine)       acgLine += 10;
-                else if (isMaleficLine)  acgLine -= 8;
-                else                     acgLine += 4;
-            } else if (line.distance_km <= 700) {
-                if (isBeneficLine)       acgLine += 5;
-                else if (isMaleficLine)  acgLine -= 4;
-                else                     acgLine += 2;
-            }
+            let baseInfluence = 12;
+            if (isBeneficLine) baseInfluence = 30;
+            else if (isMaleficLine) baseInfluence = -25;
+
+            // Continuous Gaussian decay: influence * e^(-d^2 / 2*sigma^2)
+            const modifier = baseInfluence * Math.exp(-(line.distance_km * line.distance_km) / SIGMA_SQ_2);
+            acgLine += modifier;
         }
-        acgLine = Math.max(-35, Math.min(35, acgLine));
+        acgLine = Math.max(-35, Math.min(35, Math.round(acgLine)));
 
         // ── Step 5: Geodetic Grid (Earth's permanent baseline) ────────
         let geodetic = 0;
@@ -523,21 +467,31 @@ export function computeHouseMatrix(params: {
             }
         }
 
-        // ── Step 6: Transits (applying carry extra weight) ────────────
+        // ── Step 6: Transits & Astrodynes (Gaussian Decay & R_rx) ─────
         let transitPts = 0;
         for (const t of transits) {
             if (t.targetHouse !== h) continue;
             const applying = t.applying !== false;
-            const orb = t.orb ?? 3;
-            // Tighter orb = stronger effect (1.5x at ≤1°, 1.2x at ≤2°)
-            const orbMult = orb <= 1 ? 1.5 : orb <= 2 ? 1.2 : 1.0;
-            const applyingMult = applying ? 1.0 : 0.4; // Separating aspects count much less
+            const orb = Math.abs(t.orb ?? 3);
+            
+            // Hermetic Astrodynes: Gaussian Decay w(orb) = e^(-orb^2 / 2σ^2)
+            // sigma = 2.5 for general transits -> 2*sigma^2 = 12.5
+            const orbMult = Math.exp(-(orb * orb) / 12.5);
+            
+            // Separating aspects decay faster overall
+            const applyingMult = applying ? 1.0 : 0.4; 
 
-            if (t.benefic) {
-                transitPts += Math.round(25 * orbMult * applyingMult);
-            } else {
-                transitPts -= Math.round(28 * orbMult * applyingMult);
+            // Base unmasked volume. We scale the base up slightly because Gaussian drops smoothly.
+            let pts = t.benefic 
+                ? (35 * orbMult * applyingMult)
+                : (-38 * orbMult * applyingMult);
+
+            // Retrograde Velocity Mask (R_rx): dampens externalization by checking Swisseph v < 0
+            if (t.transitRx) {
+                pts *= 0.75;
             }
+            
+            transitPts += Math.round(pts);
         }
         transitPts = Math.max(-45, Math.min(40, transitPts));
 
@@ -547,7 +501,7 @@ export function computeHouseMatrix(params: {
             retrograde = -8; // Ruler Rx = internalized, less outward expression
         }
 
-        // ── Step 8: Transit Rx (ruler of this house is Rx in sky) ─────
+        // ── Step 8: Transit Ruler Rx (Sky Velocity) ───────────────────
         let transitRx = 0;
         for (const t of transits) {
             if (t.transitRx && t.rulerOf === h) {
@@ -580,9 +534,24 @@ export function computeHouseMatrix(params: {
         if (lotFortuneHouse === h) lotBonus += 12; // Fortune in this house = auspicious
         if (lotSpiritHouse === h)  lotBonus += 8;  // Spirit in this house = purposeful
 
-        // ── Step 12: Clamp per-house score ────────────────────────────
-        const raw = base + dignity + occupants + acgLine + geodetic + transitPts + retrograde + transitRx + paranPts + natalBridge + lotBonus;
-        const score = Math.max(0, Math.min(100, raw));
+        // ── Step 12: Unified Mathematical Definition (H_final) ────────
+        // Engine 1: Hellenistic Base (H_hel) - Evaluates static spatial dignity [Naturally ~10 to 90]
+        const h_hel = base + dignity + lotBonus;
+
+        // Engine 2: Hermetic Astrodynes (H_ast) - Relocated chart volume & retrograde dampening
+        // Zero-centered raw values are natively shifted to 50 (Neutral Empty State)
+        const h_ast = occupants + natalBridge + retrograde + transitRx + 50;
+
+        // Engine 3: Geodetic/Temporal Subsystem (H_geo) - Static distances + Dynamic transits
+        // Zero-centered raw values are natively shifted to 50 (Neutral Empty State)
+        const h_geo = acgLine + geodetic + paranPts + transitPts + 50;
+
+        // As defined in Data Science Memo Part 1:
+        // H_final(t) = 0.40 * H_hel + 0.40 * H_ast + 0.20 * H_geo(t)
+        // Clean linear normalization correctly spans [0, 100] organically.
+        const raw = (0.40 * h_hel) + (0.40 * h_ast) + (0.20 * h_geo);
+        
+        const score = Math.max(0, Math.min(100, Math.round(raw)));
 
         houses.push({
             house: h,
@@ -761,7 +730,7 @@ export function computeGlobalPenalty(transits: any[]): number {
             (t.planets ? t.planets.split(" ")[0] : "")
         ).toLowerCase();
         
-        const isMalefic = MALEFIC_NAMES.some((m) => tPlanet.includes(m));
+        const isMalefic = STRONG_MALEFICS.some((m) => tPlanet.includes(m));
         const orb = t.orb ?? 5;
 
         if (orb <= 1 && isMalefic)      penalty += 14;
