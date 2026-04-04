@@ -43,6 +43,17 @@ next-env.d.ts
 # lockfiles (generated, not needed in PRs)
 bun.lock
 
+# Python venvs (mcp-astro-engine)
+**/venv/
+**/test_env/
+
+# Playwright results
+/test-results/
+
+# SQLite journal files
+*.db-shm
+*.db-wal
+
 # dev scripts and design docs
 /scripts/
 astro_layer_design.md
