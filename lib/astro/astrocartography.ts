@@ -50,7 +50,30 @@ export interface ACGLine {
   planet: string;
   angle_type: "MC" | "IC" | "ASC" | "DSC";
   longitude: number | null; // For vertical lines (MC/IC)
-  points: ACGPoint[] | null;  // For horizontal/oblique curves (ASC/DSC)
+  curve_segments: ACGPoint[][] | null; // For horizontal/oblique curves (ASC/DSC), split over antimeridian
+  declination: number; // Expose true declination for Paran mapping
+}
+
+function splitAtAntiMeridian(points: ACGPoint[], threshold: number = 180): ACGPoint[][] {
+  if (points.length === 0) return [];
+  const segments: ACGPoint[][] = [];
+  let currentSegment: ACGPoint[] = [points[0]];
+
+  for (let i = 1; i < points.length; i++) {
+    const prevLon = points[i - 1].lon;
+    const currLon = points[i].lon;
+
+    if (Math.abs(currLon - prevLon) > threshold) {
+      segments.push(currentSegment);
+      currentSegment = [];
+    }
+    currentSegment.push(points[i]);
+  }
+
+  if (currentSegment.length > 0) {
+    segments.push(currentSegment);
+  }
+  return segments;
 }
 
 /**
@@ -63,8 +86,7 @@ export async function computeACG(dtUtc: Date): Promise<ACGLine[]> {
     dtUtc.getUTCFullYear(),
     dtUtc.getUTCMonth() + 1,
     dtUtc.getUTCDate(),
-    dtUtc.getUTCHours() + dtUtc.getUTCMinutes() / 60.0 + dtUtc.getUTCSeconds() / 3600.0,
-    1 // Gregorian
+    dtUtc.getUTCHours() + dtUtc.getUTCMinutes() / 60.0 + dtUtc.getUTCSeconds() / 3600.0
   );
 
   // Constants
@@ -94,8 +116,8 @@ export async function computeACG(dtUtc: Date): Promise<ACGLine[]> {
     const mcLon = (ra - gstDeg + 360) % 360;
     const icLon = (mcLon + 180) % 360;
 
-    lines.push({ planet: name, angle_type: "MC", longitude: normalizeLongitude(mcLon), points: null });
-    lines.push({ planet: name, angle_type: "IC", longitude: normalizeLongitude(icLon), points: null });
+    lines.push({ planet: name, angle_type: "MC", longitude: normalizeLongitude(mcLon), curve_segments: null, declination: dec });
+    lines.push({ planet: name, angle_type: "IC", longitude: normalizeLongitude(icLon), curve_segments: null, declination: dec });
 
     // 2. Compute ASC/DSC Curves (Oblique curves)
     const ascPoints: ACGPoint[] = [];
@@ -117,8 +139,8 @@ export async function computeACG(dtUtc: Date): Promise<ACGLine[]> {
       }
     }
 
-    lines.push({ planet: name, angle_type: "ASC", longitude: null, points: ascPoints });
-    lines.push({ planet: name, angle_type: "DSC", longitude: null, points: dscPoints });
+    lines.push({ planet: name, angle_type: "ASC", longitude: null, curve_segments: splitAtAntiMeridian(ascPoints), declination: dec });
+    lines.push({ planet: name, angle_type: "DSC", longitude: null, curve_segments: splitAtAntiMeridian(dscPoints), declination: dec });
   }
 
   return lines;

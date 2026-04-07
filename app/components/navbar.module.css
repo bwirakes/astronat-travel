@@ -10,7 +10,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--space-lg) var(--space-xl);
+    padding: var(--space-sm) var(--space-lg);
     gap: var(--space-md);
     max-width: 1080px;
     margin: 0 auto;
@@ -32,6 +32,8 @@
 .logoImg {
     filter: invert(1) brightness(1.2);
     display: block;
+    max-width: 100px;
+    height: auto;
 }
 
 :global([data-theme="light"]) .logoImg {
@@ -112,6 +114,11 @@
         font-size: 1.3rem;
     }
 
+    .logoImg {
+        max-width: 75px;
+        height: auto;
+    }
+
     /* Hide progress on very small screens to avoid overflow */
     .center {
         display: none;
@@ -159,4 +166,22 @@
 .drawerLink:hover,
 .drawerActive {
     color: var(--text-primary);
+}
+
+.signOutBtn {
+    background: transparent;
+    border: 1px solid var(--surface-border);
+    color: var(--text-secondary);
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: var(--font-body);
+    transition: all var(--duration) var(--ease);
+}
+
+.signOutBtn:hover {
+    border-color: var(--text-primary);
+    color: var(--text-primary);
+    background: var(--surface);
 }

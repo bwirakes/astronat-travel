@@ -48,7 +48,8 @@ import { computeHouseNumber } from "./house-system";
 // ── Input types ───────────────────────────────────────────────────────────
 
 export interface MatrixNatalPlanet {
-    planet: string;
+    planet?: string;       // name of the planet (e.g. "Sun")
+    name?: string;         // alias for planet (used by some Swisseph hooks)
     sign: string;
     longitude: number;
     retrograde: boolean;
@@ -305,7 +306,7 @@ function scoreParanNuanced(
 
 /** Look up a planet's dignity from natal data */
 function findNatalDignity(planetName: string, natalPlanets: MatrixNatalPlanet[]): string {
-    const np = natalPlanets.find(p => p.planet.toLowerCase() === planetName);
+    const np = natalPlanets.find(p => (p.planet || (p as any).name || "").toLowerCase() === planetName);
     return np?.dignity || "peregrine";
 }
 
@@ -397,7 +398,7 @@ export function computeHouseMatrix(params: {
         const cuspSign = signFromLongitude(cuspLon);
         const ruler = SIGN_RULERS[cuspSign] || "Sun";
         const rulerNatal = natalPlanets.find(
-            (p) => p.planet.toLowerCase() === ruler.toLowerCase(),
+            (p) => (p.planet || (p as any).name || "").toLowerCase() === ruler.toLowerCase(),
         );
 
         // ── Step 1: Baseline by house type + global timing penalty ────
@@ -418,7 +419,7 @@ export function computeHouseMatrix(params: {
         for (const p of natalPlanets) {
             const pH = getHouseNum(p.longitude);
             if (pH === h) {
-                occupants += getOccupantModifier(p.planet, h);
+                occupants += getOccupantModifier((p.planet || (p as any).name || ""), h);
             }
         }
         // Cap occupants to reasonable range
@@ -453,13 +454,12 @@ export function computeHouseMatrix(params: {
             if (ga.house !== h) continue;
             for (const p of natalPlanets) {
                 const diff = angularDiff(p.longitude, ga.lon);
+                const pName = (p.planet || (p as any).name || "").toLowerCase();
                 if (diff <= 2) {
-                    const pName = p.planet.toLowerCase();
                     if (BENEFIC_PLANETS.includes(pName)) geodetic += 18;
                     else if (MALEFIC_PLANETS.includes(pName)) geodetic -= 18;
                     else geodetic += 7;
                 } else if (diff <= 5) {
-                    const pName = p.planet.toLowerCase();
                     if (BENEFIC_PLANETS.includes(pName)) geodetic += 8;
                     else if (MALEFIC_PLANETS.includes(pName)) geodetic -= 8;
                     else geodetic += 3;
@@ -524,33 +524,21 @@ export function computeHouseMatrix(params: {
             if (relocH !== h) continue;
             const natalH = p.house; // natal house from birth chart
             if (natalH !== undefined && natalH !== relocH) {
-                natalBridge += natalBridgeModifier(natalH, relocH, p.planet);
+                natalBridge += natalBridgeModifier(natalH, relocH, (p.planet || (p as any).name || ""));
             }
         }
         natalBridge = Math.max(-15, Math.min(15, natalBridge));
 
         // ── Step 11: Lot of Fortune / Spirit placement bonus ──────────
         let lotBonus = 0;
-        if (lotFortuneHouse === h) lotBonus += 12; // Fortune in this house = auspicious
-        if (lotSpiritHouse === h)  lotBonus += 8;  // Spirit in this house = purposeful
+        if (lotFortuneHouse === h) lotBonus += 12;
+        if (lotSpiritHouse === h)  lotBonus += 8;
 
         // ── Step 12: Unified Mathematical Definition (H_final) ────────
-        // Engine 1: Hellenistic Base (H_hel) - Evaluates static spatial dignity [Naturally ~10 to 90]
         const h_hel = base + dignity + lotBonus;
-
-        // Engine 2: Hermetic Astrodynes (H_ast) - Relocated chart volume & retrograde dampening
-        // Zero-centered raw values are natively shifted to 50 (Neutral Empty State)
         const h_ast = occupants + natalBridge + retrograde + transitRx + 50;
-
-        // Engine 3: Geodetic/Temporal Subsystem (H_geo) - Static distances + Dynamic transits
-        // Zero-centered raw values are natively shifted to 50 (Neutral Empty State)
         const h_geo = acgLine + geodetic + paranPts + transitPts + 50;
-
-        // As defined in Data Science Memo Part 1:
-        // H_final(t) = 0.40 * H_hel + 0.40 * H_ast + 0.20 * H_geo(t)
-        // Clean linear normalization correctly spans [0, 100] organically.
         const raw = (0.40 * h_hel) + (0.40 * h_ast) + (0.20 * h_geo);
-        
         const score = Math.max(0, Math.min(100, Math.round(raw)));
 
         houses.push({
@@ -562,24 +550,14 @@ export function computeHouseMatrix(params: {
             score,
             status: statusFromScore(score),
             breakdown: {
-                base,
-                globalPenalty,
-                dignity,
-                occupants,
-                acgLine,
-                geodetic,
-                transits: transitPts,
-                retrograde,
-                transitRx,
-                paran: paranPts,
-                natalBridge,
-                lotBonus,
+                base, globalPenalty, dignity, occupants, acgLine, geodetic,
+                transits: transitPts, retrograde, transitRx, paran: paranPts,
+                natalBridge, lotBonus,
             },
         });
     }
 
     // ── Step 13: Weighted decomposition into personalScore + collectiveScore
-    //            macroScore = personalScore + collectiveScore (always holds)
     let personalRaw = 0;
     for (const [hStr, weight] of Object.entries(PERSONAL_WEIGHTS)) {
         const houseScore = houses.find(hs => hs.house === Number(hStr));
@@ -663,7 +641,7 @@ export function mapTransitsToMatrix(
 
         // Find which relocated house the natal planet aspect targets
         const natalP = natalPlanets.find(
-            (p) => p.planet.toLowerCase() === natalPlanetName
+            (p) => (p.planet || (p as any).name || "").toLowerCase() === natalPlanetName
         );
         const targetHouse = natalP
             ? getHouseNum(natalP.longitude)

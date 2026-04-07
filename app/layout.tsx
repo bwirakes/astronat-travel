@@ -1,9 +1,21 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Geist } from "next/font/google";
+import { 
+    Cormorant_Upright, 
+    Libre_Baskerville, 
+    Manrope, 
+    Pinyon_Script, 
+    IBM_Plex_Mono 
+} from "next/font/google";
+import localFont from "next/font/local";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const cormorantUpright = Cormorant_Upright({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700'], variable: '--font-primary-alt' });
+const libreBaskerville = Libre_Baskerville({ subsets: ['latin'], weight: ['400', '700'], style: ['normal', 'italic'], variable: '--font-secondary-alt' });
+const monigue = localFont({ src: '../public/MoniguedemoRegular-gwlL1.otf', variable: '--font-monigue' });
+const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope' });
+const pinyonScript = Pinyon_Script({ subsets: ['latin'], weight: ['400'], variable: '--font-pinyon' });
+const ibmPlexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['300', '400', '500'], variable: '--font-ibm' });
 
 export const metadata: Metadata = {
   title: "Astro Nat — Starman Odyssey",
@@ -17,12 +29,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("font-sans", geist.variable)}>
+    <html lang="en" className={cn(
+        "font-sans",
+        cormorantUpright.variable,
+        libreBaskerville.variable,
+        monigue.variable,
+        manrope.variable,
+        pinyonScript.variable,
+        ibmPlexMono.variable
+    )}>
       <head>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syncopate:wght@400;700&display=swap"
-          rel="stylesheet"
-        />
       </head>
       <body>{children}</body>
     </html>

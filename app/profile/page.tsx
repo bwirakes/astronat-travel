@@ -6,6 +6,9 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import ThemeToggle from "../components/ThemeToggle";
+import DashboardLayout from "../components/DashboardLayout";
+import CityAutocomplete from "../components/CityAutocomplete";
+
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -15,6 +18,8 @@ export default function ProfilePage() {
     birthTime: "",
     birthTimeKnown: true,
     birthCity: "",
+    birthLat: null as number | null,
+    birthLon: null as number | null,
   });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState("");
@@ -46,6 +51,8 @@ export default function ProfilePage() {
           birthTime: data.birth_time || "12:00",
           birthTimeKnown: data.birth_time_known ?? true,
           birthCity: data.birth_city || "",
+          birthLat: data.birth_lat ?? null,
+          birthLon: data.birth_lon ?? null,
         });
         
         if (data.is_subscribed) {
@@ -62,7 +69,32 @@ export default function ProfilePage() {
   const handleSave = async () => {
     if (!userId) return;
     setSaving(true);
+    setToast("");
     
+    let lat: number | null = profile.birthLat;
+    let lon: number | null = profile.birthLon;
+    
+    // Only re-geocode if city text changed from what we already resolved
+    if (profile.birthCity && lat === null) {
+      try {
+        const res = await fetch(`/api/geocode?city=${encodeURIComponent(profile.birthCity)}`);
+        if (!res.ok) {
+           setToast("City not found. Please spell it correctly (e.g. Jakarta, Indonesia)");
+           setSaving(false);
+           return;
+        }
+        const geo = await res.json();
+        if (geo && geo.lat) {
+           lat = geo.lat;
+           lon = geo.lon;
+        }
+      } catch (e) {
+        setToast("Error finding city coordinates.");
+        setSaving(false);
+        return;
+      }
+    }
+
     const supabase = createClient();
     const { error } = await supabase
       .from('profiles')
@@ -72,6 +104,8 @@ export default function ProfilePage() {
         birth_time: profile.birthTime || '12:00:00',
         birth_time_known: profile.birthTimeKnown,
         birth_city: profile.birthCity || null,
+        birth_lat: lat,
+        birth_lon: lon,
       })
       .eq('id', userId);
       
@@ -82,7 +116,7 @@ export default function ProfilePage() {
     } else {
       setToast("Profile saved");
     }
-    setTimeout(() => setToast(""), 3000);
+    setTimeout(() => setToast(""), 4000);
   };
 
   const handleManageBilling = async () => {
@@ -108,35 +142,12 @@ export default function ProfilePage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text-primary)" }}>
-      <header style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0.75rem clamp(1.25rem, 3vw, 3rem)",
-        borderBottom: "1px solid var(--surface-border)",
-        maxWidth: "1400px", width: "100%", margin: "0 auto",
-      }}>
-        <Image src="/logo-stacked.svg" alt="ASTRONAT" width={110} height={36} priority className="onboarding-logo" />
-        <ThemeToggle />
-      </header>
+    <DashboardLayout title="Your Profile" backLabel="Home">
+      <div style={{ maxWidth: "600px", margin: "0 auto" }}>
+        <p style={{ fontFamily: "var(--font-body)", color: "var(--text-secondary)", marginBottom: "var(--space-md)" }}>
+          Manage your birth data and account settings.
+        </p>
 
-      <div style={{ maxWidth: "600px", margin: "0 auto", padding: "var(--space-lg) clamp(1.25rem, 3vw, 3rem) var(--space-3xl)" }}>
-        <button onClick={() => router.push("/home")} style={{
-          background: "none", border: "none", color: "var(--text-tertiary)",
-          fontFamily: "var(--font-mono)", fontSize: "0.6rem", cursor: "pointer",
-          letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "var(--space-md)",
-          display: "flex", alignItems: "center", gap: "0.3rem",
-        }}>
-          <ArrowLeft size={12} /> Home
-        </button>
-
-        <div style={{ marginBottom: "var(--space-xl)" }}>
-          <h1 style={{ fontFamily: "var(--font-primary)", textTransform: "uppercase", fontSize: "clamp(2rem, 5vw, 3rem)", lineHeight: 0.9 }}>
-            Your Profile
-          </h1>
-          <p style={{ fontFamily: "var(--font-body)", color: "var(--text-secondary)", marginTop: "var(--space-xs)" }}>
-            Manage your birth data and account settings.
-          </p>
-        </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
           {/* Birth Data Section */}
@@ -182,9 +193,14 @@ export default function ProfilePage() {
             </div>
 
             <div className="input-group" style={{ marginBottom: "1.75rem" }}>
-              <label className="input-label">City of birth</label>
-              <input className="input-field" type="text" value={profile.birthCity}
-                onChange={(e) => setProfile(p => ({ ...p, birthCity: e.target.value }))} />
+              <CityAutocomplete
+                id="birth-city"
+                label="City of birth"
+                value={profile.birthCity}
+                onChange={(val) => setProfile(p => ({ ...p, birthCity: val, birthLat: null, birthLon: null }))}
+                onSelect={(s) => setProfile(p => ({ ...p, birthCity: s.label, birthLat: s.lat, birthLon: s.lon }))}
+                placeholder="e.g. Jakarta, Indonesia"
+              />
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
@@ -246,6 +262,6 @@ export default function ProfilePage() {
           </section>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

@@ -70,15 +70,15 @@
 .hero {
     position: relative;
     z-index: 1;
-    padding: 3rem 0 5rem;
+    padding: 1.5rem 0 3rem;
 }
 
 .heroGrid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 4rem;
+    gap: 3rem;
     align-items: center;
-    min-height: 540px;
+    min-height: 400px;
 }
 
 @media (max-width: 768px) {
@@ -119,12 +119,12 @@
 
 .headline {
     font-family: var(--font-primary);
-    font-size: clamp(3.2rem, 6.5vw, 6rem);
+    font-size: clamp(2.5rem, 5vw, 4.5rem);
     font-weight: 400;
-    line-height: 0.82;
+    line-height: 0.85;
     letter-spacing: -0.01em;
     color: var(--text-primary);
-    margin-bottom: 2rem;
+    margin-bottom: 1.2rem;
     text-transform: uppercase;
 }
 
@@ -142,11 +142,11 @@
 
 .subline {
     font-family: var(--font-body);
-    font-size: 1rem;
-    line-height: 1.82;
+    font-size: 0.9rem;
+    line-height: 1.7;
     color: var(--text-secondary);
-    max-width: 420px;
-    margin-bottom: 2.4rem;
+    max-width: 380px;
+    margin-bottom: 1.5rem;
 }
 
 .subline em {
@@ -235,7 +235,7 @@
 .astroCutout {
     position: relative;
     width: 100%;
-    height: 540px;
+    height: 380px;
     clip-path: var(--cut-xl);
     overflow: hidden;
     background: var(--color-charcoal);
@@ -361,6 +361,56 @@
     font-style: normal;
     letter-spacing: 0.1em;
     text-transform: uppercase;
+}
+
+/* ── Login Section ────────────────────────────────────────────────── */
+.loginSection {
+    position: relative;
+    padding: 4rem 0;
+    text-align: center;
+}
+
+.loginCard {
+    display: inline-block;
+    max-width: 480px;
+    width: 100%;
+    padding: 2.5rem;
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(10px);
+}
+
+.loginTitle {
+    font-family: var(--font-secondary);
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+.loginText {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 1.8rem;
+}
+
+.loginBtn {
+    display: block;
+    width: 100%;
+    padding: 0.8rem;
+    background: transparent;
+    border: 1px solid var(--text-primary);
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-weight: 500;
+    text-decoration: none;
+    transition: all var(--duration) var(--ease);
+}
+
+.loginBtn:hover {
+    background: var(--text-primary);
+    color: var(--bg-main);
 }
 
 /* ── Footer ──────────────────────────────────────────────────────── */

@@ -36,7 +36,7 @@ export const PLANETS: Record<string, number> = {
   "Pluto": SE.PLUTO,
 };
 
-class SwissEphSingleton {
+export class SwissEphSingleton {
   private static instance: SwissEph | null = null;
   private static initialized = false;
 
@@ -76,6 +76,7 @@ export function getHouse(longitude: number, cusps: number[]): number {
 export interface ComputedPosition {
   name: string;
   longitude: number;
+  latitude?: number;
   sign: string;
   degree_in_sign: number;
   degree_minutes: number;
@@ -116,6 +117,7 @@ export async function computeRealtimePositions(dtUtc: Date, houseCusps?: number[
     const pos: ComputedPosition = {
       name,
       longitude: Number(lon.toFixed(6)),
+      latitude: Number(res.latitude.toFixed(6)),
       sign: ZODIAC_SIGNS[signIdx],
       degree_in_sign: Number(degInSign.toFixed(4)),
       degree_minutes: Math.floor((degInSign - Math.floor(degInSign)) * 60),

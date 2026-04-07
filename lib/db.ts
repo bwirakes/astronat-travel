@@ -90,3 +90,31 @@ export async function getSubscriptionStatus(userId: string) {
   return data
 }
 
+// Get user's computed natal chart
+export async function getNatalChart(userId: string) {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('natal_charts')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('chart_type', 'natal')
+    .single()
+  return data
+}
+
+// Save natal chart computation
+export async function saveNatalChart(userId: string, ephemerisData: any, housePlacements: any) {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('natal_charts')
+    .insert({
+      user_id: userId,
+      chart_type: 'natal',
+      ephemeris_data: ephemerisData,
+      house_placements: housePlacements
+    })
+    .select()
+    .single()
+  return data
+}
+

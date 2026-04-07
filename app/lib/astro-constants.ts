@@ -31,6 +31,7 @@ export const SIGN_RULERS: Record<string, string> = {
 export const BENEFIC_PLANETS = ["venus", "jupiter", "sun"];
 export const NEUTRAL_PLANETS = ["moon", "mercury", "north node", "true node", "mean node"];
 export const MALEFIC_PLANETS = ["saturn", "mars", "pluto", "uranus", "neptune", "south node", "chiron"];
+export const STRONG_MALEFICS = ["mars", "saturn", "pluto", "uranus"];
 
 // ── House classifications (for scoring) ───────────────────────────────────
 export const ANGULAR_HOUSES = [1, 4, 7, 10];

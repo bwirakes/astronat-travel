@@ -27,12 +27,14 @@ export async function GET(request: NextRequest) {
         // Vertical lines: distance is simply along the same latitude to the line's longitude
         minDistance = haversineDistance(location.latitude, location.longitude, location.latitude, line.longitude!);
       } else {
-        // Oblique curves: check all pre-computed points (±3 degrees optimization)
-        if (line.points) {
-          for (const pt of line.points) {
-            if (Math.abs(pt.lat - location.latitude) <= 3) {
-              const d = haversineDistance(location.latitude, location.longitude, pt.lat, pt.lon);
-              if (d < minDistance) minDistance = d;
+        // Oblique curves: check all pre-computed segments (±3 degrees optimization)
+        if (line.curve_segments) {
+          for (const segment of line.curve_segments) {
+            for (const pt of segment) {
+              if (Math.abs(pt.lat - location.latitude) <= 3) {
+                const d = haversineDistance(location.latitude, location.longitude, pt.lat, pt.lon);
+                if (d < minDistance) minDistance = d;
+              }
             }
           }
         }

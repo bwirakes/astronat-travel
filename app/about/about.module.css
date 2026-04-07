@@ -2,22 +2,72 @@
 
 .pageRoot {
     min-height: 100vh;
-    background: var(--bg);
+    background-color: var(--color-black);
     color: var(--text-primary);
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* ── Atmospheric Background ─────────────────────────────────────── */
+.atmosphericBg {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-color: var(--color-black);
+}
+
+.grainOverlay {
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    background-size: 256px 256px;
+    opacity: 0.85;
+    mix-blend-mode: overlay;
+}
+
+:global([data-theme="light"]) .atmosphericBg {
+    background-color: var(--color-eggshell);
+}
+
+:global([data-theme="light"]) .grainOverlay {
+    opacity: 0.4;
+}
+
+/* ── Starfield ──────────────────────────────────────────────────── */
+.starField {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    transition: opacity var(--duration) var(--ease);
+    opacity: 0.5;
+}
+
+:global([data-theme="light"]) .starField {
+    opacity: 0;
+}
+
+.star {
+    position: absolute;
+    background: var(--color-eggshell);
+    border-radius: 0;
 }
 
 /* ── Hero Section ───────────────────────────────────────────── */
 .heroSection {
-    background: var(--bg);
+    background: transparent;
     color: var(--text-primary);
-    padding: var(--space-3xl) 0;
+    padding: var(--space-xl) 0 var(--space-2xl);
     overflow: hidden;
+    position: relative;
+    z-index: 1;
 }
 
 .heroGrid {
     display: grid;
     grid-template-columns: 1.2fr 0.8fr;
-    gap: var(--space-3xl);
+    gap: var(--space-xl);
     align-items: center;
 }
 
@@ -38,10 +88,10 @@
 
 .headline {
     font-family: var(--font-primary);
-    font-size: clamp(3.2rem, 8vw, 6.5rem);
+    font-size: clamp(2.2rem, 6vw, 4.5rem);
     line-height: 0.85;
     text-transform: uppercase;
-    margin-bottom: var(--space-xl);
+    margin-bottom: var(--space-lg);
     letter-spacing: -0.04em;
     color: var(--text-primary);
 }
@@ -52,10 +102,10 @@
 
 .lead {
     font-family: var(--font-body);
-    font-size: 1.15rem;
+    font-size: 1rem;
     line-height: 1.7;
-    max-width: 480px;
-    margin-bottom: var(--space-2xl);
+    max-width: 440px;
+    margin-bottom: var(--space-xl);
     color: var(--text-secondary);
     opacity: 0.9;
 }
@@ -96,7 +146,7 @@
 
 .heroImageContainer {
     position: relative;
-    height: 520px;
+    height: 380px;
 }
 
 .organicImage {
@@ -110,11 +160,11 @@
 .heroScript {
     position: absolute;
     bottom: -10%;
-    right: -20%;
+    right: -10%;
     font-family: var(--font-display-alt-2);
-    font-size: 15rem;
+    font-size: 10rem;
     color: var(--color-y2k-blue);
-    opacity: 0.9;
+    opacity: 0.65;
     pointer-events: none;
     line-height: 0.5;
     z-index: 10;
@@ -122,10 +172,17 @@
 
 /* ── Story Section ──────────────────────────────────────────── */
 .storySection {
-    background: var(--surface);
-    color: var(--text-primary);
+    background: var(--color-eggshell);
+    color: var(--color-charcoal);
     padding: var(--space-3xl) 0;
-    border-top: 1px solid var(--surface-border);
+    border-top: 1px solid var(--color-charcoal);
+    position: relative;
+    z-index: 1;
+}
+
+:global([data-theme="light"]) .storySection {
+    background: var(--color-charcoal);
+    color: var(--color-eggshell);
 }
 
 .storyGrid {
@@ -198,11 +255,13 @@
 
 /* ── Values Section ─────────────────────────────────────────── */
 .valuesSection {
-    background: var(--bg);
+    background: transparent;
     color: var(--text-primary);
     padding: var(--space-3xl) 0;
     text-align: center;
     border-top: 1px solid var(--surface-border);
+    position: relative;
+    z-index: 1;
 }
 
 .valuesContent {
@@ -235,10 +294,12 @@
 
 /* ── Footer ────────────────────────────────────────────────── */
 .footer {
-    background: var(--bg-raised);
+    background: transparent;
     color: var(--text-tertiary);
-    padding: var(--space-2xl) 0;
+    padding: var(--space-xl) 0;
     border-top: 1px solid var(--surface-border);
+    position: relative;
+    z-index: 1;
 }
 
 .footerInner {

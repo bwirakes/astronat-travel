@@ -7,6 +7,8 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import ThemeToggle from "../components/ThemeToggle";
 import { ScoreRing, getVerdict, BAND_CONFIG } from "../components/ScoreRing";
+import DashboardLayout from "../components/DashboardLayout";
+
 
 const MOCK_RESULT = {
   userScore: 87,
@@ -43,41 +45,12 @@ export default function CouplesPage() {
   const scoreDiff = Math.abs(MOCK_RESULT.userScore - MOCK_RESULT.partnerScore);
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text-primary)" }}>
-      <header style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0.75rem clamp(1.25rem, 3vw, 3rem)",
-        borderBottom: "1px solid var(--surface-border)",
-        maxWidth: "1400px", width: "100%", margin: "0 auto",
-      }}>
-        <Image src="/logo-stacked.svg" alt="ASTRONAT" width={110} height={36} priority className="onboarding-logo" />
-        <ThemeToggle />
-      </header>
+    <DashboardLayout title="Couples & Family" kicker="SYNASTRY" backLabel="Home">
+      <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+        <p style={{ fontFamily: "var(--font-body)", color: "var(--text-secondary)", fontSize: "0.9rem", marginBottom: "var(--space-lg)" }}>
+          Compare destination scores for you and your partner.
+        </p>
 
-      <div style={{ maxWidth: "800px", margin: "0 auto", padding: "var(--space-lg) clamp(1.25rem, 3vw, 3rem) var(--space-3xl)" }}>
-        <button onClick={() => router.push("/home")} style={{
-          background: "none", border: "none", color: "var(--text-tertiary)",
-          fontFamily: "var(--font-mono)", fontSize: "0.6rem", cursor: "pointer",
-          letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "var(--space-md)",
-          display: "flex", alignItems: "center", gap: "0.3rem",
-        }}>
-          <ArrowLeft size={12} /> Home
-        </button>
-
-        <div style={{ marginBottom: "var(--space-lg)" }}>
-          <span style={{
-            display: "inline-block", fontFamily: "var(--font-mono)", fontSize: "0.65rem",
-            letterSpacing: "0.08em", textTransform: "uppercase",
-            padding: "0.3rem 0.8rem", border: "1px solid currentColor", borderRadius: "20px",
-            marginBottom: "var(--space-sm)",
-          }}>SYNASTRY</span>
-          <h1 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(2rem, 5vw, 3rem)", textTransform: "uppercase", lineHeight: 0.9, marginBottom: "var(--space-xs)" }}>
-            Couples & Family
-          </h1>
-          <p style={{ fontFamily: "var(--font-body)", color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-            Compare destination scores for you and your partner.
-          </p>
-        </div>
 
         {step === "input" ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -202,6 +175,6 @@ export default function CouplesPage() {
           </motion.div>
         )}
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

@@ -98,7 +98,13 @@ function FlowPageInner() {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${origin}/auth/callback?next=/flow?step=1` },
+      options: { 
+        redirectTo: `${origin}/auth/callback?next=/flow?step=1`,
+        queryParams: {
+            prompt: 'select_account',
+            access_type: 'offline',
+        }
+      },
     });
   };
 

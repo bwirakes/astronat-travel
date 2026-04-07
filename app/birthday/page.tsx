@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Cake, ArrowLeft } from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import ThemeToggle from "../components/ThemeToggle";
 import { ScoreRing, getVerdict, BAND_CONFIG } from "../components/ScoreRing";
 
@@ -18,18 +18,49 @@ const MOCK_RESULTS = [
 
 export default function BirthdayPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isDemo = searchParams.get("demo") === "true";
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!isDemo);
   const [results, setResults] = useState(MOCK_RESULTS);
 
-  const handleYearChange = (year: number) => {
+  useEffect(() => {
+    if (!isDemo) {
+      handleYearChange(currentYear);
+    } else {
+      setResults(MOCK_RESULTS);
+      setLoading(false);
+    }
+  }, [isDemo]);
+
+  const handleYearChange = async (year: number) => {
     setSelectedYear(year);
     setLoading(true);
-    setTimeout(() => {
-      setResults(year === currentYear ? MOCK_RESULTS : MOCK_RESULTS.map(r => ({ ...r, score: Math.max(30, r.score + Math.floor(Math.random() * 20 - 10)) })));
+    
+    if (isDemo) {
+      setTimeout(() => {
+        setResults(year === currentYear ? MOCK_RESULTS : MOCK_RESULTS.map(r => ({ ...r, score: Math.max(30, r.score + Math.floor(Math.random() * 20 - 10)) })));
+        setLoading(false);
+      }, 500);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/birthday/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ year })
+      });
+      const data = await res.json();
+      if (data.results) {
+        setResults(data.results);
+      }
+    } catch(e) {
+      console.error(e);
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   return (

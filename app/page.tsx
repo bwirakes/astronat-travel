@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -26,6 +27,22 @@ if (typeof window !== "undefined") {
 
 export default function Home() {
   const container = useRef<HTMLDivElement>(null);
+  const [user, setUser] = useState<any>(null);
+  const supabase = createClient();
+
+  useEffect(() => {
+      const getUser = async () => {
+          const { data: { user } } = await supabase.auth.getUser();
+          setUser(user);
+      };
+      getUser();
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+          setUser(session?.user ?? null);
+      });
+
+      return () => subscription.unsubscribe();
+  }, [supabase.auth]);
 
   useGSAP(() => {
     // ── Starfield Animation ───────────────────────────────────
@@ -163,8 +180,8 @@ export default function Home() {
 
               {/* CTA — Y2K Blue + M3 asymmetric shape per SKILL §3 Option A */}
               <div className="hero-anim" style={{ opacity: 0 }}>
-                <Link href="/flow" className={styles.ctaBtn} id="cta-start">
-                  Begin your Travels <ArrowRight className={`${styles.ctaIcon} cta-icon`} />
+                <Link href={user ? "/home" : "/flow"} className={styles.ctaBtn} id="cta-start">
+                  {user ? "Enter Astronat Portal" : "Begin your Travels"} <ArrowRight className={`${styles.ctaIcon} cta-icon`} />
                 </Link>
               </div>
             </div>

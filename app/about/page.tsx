@@ -1,16 +1,71 @@
 "use client";
 
+import { useRef } from "react";
 import { motion } from "framer-motion";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Link from "next/link";
 import Image from "next/image";
-import StarBackground from "../components/StarBackground";
 import Navbar from "../components/Navbar";
 import styles from "./about.module.css";
 
+if (typeof window !== "undefined") {
+    gsap.registerPlugin(ScrollTrigger);
+}
+
 export default function AboutPage() {
+    const container = useRef<HTMLDivElement>(null);
+
+    useGSAP(() => {
+        // ── Starfield Animation (Matching Home) ───────────────────
+        gsap.utils.toArray(".star-anim").forEach((star: any) => {
+            gsap.to(star, {
+                y: "random(-20, 20)",
+                x: "random(-20, 20)",
+                opacity: "random(0.1, 0.8)",
+                duration: "random(3, 7)",
+                repeat: -1,
+                yoyo: true,
+                ease: "sine.inOut"
+            });
+            gsap.to(star, {
+                yPercent: "random(-50, 50)",
+                ease: "none",
+                scrollTrigger: {
+                    trigger: container.current,
+                    start: "top top",
+                    end: "bottom top",
+                    scrub: true
+                }
+            });
+        });
+    }, { scope: container });
+
     return (
-        <div className={styles.pageRoot}>
-            <StarBackground />
+        <div className={styles.pageRoot} ref={container}>
+            {/* ── Atmospheric Background ─────────────────────────────────── */}
+            <div className={styles.atmosphericBg} aria-hidden="true">
+                <div className={styles.grainOverlay} />
+            </div>
+
+            {/* ── Starfield ───────────────────── */}
+            <div className={styles.starField} aria-hidden="true">
+                {Array.from({ length: 40 }).map((_, i) => (
+                    <div
+                        key={i}
+                        className={`${styles.star} star-anim`}
+                        style={{
+                            left: `${(i * 19.3 + 7) % 100}%`,
+                            top: `${(i * 17.7 + 13) % 100}%`,
+                            width: `${(i % 3) * 0.5 + 0.4}px`,
+                            height: `${(i % 3) * 0.5 + 0.4}px`,
+                            opacity: 0.1 + (i % 4) * 0.08,
+                        }}
+                    />
+                ))}
+            </div>
+
             <Navbar activeHref="/about" />
 
             <main>

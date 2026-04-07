@@ -316,16 +316,23 @@ export const PLANET_MEANINGS: Record<string, Record<string, PlanetAngleMeaning>>
 };
 
 export const PLANET_COLORS: Record<string, string> = {
-    Sun: "#f5c542",
-    Moon: "#c4c9d4",
-    Mercury: "#7ecbf5",
-    Venus: "#f5a0c8",
-    Mars: "#e85d4a",
-    Jupiter: "#f5a623",
-    Saturn: "#8b8fa3",
-    Uranus: "#42d4c8",
-    Neptune: "#6b7cff",
-    Pluto: "#9b6bff",
+    Sun: "var(--color-planet-sun)",
+    Moon: "var(--color-planet-moon)",
+    Mercury: "var(--color-planet-mercury)",
+    Venus: "var(--color-planet-venus)",
+    Mars: "var(--color-planet-mars)",
+    Jupiter: "var(--color-planet-jupiter)",
+    Saturn: "var(--color-planet-saturn)",
+    Uranus: "var(--color-planet-uranus)",
+    Neptune: "var(--color-planet-neptune)",
+    Pluto: "var(--color-planet-pluto)",
+    Ascendant: "var(--color-planet-sun)",
+    MC: "var(--color-planet-sun)",
+    IC: "var(--color-planet-moon)",
+    DC: "var(--color-planet-moon)",
+    "North Node": "var(--color-planet-mercury)",
+    "South Node": "var(--color-planet-venus)",
+    Chiron: "var(--color-planet-jupiter)",
 };
 
 // Zodiac sign from birth date (simplified — no ephemeris needed for sun sign)

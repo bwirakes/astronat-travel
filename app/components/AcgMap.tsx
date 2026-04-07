@@ -8,6 +8,7 @@ import { TransformWrapper, TransformComponent, useControls } from "react-zoom-pa
 
 export interface NatalPoint {
   longitude: number;
+  latitude?: number;
   retrograde?: boolean;
 }
 
@@ -57,46 +58,6 @@ const unprojectLat = (y: number, h: number) => 90 - (y / h) * 180;
 
 // ── Astronomy Helpers ──────────────────────────────────────────
 
-function julianDay(d: Date): number {
-  return d.getTime() / 86400000 + 2440587.5;
-}
-
-function computeGMST(utcDate: Date): number {
-  const JD = julianDay(utcDate);
-  const T  = (JD - 2451545.0) / 36525.0;
-  const gmst =
-    280.46061837 +
-    360.98564736629 * (JD - 2451545.0) +
-    0.000387933 * T * T -
-    (T * T * T) / 38710000.0;
-  return ((gmst % 360) + 360) % 360;
-}
-
-function computeRAMC(utcDate: Date, birthLonDeg: number): number {
-  return ((computeGMST(utcDate) + birthLonDeg) % 360 + 360) % 360;
-}
-
-function eclToRA(eclLonDeg: number): number {
-  const λ = eclLonDeg * (Math.PI / 180);
-  const ε = 23.4393 * (Math.PI / 180);
-  const ra = Math.atan2(Math.sin(λ) * Math.cos(ε), Math.cos(λ));
-  return ((ra * (180 / Math.PI)) % 360 + 360) % 360;
-}
-
-function computeDec(eclLonDeg: number, eclLatDeg: number = 0): number {
-  const λ = eclLonDeg * (Math.PI / 180);
-  const β = eclLatDeg * (Math.PI / 180);
-  const ε = 23.4393 * (Math.PI / 180);
-  const sinDec = Math.sin(β) * Math.cos(ε) +
-                 Math.cos(β) * Math.sin(ε) * Math.sin(λ);
-  return Math.asin(sinDec) * (180 / Math.PI);
-}
-
-function mcLonFromRAMC(RAMC: number, planetRA: number): number {
-  const raw = RAMC - planetRA;
-  return ((raw + 540) % 360) - 180;
-}
-
 function haversine(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371; // Earth ratio in km
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -109,63 +70,11 @@ function haversine(lat1: number, lon1: number, lat2: number, lon2: number) {
 
 type GeoPoint = { lat: number; lon: number };
 
-function computeAscDscCurve(
-  mcLon: number,
-  decDeg: number,
-  angle: 'ASC' | 'DSC'
-): GeoPoint[] {
-  const sign = angle === 'ASC' ? -1 : 1;
-  const decRad = decDeg * (Math.PI / 180);
-  const points: GeoPoint[] = [];
-
-  for (let latDeg = -75; latDeg <= 75; latDeg += 2) {
-    const φ = latDeg * (Math.PI / 180);
-    const tanPhi_tanDec = Math.tan(φ) * Math.tan(decRad);
-
-    if (Math.abs(tanPhi_tanDec) > 1) continue;
-
-    const H_rad = Math.acos(-tanPhi_tanDec);
-    const H_deg = H_rad * (180 / Math.PI);
-
-    const ptLon = mcLon + sign * H_deg;
-    const normLon = ((ptLon + 540) % 360) - 180;
-
-    points.push({ lat: latDeg, lon: normLon });
-  }
-
-  return points;
-}
-
-function splitAtAntiMeridian(points: GeoPoint[], threshold: number = 180): GeoPoint[][] {
-  if (points.length === 0) return [];
-
-  const segments: GeoPoint[][] = [];
-  let currentSegment: GeoPoint[] = [points[0]];
-
-  for (let i = 1; i < points.length; i++) {
-    const prevLon = points[i - 1].lon;
-    const currLon = points[i].lon;
-
-    if (Math.abs(currLon - prevLon) > threshold) {
-      segments.push(currentSegment);
-      currentSegment = [];
-    }
-
-    currentSegment.push(points[i]);
-  }
-
-  if (currentSegment.length > 0) {
-    segments.push(currentSegment);
-  }
-
-  return segments;
-}
-
 interface AcgLine {
   planet: string;
   angle: 'MC' | 'IC' | 'ASC' | 'DSC';
-  longitude?: number;
-  curve?: GeoPoint[];
+  longitude?: number | null;
+  curve_segments?: GeoPoint[][];
   color: string;
   declination: number;
 }
@@ -229,58 +138,53 @@ export function AcgMap({
     setHoveredLine(null);
   };
   
+  const [serverLines, setServerLines] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (birthDateTimeUTC) {
+      fetch(`/api/astro/acg-map?date=${encodeURIComponent(birthDateTimeUTC)}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.lines) setServerLines(data.lines);
+        })
+        .catch(err => console.error("[AcgMap] Failed to load true ACG lines:", err));
+    }
+  }, [birthDateTimeUTC]);
+
   // ── Derive ACG Lines ───────────────────────────────────────
   
   const lines = useMemo(() => {
-    const planets = ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto', 'chiron'] as const;
     const computedLines: AcgLine[] = [];
 
-    let RAMC: number | null = null;
-    if (birthDateTimeUTC && birthLon !== undefined) {
-      try {
-        const utcDate = new Date(birthDateTimeUTC);
-        if (!isNaN(utcDate.getTime())) {
-          RAMC = computeRAMC(utcDate, birthLon);
-        }
-      } catch (e) {
-        console.warn('[AcgMap] Invalid birthDateTimeUTC, falling back to demo mode.', e);
-      }
+    if (serverLines.length > 0) {
+      serverLines.forEach(sl => {
+         computedLines.push({
+           planet: sl.planet,
+           angle: sl.angle_type,
+           longitude: sl.longitude,
+           curve_segments: sl.curve_segments,
+           color: PLANET_LINE_COLORS[sl.planet] || 'var(--text-tertiary)',
+           declination: sl.declination || 0
+         });
+      });
+      return computedLines;
     }
-    
+
+    // Demo Mode Fallback
+    const planets = ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto', 'chiron'] as const;
     planets.forEach(p => {
       const point = natal[p];
       if (!point) return;
-      
       const name = p.charAt(0).toUpperCase() + p.slice(1);
       const color = PLANET_LINE_COLORS[name] || 'var(--text-tertiary)';
-      
-      if (RAMC !== null) {
-        // Accurate lines config
-        const ra  = eclToRA(point.longitude);
-        const dec = computeDec(point.longitude);
-        const mcLon = mcLonFromRAMC(RAMC, ra);
-        
-        computedLines.push({ planet: name, angle: 'MC', longitude: mcLon, color, declination: dec });
-        const icLon = ((mcLon + 180 + 540) % 360) - 180;
-        computedLines.push({ planet: name, angle: 'IC', longitude: icLon, color, declination: dec });
-        
-        const ascCurve = computeAscDscCurve(mcLon, dec, 'ASC');
-        computedLines.push({ planet: name, angle: 'ASC', curve: ascCurve, color, declination: dec });
-        
-        const dscCurve = computeAscDscCurve(mcLon, dec, 'DSC');
-        computedLines.push({ planet: name, angle: 'DSC', curve: dscCurve, color, declination: dec });
-      } else {
-        // Demo
-        const mcLon = ((point.longitude - 120 + 540) % 360) - 180;
-        computedLines.push({ planet: name, angle: 'MC', longitude: mcLon, color, declination: 0 });
-        computedLines.push({ planet: name, angle: 'IC', longitude: ((mcLon + 180 + 540) % 360) - 180, color, declination: 0 });
-        computedLines.push({ planet: name, angle: 'ASC', longitude: ((mcLon - 90 + 540) % 360) - 180, color, declination: 0 });
-        computedLines.push({ planet: name, angle: 'DSC', longitude: ((mcLon + 90 + 540) % 360) - 180, color, declination: 0 });
-      }
+      const mcLon = ((point.longitude - 120 + 540) % 360) - 180;
+
+      computedLines.push({ planet: name, angle: 'MC', longitude: mcLon, color, declination: 0 });
+      computedLines.push({ planet: name, angle: 'IC', longitude: ((mcLon + 180 + 540) % 360) - 180, color, declination: 0 });
     });
 
     return computedLines;
-  }, [natal, birthDateTimeUTC, birthLon]);
+  }, [natal, serverLines]);
 
   // Hook to calculate distance outputs for ChartClient + Tooltips
   const distances = useMemo(() => {
@@ -292,10 +196,12 @@ export function AcgMap({
           if (line.angle === 'MC' || line.angle === 'IC') {
               // Minimal distance from a pure vertical meridian is along the parallel
               minD = haversine(highlightCity.lat, highlightCity.lon, highlightCity.lat, line.longitude!);
-          } else if (line.curve) {
-              line.curve.forEach(pt => {
-                  const d = haversine(highlightCity.lat, highlightCity.lon, pt.lat, pt.lon);
-                  if (d < minD) minD = d;
+          } else if (line.curve_segments) {
+              line.curve_segments.forEach(seg => {
+                seg.forEach(pt => {
+                    const d = haversine(highlightCity.lat, highlightCity.lon, pt.lat, pt.lon);
+                    if (d < minD) minD = d;
+                });
               });
           }
           distMap.set(`${line.planet}-${line.angle}`, Math.round(minD));
@@ -364,7 +270,7 @@ export function AcgMap({
         {/* Layer 2: Paran Lines */}
         {(() => {
           const lats = new Set<number>();
-          if (lines.some(l => l.curve)) {
+          if (lines.some(l => l.curve_segments)) {
              lines.filter(l => l.angle === 'MC').forEach(l => {
                 if (l.declination) {
                    const paranLat = 90 - Math.abs(l.declination);
@@ -396,7 +302,7 @@ export function AcgMap({
           const dash = (line.angle === 'MC' || line.angle === 'IC') ? (line.angle === 'MC' ? "" : "10 5") : (line.angle === 'ASC' ? "6 3" : "2 5");
           const isHovered = hoveredLine && hoveredLine.planet === line.planet && hoveredLine.angle === line.angle;
           
-          if (line.angle === 'MC' || line.angle === 'IC') {
+          if ((line.angle === 'MC' || line.angle === 'IC') && line.longitude !== null && line.longitude !== undefined) {
             const x = projectLon(line.longitude!);
             return (
               <line
@@ -411,11 +317,10 @@ export function AcgMap({
                   style={{ transition: 'opacity 0.2s ease, stroke-width 0.2s ease' }}
               />
             );
-          } else if (line.curve) {
-            const segments = splitAtAntiMeridian(line.curve);
+          } else if (line.curve_segments) {
             return (
               <g key={`${line.planet}-${line.angle}-${i}`}>
-                {segments.map((seg, si) => seg.length > 1 ? (
+                {line.curve_segments.map((seg, si) => seg.length > 1 ? (
                   <polyline
                     key={`${line.planet}-${line.angle}-${i}-seg${si}`}
                     points={seg.map(p => `${projectLon(p.lon)},${projectLat(p.lat)}`).join(' ')}
@@ -459,28 +364,31 @@ export function AcgMap({
           );
 
           if (line.angle === 'MC' || line.angle === 'IC') {
-            const x = projectLon(line.longitude!);
+            const x = projectLon(line.longitude || 0);
             return (
               <g key={`label-${line.planet}-${line.angle}-${i}`}>
                 {renderLabel(x, 24)}
                 {renderLabel(x, 250)}
               </g>
             );
-          } else if (line.curve && line.curve.length > 0) {
-            const topPoint = line.curve.reduce((max, p) => p.lat > max.lat ? p : max, line.curve[0]);
-            const midPoint = line.curve.reduce((closest, p) => Math.abs(p.lat) < Math.abs(closest.lat) ? p : closest, line.curve[0]);
-            
-            const topX = projectLon(topPoint.lon);
-            const topY = Math.max(15, projectLat(topPoint.lat) + 15);
-            const midX = projectLon(midPoint.lon);
-            const midY = projectLat(midPoint.lat);
+          } else if (line.curve_segments && line.curve_segments.length > 0) {
+            const firstSeg = line.curve_segments[0];
+            if (firstSeg && firstSeg.length > 0) {
+                const topPoint = firstSeg.reduce((max, p) => p.lat > max.lat ? p : max, firstSeg[0]);
+                const midPoint = firstSeg.reduce((closest, p) => Math.abs(p.lat) < Math.abs(closest.lat) ? p : closest, firstSeg[0]);
+                
+                const topX = projectLon(topPoint.lon);
+                const topY = Math.max(15, projectLat(topPoint.lat) + 15);
+                const midX = projectLon(midPoint.lon);
+                const midY = projectLat(midPoint.lat);
 
-            return (
-               <g key={`label-${line.planet}-${line.angle}-${i}`}>
-                 {renderLabel(topX, topY)}
-                 {Math.abs(topY - midY) > 40 && renderLabel(midX, midY)}
-               </g>
-            );
+                return (
+                   <g key={`label-${line.planet}-${line.angle}-${i}`}>
+                     {renderLabel(topX, topY)}
+                     {Math.abs(topY - midY) > 40 && renderLabel(midX, midY)}
+                   </g>
+                );
+            }
           }
           return null;
         })}
@@ -536,11 +444,10 @@ export function AcgMap({
                 style={{ cursor: 'pointer', pointerEvents: 'stroke' }}
               />
             )
-          } else if (line.curve) {
-            const segments = splitAtAntiMeridian(line.curve);
+          } else if (line.curve_segments) {
             return (
               <g key={`hit-${line.planet}-${line.angle}-${i}`}>
-                {segments.map((seg, si) => seg.length > 1 ? (
+                {line.curve_segments.map((seg, si) => seg.length > 1 ? (
                   <polyline
                     key={`hit-${line.planet}-${line.angle}-${i}-seg${si}`}
                     points={seg.map(p => `${projectLon(p.lon)},${projectLat(p.lat)}`).join(' ')}

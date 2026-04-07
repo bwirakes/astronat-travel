@@ -1,6 +1,5 @@
 /* ═══ App Home — Responsive Layout ══════════════════════════════════════════ */
 
-/* ── Page Shell ─────────────────────────────────────────── */
 .page {
     min-height: 100vh;
     background: var(--bg);
@@ -21,9 +20,19 @@
 
 /* ── Content Grid ───────────────────────────────────────── */
 .content {
-    max-width: 1400px;
+    max-width: 1080px;
     margin: 0 auto;
-    padding: var(--space-md) clamp(1.25rem, 3vw, 3rem) var(--space-3xl);
+    padding: 0 clamp(0.75rem, 2vw, 1.25rem) var(--space-2xl);
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.topSection {
+    display: none;
+}
+
+.dashboardGrid {
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
@@ -31,7 +40,8 @@
 
 /* ── Hero ────────────────────────────────────────────────── */
 .hero {
-    padding: var(--space-md) 0 var(--space-sm);
+    padding: 0 0 var(--space-md);
+    flex-shrink: 0;
 }
 
 .pill {
@@ -39,15 +49,16 @@
     font-size: 0.65rem;
     text-transform: uppercase;
     letter-spacing: 0.12em;
-    color: var(--gold);
+    color: var(--text-secondary);
+    font-weight: 500;
 }
 
 .greeting {
     font-family: var(--font-primary);
-    font-size: clamp(2.2rem, 5vw, 3.5rem);
-    line-height: 1;
+    font-size: clamp(1.6rem, 3.5vw, 2.5rem);
+    line-height: 1.1;
     letter-spacing: -0.02em;
-    margin-top: 0.4rem;
+    margin-top: 0.2rem;
     color: var(--text-primary);
     text-transform: uppercase;
 }
@@ -57,105 +68,94 @@
     font-family: var(--font-display-alt-2);
     font-style: italic;
     text-transform: none;
-    color: var(--gold);
-    font-size: 1.1em;
+    color: var(--color-y2k-blue);
+    font-size: 1.15em;
     position: relative;
-    top: 0.04em;
+    top: 0; /* Removing offset to prevent overlap */
+    display: inline-block;
 }
 
 /* ── Birthday Optimizer Banner ──────────────────────────── */
 .banner {
     background: var(--color-y2k-blue);
-    border-radius: var(--shape-asymmetric-md);
-    padding: var(--space-lg) var(--space-lg);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-lg);
+    padding: var(--space-md) var(--space-lg);
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-md);
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
     cursor: pointer;
-    transition: box-shadow 0.2s var(--ease);
-    box-shadow: 0 4px 16px rgba(4, 86, 251, 0.15);
+    transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
+    width: 100%;
+    margin-bottom: var(--space-md);
+    height: 120px;
+    max-height: 120px;
     position: relative;
     overflow: hidden;
-    margin-bottom: var(--space-xl);
+}
+
+.bannerSpiral {
+    position: absolute;
+    right: -20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 180px;
+    height: 180px;
+    opacity: 0.15;
+    pointer-events: none;
+    animation: astro-spin 40s linear infinite;
 }
 
 .banner::before {
-    content: '';
-    position: absolute;
-    top: -30%;
-    right: -10%;
-    width: 200px;
-    height: 200px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.06);
-    pointer-events: none;
+    display: none; /* remove old glow */
 }
 
 .banner:hover {
-    box-shadow: 0 8px 24px rgba(4, 86, 251, 0.25);
-}
-
-.bannerText {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(4, 86, 251, 0.4);
 }
 
 .bannerTag {
     font-family: var(--font-mono);
-    font-size: 0.55rem;
-    letter-spacing: 0.1em;
-    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 0.2rem;
 }
 
-.bannerTitle {
-    font-family: var(--font-secondary);
-    font-size: clamp(1.2rem, 3vw, 1.6rem);
+.bannerTitleMain {
+    font-family: var(--font-primary);
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 0.9;
     color: #fff;
-    line-height: 1.15;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    position: relative;
+    z-index: 2;
+}
+
+.bannerTitleScript {
+    font-family: var(--font-display-alt-2);
+    font-size: clamp(2.5rem, 5vw, 3.5rem);
+    line-height: 0.6;
+    color: #fff;
+    font-style: italic;
+    position: relative;
+    z-index: 2;
+    margin-top: -0.2rem;
+    margin-left: 1rem;
 }
 
 .bannerSub {
-    font-family: var(--font-body);
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.65);
-    line-height: 1.4;
-    max-width: 340px;
-}
-
-.bannerRight {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    flex-shrink: 0;
+    font-family: var(--font-secondary);
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.8);
     position: relative;
-    z-index: 1;
-}
-
-.bannerEmoji {
-    font-size: 2.5rem;
-    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.2));
-}
-
-.bannerBtn {
-    flex-shrink: 0;
-    background: #fff;
-    color: var(--color-y2k-blue);
-    border: none;
-    border-radius: var(--radius-full);
-    padding: 0.5rem 1.2rem;
-    font-family: var(--font-body);
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.15s var(--ease);
-    white-space: nowrap;
-}
-
-.bannerBtn:hover {
-    background: var(--color-eggshell);
+    z-index: 2;
+    margin-top: auto;
 }
 
 /* ── Section Kicker (SKILL.md H4 pattern) ───────────────── */
@@ -172,56 +172,29 @@
 /* ── Explore Grid ───────────────────────────────────────── */
 .exploreSection {
     margin-top: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .exploreGrid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-xs);
+    grid-template-columns: 1fr;
+    gap: var(--space-sm);
+    padding-bottom: 0;
+    flex-shrink: 0;
 }
 
-.exploreCard {
-    background: var(--surface);
-    border: 1px solid var(--surface-border);
-    border-radius: var(--shape-asymmetric-md);
-    padding: var(--space-md);
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    cursor: pointer;
-    transition: background 0.15s var(--ease);
-}
-
-.exploreCard:hover {
-    background: var(--bg-raised);
-}
-
-.exploreIcon {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-    margin-bottom: 0.25rem;
-}
-
-.exploreName {
-    font-family: var(--font-secondary);
-    font-size: 1rem;
-    line-height: 1.15;
-    color: var(--text-primary);
-}
-
-.exploreDesc {
-    font-family: var(--font-mono);
-    font-size: 0.55rem;
-    color: var(--text-tertiary);
-    letter-spacing: 0.05em;
+.exploreGrid::-webkit-scrollbar {
+    display: none;
 }
 
 /* ── Readings List ──────────────────────────────────────── */
+.readingsSection {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
 .readingsList {
     display: flex;
     flex-direction: column;
@@ -230,16 +203,17 @@
 
 .readingRow {
     background: var(--surface);
-    border: 1px solid var(--surface-border);
-    border-radius: var(--shape-asymmetric-md);
-    padding: 0.6rem var(--space-sm);
+    border-radius: var(--radius-md);
+    padding: 0.4rem var(--space-sm);
     display: flex;
     align-items: center;
     justify-content: space-between;
     transition: background 0.15s var(--ease);
+    border: 1px solid var(--surface-border);
 }
 
 .readingRow:hover {
+    transform: translateY(-2px);
     background: var(--bg-raised);
 }
 
@@ -250,17 +224,17 @@
 }
 
 .miniRing {
-    transform: scale(0.45);
+    transform: scale(0.55);
     transform-origin: left center;
-    margin-right: -40px;
+    margin-right: -30px;
     flex-shrink: 0;
 }
 
 .readingDest {
     display: block;
-    font-family: var(--font-body);
-    font-size: 0.9rem;
-    font-weight: 600;
+    font-family: var(--font-secondary);
+    font-size: 1rem;
+    letter-spacing: 0.01em;
     color: var(--text-primary);
 }
 
@@ -286,6 +260,23 @@
     transition: all 0.15s var(--ease);
 }
 
+.viewAllBtn {
+    background: transparent;
+    border: none;
+    color: var(--text-tertiary);
+    text-align: center;
+    padding: 0.4rem var(--space-md);
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.15s var(--ease);
+}
+
+.viewAllBtn:hover {
+    color: var(--text-primary);
+}
+
 .viewBtn:hover {
     background: var(--text-primary);
     color: var(--bg);
@@ -304,10 +295,10 @@
 /* ── Floating Action Button ──────────────────────────────── */
 .fab {
     position: fixed;
-    bottom: var(--space-md);
-    left: 0;
-    right: 0;
-    margin: 0 auto;
+    bottom: var(--space-xl);
+    right: clamp(1.25rem, 3vw, 3rem);
+    left: auto;
+    margin: 0;
     width: max-content;
     z-index: 100;
     background: var(--color-y2k-blue);
@@ -319,8 +310,8 @@
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 4px 20px rgba(4, 86, 251, 0.35);
-    transition: background 0.15s var(--ease);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    transition: background 0.15s var(--ease), transform 0.15s var(--ease);
 }
 
 .fab:hover {
@@ -329,32 +320,48 @@
 
 /* ═══ RESPONSIVE — Tablet (≥768px): 2-column grid ════════ */
 @media (min-width: 768px) {
-    .content {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: var(--space-xl);
-        align-items: stretch;
+    .page {
+        min-height: 100vh;
     }
 
-    .primary {
+    .content {
+        padding: 0 clamp(1rem, 2vw, 2rem) var(--space-xl);
+    }
+
+    .dashboardGrid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-lg);
+        align-items: start;
+    }
+
+    .exploreSection {
         display: flex;
         flex-direction: column;
     }
 
-    .exploreSection {
-        margin-top: auto;
+    .readingsSection {
+        display: flex;
+        flex-direction: column;
     }
 
-    .fab {
-        left: auto;
-        right: var(--space-lg);
-        margin: 0;
+    .readingsList {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .exploreGrid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-sm);
+        margin-right: 0;
+        padding-right: 0;
     }
 }
 
 /* ═══ RESPONSIVE — Desktop wide (≥1200px) ════════════════ */
 @media (min-width: 1200px) {
-    .content {
+    .dashboardGrid {
         grid-template-columns: 3fr 2fr;
         gap: var(--space-2xl);
     }

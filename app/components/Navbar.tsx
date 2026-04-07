@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import Image from "next/image";
 import ThemeToggle from "./ThemeToggle";
@@ -17,11 +18,34 @@ interface NavbarProps {
 
 export default function Navbar({ activeHref, centerContent, logoHref = "/" }: NavbarProps) {
     const [open, setOpen] = useState(false);
+    const [user, setUser] = useState<any>(null);
+    const supabase = createClient();
+
+    useEffect(() => {
+        const getUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setUser(user);
+        };
+        getUser();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null);
+        });
+
+        return () => subscription.unsubscribe();
+    }, [supabase.auth]);
+
+    const handleSignOut = async () => {
+        await supabase.auth.signOut();
+        window.location.href = "/";
+    };
 
     const links = [
         { href: "/about", label: "About" },
         { href: "https://calendly.com/astronat/60min-acg-reading", label: "Book a reading", external: true },
-    ];
+        user && { href: "/home", label: "Dashboard" },
+        !user && { href: "/auth/login", label: "Log in" },
+    ].filter(Boolean) as any[];
 
     return (
         <nav className={styles.nav}>
@@ -69,6 +93,11 @@ export default function Navbar({ activeHref, centerContent, logoHref = "/" }: Na
                                 )
                             )}
                         </div>
+                    )}
+                    {user && (
+                        <button onClick={handleSignOut} className={styles.signOutBtn}>
+                            Sign out
+                        </button>
                     )}
                     <ThemeToggle />
                     {/* Hamburger — only shown when no centerContent (full nav) */}
