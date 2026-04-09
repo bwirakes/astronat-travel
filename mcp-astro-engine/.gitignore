@@ -1,0 +1,12 @@
+# Data files (generated, not committed)
+data/astro_engine.db
+data/astro_engine_test.db
+data/ephemeris_files/*.se1
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Test artifacts
+.pytest_cache/

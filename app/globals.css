@@ -1,38 +1,67 @@
-/* ═══ Astro Nat — Elevated Editorial ════════════════════════════ */
+/* ═══ Astro Nat — Elevated Editorial + 90s Vibe ════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  /* Fonts — Editorial serif + utilitarian sans + industrial mono */
-  --font-display: 'Cormorant Garamond', serif;
-  --font-body: 'Space Grotesk', sans-serif;
-  --font-mono: 'IBM Plex Mono', monospace;
+  /* Astro-Brand Strategy Google Font Alternatives */
+  --font-primary: var(--font-primary-alt), sans-serif;
+  --font-secondary: var(--font-secondary-alt), serif;
+  --font-body: var(--font-manrope), sans-serif;
+  --font-display-alt-1: var(--font-monigue), serif;
+  --font-display-alt-2: var(--font-pinyon), cursive;
 
-  /* Dark Theme (Default) — Deep Obsidian */
-  --bg: #0A0A0E;
-  --bg-raised: #111118;
-  --surface: #161620;
-  --surface-border: rgba(255, 255, 255, 0.055);
+  --font-display: var(--font-secondary);
+  --font-mono: var(--font-ibm), monospace;
+
+  /* Astro-Brand Strategy Colors */
+  --color-charcoal: #1B1B1B;
+  --color-y2k-blue: #0456fb;
+  --color-acqua: #CAF1F0;
+  --color-black: #000000;
+  --color-eggshell: #F8F5EC;
+  --color-cream: #F1EFE7;
+  --color-spiced-life: #E67A7A;
+
+  /* Dark Theme (Default) mapped to Brand Colors */
+  --bg: var(--color-charcoal);
+  --bg-raised: #212121;
+  --surface: var(--color-black);
+  --surface-border: rgba(255, 255, 255, 0.2);
 
   /* Esoteric / Atmospheric Palette */
-  --accent: #C4622D;       /* Terracotta — replaces neon red */
-  --accent-soft: rgba(196, 98, 45, 0.12);
-  --cyan: #7FB5C1;         /* Desaturated slate-blue — replaces neon cyan */
-  --cyan-soft: rgba(127, 181, 193, 0.1);
+  --accent: var(--color-spiced-life);
+  --accent-soft: rgba(230, 122, 122, 0.12);
+  --cyan: var(--color-acqua);
+  --cyan-soft: rgba(202, 241, 240, 0.1);
+  --y2k-blue: var(--color-y2k-blue);
 
-  /* Quality states — no traffic lights */
-  --sage: #7B9E87;         /* Muted sage — for excellent/positive */
-  --sage-soft: rgba(123, 158, 135, 0.12);
-  --amber: #C17B3F;        /* Warm amber — for caution */
+  /* Quality states */
+  --sage: #00FD00; /* Neon green seen in identity assets */
+  --sage-soft: rgba(0, 253, 0, 0.12);
+  --amber: #C17B3F;
   --amber-soft: rgba(193, 123, 63, 0.12);
 
   /* Celestial Editorial Gold Palette */
   --gold: #C9A96E;
   --gold-soft: rgba(201, 169, 110, 0.12);
 
-  --text-primary: #E4E2DD;
-  --text-secondary: #7C7C82;
-  --text-tertiary: #4A4A52;
+  /* Planet Palette */
+  --color-planet-sun: var(--gold);
+  --color-planet-moon: #FFFFFF;
+  --color-planet-mercury: #BDBDBD;
+  --color-planet-venus: var(--color-spiced-life);
+  --color-planet-mars: #D32F2F;
+  --color-planet-jupiter: var(--amber);
+  --color-planet-saturn: #757575;
+  --color-planet-uranus: var(--color-acqua);
+  --color-planet-neptune: var(--color-y2k-blue);
+  --color-planet-pluto: #8E24AA;
+
+  --text-primary: var(--color-eggshell);
+  --text-secondary: #CCCCCC;
+  --text-tertiary: #999999;
 
   /* Spacing */
   --space-xs: 0.5rem;
@@ -43,40 +72,61 @@
   --space-2xl: 4rem;
   --space-3xl: 6rem;
 
-  /* Radii — reduced for editorial flatness */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  /* Radii - M3 Shape Scale (Rounded) */
+  --radius-none: 0px;
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 28px;
+  --radius-full: 9999px;
+
+  /* M3 Shape Scale (Cut) */
+  --cut-sm: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  --cut-md: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  --cut-lg: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+  --cut-xl: polygon(28px 0, 100% 0, 100% calc(100% - 28px), calc(100% - 28px) 100%, 0 100%, 0 28px);
+
+  /* Astro-Organic Asymmetric Shapes */
+  --shape-organic-1: 40% 60% 70% 30% / 40% 50% 60% 50%;
+  --shape-asymmetric-md: var(--radius-xl) var(--radius-xs) var(--radius-xl) var(--radius-sm);
+  --shape-asymmetric-lg: var(--radius-full) var(--radius-md) var(--radius-full) var(--radius-sm);
 
   /* Motion */
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --duration: 0.3s;
 }
 
-/* Light Theme */
+/* Light Theme (Astro-Brand mappings) */
 [data-theme="light"] {
-  --bg: #F2F0EB;
-  --bg-raised: #FAFAF8;
-  --surface: #FAFAF8;
-  --surface-border: rgba(0, 0, 0, 0.07);
+  --bg: var(--color-eggshell);
+  --bg-raised: var(--color-cream);
+  --surface: var(--color-cream);
+  --surface-border: rgba(0, 0, 0, 0.08);
 
-  --accent: #B35520;
-  --accent-soft: rgba(179, 85, 32, 0.08);
-  --cyan: #4A8E9C;
-  --cyan-soft: rgba(74, 142, 156, 0.08);
+  --accent: var(--color-spiced-life);
+  --cyan: #007676; /* Dark teal replacing Acqua */
+  --color-acqua: #007676; 
+  --sage: #007A00; /* Deep green replacing neon */
+  --amber: #C17B3F;
+  --gold: #A67C00; /* Darker gold for text contrast */
+  --gold-soft: rgba(201, 169, 110, 0.12);
 
-  --sage: #4E7A5E;
-  --sage-soft: rgba(78, 122, 94, 0.1);
-  --amber: #9E6228;
-  --amber-soft: rgba(158, 98, 40, 0.1);
+  /* Planet Palette - Light Mode Overrides for Legibility */
+  --color-planet-sun: #A58B5A;
+  --color-planet-moon: #8794A6;
+  --color-planet-mercury: var(--color-charcoal);
+  --color-planet-venus: #C34949;
+  --color-planet-mars: #A52020;
+  --color-planet-jupiter: #985925;
+  --color-planet-saturn: #555555;
+  --color-planet-uranus: #0340B5;
+  --color-planet-neptune: var(--color-y2k-blue);
+  --color-planet-pluto: #6C1582;
 
-  /* Celestial Editorial Gold Palette (Light Mode) */
-  --gold: #A3824A;
-  --gold-soft: rgba(163, 130, 74, 0.12);
-
-  --text-primary: #1A1A1F;
-  --text-secondary: #5C5C62;
-  --text-tertiary: #8E8E94;
+  --text-primary: var(--color-charcoal);
+  --text-secondary: var(--color-charcoal);
+  --text-tertiary: #555555;
 }
 
 /* ── Reset ──────────────────────────────────────────────────── */
@@ -105,25 +155,58 @@ img, table, svg, canvas {
   max-width: 100%;
 }
 
-h1,
-h2,
-h3 {
+h1 {
   font-family: var(--font-display);
   font-weight: 400;
+  font-size: 4rem;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--text-primary);
+}
+
+h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 2.5rem;
   letter-spacing: -0.01em;
   line-height: 1.15;
   color: var(--text-primary);
 }
 
-h4,
-h5,
-h6 {
+h3 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.75rem;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+h4 {
   font-family: var(--font-body);
-  font-weight: 500;
-  font-size: 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-secondary);
+}
+
+h5 {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+h6 {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
 }
 
 p {
@@ -148,16 +231,11 @@ a {
 .card {
     background-color: var(--surface);
     padding: var(--space-xl);
-    border-radius: 0;
-    min-width: 0;
-    overflow-wrap: break-word;
-    word-break: break-word;
-    transition: background-color 0.2s var(--ease);
+    border: 1px solid var(--surface-border);
+    transition: background-color 0.2s var(--ease), border-color 0.2s var(--ease);
 }
 
-.card:hover {
-    background-color: var(--bg-raised);
-}
+
 
 /* Narrower card padding on small screens */
 @media (max-width: 600px) {
@@ -183,31 +261,29 @@ a {
 }
 
 .btn-primary {
-  /* Metallic brushed gold — matches homepage CTA */
-  background: linear-gradient(135deg, #C9A96E 0%, #E8C97A 45%, #B8956A 100%);
-  color: #1A1208;
-  box-shadow:
-    0 0 0 1px rgba(201, 169, 110, 0.3),
-    0 4px 20px rgba(201, 169, 110, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  /* Astro-Brand Flat & Asymmetric */
+  background: var(--color-y2k-blue);
+  color: var(--color-eggshell);
+  border-radius: var(--shape-asymmetric-md);
+  box-shadow: none;
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow:
-    0 0 0 1px rgba(201, 169, 110, 0.5),
-    0 8px 32px rgba(201, 169, 110, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  background: var(--color-y2k-blue);
+  opacity: 0.9;
+  box-shadow: none;
 }
 
 .btn-secondary {
   background: transparent;
   color: var(--text-primary);
-  border: 1px solid var(--surface-border);
+  border: 1px solid var(--text-primary);
 }
 
 .btn-secondary:hover {
-  background: var(--surface);
+  background: var(--text-primary);
+  color: var(--bg);
 }
 
 /* ── Inputs ─────────────────────────────────────────────────── */
@@ -322,20 +398,35 @@ a {
     font-size: 0.55rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    padding: 0.2rem 0.5rem;
-    border-radius: var(--radius-sm);
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
     border: 1px solid var(--surface-border);
     color: var(--text-secondary);
     white-space: nowrap;
 }
 
+.btn-ghost {
+  border: 1px solid var(--surface-border);
+  color: var(--text-primary);
+  background: transparent;
+}
+.btn-ghost:hover {
+  background: var(--bg-raised);
+}
+
+/* ── Editorial Action Components ───────────────────────── */
+.editorial-btn:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+}
+
 .expandable-title {
-    font-family: var(--font-body);
-    font-weight: 500;
-    font-size: 0.72rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--text-secondary);
+    font-family: var(--font-secondary);
+    font-weight: 400;
+    font-size: 1.2rem;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--text-primary);
     white-space: nowrap;
 }
 
@@ -387,3 +478,58 @@ a {
         padding: 0 1rem 0;
     }
 }
+
+/* ── Global Utility: Logo ── */
+.onboarding-logo {
+  filter: invert(1) brightness(1.2);
+  display: block;
+}
+[data-theme="light"] .onboarding-logo {
+  filter: none;
+}
+
+/* ── Accordion Animations ── */
+.astro-accordion-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+.astro-accordion-trigger:hover {
+  opacity: 0.8;
+}
+.astro-accordion-content[data-state="open"] {
+  animation: slideDown 0.3s cubic-bezier(0.87, 0, 0.13, 1);
+}
+.astro-accordion-content[data-state="closed"] {
+  animation: slideUp 0.3s cubic-bezier(0.87, 0, 0.13, 1);
+}
+@keyframes slideDown {
+  from { height: 0; opacity: 0; }
+  to   { height: var(--radix-accordion-content-height); opacity: 1; }
+}
+@keyframes slideUp {
+  from { height: var(--radix-accordion-content-height); opacity: 1; }
+  to   { height: 0; opacity: 0; }
+}
+
+/* HoverCard pop animation */
+.planet-hover-card-pop[data-state="open"] {
+  animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(4px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Astro Loader ── */
+@keyframes astro-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── Home Layout V2 (100vh lock on Desktop only) - Removed to allow scrolling ── */

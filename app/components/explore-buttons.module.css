@@ -1,0 +1,238 @@
+/* ── Dashboard Explore Buttons — Poster Typographic Lockups ──────────────── */
+/* Hardcoded hexes to prevent theme-flipping inversions (ensuring always readable). */
+/* Eggshell: #F8F5EC, Charcoal: #1B1B1B, Y2K Blue: #0456fb, Acqua: #CAF1F0, Spiced Life: #E67A7A, Black: #000 */
+
+.card {
+    border: none;
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-md);
+    cursor: pointer;
+    transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+    position: relative;
+    overflow: hidden;
+    text-align: left;
+    height: 180px;
+    min-height: 180px;
+    border-radius: var(--shape-asymmetric-md);
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+}
+
+/* ── 1. Life Goals — Acqua bg ─────────────────────────── */
+.lifeGoals {
+    background-color: #CAF1F0;
+    background-image: linear-gradient(rgba(202, 241, 240, 0.65), rgba(202, 241, 240, 0.85)), url('/life_goals_retro.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    color: #1B1B1B;
+    justify-content: flex-start;
+    align-items: flex-start;
+    text-align: left;
+}
+
+.lifeGoalsMain {
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: clamp(2.5rem, 4.5vw, 3.8rem);
+    line-height: 0.85;
+    letter-spacing: -0.04em;
+    color: #1B1B1B;
+    position: relative;
+    z-index: 2;
+    margin-bottom: var(--space-xs);
+    text-transform: uppercase;
+}
+
+.lifeGoalsSub {
+    font-family: var(--font-secondary);
+    font-size: clamp(0.9rem, 2vw, 1.1rem);
+    line-height: 1.3;
+    color: rgba(27, 27, 27, 0.85);
+    position: relative;
+    z-index: 2;
+    max-width: 90%;
+}
+
+.amazingSmall {
+    font-family: var(--font-display-alt-2);
+    font-style: italic;
+    font-size: 1.4em;
+    color: #0456fb; /* Hex y2k blue */
+    margin: 0 0.1rem;
+    text-shadow: 1px 1px 0px rgba(255,255,255,0.8);
+}
+
+.sunSvgLarge {
+    width: 32px;
+    height: 32px;
+    margin-top: auto;
+    color: #0456fb;
+}
+
+/* ── 2. Couples — Y2K Blue bg ────────────────────────────── */
+.couples {
+    background-color: #0456fb;
+    background-image: linear-gradient(rgba(4, 86, 251, 0.8), rgba(4, 86, 251, 0.9)), url('/couples_retro.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    color: #F8F5EC;
+    justify-content: flex-end; /* Push to bottom to save space */
+    padding-bottom: 1.5rem;
+    align-items: center;
+    text-align: center;
+}
+
+.couplesGroup {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.couplesScript {
+    font-family: var(--font-display-alt-2);
+    font-size: clamp(3.5rem, 5vw, 4.5rem);
+    color: #CAF1F0; /* Bright acqua */
+    line-height: 0.5;
+    margin-bottom: 12px;
+    transform: rotate(-4deg);
+}
+
+.couplesLead {
+    font-family: var(--font-mono);
+    font-size: 0.70rem;
+    letter-spacing: 0.25em;
+    margin-bottom: -4px; 
+    position: relative;
+    z-index: 2;
+}
+
+.couplesMain {
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: clamp(2rem, 4vw, 3rem);
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    position: relative;
+    z-index: 1;
+}
+
+/* ── 3. My Chart — Moon Textured Black bg ────────────────── */
+.myChart {
+    background-color: #000;
+    background-image: linear-gradient(rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.85)), url('/retro_moon.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    color: #F8F5EC;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.chartHeader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: var(--space-xs);
+}
+
+.starsRow {
+    color: #CAF1F0; /* Acqua hex */
+    margin-bottom: 4px;
+}
+
+.chartGuide {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    color: #F8F5EC;
+    opacity: 0.9;
+}
+
+.chartTitleContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.chartScript {
+    font-family: var(--font-display-alt-2);
+    font-size: clamp(3.8rem, 6vw, 4.5rem);
+    color: #CAF1F0; /* Acqua */
+    text-shadow: 0 4px 15px rgba(0,0,0,1); /* Enhance contrast over craters */
+    line-height: 0.5;
+    margin-right: 15%;
+    margin-bottom: 8px; 
+    position: relative;
+    z-index: 2;
+}
+
+.chartMain {
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: clamp(2.8rem, 4.5vw, 3.5rem);
+    letter-spacing: -0.04em;
+    text-transform: uppercase;
+    position: relative;
+    z-index: 1;
+    line-height: 0.8;
+}
+
+/* ── 4. World Charts — Spiced Life bg ───────────────────────── */
+.worldCharts {
+    background-color: #E67A7A;
+    background-image: linear-gradient(rgba(230, 122, 122, 0.85), rgba(230, 122, 122, 0.95)), url('/world_charts_retro.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    color: #1B1B1B;
+    justify-content: center;
+    align-items: center; 
+}
+
+.worldContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.worldMundane {
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: clamp(2.3rem, 4.5vw, 3.2rem);
+    color: #1B1B1B;
+    background: transparent;
+    line-height: 0.8;
+    letter-spacing: -0.04em;
+    position: relative;
+    z-index: 1;
+}
+
+.worldAstrology {
+    font-family: var(--font-display-alt-1); /* Monigue for better readability */
+    font-size: clamp(2.2rem, 3.5vw, 3.2rem);
+    color: #F8F5EC;
+    line-height: 0.5;
+    margin-top: 5px; /* Monigue scales differently, requires different margins */
+    margin-left: 25%;
+    position: relative;
+    z-index: 2;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (min-width: 768px) {
+    .card {
+        height: 200px; /* Slightly taller cleanly on desktop */
+        min-height: 200px;
+    }
+}

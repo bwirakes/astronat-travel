@@ -8,16 +8,6 @@ interface TravelWindowsCardProps {
     travelDate: string;
 }
 
-function qualityToScore(quality: string): number {
-    switch (quality) {
-        case "excellent": return 85;
-        case "good":      return 70;
-        case "caution":   return 55;
-        case "avoid":     return 30;
-        default:          return 60;
-    }
-}
-
 export default function TravelWindowsCard({ windows, travelDate }: TravelWindowsCardProps) {
     if (!windows || windows.length === 0) return null;
 
@@ -56,8 +46,6 @@ export default function TravelWindowsCard({ windows, travelDate }: TravelWindows
                         );
                     })();
 
-                    const approxScore = qualityToScore(w.quality);
-
                     return (
                         <div key={i} className={`${styles.windowItem} ${styles[`q_${w.quality}`]} ${isTargetMonth ? styles.windowItemTarget : ""}`}>
                             <div className={styles.windowMonth}>
@@ -67,11 +55,12 @@ export default function TravelWindowsCard({ windows, travelDate }: TravelWindows
                             <div className={styles.windowQuality}>
                                 <span className={`${styles.qDot} ${styles[`qd_${w.quality}`]}`} />
                                 {w.quality}
-                                <span style={{ marginLeft: "auto", fontSize: "0.6rem", opacity: 0.6 }}>
-                                    ~{approxScore}
+                                <span style={{ marginLeft: "auto", fontSize: "0.6rem", opacity: 0.8, fontWeight: 500 }}>
+                                    {w.score}/100
                                 </span>
                             </div>
                             <div className={styles.windowReason}>{w.reason}</div>
+                            {w.house && <div className={styles.windowHouse}>{w.house}</div>}
                         </div>
                     );
                 })}

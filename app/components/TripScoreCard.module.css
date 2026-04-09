@@ -5,6 +5,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-lg);
+    clip-path: var(--cut-md);
 }
 
 .scoreTop {
@@ -45,12 +46,16 @@
 }
 
 .ringLabel {
+    position: absolute;
+    bottom: 6px;
+    left: 0;
+    right: 0;
+    text-align: center;
     font-family: var(--font-mono);
-    font-size: 0.52rem;
+    font-size: 0.6rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--text-tertiary);
-    margin-top: 0.2rem;
 }
 
 /* ─── Score details panel ────────────────────────────────────── */
@@ -113,7 +118,7 @@
     align-items: center;
     gap: 0.25rem;
     padding: 0.2rem 0.55rem;
-    border-radius: 3px;
+    border-radius: 20px;
     background: rgba(196, 98, 45, 0.12);
     border: 1px solid rgba(196, 98, 45, 0.35);
     color: #C4622D;
@@ -248,18 +253,10 @@
     animation: shimmer 1.5s ease-in-out infinite;
 }
 
-.skeletonLines {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    justify-content: center;
-}
-
 .skeletonLine {
     border-radius: var(--radius-sm);
-    background: rgba(255,255,255,0.04);
-    animation: shimmer 1.5s ease-in-out infinite;
+    background: rgba(255,255,255,0.05);
+    animation: shimmer 1.8s ease-in-out infinite;
 }
 
 @keyframes shimmer {
@@ -386,4 +383,23 @@
     .scoreHeadline {
         font-size: 0.85rem;
     }
+}
+
+/* ─── Insights Loading ───────────────────────────────────────── */
+.loadingInsights {
+    pointer-events: none;
+}
+
+.skeletonBox {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.5rem 0;
+}
+
+.skeletonBox .skeletonLine {
+    height: 0.85rem;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    animation: shimmer 1.8s ease-in-out infinite;
 }

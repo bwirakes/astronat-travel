@@ -26,11 +26,19 @@ interface NatalPlanet {
     house?: number;
 }
 
+interface TransitPlanet {
+    name: string;
+    longitude: number;
+    ra?: number;
+}
+
 interface Props {
     destination: string;
     planetLines: PlanetLine[];
     /** Real natal planets — used to compute all 40 ACG lines via RAMC */
     natalPlanets?: NatalPlanet[];
+    /** Transiting planets for overlay */
+    transitPlanets?: TransitPlanet[];
     /** Birth datetime as ISO 8601 UTC string e.g. "1990-11-06T20:00:00Z" */
     birthDateTimeUTC?: string;
     /** Birth longitude in decimal degrees (east positive) */
@@ -89,6 +97,14 @@ function mcLonFromRAMC(RAMC: number, planetRA: number): number {
     return ((raw + 540) % 360) - 180;
 }
 
+function computeDec(eclLonDeg: number, eclLatDeg: number = 0): number {
+    const λ = eclLonDeg * (Math.PI / 180);
+    const β = eclLatDeg * (Math.PI / 180);
+    const ε = 23.4393 * (Math.PI / 180);
+    const sinDec = Math.sin(β) * Math.cos(ε) + Math.cos(β) * Math.sin(ε) * Math.sin(λ);
+    return Math.asin(sinDec) * (180 / Math.PI);
+}
+
 /**
  * Compute all 40 ACG lines (4 angles × 10 planets) from natal planets.
  * Uses the correct RAMC − planet_RA formula.
@@ -110,12 +126,16 @@ function computeAllLines(
             RAMC = computeRAMC(utcDate, birthLon);
         } catch {
             RAMC = null;
+            console.warn("[AstroMap] Invalid birthDateTimeUTC, falling back to approximate projection.");
         }
+    } else {
+        console.warn("[AstroMap] Missing birthDateTimeUTC or birthLon. Map will use an approximate flat projection which is highly inaccurate (±15° error). Please provide full birth data.");
     }
 
     for (const np of natalPlanets) {
         // Prefer provided RA; otherwise compute from ecliptic longitude
         const planetRA = np.ra !== undefined ? np.ra : eclToRA(np.longitude);
+        const planetDec = computeDec(np.longitude);
 
         let mcLon: number;
         if (RAMC !== null) {
@@ -133,10 +153,10 @@ function computeAllLines(
         const dscLon = ((mcLon + 90 + 540) % 360) - 180;
 
         lines.push(
-            { planet: np.planet, angle: "MC",  longitude: mcLon,  is_paran: false },
-            { planet: np.planet, angle: "IC",  longitude: icLon,  is_paran: false },
-            { planet: np.planet, angle: "ASC", longitude: ascLon, is_paran: false },
-            { planet: np.planet, angle: "DSC", longitude: dscLon, is_paran: false },
+            { planet: np.planet, angle: "MC",  longitude: mcLon,  is_paran: false, dec: planetDec } as PlanetLine,
+            { planet: np.planet, angle: "IC",  longitude: icLon,  is_paran: false, dec: planetDec } as PlanetLine,
+            { planet: np.planet, angle: "ASC", longitude: ascLon, is_paran: false, dec: planetDec } as PlanetLine,
+            { planet: np.planet, angle: "DSC", longitude: dscLon, is_paran: false, dec: planetDec } as PlanetLine,
         );
     }
     return lines;
@@ -173,9 +193,14 @@ function buildLabelHtml(planet: string, angle: string, color: string): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AstroMap({
-    destination, planetLines, natalPlanets,
-    birthDateTimeUTC, birthLon,
-    destLat: propLat, destLon: propLon,
+    destination,
+    planetLines,
+    natalPlanets,
+    transitPlanets,
+    birthDateTimeUTC,
+    birthLon,
+    destLat: propLat,
+    destLon: propLon
 }: Props) {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstance = useRef<unknown>(null);
@@ -221,6 +246,13 @@ export default function AstroMap({
                     }
                 ).addTo(map);
 
+                // ── Layer Groups ────────────────────────────────────────────
+                const destLayer = L.layerGroup().addTo(map);
+                const natalLayer = L.layerGroup().addTo(map);
+                const transitLayer = L.layerGroup(); // Default off
+                const paranLayer = L.layerGroup().addTo(map);
+                const geoZoneLayer = L.layerGroup(); // Default off
+
                 // ── Destination marker ──────────────────────────────────────
                 const destIcon = L.divIcon({
                     className: "",
@@ -228,7 +260,7 @@ export default function AstroMap({
                     iconSize: [10, 10], iconAnchor: [5, 5],
                 });
                 L.marker(center, { icon: destIcon })
-                    .addTo(map)
+                    .addTo(destLayer)
                     .bindPopup(`<strong>${destination}</strong>`);
 
                 // ── 150-mile influence zone ─────────────────────────────────
@@ -240,13 +272,15 @@ export default function AstroMap({
                         color: "#ffffff", weight: 0.6, opacity: 0.15,
                         fill: true, fillColor: "#ffffff", fillOpacity: 0.03,
                         dashArray: "3 8",
-                    }).addTo(map);
+                    }).addTo(destLayer);
                 }
 
                 // ── Build line set ──────────────────────────────────────────
                 // Priority: real natalPlanets + RAMC → all 40 ACG lines computed
                 // Fallback: use MOCK_PLANET_LINES which have pre-set longitudes
                 let allLines: (PlanetLine | Omit<PlanetLine, "distance_km" | "orb">)[];
+                let tLines: Omit<PlanetLine, "distance_km" | "orb">[] = [];
+
                 if (natalPlanets && natalPlanets.length > 0) {
                     allLines = [
                         ...computeAllLines(natalPlanets, birthDateTimeUTC, birthLon),
@@ -254,6 +288,15 @@ export default function AstroMap({
                     ];
                 } else {
                     allLines = [...planetLines];
+                }
+
+                if (transitPlanets && transitPlanets.length > 0) {
+                    const mappedTransits = transitPlanets.map(p => ({
+                        planet: p.name,
+                        longitude: p.longitude,
+                        ra: p.ra
+                    }));
+                    tLines = computeAllLines(mappedTransits, birthDateTimeUTC, birthLon);
                 }
 
                 // ── Dash patterns per angle type ────────────────────────────
@@ -269,6 +312,11 @@ export default function AstroMap({
                     return ((a as PlanetLine).distance_km ?? 9999) - ((b as PlanetLine).distance_km ?? 9999);
                 });
 
+                // Tier 2B: Proximity Glow on top 3 closest non-paran lines
+                const closestLinesSet = new Set(
+                    sorted.filter(l => !l.is_paran && (l as PlanetLine).distance_km !== undefined).slice(0, 3)
+                );
+
                 sorted.forEach((line) => {
                     const planetKey = line.planet?.split("-")[0] || line.planet;
                     const color = PLANET_COLORS[planetKey] || PLANET_COLORS[line.planet] || "#aaaaaa";
@@ -276,8 +324,10 @@ export default function AstroMap({
                     const dash = line.is_paran
                         ? dashPattern.PARAN
                         : (dashPattern[angle] ?? "5 4");
-                    const weight = line.is_paran ? 1.0 : 1.6;
-                    const opacity = line.is_paran ? 0.5 : 0.85;
+
+                    const isClosest = closestLinesSet.has(line);
+                    const weight = line.is_paran ? 1.0 : (isClosest ? 2.5 : 1.6);
+                    const opacity = line.is_paran ? 0.5 : (isClosest ? 1.0 : 0.85);
 
                     const kmNote = (line as PlanetLine).distance_km !== undefined
                         ? `<br><span style="opacity:0.55;font-size:0.82em">${Math.round((line as PlanetLine).distance_km!)} km from ${destination}</span>`
@@ -296,7 +346,7 @@ export default function AstroMap({
                         if (LG.Geodesic) {
                             new LG.Geodesic([paranPoints], {
                                 steps: 1, color, weight, opacity, dashArray: dash,
-                            }).addTo(map).bindPopup(popup);
+                            }).addTo(paranLayer).bindPopup(popup);
                         }
                         // Paran label
                         const pLabel = L.divIcon({
@@ -304,7 +354,7 @@ export default function AstroMap({
                             html: buildLabelHtml(`${line.planet} Paran`, "IC", color),
                             iconSize: [20, 24], iconAnchor: [10, 12],
                         });
-                        L.marker([paranLat, destLonVal + 20], { icon: pLabel, interactive: false }).addTo(map);
+                        L.marker([paranLat, destLonVal + 20], { icon: pLabel, interactive: false }).addTo(paranLayer);
                         return;
                     }
 
@@ -312,47 +362,63 @@ export default function AstroMap({
                     if ((line as PlanetLine).longitude === undefined) return;
                     const lineLon = ((( (line as PlanetLine).longitude!) + 540) % 360) - 180;
 
+                    // Glow effect class for label if closest
+                    const labelHtml = buildLabelHtml(line.planet, angle, color);
+                    const styledLabelHtml = isClosest 
+                        ? `<div style="filter: drop-shadow(0 0 6px ${color});">${labelHtml}</div>` 
+                        : labelHtml;
+
                     if (angle === "MC" || angle === "IC") {
                         // ── Meridian: pole-to-pole vertical ────────────────
                         if (LG.Geodesic) {
                             new LG.Geodesic([[[85, lineLon], [-85, lineLon]]], {
                                 steps: 8, color, weight, opacity, dashArray: dash,
-                            }).addTo(map).bindPopup(popup);
+                            }).addTo(natalLayer).bindPopup(popup);
                         } else {
                             const pts: [number, number][] = [];
                             for (let lat = 85; lat >= -85; lat -= 5) pts.push([lat, lineLon]);
-                            L.polyline(pts, { color, weight, opacity, dashArray: dash }).addTo(map).bindPopup(popup);
+                            L.polyline(pts, { color, weight, opacity, dashArray: dash }).addTo(natalLayer).bindPopup(popup);
                         }
 
                         // Labels at TOP and BOTTOM (like reference image)
                         const mkLabel = (lat: number) => L.divIcon({
                             className: "",
-                            html: buildLabelHtml(line.planet, angle, color),
+                            html: styledLabelHtml,
                             iconSize: [20, 24], iconAnchor: [10, lat > 0 ? 0 : 24],
                         });
-                        L.marker([75, lineLon],  { icon: mkLabel(75),  interactive: false }).addTo(map);
-                        L.marker([-75, lineLon], { icon: mkLabel(-75), interactive: false }).addTo(map);
+                        L.marker([75, lineLon],  { icon: mkLabel(75),  interactive: false }).addTo(natalLayer);
+                        L.marker([-75, lineLon], { icon: mkLabel(-75), interactive: false }).addTo(natalLayer);
 
                     } else if (angle === "ASC" || angle === "DSC") {
-                        // ── ASC/DSC: sinusoidal great-circle curve ──────────
-                        // The ASC/DSC line follows the curve where the planet
-                        // is on the local horizon. At latitude φ, the curve
-                        // satisfies: lon(φ) = MC_lon ± f(φ, obliquity).
-                        // We use the complete formula:
-                        //   ΔH(φ) = arcsin(sin(φ) * tan(ε)) from horizon geometry
-                        // Which gives lon = MC_lon ∓ ΔH  (∓ for ASC vs DSC)
-                        const obliquity = 23.4393 * (Math.PI / 180);
-                        const curvePts: [number, number][] = [];
+                        // ── ASC/DSC: rigorous spherical hour angle curve ──────
+                        // The horizon equation dictates: cos(H) = -tan(φ)*tan(δ)
+                        // where H is the local hour angle, φ is latitude, δ is declination.
                         const sign = angle === "ASC" ? -1 : 1;
+                        const curvePts: [number, number][] = [];
+
+                        let decRad = 0;
+                        if ((line as any).dec !== undefined) {
+                            decRad = (line as any).dec * (Math.PI / 180);
+                        } else {
+                            // Fallback for mock lines - infer declination from RA roughly
+                            const obliquity = 23.4393 * (Math.PI / 180);
+                            const planetRA = -lineLon * (Math.PI / 180);
+                            decRad = Math.atan(Math.sin(planetRA) * Math.tan(obliquity));
+                        }
 
                         for (let latDeg = -75; latDeg <= 75; latDeg += 3) {
                             const φ = latDeg * (Math.PI / 180);
-                            // Oblique ascension offset from the MC
-                            // ΔOA = arcsin(tan(φ) * tan(ε))
-                            const tanPhi_tanEps = Math.tan(φ) * Math.tan(obliquity);
-                            if (Math.abs(tanPhi_tanEps) > 1) continue; // polar region — no ASC
-                            const deltaOA = Math.asin(tanPhi_tanEps) * (180 / Math.PI);
-                            const ptLon = lineLon + sign * (90 - deltaOA);
+                            const tanPhi_tanDec = Math.tan(φ) * Math.tan(decRad);
+
+                            // Skip if circumpolar (planet never rises or sets at this latitude)
+                            if (Math.abs(tanPhi_tanDec) > 1) continue;
+
+                            const H_rad = Math.acos(-tanPhi_tanDec);
+                            const H_deg = H_rad * (180 / Math.PI);
+
+                            // ASC longitude = MC - H (planet is east of meridian, rising)
+                            // DSC longitude = MC + H (planet is west of meridian, setting)
+                            const ptLon = lineLon + sign * H_deg;
                             curvePts.push([latDeg, ((ptLon + 540) % 360) - 180]);
                         }
 
@@ -360,39 +426,77 @@ export default function AstroMap({
                             if (LG.Geodesic) {
                                 new LG.Geodesic([curvePts], {
                                     steps: 3, color, weight, opacity, dashArray: dash,
-                                }).addTo(map).bindPopup(popup);
+                                }).addTo(natalLayer).bindPopup(popup);
                             } else {
-                                L.polyline(curvePts, { color, weight, opacity, dashArray: dash }).addTo(map).bindPopup(popup);
+                                L.polyline(curvePts, { color, weight, opacity, dashArray: dash }).addTo(natalLayer).bindPopup(popup);
                             }
                         }
 
-                        // Labels at equator crossing
+                        // Labels at equator crossing (H = 90°)
                         const equatorLon = lineLon + sign * 90;
                         const eqLon = ((equatorLon + 540) % 360) - 180;
                         const ascLabel = L.divIcon({
                             className: "",
-                            html: buildLabelHtml(line.planet, angle, color),
+                            html: styledLabelHtml,
                             iconSize: [20, 24], iconAnchor: [10, 12],
                         });
-                        L.marker([0, eqLon], { icon: ascLabel, interactive: false }).addTo(map);
+                        L.marker([0, eqLon], { icon: ascLabel, interactive: false }).addTo(natalLayer);
+
                         // Second label at ±40° lat
                         const midLat = angle === "ASC" ? 40 : -40;
                         const φ2 = midLat * (Math.PI / 180);
-        const tanVal2 = Math.tan(φ2) * Math.tan(obliquity);
+                        const tanVal2 = Math.tan(φ2) * Math.tan(decRad);
                         if (Math.abs(tanVal2) <= 1) {
-                            const dOA2 = Math.asin(tanVal2) * (180 / Math.PI);
-                            const midLon = ((lineLon + sign * (90 - dOA2) + 540) % 360) - 180;
+                            const H_deg2 = Math.acos(-tanVal2) * (180 / Math.PI);
+                            const midLon = ((lineLon + sign * H_deg2 + 540) % 360) - 180;
                             const midLabel = L.divIcon({
                                 className: "",
-                                html: buildLabelHtml(line.planet, angle, color),
+                                html: styledLabelHtml,
                                 iconSize: [20, 24], iconAnchor: [10, 12],
                             });
-                            L.marker([midLat, midLon], { icon: midLabel, interactive: false }).addTo(map);
+                            L.marker([midLat, midLon], { icon: midLabel, interactive: false }).addTo(natalLayer);
                         }
                     }
                 });
 
-                // ── Map legend ───────────────────────────────────────────────
+                // ── Geodetic Zones ──────────────────────────────────────────
+                const ZODIAC_COLORS = [
+                    "rgba(255, 60, 0, 0.05)", "rgba(60, 200, 60, 0.05)", "rgba(100, 200, 255, 0.05)", "rgba(0, 100, 255, 0.05)",
+                    "rgba(255, 60, 0, 0.05)", "rgba(60, 200, 60, 0.05)", "rgba(100, 200, 255, 0.05)", "rgba(0, 100, 255, 0.05)",
+                    "rgba(255, 60, 0, 0.05)", "rgba(60, 200, 60, 0.05)", "rgba(100, 200, 255, 0.05)", "rgba(0, 100, 255, 0.05)",
+                ];
+                const ZODIAC_NAMES = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
+
+                for (let i = 0; i < 12; i++) {
+                    const l1 = i * 30;
+                    const l2 = l1 + 30;
+                    let w = l1 > 180 ? l1 - 360 : l1;
+                    let e = l2 > 180 ? l2 - 360 : l2;
+                    if (l1 === 330) { w = -30; e = 0; }
+                    L.rectangle([[-85, w], [85, e]], {
+                        color: "transparent", fillColor: ZODIAC_COLORS[i], fillOpacity: 1, interactive: false
+                    }).addTo(geoZoneLayer);
+
+                    const geoLabel = L.divIcon({
+                        className: "",
+                        html: `<div style="font-size:8px; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:0.1em; text-align:center;">${ZODIAC_NAMES[i]}</div>`,
+                        iconSize: [60, 20], iconAnchor: [30, 10],
+                    });
+                    const midLon = (w + e) / 2;
+                    L.marker([0, midLon], { icon: geoLabel, interactive: false }).addTo(geoZoneLayer);
+                }
+
+                // ── Layer Control ───────────────────────────────────────────
+                const overlayMaps = {
+                    "Destination": destLayer,
+                    "Natal ACG Lines": natalLayer,
+                    "Transit Lines": transitLayer,
+                    "Parans": paranLayer,
+                    "Geodetic Zones": geoZoneLayer,
+                };
+                L.control.layers(undefined, overlayMaps, { position: "topright" }).addTo(map);
+
+                // ── Map Legend ───────────────────────────────────────────────
                 const Legend = L.Control.extend({
                     options: { position: "bottomleft" as const },
                     onAdd() {
@@ -421,6 +525,30 @@ export default function AstroMap({
                     },
                 });
                 new Legend().addTo(map);
+
+                // ── Planet Color Legend ─────────────────────────────────────
+                const PlanetLegend = L.Control.extend({
+                    options: { position: "bottomright" as const },
+                    onAdd() {
+                        const div = L.DomUtil.create("div");
+                        div.style.cssText = [
+                            "background:rgba(8,8,16,0.82)", "backdrop-filter:blur(8px)",
+                            "border:1px solid rgba(255,255,255,0.1)", "border-radius:6px",
+                            "padding:8px 12px", "font-family:'Inter',sans-serif", "font-size:10px",
+                            "max-width:200px", "display:flex", "flex-wrap:wrap", "gap:6px",
+                            "margin-bottom:20px"
+                        ].join(";");
+                        let html = "";
+                        const visiblePlanets = Array.from(new Set(allLines.map(l => (l as PlanetLine).planet.split("-")[0])));
+                        for (const p of visiblePlanets) {
+                            if (!PLANET_COLORS[p]) continue;
+                            html += `<div style="display:flex;align-items:center;gap:4px;width:45%;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${PLANET_COLORS[p]};"></span><span style="font-size:9px;color:rgba(255,255,255,0.8)">${p}</span></div>`;
+                        }
+                        div.innerHTML = html;
+                        return div;
+                    }
+                });
+                new PlanetLegend().addTo(map);
             };
 
             // Geocode destination if no coords provided

@@ -14,17 +14,13 @@
     inset: 0;
     pointer-events: none;
     z-index: 0;
+    background-color: var(--color-black);
 }
 
 .radialGlow {
     position: absolute;
     inset: 0;
-    background: radial-gradient(
-        ellipse 100% 70% at 60% 10%,
-        rgba(74, 40, 110, 0.18) 0%,
-        rgba(20, 12, 40, 0.1) 45%,
-        transparent 75%
-    );
+    transition: opacity var(--duration) var(--ease);
 }
 
 .grainOverlay {
@@ -32,8 +28,16 @@
     inset: 0;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
     background-size: 256px 256px;
-    opacity: 0.55;
+    opacity: 0.85;
     mix-blend-mode: overlay;
+}
+
+:global([data-theme="light"]) .atmosphericBg {
+    background-color: var(--color-eggshell);
+}
+
+:global([data-theme="light"]) .grainOverlay {
+    opacity: 0.4;
 }
 
 /* ── Header ──────────────────────────────────────────────────── */
@@ -123,18 +127,26 @@
 }
 
 .stepHeading {
-    font-family: var(--font-display);
-    font-size: clamp(2.2rem, 4vw, 3rem);
+    font-family: var(--font-primary);
+    font-size: clamp(2.4rem, 4.5vw, 3.8rem);
     font-weight: 400;
-    letter-spacing: -0.02em;
-    line-height: 1.1;
+    letter-spacing: -0.01em;
+    line-height: 0.82;
     margin-bottom: var(--space-sm);
     color: var(--text-primary);
+    text-transform: uppercase;
 }
 
 .stepHeading em {
     font-style: italic;
     color: var(--gold);
+    font-family: var(--font-display-alt-2);
+    text-transform: lowercase;
+    font-size: 1.3em;
+    position: relative;
+    top: -0.02em;
+    margin-left: -0.1em;
+    padding-right: 0.1em;
 }
 
 .stepIntro p {
@@ -225,18 +237,26 @@
 }
 
 .resultsHeading {
-    font-family: var(--font-display);
-    font-size: clamp(2.4rem, 5vw, 3.8rem);
+    font-family: var(--font-primary);
+    font-size: clamp(2.8rem, 5.5vw, 4.6rem);
     font-weight: 400;
-    letter-spacing: -0.02em;
-    line-height: 1.08;
+    letter-spacing: -0.01em;
+    line-height: 0.82;
     margin-bottom: var(--space-xs);
     color: var(--text-primary);
+    text-transform: uppercase;
 }
 
 .resultsHeading em {
     font-style: italic;
     color: var(--gold);
+    font-family: var(--font-display-alt-2);
+    text-transform: lowercase;
+    font-size: 1.3em;
+    position: relative;
+    top: -0.02em;
+    margin-left: -0.1em;
+    padding-right: 0.1em;
 }
 
 .resultsHeader p {
@@ -246,7 +266,8 @@
 .mapPlaceholder {
     background: var(--surface);
     border: 1px solid var(--surface-border);
-    border-radius: var(--radius-lg);
+    clip-path: var(--cut-md);
+    border-radius: 0;
     height: 360px;
     display: flex;
     flex-direction: column;
@@ -282,7 +303,6 @@
     display: flex;
     flex-direction: column;
     margin-top: var(--space-md);
-    overflow-x: auto; /* Fix 2: allow scroll on tiny screens */
 }
 
 .lineRow {
@@ -295,6 +315,7 @@
     gap: 0.5rem;
     min-width: 0;
     font-size: clamp(0.72rem, 1.5vw, 0.875rem);
+    flex-wrap: wrap;
 }
 
 .lineRow:last-child {
@@ -337,7 +358,8 @@
     align-items: center;
     gap: 0.4rem;
     flex-shrink: 0;
-    white-space: nowrap;
+    white-space: normal;
+    flex-wrap: wrap;
 }
 
 /* Fix 1: orb strength indicator dot (replaces bar) */
@@ -616,6 +638,11 @@
     color: var(--amber);
 }
 
+.q_avoid .windowMonth,
+.q_avoid .windowQuality {
+    color: var(--accent);
+}
+
 .q_good .windowQuality {
     color: var(--text-tertiary);
 }
@@ -706,10 +733,10 @@
     }
 }
 
-/* Map container */
 .mapContainer {
     margin-bottom: var(--space-md);
-    border-radius: var(--radius-lg);
+    clip-path: var(--cut-md);
+    border-radius: 0;
     overflow: hidden;
     border: 1px solid var(--surface-border);
 }

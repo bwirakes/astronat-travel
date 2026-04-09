@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { HouseScore, HouseMatrixResult } from "../lib/house-matrix";
 import PlanetIcon from "./PlanetIcon";
+import SignIcon from "./SignIcon";
 import { PLANET_COLORS } from "../lib/planet-data";
 import styles from "./HouseMatrixCard.module.css";
 
@@ -88,8 +89,16 @@ function HouseRow({ h, rank, expanded, onToggle }: {
 
                 {/* H# + sign name */}
                 <div className={styles.gHouse}>
-                    <span className={styles.houseNum}>H{h.house}</span>
-                    <span className={styles.signName}>{h.relocatedSign}</span>
+                    <SignIcon
+                        sign={h.relocatedSign}
+                        size={18}
+                        className={styles.signIcon}
+                        color="var(--text-tertiary)"
+                    />
+                    <div className={styles.houseText}>
+                        <span className={styles.houseNum}>H{h.house}</span>
+                        <span className={styles.signName}>{h.relocatedSign}</span>
+                    </div>
                 </div>
 
                 {/* sphere of life */}

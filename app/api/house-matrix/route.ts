@@ -1,6 +1,6 @@
 /**
  * POST /api/house-matrix
- * Computes the 12-House scoring matrix for a destination.
+ * Computes the 12-House scoring matrix and Generalized Event Scores for a destination.
  *
  * Request body:
  *   {
@@ -13,18 +13,21 @@
  *     destLon: number,
  *   }
  *
- * Response: HouseMatrixResult
+ * Response: { ...HouseMatrixResult, eventScores: FinalEventScore[] }
  */
 import { NextRequest, NextResponse } from "next/server";
 import {
     computeHouseMatrix,
+    mapTransitsToMatrix,
+    computeGlobalPenalty,
     type MatrixNatalPlanet,
     type MatrixACGLine,
     type MatrixTransit,
     type MatrixParan,
 } from "@/app/lib/house-matrix";
-import { SIGN_RULERS, BENEFIC_PLANETS } from "@/app/lib/astro-constants";
-import { signFromLongitude, houseFromLongitude } from "@/app/lib/geodetic";
+import { houseFromLongitude } from "@/app/lib/geodetic";
+import { computeEventScores, type OccupancyPlanet } from "@/app/lib/scoring-engine";
+import { determineSect } from "@/app/lib/arabic-parts";
 
 export async function POST(req: NextRequest) {
     try {
@@ -47,94 +50,18 @@ export async function POST(req: NextRequest) {
         }
 
         // Map raw transit data into per-house scoring format
-        const ascLon = relocatedCusps[0] ?? 0;
-        const mappedTransits: MatrixTransit[] = (transits as any[]).map((t) => {
-            const transitPlanetName = (
-                t.transit_planet ||
-                (t.planets ? t.planets.split(" ")[0] : "")
-            ).toLowerCase();
-            const natalPlanetName = (
-                t.natal_planet ||
-                (t.planets && t.planets.includes("natal")
-                    ? t.planets.split("natal ")[1]
-                    : "")
-            ).toLowerCase();
+        const mappedTransits = mapTransitsToMatrix(transits, natalPlanets, relocatedCusps);
+        const globalPenalty = computeGlobalPenalty(transits);
 
-            // Find which relocated house the natal planet aspect targets
-            const natalP = natalPlanets.find(
-                (p: MatrixNatalPlanet) =>
-                    p.planet.toLowerCase() === natalPlanetName,
-            );
-            const targetHouse = natalP
-                ? houseFromLongitude(natalP.longitude, ascLon)
-                : undefined;
+        // Compute sect from natal Sun position vs relocated ASC
+        const sunEntry = (natalPlanets as MatrixNatalPlanet[]).find(
+            (p) => (p.planet || (p as any).name || "").toLowerCase() === "sun"
+        );
+        const sect = sunEntry
+            ? determineSect(sunEntry.longitude, (relocatedCusps as number[])[0] ?? 0)
+            : undefined;
 
-            const aspectStr = (t.aspect || t.type || "").toLowerCase();
-            const isHard = ["square", "opposition", "□", "☍"].some((a) =>
-                aspectStr.includes(a),
-            );
-            const isSoft = ["trine", "sextile", "△", "⚹"].some((a) =>
-                aspectStr.includes(a),
-            );
-            const isConj = ["conjunction", "☌"].some((a) =>
-                aspectStr.includes(a),
-            );
-
-            const isBeneficPlanet = BENEFIC_PLANETS.includes(transitPlanetName);
-            let benefic = false;
-            if (isSoft && isBeneficPlanet) benefic = true;
-            else if (isConj && isBeneficPlanet) benefic = true;
-            else if (isSoft) benefic = true;
-            // Hard aspects or malefic conjunctions → benefic = false (malefic)
-
-            // Determine if the transit planet rules any relocated house
-            let rulerOf: number | undefined;
-            for (let h = 0; h < 12; h++) {
-                const cSign = signFromLongitude(relocatedCusps[h] ?? 0);
-                const cRuler = SIGN_RULERS[cSign] || "";
-                if (cRuler.toLowerCase() === transitPlanetName) {
-                    rulerOf = h + 1;
-                    break;
-                }
-            }
-
-            return {
-                targetHouse,
-                transitPlanet: transitPlanetName,
-                natalPlanet: natalPlanetName,
-                aspect: aspectStr,
-                orb: t.orb,
-                applying: t.applying ?? true,
-                benefic,
-                transitRx: t.retrograde ?? false,
-                rulerOf,
-            } satisfies MatrixTransit;
-        });
-
-        // ── Compute global timing penalty from tense applying hard transits
-        const MALEFIC_NAMES = ["mars", "saturn", "pluto", "uranus"];
-        let globalPenalty = 0;
-        for (const t of (transits as any[])) {
-            const aspectStr = (t.aspect || t.type || "").toLowerCase();
-            const isHardTransit = ["square", "opposition"].some(a => aspectStr.includes(a));
-            if (!isHardTransit) continue;
-            const applying = t.applying ?? true;
-            if (!applying) continue; // Only applying hard transits affect base timing
-            const tPlanet = (
-                t.transit_planet ||
-                (t.planets ? t.planets.split(" ")[0] : "")
-            ).toLowerCase();
-            const isMalefic = MALEFIC_NAMES.some(m => tPlanet.includes(m));
-            const orb = t.orb ?? 5;
-            if (orb <= 1 && isMalefic)      globalPenalty += 14;
-            else if (orb <= 2 && isMalefic) globalPenalty += 10;
-            else if (orb <= 3 && isMalefic) globalPenalty += 6;
-            else if (orb <= 1)              globalPenalty += 8;
-            else if (orb <= 3)              globalPenalty += 4;
-        }
-        globalPenalty = Math.min(25, globalPenalty); // cap at -25 pts
-
-        const result = computeHouseMatrix({
+        const matrixResult = computeHouseMatrix({
             natalPlanets: natalPlanets as MatrixNatalPlanet[],
             relocatedCusps: relocatedCusps as number[],
             acgLines: acgLines as MatrixACGLine[],
@@ -143,9 +70,20 @@ export async function POST(req: NextRequest) {
             destLat,
             destLon,
             globalPenalty,
+            sect,
         });
 
-        return NextResponse.json(result);
+        // Compute Relocated Occupancy (P_occ) for scoring engine
+        const ascLon = relocatedCusps[0] ?? 0;
+        const relocatedPlanets: OccupancyPlanet[] = natalPlanets.map((p: any) => ({
+            name: p.planet,
+            house: houseFromLongitude(p.longitude, ascLon),
+        }));
+
+        // Execute Memo Part 2: Vectorizing Life Events
+        const eventScores = computeEventScores(matrixResult, relocatedPlanets);
+
+        return NextResponse.json({ ...matrixResult, eventScores });
     } catch (err) {
         console.error("[/api/house-matrix]", err);
         return NextResponse.json(
