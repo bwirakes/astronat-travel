@@ -84,25 +84,19 @@ export default function Navbar({ activeHref, centerContent, logoHref = "/", hide
                                     <div className="pt-3">
                                       <ul className="grid w-[220px] gap-1 p-2 bg-[var(--bg)] border border-[var(--surface-border)] rounded-sm shadow-sm outline-none">
                                         <li>
-                                          <Link href="/b2b" legacyBehavior passHref>
-                                            <NavigationMenuLink className="block select-none space-y-1 rounded-sm px-3 py-2 leading-none outline-none transition-colors hover:bg-[var(--bg-raised)] hover:text-[var(--text-primary)] focus:bg-[var(--bg-raised)] focus:text-[var(--text-primary)] focus-visible:ring-0 text-[0.85rem]">
-                                              B2B Corporate Intel
-                                            </NavigationMenuLink>
-                                          </Link>
+                                          <NavigationMenuLink render={<Link href="/b2b" />} className="block select-none space-y-1 rounded-sm px-3 py-2 leading-none outline-none transition-colors hover:bg-[var(--bg-raised)] hover:text-[var(--text-primary)] focus:bg-[var(--bg-raised)] focus:text-[var(--text-primary)] focus-visible:ring-0 text-[0.85rem]">
+                                            B2B Corporate Intel
+                                          </NavigationMenuLink>
                                         </li>
                                         <li>
-                                          <Link href="/geodetic" legacyBehavior passHref>
-                                            <NavigationMenuLink className="block select-none space-y-1 rounded-sm px-3 py-2 leading-none outline-none transition-colors hover:bg-[var(--bg-raised)] hover:text-[var(--text-primary)] focus:bg-[var(--bg-raised)] focus:text-[var(--text-primary)] focus-visible:ring-0 text-[0.85rem]">
-                                              Geodetic Astrology
-                                            </NavigationMenuLink>
-                                          </Link>
+                                          <NavigationMenuLink render={<Link href="/geodetic" />} className="block select-none space-y-1 rounded-sm px-3 py-2 leading-none outline-none transition-colors hover:bg-[var(--bg-raised)] hover:text-[var(--text-primary)] focus:bg-[var(--bg-raised)] focus:text-[var(--text-primary)] focus-visible:ring-0 text-[0.85rem]">
+                                            Geodetic Astrology
+                                          </NavigationMenuLink>
                                         </li>
                                         <li>
-                                          <Link href="/map-from-home" legacyBehavior passHref>
-                                            <NavigationMenuLink className="block select-none space-y-1 rounded-sm px-3 py-2 leading-none outline-none transition-colors hover:bg-[var(--bg-raised)] hover:text-[var(--text-primary)] focus:bg-[var(--bg-raised)] focus:text-[var(--text-primary)] focus-visible:ring-0 text-[0.85rem]">
-                                              Map From Home
-                                            </NavigationMenuLink>
-                                          </Link>
+                                          <NavigationMenuLink render={<Link href="/map-from-home" />} className="block select-none space-y-1 rounded-sm px-3 py-2 leading-none outline-none transition-colors hover:bg-[var(--bg-raised)] hover:text-[var(--text-primary)] focus:bg-[var(--bg-raised)] focus:text-[var(--text-primary)] focus-visible:ring-0 text-[0.85rem]">
+                                            Map From Home
+                                          </NavigationMenuLink>
                                         </li>
                                       </ul>
                                     </div>
