@@ -189,12 +189,12 @@ export default function Home() {
               Readings &amp; Services
             </h2>
             <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--text-tertiary)]">
-              03 offerings
+              04 offerings
             </span>
           </div>
 
           {/* Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
               {
                 num: "01 —",
@@ -225,6 +225,16 @@ export default function Home() {
                 bg: "var(--color-y2k-blue)",
                 light: false,
                 glyph: "☉",
+              },
+              {
+                num: "04 —",
+                name: "AstroNat Planner App",
+                desc: "High-precision ACG maps and travel planning software in your pocket. Calculate lines, timing, and score destinations on the go with our proprietary engine.",
+                link: "/app",
+                linkLabel: "Get the App →",
+                bg: "var(--color-black)",
+                light: false,
+                glyph: "♅",
               },
             ].map((svc) => (
               <div

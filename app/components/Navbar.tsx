@@ -98,6 +98,11 @@ export default function Navbar({ activeHref, centerContent, logoHref = "/", hide
                                             Map From Home
                                           </NavigationMenuLink>
                                         </li>
+                                        <li>
+                                          <NavigationMenuLink render={<Link href="/app" />} className="block select-none space-y-1 rounded-sm px-3 py-2 leading-none outline-none transition-colors hover:bg-[var(--bg-raised)] hover:text-[var(--text-primary)] focus:bg-[var(--bg-raised)] focus:text-[var(--text-primary)] focus-visible:ring-0 text-[0.85rem]">
+                                            AstroNat App
+                                          </NavigationMenuLink>
+                                        </li>
                                       </ul>
                                     </div>
                                   </NavigationMenuContent>
@@ -143,6 +148,7 @@ export default function Navbar({ activeHref, centerContent, logoHref = "/", hide
                     <Link href="/b2b" className={styles.drawerLink} onClick={() => setOpen(false)}>B2B</Link>
                     <Link href="/geodetic" className={styles.drawerLink} onClick={() => setOpen(false)}>Geodetic</Link>
                     <Link href="/map-from-home" className={styles.drawerLink} onClick={() => setOpen(false)}>Map From Home</Link>
+                    <Link href="/app" className={styles.drawerLink} onClick={() => setOpen(false)}>The App</Link>
 
                     <div className="font-mono text-[9px] uppercase tracking-widest opacity-50 px-4 py-2 mt-4 text-[var(--text-primary)]">Menu</div>
                     <div className="px-4 py-3 mt-2 mb-2">

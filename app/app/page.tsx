@@ -227,9 +227,7 @@ export default function Home() {
               },
             ].map((step, i) => (
               <div key={i} className={`${styles.step} process-step`} style={{ opacity: 0 }}>
-                {/* Step number — BETTER DAYS ghost text */}
-                <span className={styles.stepNum}>{step.number}</span>
-                {/* Step title — PERFECTLY NINETIES serif */}
+                <span className={styles.stepNum}>{step.number} —</span>
                 <h3 className={styles.stepTitle}>{step.title}</h3>
                 <p className={styles.stepDesc}>{step.desc}</p>
               </div>

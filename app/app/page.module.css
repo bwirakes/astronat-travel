@@ -61,16 +61,25 @@
 /* ── Layout ──────────────────────────────────────────────────────── */
 .container {
     width: 100%;
-    max-width: 980px;
+    max-width: 1280px;
     margin: 0 auto;
     padding: 0 var(--space-lg);
 }
 
-/* ── Hero ────────────────────────────────────────────────────────── */
 .hero {
     position: relative;
     z-index: 1;
-    padding: 1.5rem 0 3rem;
+    min-height: 85vh; /* Enough to feel like a full page but with room at bottom */
+    display: flex;
+    align-items: flex-start; /* Shift content UP */
+    padding: 8rem 0 4rem; /* pt-32 equivalent for top clearance */
+}
+
+@media (max-width: 768px) {
+    .hero {
+        padding: 8rem 0 4rem; /* pt-32 mobile clearance */
+        min-height: auto;
+    }
 }
 
 .heroGrid {
@@ -78,14 +87,10 @@
     grid-template-columns: 1fr 1fr;
     gap: 3rem;
     align-items: center;
-    min-height: 400px;
+    width: 100%;
 }
 
 @media (max-width: 768px) {
-    .hero {
-        padding: 1.5rem 0 3rem;
-    }
-
     .heroGrid {
         grid-template-columns: 1fr;
         gap: 2.5rem;
@@ -119,7 +124,7 @@
 
 .headline {
     font-family: var(--font-primary);
-    font-size: clamp(2.5rem, 5vw, 4.5rem);
+    font-size: clamp(3.5rem, 8vw, 6.5rem);
     font-weight: 400;
     line-height: 0.85;
     letter-spacing: -0.01em;
@@ -142,7 +147,7 @@
 
 .subline {
     font-family: var(--font-body);
-    font-size: 0.9rem;
+    font-size: 1rem;
     line-height: 1.7;
     color: var(--text-secondary);
     max-width: 380px;
@@ -165,7 +170,7 @@
     color: var(--color-eggshell);
     border-radius: var(--shape-asymmetric-md);
     font-family: var(--font-body);
-    font-weight: 600;
+    font-weight: 500;
     font-size: 0.875rem;
     letter-spacing: 0.04em;
     text-decoration: none;
@@ -235,7 +240,7 @@
 .astroCutout {
     position: relative;
     width: 100%;
-    height: 380px;
+    height: clamp(400px, 60vh, 700px); /* Tall but fits within viewport */
     clip-path: var(--cut-xl);
     overflow: hidden;
     background: var(--color-charcoal);
@@ -259,20 +264,18 @@
     scale: 1.06;
 }
 
-/* ── Process Section ─────────────────────────────────────────────── */
 .process {
     position: relative;
     z-index: 10;
-    padding: 6rem 0;
-    background-color: var(--color-eggshell);
-    color: var(--color-charcoal);
-    border-top: 2px solid var(--color-charcoal);
-    border-bottom: 2px solid var(--color-charcoal);
+    padding: 8rem 0;
+    background-color: var(--bg-raised);
+    color: var(--text-primary);
+    border-top: 1px solid var(--surface-border);
+    border-bottom: 1px solid var(--surface-border);
 }
 
-:global([data-theme="light"]) .process {
+:global([data-theme="dark"]) .process {
     background-color: var(--color-charcoal);
-    color: var(--color-eggshell);
 }
 
 .sectionLabel {
@@ -302,33 +305,43 @@
 
 .step {
     position: relative;
+    background-color: var(--bg);
+    border: 1px solid var(--surface-border);
+    border-radius: 2rem;
+    padding: 2.5rem;
+    transition: transform 0.3s var(--ease);
+}
+
+:global([data-theme="dark"]) .step {
+    background-color: var(--bg-raised);
 }
 
 .stepNum {
     display: block;
-    font-family: var(--font-primary);
-    font-size: 4rem;
-    font-weight: 400;
-    color: inherit;
-    opacity: 0.15;
-    margin-bottom: 0.2rem;
-    line-height: 0.8;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 1rem;
+    line-height: 1;
 }
 
 .stepTitle {
     font-family: var(--font-secondary);
-    font-size: 2.2rem;
-    font-weight: 400;
-    color: inherit;
-    margin-bottom: 1rem;
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1.2rem;
     line-height: 1.1;
 }
 
 .stepDesc {
-    font-size: 0.95rem;
-    line-height: 1.8;
-    font-weight: 500;
-    color: inherit;
+    font-size: 0.85rem;
+    line-height: 1.7;
+    font-weight: 400;
+    color: var(--text-secondary);
     opacity: 0.85;
 }
 
