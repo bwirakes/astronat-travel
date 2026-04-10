@@ -5,10 +5,10 @@
 @tailwind utilities;
 
 :root {
-  /* Astro-Brand Strategy Google Font Alternatives */
-  --font-primary: var(--font-primary-alt), sans-serif;
-  --font-secondary: var(--font-secondary-alt), serif;
-  --font-body: var(--font-manrope), sans-serif;
+  /* Astro-Brand Strategy Authentic Local Fonts */
+  --font-primary: var(--font-perfectly-nineties), var(--font-garamond), serif;
+  --font-secondary: var(--font-perfectly-nineties), var(--font-garamond), serif;
+  --font-body: var(--font-garet), var(--font-dm-sans), sans-serif;
   --font-display-alt-1: var(--font-monigue), serif;
   --font-display-alt-2: var(--font-pinyon), cursive;
 
@@ -210,8 +210,9 @@ h6 {
 }
 
 p {
-  line-height: 1.7;
+  line-height: 1.6;
   color: var(--text-secondary);
+  font-weight: 300;
 }
 
 a {

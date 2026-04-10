@@ -11,7 +11,7 @@ export default function Footer({ variant = 'default' }: FooterProps) {
 
   return (
     <footer className="bg-[var(--bg)] py-16 md:py-24 text-[var(--text-primary)] border-t border-[var(--surface-border)] overflow-hidden transition-colors">
-      <div className="max-w-5xl mx-auto w-full px-6">
+      <div className="max-w-7xl mx-auto w-full px-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr] gap-12 text-[var(--text-primary)] mb-16 relative">
           
           {/* Logo / Description */}
@@ -57,10 +57,6 @@ export default function Footer({ variant = 'default' }: FooterProps) {
             </div>
           </div>
           
-          {/* Decorative large logo watermark */}
-          <div className="absolute -bottom-10 -right-20 opacity-[0.02] pointer-events-none select-none z-0">
-             <Image src="/avatar/saturn-monogram.svg" alt="" width={300} height={300} className="onboarding-logo" />
-          </div>
         </div>
         
         {/* Bottom Bar */}

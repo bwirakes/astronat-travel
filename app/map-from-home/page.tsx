@@ -46,8 +46,8 @@ export default function MapFromHomePage() {
       <Navbar hideAuth={true} />
 
       {/* ── PAGE HERO ── */}
-      <section className="border-b border-[var(--surface-border)] pt-4 pb-12 md:pt-6 md:pb-16">
-        <div className="max-w-5xl mx-auto w-full px-6 grid grid-cols-1 md:grid-cols-[1.1fr_0.9fr] gap-8 lg:gap-12 items-center relative">
+      <section className="border-b border-[var(--surface-border)] pt-32 pb-12 md:pt-40 md:pb-16">
+        <div className="max-w-7xl mx-auto w-full px-6 grid grid-cols-1 md:grid-cols-[1.1fr_0.9fr] gap-8 lg:gap-12 items-center relative">
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-8 h-0.5 bg-[var(--color-spiced-life)]" />
@@ -56,19 +56,19 @@ export default function MapFromHomePage() {
             
             <div className="relative">
               <span className="absolute font-secondary text-[12rem] md:text-[18rem] text-[var(--text-primary)] leading-[0.5] -top-12 -right-4 md:-right-10 z-[-1] pointer-events-none opacity-[0.04]">♄</span>
-              <h1 className="font-primary text-5xl md:text-6xl lg:text-7xl font-semibold leading-[0.9] uppercase text-[var(--text-primary)]">
+              <h1 className="font-primary text-4xl md:text-6xl lg:text-7xl font-semibold leading-[0.9] uppercase text-[var(--text-primary)]">
                 Map From <br /> 
-                <span className="text-[var(--color-spiced-life)] block mt-2">Home!</span>
+                <span className="text-[var(--color-spiced-life)] block mt-1">Home!</span>
               </h1>
             </div>
 
-            <div className="mt-8 space-y-4">
-                <p className="font-body text-sm md:text-base leading-relaxed opacity-90 text-[var(--text-secondary)] max-w-lg">
-                Astrocartography shows you where your energy <strong className="font-secondary italic font-normal text-lg md:text-xl text-[var(--text-primary)]">naturally flows, expands, contracts, and thrives</strong> around the world.
+            <div className="mt-6 space-y-3">
+                <p className="font-body text-xs md:text-base leading-relaxed opacity-90 text-[var(--text-secondary)] max-w-lg">
+                Astrocartography shows you where your energy <strong className="font-secondary italic font-normal text-base md:text-xl text-[var(--text-primary)]">naturally flows, expands, contracts, and thrives</strong> around the world.
                 </p>
-                <div className="space-y-4 text-sm md:text-base leading-relaxed opacity-90 text-[var(--text-secondary)] max-w-lg mt-4 border-l-2 border-[var(--color-y2k-blue)] pl-4">
+                <div className="space-y-3 text-xs md:text-base leading-relaxed opacity-90 text-[var(--text-secondary)] max-w-lg mt-3 border-l-2 border-[var(--color-y2k-blue)] pl-4">
                     <p>Most people think: <strong>“I have to move there to feel better”</strong></p>
-                    <p>Yes, that is the best solution possible. But your life doesn't support that now. Work keeps you stuck. Responsibilities are piling up. Travel budgets are tight. Passport is not strong.</p>
+                    <p>But your life doesn't support that now. Work, family, and budgets keep you stuck. Passport is not strong.</p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 pt-6">
                 <Link href="#buy" className="btn-primary text-center px-6 py-4 font-mono uppercase text-[10px] tracking-widest rounded-[var(--shape-asymmetric-md)] w-full sm:w-auto hover:bg-[var(--color-info)]">
@@ -79,7 +79,7 @@ export default function MapFromHomePage() {
           </div>
           
           <div className="relative z-10">
-            <div className="w-full aspect-[4/5] relative overflow-hidden bg-black" style={{ clipPath: 'var(--cut-lg)' }}>
+            <div className="w-full aspect-[4/5] relative overflow-hidden bg-black rounded-[2rem]">
                  <Image 
                     src="/astronat-hero.jpg" 
                     alt="Map From Home Workshop - AstroNat" 
@@ -94,9 +94,9 @@ export default function MapFromHomePage() {
 
       {/* ── THE TRUTH SECTION ── */}
       <section className="bg-[var(--color-charcoal)] border-b border-[var(--surface-border)] py-16 md:py-24">
-        <div className="max-w-4xl mx-auto w-full px-6 flex flex-col md:flex-row gap-12 items-center">
+        <div className="max-w-7xl mx-auto w-full px-6 flex flex-col md:flex-row gap-12 items-center">
           <div className="md:w-1/3 w-full shrink-0">
-             <div className="w-full aspect-[4/5] relative" style={{ borderRadius: 'var(--shape-organic-1)', overflow: 'hidden' }}>
+             <div className="w-full aspect-[4/5] relative overflow-hidden rounded-[2rem]">
                 <Image src="/nat-1.jpg" alt="Editorial Astrocartography" fill className="object-cover" />
              </div>
           </div>
@@ -123,7 +123,7 @@ export default function MapFromHomePage() {
 
       {/* ── STUCK BIO SECTION ── */}
       <section className="bg-[var(--color-spiced-life)] py-12 md:py-20 text-[#111b2e] border-b border-[var(--surface-border)]">
-        <div className="max-w-4xl mx-auto w-full px-6 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+        <div className="max-w-7xl mx-auto w-full px-6 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
            <div>
               <p className="font-secondary text-2xl md:text-3xl mb-6 leading-tight">This workshop is created to help those who are stuck where they are.</p>
               <ul className="space-y-3 font-body opacity-90 text-sm md:text-base text-pretty list-none">
@@ -135,7 +135,7 @@ export default function MapFromHomePage() {
                  I created this workshop for the average person who needs energetic alignment in their life, <em className="italic text-[#111b2e]">but are only able to move domestically within national borders, without breaking the bank.</em>
               </p>
            </div>
-           <div className="relative w-full aspect-square" style={{ clipPath: 'var(--cut-md)' }}>
+            <div className="relative w-full aspect-square overflow-hidden rounded-[2rem]">
                <Image src="/green_phone.png" alt="Y2K Phone" fill className="object-cover grayscale hover:grayscale-0 transition-opacity duration-700" />
            </div>
         </div>
@@ -143,8 +143,8 @@ export default function MapFromHomePage() {
 
       {/* ── WHY IM TEACHING THIS ── */}
       <section className="bg-[var(--bg-raised)] border-b border-[var(--surface-border)] py-16 md:py-24">
-        <div className="max-w-5xl mx-auto w-full px-6 grid grid-cols-1 md:grid-cols-[0.8fr_1.2fr] gap-12 items-center">
-          <div className="relative w-full aspect-square md:aspect-[3/4]" style={{ borderRadius: 'var(--shape-organic-1)', overflow: 'hidden' }}>
+        <div className="max-w-7xl mx-auto w-full px-6 grid grid-cols-1 md:grid-cols-[0.8fr_1.2fr] gap-12 items-center">
+          <div className="relative w-full aspect-square md:aspect-[3/4] overflow-hidden rounded-[2rem]">
              <Image src="/nat-2.jpg" alt="Astrocartography Path" fill className="object-cover" />
           </div>
           <div>
@@ -166,19 +166,19 @@ export default function MapFromHomePage() {
 
       {/* ── NERVOUS SYSTEM BIO ── */}
       <section className="bg-[var(--bg-raised)] py-12 md:py-20 text-[var(--text-primary)] border-b border-[var(--surface-border)]">
-         <div className="max-w-4xl mx-auto w-full px-6 flex flex-col items-center text-center">
+         <div className="max-w-7xl mx-auto w-full px-6 flex flex-col items-center text-center">
             <h2 className="font-secondary text-3xl md:text-5xl mb-8 leading-tight">This isn't just about moving, it's about...</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left w-full max-w-2xl font-body text-sm md:text-base text-pretty">
-               <div className="bg-[var(--surface)] p-5 shadow-sm border border-[var(--surface-border)]" style={{ clipPath: 'var(--cut-sm)' }}>
+               <div className="bg-[var(--surface)] p-5 shadow-sm border border-[var(--surface-border)] rounded-[2rem]">
                   ✨ Choosing environments that <strong className="text-[var(--text-primary)]">support your nervous system</strong>
                </div>
-               <div className="bg-[var(--surface)] p-5 shadow-sm border border-[var(--surface-border)]" style={{ clipPath: 'var(--cut-sm)' }}>
+               <div className="bg-[var(--surface)] p-5 shadow-sm border border-[var(--surface-border)] rounded-[2rem]">
                   ✨ Building a life that feels <strong className="text-[var(--text-primary)]">grounded and emotionally sustainable</strong>
                </div>
-               <div className="bg-[var(--surface)] p-5 shadow-sm border border-[var(--surface-border)]" style={{ clipPath: 'var(--cut-sm)' }}>
+               <div className="bg-[var(--surface)] p-5 shadow-sm border border-[var(--surface-border)] rounded-[2rem]">
                   ✨ Learning to trust that <strong className="text-[var(--text-primary)]">you can change your environment</strong> to bring out the best in you
                </div>
-               <div className="bg-[var(--surface)] p-5 shadow-sm border border-[var(--surface-border)]" style={{ clipPath: 'var(--cut-sm)' }}>
+               <div className="bg-[var(--surface)] p-5 shadow-sm border border-[var(--surface-border)] rounded-[2rem]">
                   ✨ You will finally understand <strong className="text-[var(--text-primary)]">how you’re meant to thrive.</strong>
                </div>
             </div>
@@ -187,7 +187,7 @@ export default function MapFromHomePage() {
 
       {/* ── COURSE MODULES ── */}
       <section className="bg-[var(--bg-raised)] py-12 md:py-20 border-b border-[var(--surface-border)]">
-         <div className="max-w-5xl mx-auto w-full px-6">
+         <div className="max-w-7xl mx-auto w-full px-6">
            <div className="flex flex-col md:flex-row md:justify-between md:items-end border-b border-dotted border-[var(--color-spiced-life)] pb-3 mb-10 gap-2">
              <h2 className="font-primary text-2xl md:text-4xl lg:text-5xl uppercase leading-none text-[var(--text-primary)]">In this workshop, you'll learn...</h2>
              <span className="font-mono text-[9px] tracking-widest shrink-0 mb-1 text-[var(--text-secondary)]">Curriculum</span>
@@ -195,10 +195,9 @@ export default function MapFromHomePage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {WORKSHOP_MODULES.map((card, i) => (
-               <div key={i} className="relative overflow-hidden min-h-[300px] flex flex-col p-6 shadow-sm" style={{ 
+               <div key={i} className="relative overflow-hidden min-h-[300px] flex flex-col p-6 shadow-sm rounded-[2rem]" style={{ 
                   background: card.bg, color: card.text,
-                  border: card.bg.includes('--bg') ? '1px solid var(--surface-border)' : 'none',
-                  clipPath: 'var(--cut-md)'
+                  border: card.bg.includes('--bg') ? '1px solid var(--surface-border)' : 'none'
                }}>
                   <div className="font-mono text-[9px] mb-4 opacity-50 uppercase tracking-tighter" style={{ color: card.text }}>Module — {card.num}</div>
                   <h4 className="font-secondary text-xl md:text-2xl mb-4 leading-snug font-normal lowercase capitalize" style={{ color: card.text }}>{card.title}</h4>
@@ -215,7 +214,7 @@ export default function MapFromHomePage() {
 
       {/* ── PULL QUOTE ── */}
       <section className="bg-black py-24 md:py-32">
-         <div className="max-w-4xl mx-auto w-full px-6 text-center">
+         <div className="max-w-7xl mx-auto w-full px-6 text-center">
             <h2 className="font-secondary text-3xl md:text-5xl lg:text-6xl text-[#fcfaf1] leading-tight mb-8 lowercase font-normal italic">
                "Our house is our corner of the world. As has often been said, it is our first universe, a real cosmos in every sense of the word."
             </h2>
@@ -227,7 +226,7 @@ export default function MapFromHomePage() {
 
       {/* ── WHY LEARN FROM ME BIO ── */}
       <section className="bg-[var(--color-y2k-blue)] py-16 md:py-24 text-[#fcfaf1]">
-         <div className="max-w-5xl mx-auto w-full px-6 grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-12 items-center">
+         <div className="max-w-7xl mx-auto w-full px-6 grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-12 items-center">
             <div className="flex flex-col justify-center">
                <div className="font-mono text-[9px] uppercase tracking-[0.2em] opacity-80 mb-4 text-[#fcfaf1]">Authority</div>
                <h2 className="font-primary text-4xl md:text-5xl uppercase leading-[0.9] text-[#fcfaf1] mb-8">
@@ -241,7 +240,7 @@ export default function MapFromHomePage() {
                </div>
             </div>
             
-            <div className="relative w-full aspect-[3/4]" style={{ borderRadius: 'var(--shape-asymmetric-lg)', overflow: 'hidden' }}>
+            <div className="relative w-full aspect-[3/4] overflow-hidden rounded-[2rem]">
                 <Image 
                  src="/nat-3.jpg" 
                  alt="Natalia - Teaching Astrocartography" 
@@ -254,7 +253,7 @@ export default function MapFromHomePage() {
       
       {/* ── PRODUCT BANNER / CTA STRIP ── */}
       <section id="buy" className="bg-[#fcfaf1] py-16 md:py-24 text-[var(--color-charcoal)] border-t border-[var(--surface-border)]">
-         <div className="max-w-5xl mx-auto w-full px-6 grid grid-cols-1 md:grid-cols-[1fr_1.2fr] gap-12 items-center">
+         <div className="max-w-7xl mx-auto w-full px-6 grid grid-cols-1 md:grid-cols-[1fr_1.2fr] gap-12 items-center">
            <div>
               <div className="font-mono text-[10px] uppercase tracking-[0.2em] opacity-50 mb-4 text-[var(--color-charcoal)]">Action</div>
               <h2 className="font-primary text-4xl md:text-5xl lg:text-6xl leading-[1] uppercase mb-4 text-[var(--color-charcoal)] font-semibold">
@@ -262,12 +261,12 @@ export default function MapFromHomePage() {
               </h2>
               <div className="font-secondary text-2xl text-[var(--color-spiced-life)] mb-8">$397 <span className="text-sm opacity-60 ml-2 font-body italic text-[var(--color-charcoal)]">or 2 monthly payments of $199</span></div>
               
-              <Link href="https://astronat.podia.com/map-from-home-workshop/buy?offer_id=4918750" className="btn-primary block text-center px-8 py-5 font-mono uppercase text-xs tracking-widest rounded-[var(--shape-asymmetric-md)] w-full hover:bg-[var(--color-info)] shadow-md">
+              <Link href="https://astronat.podia.com/map-from-home-workshop/buy?offer_id=4918750" className="btn-primary block text-center px-8 py-5 font-mono uppercase text-xs tracking-widest rounded-[2rem] w-full hover:bg-[var(--color-info)] shadow-md">
                  I want in! <ArrowRight size={16} className="inline-block ml-2 -translate-y-0.5" />
               </Link>
            </div>
            
-           <div className="bg-white p-6 md:p-8 rounded-[var(--shape-asymmetric-lg)] border border-[var(--surface-border)] shadow-sm">
+           <div className="bg-white p-6 md:p-8 rounded-[2rem] border border-[var(--surface-border)] shadow-sm">
               <div className="font-secondary text-xl mb-6 lowercase">Everything included:</div>
               <ul className="flex flex-col gap-4">
                  {WHAT_YOU_GET.map((perk, i) => (
@@ -283,7 +282,7 @@ export default function MapFromHomePage() {
 
       {/* ── DEEP PITCH SECTION ── */}
       <section className="bg-[var(--color-charcoal)] text-[#fcfaf1] py-16 md:py-24 border-t border-white/10">
-         <div className="max-w-4xl mx-auto w-full px-6 text-center">
+         <div className="max-w-7xl mx-auto w-full px-6 text-center">
             <h2 className="font-primary text-3xl md:text-5xl uppercase leading-[0.9] text-[var(--color-spiced-life)] mb-10">Get lifetime access to my signature course for only USD $397!</h2>
             <div className="text-left space-y-6 opacity-90 text-sm md:text-base font-body text-pretty [&_p]:text-white">
                <p>👉 This is THE most comprehensive local space & remote activation workshops out there, with modules and tips that I have not seen in other courses. The methods are designed to be used together for compounded results.</p>
@@ -298,7 +297,7 @@ export default function MapFromHomePage() {
 
       {/* ── FAQ ── */}
       <section className="bg-[var(--bg)] py-16 md:py-24 border-t border-[var(--surface-border)]">
-         <div className="max-w-5xl mx-auto w-full px-6">
+         <div className="max-w-7xl mx-auto w-full px-6">
            <div className="flex flex-col md:flex-row md:justify-between md:items-end border-b border-[var(--surface-border)] pb-3 mb-12 gap-2">
              <h2 className="font-primary text-4xl md:text-5xl lg:text-6xl uppercase leading-none text-[var(--text-primary)]">Intelligence FAQ</h2>
              <span className="font-mono text-[9px] tracking-widest shrink-0 mb-1 text-[var(--color-y2k-blue)]">Queries</span>

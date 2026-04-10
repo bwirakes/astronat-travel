@@ -104,11 +104,11 @@ function NavigationMenuPositioner({
     <NavigationMenuPrimitive.Portal>
       <NavigationMenuPrimitive.Positioner
         side={side}
-        sideOffset={sideOffset}
+        sideOffset={0}
         align={align}
         alignOffset={alignOffset}
         className={cn(
-          "isolate z-50 h-(--positioner-height) w-(--positioner-width) max-w-(--available-width) transition-[top,left,right,bottom] duration-[0.35s] ease-[cubic-bezier(0.22,1,0.36,1)] data-instant:transition-none data-[side=bottom]:before:top-[-10px] data-[side=bottom]:before:right-0 data-[side=bottom]:before:left-0",
+          "isolate z-[1050] h-(--positioner-height) w-(--positioner-width) max-w-(--available-width) transition-[top,left,right,bottom] duration-[0.35s] ease-[cubic-bezier(0.22,1,0.36,1)] data-instant:transition-none data-[side=bottom]:before:absolute data-[side=bottom]:before:content-[''] data-[side=bottom]:before:h-[20px] data-[side=bottom]:before:top-[-20px] data-[side=bottom]:before:right-0 data-[side=bottom]:before:left-0",
           className
         )}
         {...props}

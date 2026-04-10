@@ -50,12 +50,7 @@ export default function Navbar({ activeHref, centerContent, logoHref = "/", hide
         window.location.href = "/";
     };
 
-    const links = [
-        { href: "/about", label: "About" },
-        { href: "https://calendly.com/astronat/60min-acg-reading", label: "Book a reading", external: true },
-        !hideAuth && user && { href: "/home", label: "Dashboard" },
-        !hideAuth && !user && { href: "/auth/login", label: "Log in" },
-    ].filter(Boolean) as any[];
+
 
     return (
         <nav className={styles.nav}>
@@ -65,8 +60,8 @@ export default function Navbar({ activeHref, centerContent, logoHref = "/", hide
                     <Image
                         src="/logo-stacked.svg"
                         alt="Astro Nat Logo"
-                        width={130}
-                        height={44}
+                        width={200}
+                        height={68}
                         priority
                         className={styles.logoImg}
                     />
@@ -86,63 +81,52 @@ export default function Navbar({ activeHref, centerContent, logoHref = "/", hide
                                 <NavigationMenuItem>
                                   <NavigationMenuTrigger className="!h-auto !p-0 !bg-transparent hover:!bg-transparent hover:text-[var(--text-primary)] font-body font-normal text-[0.85rem] text-[var(--text-secondary)] focus:!bg-transparent data-[state=open]:!bg-transparent data-[state=open]:text-[var(--text-primary)] outline-none ring-0 focus-visible:ring-0">Services</NavigationMenuTrigger>
                                   <NavigationMenuContent>
-                                    <ul className="grid w-[180px] gap-1 p-2 bg-[var(--bg)] border border-[var(--surface-border)] rounded-sm shadow-sm outline-none">
-                                      <li>
-                                        <Link href="/b2b" legacyBehavior passHref>
-                                          <NavigationMenuLink className="block select-none space-y-1 rounded-sm px-3 py-2 leading-none outline-none transition-colors hover:bg-[var(--bg-raised)] hover:text-[var(--text-primary)] focus:bg-[var(--bg-raised)] focus:text-[var(--text-primary)] focus-visible:ring-0 text-[0.85rem]">
-                                            B2B Corporate Intel
-                                          </NavigationMenuLink>
-                                        </Link>
-                                      </li>
-                                      <li>
-                                        <Link href="/geodetic" legacyBehavior passHref>
-                                          <NavigationMenuLink className="block select-none space-y-1 rounded-sm px-3 py-2 leading-none outline-none transition-colors hover:bg-[var(--bg-raised)] hover:text-[var(--text-primary)] focus:bg-[var(--bg-raised)] focus:text-[var(--text-primary)] focus-visible:ring-0 text-[0.85rem]">
-                                            Geodetic Astrology
-                                          </NavigationMenuLink>
-                                        </Link>
-                                      </li>
-                                      <li>
-                                        <Link href="/map-from-home" legacyBehavior passHref>
-                                          <NavigationMenuLink className="block select-none space-y-1 rounded-sm px-3 py-2 leading-none outline-none transition-colors hover:bg-[var(--bg-raised)] hover:text-[var(--text-primary)] focus:bg-[var(--bg-raised)] focus:text-[var(--text-primary)] focus-visible:ring-0 text-[0.85rem]">
-                                            Map From Home
-                                          </NavigationMenuLink>
-                                        </Link>
-                                      </li>
-                                    </ul>
+                                    <div className="pt-3">
+                                      <ul className="grid w-[220px] gap-1 p-2 bg-[var(--bg)] border border-[var(--surface-border)] rounded-sm shadow-sm outline-none">
+                                        <li>
+                                          <Link href="/b2b" legacyBehavior passHref>
+                                            <NavigationMenuLink className="block select-none space-y-1 rounded-sm px-3 py-2 leading-none outline-none transition-colors hover:bg-[var(--bg-raised)] hover:text-[var(--text-primary)] focus:bg-[var(--bg-raised)] focus:text-[var(--text-primary)] focus-visible:ring-0 text-[0.85rem]">
+                                              B2B Corporate Intel
+                                            </NavigationMenuLink>
+                                          </Link>
+                                        </li>
+                                        <li>
+                                          <Link href="/geodetic" legacyBehavior passHref>
+                                            <NavigationMenuLink className="block select-none space-y-1 rounded-sm px-3 py-2 leading-none outline-none transition-colors hover:bg-[var(--bg-raised)] hover:text-[var(--text-primary)] focus:bg-[var(--bg-raised)] focus:text-[var(--text-primary)] focus-visible:ring-0 text-[0.85rem]">
+                                              Geodetic Astrology
+                                            </NavigationMenuLink>
+                                          </Link>
+                                        </li>
+                                        <li>
+                                          <Link href="/map-from-home" legacyBehavior passHref>
+                                            <NavigationMenuLink className="block select-none space-y-1 rounded-sm px-3 py-2 leading-none outline-none transition-colors hover:bg-[var(--bg-raised)] hover:text-[var(--text-primary)] focus:bg-[var(--bg-raised)] focus:text-[var(--text-primary)] focus-visible:ring-0 text-[0.85rem]">
+                                              Map From Home
+                                            </NavigationMenuLink>
+                                          </Link>
+                                        </li>
+                                      </ul>
+                                    </div>
                                   </NavigationMenuContent>
                                 </NavigationMenuItem>
                               </NavigationMenuList>
                             </NavigationMenu>
 
-                            {links.map((l) =>
-                                l.external ? (
-                                    <a
-                                        key={l.href}
-                                        href={l.href}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className={activeHref === l.href ? styles.active : ""}
-                                    >
-                                        {l.label}
-                                    </a>
-                                ) : (
-                                    <Link
-                                        key={l.href}
-                                        href={l.href}
-                                        className={activeHref === l.href ? styles.active : ""}
-                                    >
-                                        {l.label}
-                                    </Link>
-                                )
-                            )}
                         </div>
                     )}
-                    {user && !hideAuth && (
-                        <button onClick={handleSignOut} className={styles.signOutBtn}>
-                            Sign out
-                        </button>
-                    )}
+
                     <ThemeToggle />
+                    
+                    {!centerContent && (
+                        <a
+                            href="https://calendly.com/astronat/60min-acg-reading"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hidden sm:inline-flex bg-[var(--color-y2k-blue)] text-[var(--color-eggshell)] px-6 py-3.5 font-mono text-[0.7rem] uppercase tracking-[0.15em] font-semibold transition-transform hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap outline-none"
+                            style={{ borderRadius: "var(--shape-asymmetric-md)" }}
+                        >
+                            Book a Reading
+                        </a>
+                    )}
                     {/* Hamburger — only shown when no centerContent (full nav) */}
                     {!centerContent && (
                         <button
@@ -161,34 +145,24 @@ export default function Navbar({ activeHref, centerContent, logoHref = "/", hide
             {open && !centerContent && (
                 <div className={styles.drawer}>
                     <div className="font-mono text-[9px] uppercase tracking-widest opacity-50 px-4 py-2 mt-2 text-[var(--text-primary)]">Services</div>
+
                     <Link href="/b2b" className={styles.drawerLink} onClick={() => setOpen(false)}>B2B</Link>
                     <Link href="/geodetic" className={styles.drawerLink} onClick={() => setOpen(false)}>Geodetic</Link>
                     <Link href="/map-from-home" className={styles.drawerLink} onClick={() => setOpen(false)}>Map From Home</Link>
 
                     <div className="font-mono text-[9px] uppercase tracking-widest opacity-50 px-4 py-2 mt-4 text-[var(--text-primary)]">Menu</div>
-                    {links.map((l) =>
-                        l.external ? (
-                            <a
-                                key={l.href}
-                                href={l.href}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={styles.drawerLink}
-                                onClick={() => setOpen(false)}
-                            >
-                                {l.label}
-                            </a>
-                        ) : (
-                            <Link
-                                key={l.href}
-                                href={l.href}
-                                className={`${styles.drawerLink} ${activeHref === l.href ? styles.drawerActive : ""}`}
-                                onClick={() => setOpen(false)}
-                            >
-                                {l.label}
-                            </Link>
-                        )
-                    )}
+                    <div className="px-4 py-3 mt-2 mb-2">
+                        <a
+                            href="https://calendly.com/astronat/60min-acg-reading"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-[var(--color-y2k-blue)] text-[var(--color-eggshell)] px-4 py-3 font-mono text-[0.7rem] uppercase tracking-[0.15em] font-semibold transition-transform hover:scale-[1.02] active:scale-[0.98] block text-center outline-none"
+                            style={{ borderRadius: "var(--shape-asymmetric-md)" }}
+                            onClick={() => setOpen(false)}
+                        >
+                            Book a Reading
+                        </a>
+                    </div>
                 </div>
             )}
         </nav>
