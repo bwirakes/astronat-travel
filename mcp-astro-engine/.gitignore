@@ -3,10 +3,19 @@ data/astro_engine.db
 data/astro_engine_test.db
 data/ephemeris_files/*.se1
 
+# Evaluation pipeline outputs (rebuilt by running the pipeline)
+data/eval.db
+data/raw/astrodatabank_cache/
+data/raw/batch_runs.jsonl
+data/raw/*.json
+data/raw/*.html
+
 # Python
 __pycache__/
 *.py[cod]
 *.egg-info/
+venv/
+test_env/
 
 # Test artifacts
 .pytest_cache/

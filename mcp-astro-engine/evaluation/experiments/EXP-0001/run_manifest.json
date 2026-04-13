@@ -1,0 +1,30 @@
+{
+  "exp_id": "EXP-0001",
+  "pipeline_version": "v0.1-positive-only-macroscore",
+  "started_at": "2026-04-12T07:21:21.890568+00:00",
+  "finished_at": "2026-04-12T07:21:23.261211+00:00",
+  "endpoint": "http://localhost:3000/api/house-matrix",
+  "git_commit": "794b31a9bc8fe338e45501d7582e312896f2d759",
+  "db_path": "data/eval.db",
+  "row_count": 249,
+  "rows_ok": 249,
+  "rows_error": 0,
+  "avg_macro_score": 51.23694779116466,
+  "verdict_distribution": {
+    "Challenging": 95,
+    "Mixed": 92,
+    "Hostile": 25,
+    "Productive": 34,
+    "Highly Productive": 3
+  },
+  "errors_sample": [],
+  "caveats": [
+    "ACG lines passed as empty array \u2014 pending integration",
+    "Parans passed as empty array \u2014 pending integration",
+    "Transit sample_date anchored at noon UTC (no hour-of-day resolution)",
+    "Lot of Fortune / Spirit not explicitly computed \u2014 engine derives internally",
+    "Negative sampling not performed; only positive event rows scored",
+    "No per-house score extraction \u2014 macroScore only",
+    "External validity limited per docs/ml-evaluation/04 \u00a77"
+  ]
+}
