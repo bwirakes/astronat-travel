@@ -1,0 +1,111 @@
+[
+  {
+    "goal": "love",
+    "n_total": 94,
+    "n_positive_plus1": 42,
+    "n_zero": 31,
+    "n_negative_minus1": 21,
+    "score_mean": 48.5,
+    "score_median": 48.0,
+    "score_min": 26.0,
+    "score_max": 80.0,
+    "pr_auc_positive": {
+      "point": 0.4210084087613307,
+      "ci_lower": 0.3056410034522764,
+      "ci_upper": 0.577809694221033,
+      "prevalence": 0.44680851063829785
+    },
+    "pr_auc_harm": {
+      "point": 0.19062000559534792,
+      "ci_lower": 0.12080005490726277,
+      "ci_upper": 0.33671359030289577,
+      "prevalence": 0.22340425531914893
+    },
+    "calibration": {
+      "slope": 0.15175520002190557,
+      "intercept": 0.42041484485180797,
+      "ece": 0.21521276595744682
+    },
+    "spearman": {
+      "median": -0.23604760286020518,
+      "q25": -0.3684617642603994,
+      "q75": 0.06137378162887286,
+      "subjects_included": 12,
+      "subjects_excluded_low_rows": 14
+    },
+    "status": "computed"
+  },
+  {
+    "goal": "career",
+    "n_total": 131,
+    "n_positive_plus1": 107,
+    "n_zero": 4,
+    "n_negative_minus1": 20,
+    "score_mean": 53.66412213740458,
+    "score_median": 56.0,
+    "score_min": 26.0,
+    "score_max": 85.0,
+    "pr_auc_positive": {
+      "point": 0.7497485232388521,
+      "ci_lower": 0.6602308145367044,
+      "ci_upper": 0.8482884875104431,
+      "prevalence": 0.816793893129771
+    },
+    "pr_auc_harm": {
+      "point": 0.13240458716812867,
+      "ci_lower": 0.0732376440093341,
+      "ci_upper": 0.26369829570515485,
+      "prevalence": 0.15267175572519084
+    },
+    "calibration": {
+      "slope": -0.6009734076477302,
+      "intercept": 1.0509957345370475,
+      "ece": 0.32381679389312973
+    },
+    "spearman": {
+      "median": -0.006958309794083711,
+      "q25": -0.2581988897471611,
+      "q75": 0.26777102988409596,
+      "subjects_included": 10,
+      "subjects_excluded_low_rows": 15
+    },
+    "status": "computed"
+  },
+  {
+    "goal": "community",
+    "n_total": 0,
+    "status": "empty"
+  },
+  {
+    "goal": "growth",
+    "n_total": 14,
+    "n_positive_plus1": 0,
+    "n_zero": 0,
+    "n_negative_minus1": 14,
+    "score_mean": 47.357142857142854,
+    "score_median": 43.0,
+    "score_min": 25.0,
+    "score_max": 78.0,
+    "pr_auc_positive": null,
+    "pr_auc_harm": null,
+    "calibration": null,
+    "spearman": null,
+    "status": "computed"
+  },
+  {
+    "goal": "relocation",
+    "n_total": 10,
+    "n_positive_plus1": 10,
+    "n_zero": 0,
+    "n_negative_minus1": 0,
+    "score_mean": 50.6,
+    "score_median": 59.0,
+    "score_min": 25.0,
+    "score_max": 69.0,
+    "pr_auc_positive": null,
+    "pr_auc_harm": null,
+    "calibration": null,
+    "spearman": null,
+    "status": "computed"
+  }
+]

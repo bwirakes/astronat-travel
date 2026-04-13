@@ -1,0 +1,420 @@
+{
+  "overall": [
+    {
+      "goal": "love",
+      "n_total": 233,
+      "n_positive_plus1": 99,
+      "n_zero": 85,
+      "n_negative_minus1": 49,
+      "score_mean": 52.648068669527895,
+      "score_median": 52.0,
+      "score_min": 23.0,
+      "score_max": 99.0,
+      "pr_auc_positive": {
+        "point": 0.4234676703194838,
+        "ci_lower": 0.34843411012307984,
+        "ci_upper": 0.5410670431209643,
+        "prevalence": 0.4248927038626609
+      },
+      "pr_auc_harm": {
+        "point": 0.2055233722462101,
+        "ci_lower": 0.14511613476675203,
+        "ci_upper": 0.2955523277308586,
+        "prevalence": 0.21030042918454936
+      },
+      "calibration": {
+        "slope": 0.011922562942036394,
+        "intercept": 0.4345174261615739,
+        "ece": 0.2027896995708155
+      },
+      "spearman": {
+        "median": 0.0,
+        "q25": -0.38877069622125715,
+        "q75": 0.4208014530079651,
+        "subjects_included": 30,
+        "subjects_excluded_low_rows": 36
+      },
+      "status": "computed"
+    },
+    {
+      "goal": "career",
+      "n_total": 270,
+      "n_positive_plus1": 223,
+      "n_zero": 8,
+      "n_negative_minus1": 39,
+      "score_mean": 51.63333333333333,
+      "score_median": 51.0,
+      "score_min": 23.0,
+      "score_max": 90.0,
+      "pr_auc_positive": {
+        "point": 0.8098043672325776,
+        "ci_lower": 0.7581946975885888,
+        "ci_upper": 0.8676058812491352,
+        "prevalence": 0.825925925925926
+      },
+      "pr_auc_harm": {
+        "point": 0.15274643353910655,
+        "ci_lower": 0.10186925710792558,
+        "ci_upper": 0.25761942772679514,
+        "prevalence": 0.14444444444444443
+      },
+      "calibration": {
+        "slope": -0.6853649731538674,
+        "intercept": 1.13418731385012,
+        "ece": 0.3162592592592592
+      },
+      "spearman": {
+        "median": 0.23570226039551587,
+        "q25": -0.2904737509655563,
+        "q75": 0.5000000000000001,
+        "subjects_included": 23,
+        "subjects_excluded_low_rows": 41
+      },
+      "status": "computed"
+    },
+    {
+      "goal": "community",
+      "n_total": 0,
+      "status": "empty"
+    },
+    {
+      "goal": "growth",
+      "n_total": 26,
+      "n_positive_plus1": 1,
+      "n_zero": 0,
+      "n_negative_minus1": 25,
+      "score_mean": 47.61538461538461,
+      "score_median": 48.0,
+      "score_min": 24.0,
+      "score_max": 78.0,
+      "pr_auc_positive": {
+        "point": 0.05555555555555555,
+        "ci_lower": 0.045454545454545456,
+        "ci_upper": 0.22647058823529395,
+        "prevalence": 0.038461538461538464
+      },
+      "pr_auc_harm": {
+        "point": 0.9605830900348064,
+        "ci_lower": 0.8532223709048039,
+        "ci_upper": 0.9741316301689367,
+        "prevalence": 0.9615384615384616
+      },
+      "calibration": {
+        "slope": -0.02776828434723176,
+        "intercept": 0.030310150375939874,
+        "ece": 0.43769230769230777
+      },
+      "spearman": {
+        "median": NaN,
+        "q25": NaN,
+        "q75": NaN,
+        "subjects_included": 0,
+        "subjects_excluded_low_rows": 13
+      },
+      "status": "computed"
+    },
+    {
+      "goal": "relocation",
+      "n_total": 22,
+      "n_positive_plus1": 19,
+      "n_zero": 3,
+      "n_negative_minus1": 0,
+      "score_mean": 51.31818181818182,
+      "score_median": 51.0,
+      "score_min": 24.0,
+      "score_max": 78.0,
+      "pr_auc_positive": {
+        "point": 0.8513100366672959,
+        "ci_lower": 0.6522297555385791,
+        "ci_upper": 0.9759600703652009,
+        "prevalence": 0.8636363636363636
+      },
+      "pr_auc_harm": null,
+      "calibration": {
+        "slope": -0.22694417309883697,
+        "intercept": 1.018510713710693,
+        "ece": 0.35045454545454546
+      },
+      "spearman": {
+        "median": -0.5000000000000001,
+        "q25": -0.5000000000000001,
+        "q75": -0.5000000000000001,
+        "subjects_included": 1,
+        "subjects_excluded_low_rows": 13
+      },
+      "status": "computed"
+    }
+  ],
+  "aa_only": [
+    {
+      "goal": "love",
+      "n_total": 135,
+      "n_positive_plus1": 61,
+      "n_zero": 46,
+      "n_negative_minus1": 28,
+      "score_mean": 51.666666666666664,
+      "score_median": 51.0,
+      "score_min": 25.0,
+      "score_max": 81.0,
+      "pr_auc_positive": {
+        "point": 0.47672058062851513,
+        "ci_lower": 0.3695926771516184,
+        "ci_upper": 0.6156698755801873,
+        "prevalence": 0.45185185185185184
+      },
+      "pr_auc_harm": {
+        "point": 0.17776991486250868,
+        "ci_lower": 0.11944146486468857,
+        "ci_upper": 0.2924016537350568,
+        "prevalence": 0.2074074074074074
+      },
+      "calibration": {
+        "slope": 0.5748373556312837,
+        "intercept": 0.2250627085661938,
+        "ece": 0.18214814814814814
+      },
+      "spearman": {
+        "median": 0.0,
+        "q25": -0.30845157820371816,
+        "q75": 0.4603912563829967,
+        "subjects_included": 18,
+        "subjects_excluded_low_rows": 22
+      },
+      "status": "computed"
+    },
+    {
+      "goal": "career",
+      "n_total": 191,
+      "n_positive_plus1": 159,
+      "n_zero": 6,
+      "n_negative_minus1": 26,
+      "score_mean": 52.204188481675395,
+      "score_median": 52.0,
+      "score_min": 25.0,
+      "score_max": 87.0,
+      "pr_auc_positive": {
+        "point": 0.7953829798017664,
+        "ci_lower": 0.7198937014837832,
+        "ci_upper": 0.8711822434303457,
+        "prevalence": 0.8324607329842932
+      },
+      "pr_auc_harm": {
+        "point": 0.13045710264871418,
+        "ci_lower": 0.08276076829453419,
+        "ci_upper": 0.24206014944802431,
+        "prevalence": 0.13612565445026178
+      },
+      "calibration": {
+        "slope": -0.4902507086143151,
+        "intercept": 1.050468925140205,
+        "ece": 0.3186910994764398
+      },
+      "spearman": {
+        "median": 0.21821789023599236,
+        "q25": -0.2581988897471611,
+        "q75": 0.30274943015462097,
+        "subjects_included": 15,
+        "subjects_excluded_low_rows": 27
+      },
+      "status": "computed"
+    },
+    {
+      "goal": "community",
+      "n_total": 0,
+      "status": "empty"
+    },
+    {
+      "goal": "growth",
+      "n_total": 20,
+      "n_positive_plus1": 0,
+      "n_zero": 0,
+      "n_negative_minus1": 20,
+      "score_mean": 47.8,
+      "score_median": 47.0,
+      "score_min": 24.0,
+      "score_max": 78.0,
+      "pr_auc_positive": null,
+      "pr_auc_harm": null,
+      "calibration": null,
+      "spearman": null,
+      "status": "computed"
+    },
+    {
+      "goal": "relocation",
+      "n_total": 12,
+      "n_positive_plus1": 11,
+      "n_zero": 1,
+      "n_negative_minus1": 0,
+      "score_mean": 51.083333333333336,
+      "score_median": 56.0,
+      "score_min": 24.0,
+      "score_max": 71.0,
+      "pr_auc_positive": {
+        "point": 0.9649678604224059,
+        "ci_lower": 0.871587481962482,
+        "ci_upper": 0.9922348484848482,
+        "prevalence": 0.9166666666666666
+      },
+      "pr_auc_harm": null,
+      "calibration": {
+        "slope": -0.07444296128965969,
+        "intercept": 0.9718699729609472,
+        "ece": 0.40583333333333327
+      },
+      "spearman": {
+        "median": NaN,
+        "q25": NaN,
+        "q75": NaN,
+        "subjects_included": 0,
+        "subjects_excluded_low_rows": 8
+      },
+      "status": "computed"
+    }
+  ],
+  "a_only": [
+    {
+      "goal": "love",
+      "n_total": 84,
+      "n_positive_plus1": 32,
+      "n_zero": 33,
+      "n_negative_minus1": 19,
+      "score_mean": 54.57142857142857,
+      "score_median": 56.0,
+      "score_min": 23.0,
+      "score_max": 99.0,
+      "pr_auc_positive": {
+        "point": 0.35456473599800475,
+        "ci_lower": 0.24552744195654208,
+        "ci_upper": 0.5313822432417225,
+        "prevalence": 0.38095238095238093
+      },
+      "pr_auc_harm": {
+        "point": 0.26597856916056706,
+        "ci_lower": 0.15741196202716728,
+        "ci_upper": 0.45215652882005836,
+        "prevalence": 0.2261904761904762
+      },
+      "calibration": {
+        "slope": -0.17752723407271864,
+        "intercept": 0.5054120768658102,
+        "ece": 0.2702380952380952
+      },
+      "spearman": {
+        "median": -0.09574271077563382,
+        "q25": -0.3855720950203594,
+        "q75": 0.38677620420012865,
+        "subjects_included": 10,
+        "subjects_excluded_low_rows": 11
+      },
+      "status": "computed"
+    },
+    {
+      "goal": "career",
+      "n_total": 67,
+      "n_positive_plus1": 54,
+      "n_zero": 2,
+      "n_negative_minus1": 11,
+      "score_mean": 50.88059701492537,
+      "score_median": 51.0,
+      "score_min": 23.0,
+      "score_max": 90.0,
+      "pr_auc_positive": {
+        "point": 0.8301968025797603,
+        "ci_lower": 0.7142260381395354,
+        "ci_upper": 0.9360694434255885,
+        "prevalence": 0.8059701492537313
+      },
+      "pr_auc_harm": {
+        "point": 0.21780351351246874,
+        "ci_lower": 0.10102043685157083,
+        "ci_upper": 0.44423271975510603,
+        "prevalence": 0.16417910447761194
+      },
+      "calibration": {
+        "slope": -0.4719646400503405,
+        "intercept": 1.0346023441381735,
+        "ece": 0.32402985074626867
+      },
+      "spearman": {
+        "median": 0.5000000000000001,
+        "q25": -0.43353983306788435,
+        "q75": 0.5000000000000001,
+        "subjects_included": 7,
+        "subjects_excluded_low_rows": 10
+      },
+      "status": "computed"
+    },
+    {
+      "goal": "community",
+      "n_total": 0,
+      "status": "empty"
+    },
+    {
+      "goal": "growth",
+      "n_total": 2,
+      "n_positive_plus1": 1,
+      "n_zero": 0,
+      "n_negative_minus1": 1,
+      "score_mean": 46.0,
+      "score_median": 46.0,
+      "score_min": 42.0,
+      "score_max": 50.0,
+      "pr_auc_positive": {
+        "point": 0.5,
+        "ci_lower": 0.5,
+        "ci_upper": 0.5,
+        "prevalence": 0.5
+      },
+      "pr_auc_harm": {
+        "point": 0.5,
+        "ci_lower": 0.5,
+        "ci_upper": 0.5,
+        "prevalence": 0.5
+      },
+      "calibration": {
+        "slope": -12.499999999999993,
+        "intercept": 6.249999999999995,
+        "ece": 0.54
+      },
+      "spearman": {
+        "median": NaN,
+        "q25": NaN,
+        "q75": NaN,
+        "subjects_included": 0,
+        "subjects_excluded_low_rows": 2
+      },
+      "status": "computed"
+    },
+    {
+      "goal": "relocation",
+      "n_total": 6,
+      "n_positive_plus1": 4,
+      "n_zero": 2,
+      "n_negative_minus1": 0,
+      "score_mean": 54.166666666666664,
+      "score_median": 50.0,
+      "score_min": 35.0,
+      "score_max": 78.0,
+      "pr_auc_positive": {
+        "point": 0.6916666666666667,
+        "ci_lower": 0.26666666666666666,
+        "ci_upper": 0.9333333333333333,
+        "prevalence": 0.6666666666666666
+      },
+      "pr_auc_harm": null,
+      "calibration": {
+        "slope": -0.7352941176470581,
+        "intercept": 1.1044117647058818,
+        "ece": 0.34500000000000003
+      },
+      "spearman": {
+        "median": -0.5000000000000001,
+        "q25": -0.5000000000000001,
+        "q75": -0.5000000000000001,
+        "subjects_included": 1,
+        "subjects_excluded_low_rows": 2
+      },
+      "status": "computed"
+    }
+  ]
+}

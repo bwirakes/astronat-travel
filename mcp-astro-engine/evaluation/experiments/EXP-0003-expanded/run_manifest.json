@@ -1,0 +1,30 @@
+{
+  "exp_id": "EXP-0003-expanded",
+  "pipeline_version": "v0.1-positive-only-macroscore",
+  "started_at": "2026-04-12T08:02:16.176387+00:00",
+  "finished_at": "2026-04-12T08:02:22.243551+00:00",
+  "endpoint": "http://localhost:3000/api/house-matrix",
+  "git_commit": "794b31a9bc8fe338e45501d7582e312896f2d759",
+  "db_path": "data/eval.db",
+  "row_count": 551,
+  "rows_ok": 551,
+  "rows_error": 0,
+  "avg_macro_score": 51.86025408348458,
+  "verdict_distribution": {
+    "Challenging": 188,
+    "Mixed": 209,
+    "Hostile": 54,
+    "Productive": 79,
+    "Highly Productive": 21
+  },
+  "errors_sample": [],
+  "caveats": [
+    "ACG lines computed via engine/astrocartography.py, filtered to \u2264700 km",
+    "Parans passed as empty array \u2014 pending integration",
+    "Transit sample_date anchored at noon UTC (no hour-of-day resolution)",
+    "Lot of Fortune / Spirit not explicitly computed \u2014 engine derives internally",
+    "Negative sampling not performed; only positive event rows scored",
+    "No per-house score extraction \u2014 macroScore only",
+    "External validity limited per docs/ml-evaluation/04 \u00a77"
+  ]
+}
