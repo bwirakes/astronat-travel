@@ -89,14 +89,14 @@ I created this workshop for the average person who needs energetic alignment in 
       { num: "03", title: "Evaluating Charts", desc: "Learn how to properly evaluate your relocated charts. Be truly confident in your knowledge with my comprehensive breakdown.", glyph: "♄", bgToken: "y2k-blue", textToken: "eggshell" },
       { num: "04", title: "Local Space", desc: "Bring supportive energy into your local neighbourhood. Learn how to see local space lines from where you live.", glyph: "♅", bgToken: "raised", textToken: "primary" },
       { num: "05", title: "Spiritual Modalities", desc: "My proprietary blend of astrocartography + spiritual methodologies (like human design and numerology) to maximize the effects.", glyph: "♆", bgToken: "charcoal", textToken: "eggshell" },
-      { num: "06", title: "Travel Trackers", desc: "The AstroNat travel worksheet trackers for guided application. Walk away with a clear and robust system you can use again and again.", glyph: "♇", bgToken: "black", textToken: "eggshell" },
+      { num: "06", title: "Travel Trackers", desc: "The AstroNat travel worksheet trackers for guided application. Walk away with a clear and robust system you can use again and again.", glyph: "♇", bgToken: "charcoal", textToken: "eggshell" },
     ],
   },
   {
     blockType: "pullQuote",
     quote: '"Our house is our corner of the world. As has often been said, it is our first universe, a real cosmos in every sense of the word."',
     attribution: "Gaston Bachelard",
-    bgToken: "black",
+    bgToken: "charcoal",
   },
   {
     blockType: "splitContent",

@@ -30,14 +30,14 @@ export default function DashboardLayout({
   backHref,
   backLabel = "Back",
   maxWidth = "960px",
-  paddingTop = "var(--space-lg)",
+  paddingTop = "var(--space-3xl)",
   paddingBottom = "var(--space-3xl)",
 }: DashboardLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Default: hide back button on /home
-  const isHome = pathname === "/home";
+  // Default: hide back button on /dashboard
+  const isHome = pathname === "/dashboard";
   const shouldShowBack = showBack && !isHome;
 
   const handleBack = () => {
@@ -48,7 +48,7 @@ export default function DashboardLayout({
       if (pathname.includes("/reading/")) {
         router.push("/readings?demo=true");
       } else {
-        router.push("/home");
+        router.push("/dashboard");
       }
     }
   };

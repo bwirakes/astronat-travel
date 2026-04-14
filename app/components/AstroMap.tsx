@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { PLANET_COLORS } from "../lib/planet-data";
+import { PLANET_COLORS } from "@/app/lib/planet-data";
 import { PLANET_PATHS } from "./PlanetIcon";
 import styles from "./map.module.css";
 

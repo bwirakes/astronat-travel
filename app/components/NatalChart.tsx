@@ -7,7 +7,7 @@
  */
 
 import { useMemo, useEffect, useRef, useState, useId } from "react";
-import { PLANET_COLORS } from "../lib/planet-data";
+import { PLANET_COLORS } from "@/app/lib/planet-data";
 import PlanetIcon from "./PlanetIcon";
 
 interface NatalPlanet {

@@ -1,7 +1,7 @@
 "use client";
 
-import type { TravelWindow } from "../lib/planet-data";
-import styles from "../flow/flow.module.css";
+import type { TravelWindow } from "@/app/lib/planet-data";
+import styles from "@/app/(frontend)/(app)/flow/flow.module.css";
 
 interface TravelWindowsCardProps {
     windows: TravelWindow[];

@@ -46,7 +46,7 @@ export default function AppNavbar() {
         <nav className={styles.nav}>
             <div className={styles.navInner}>
                 {/* Logo */}
-                <Link href="/home" className={styles.logo}>
+                <Link href="/dashboard" className={styles.logo}>
                     <Image
                         src="/logo-stacked.svg"
                         alt="Astro Nat Logo"

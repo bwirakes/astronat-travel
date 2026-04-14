@@ -1,6 +1,6 @@
 "use client";
 
-import GeodeticMapSVG from "@/app/(frontend)/geodetic/components/GeodeticMapSVG";
+import GeodeticMapSVG from "@/app/geodetic/components/GeodeticMapSVG";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Block = Record<string, any>;

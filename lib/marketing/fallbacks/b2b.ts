@@ -1,9 +1,10 @@
-import {
-  B2B_PACKAGES,
-  B2B_PILLARS,
-  B2B_PROCESS_STEPS,
-  B2B_STATS,
-} from "@/lib/marketing/data/b2b";
+import { 
+  B2B_PACKAGES, 
+  B2B_PILLARS, 
+  B2B_PROCESS_STEPS, 
+  B2B_STATS 
+} from "../data/b2b";
+
 
 export const b2bFallbackBlocksUniversal = [
   {
@@ -73,7 +74,7 @@ export const b2bFallbackBlocksUniversal = [
       price: p.from,
       glyph: p.glyph,
       primary: p.primary,
-      includes: p.includes.map((line) => ({ line })),
+      includes: p.includes.map((line: string) => ({ line })),
       ctaLabel: `Enquire About ${p.tier.split(" ")[1]}`,
       ctaHref: "#",
     })),

@@ -1,4 +1,4 @@
-import { normalizeLongitude, haversineDistance } from '../lib/astro/astrocartography';
+import { normalizeLongitude, haversineDistance } from "@/app/lib/astro/astrocartography";
 
 // Simple direct test mocking for astrocartography logic to verify edge cases
 // (Unit tests for spherical geometry and map antimeridian handling)

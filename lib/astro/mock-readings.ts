@@ -20,6 +20,19 @@ export const MOCK_READING_DETAILS: Record<string, any> = {
       { planet: "Sun", line: "MC", distance: "12km", tier: "Strong" },
       { planet: "Venus", line: "AS", distance: "45km", tier: "Moderate" },
       { planet: "Jupiter", line: "IC", distance: "120km", tier: "Weak" },
+    ],
+    natalPlanets: [
+      { name: "Sun", sign: "Leo", longitude: 145 },
+      { name: "Moon", sign: "Scorpio", longitude: 228 },
+      { name: "Mercury", sign: "Virgo", longitude: 156 },
+      { name: "Venus", sign: "Cancer", longitude: 108 },
+      { name: "Mars", sign: "Capricorn", longitude: 280 },
+      { name: "Jupiter", sign: "Sagittarius", longitude: 252 },
+      { name: "Saturn", sign: "Pisces", longitude: 335 },
+      { name: "Uranus", sign: "Aquarius", longitude: 295 },
+      { name: "Neptune", sign: "Capricorn", longitude: 282 },
+      { name: "Pluto", sign: "Scorpio", longitude: 219 },
+      { name: "Chiron", sign: "Libra", longitude: 190 }
     ]
   },
   "2": {

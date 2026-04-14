@@ -90,7 +90,7 @@ export const homeFallbackBlocksUniversal = [
         desc: "High-precision ACG maps and travel planning software in your pocket. Calculate lines, timing, and score destinations on the go with our proprietary engine.",
         link: "/app",
         linkLabel: "Get the App →",
-        bgToken: "black",
+        bgToken: "charcoal",
         textToken: "eggshell",
         glyph: "♅",
       },

@@ -27,8 +27,8 @@
   /* Dark Theme (Default) mapped to Brand Colors */
   --bg: var(--color-charcoal);
   --bg-raised: #212121;
-  --surface: var(--color-black);
-  --surface-border: rgba(255, 255, 255, 0.2);
+  --surface: #121212; /* Softer than pure black */
+  --surface-border: rgba(255, 255, 255, 0.12);
 
   /* Esoteric / Atmospheric Palette */
   --accent: var(--color-spiced-life);
@@ -127,6 +127,21 @@
   --text-primary: var(--color-charcoal);
   --text-secondary: var(--color-charcoal);
   --text-tertiary: #555555;
+
+  /* Theme-aware Text Colors for Brand Backgrounds */
+  --text-on-charcoal: #F8F5EC; /* Force legibility on dark blocks in light mode */
+  --text-on-y2k-blue: #F8F5EC;
+  --text-on-acqua: #111b2e; /* Acqua is teal in light mode, use dark text */
+}
+
+/* ── Block Theming Utilities ────────────────────────────────── */
+.theme-block-h h1, 
+.theme-block-h h2, 
+.theme-block-h h3, 
+.theme-block-h h4, 
+.theme-block-h h5, 
+.theme-block-h h6 {
+  color: inherit !important;
 }
 
 /* ── Reset ──────────────────────────────────────────────────── */
@@ -534,3 +549,13 @@ a {
 }
 
 /* ── Home Layout V2 (100vh lock on Desktop only) - Removed to allow scrolling ── */
+
+/* ── Base UI Navigation Menu — force transparent containers ── */
+[data-slot="navigation-menu-positioner"],
+[data-slot="navigation-menu-positioner"] > *,
+[data-slot="navigation-menu-positioner"] [role="dialog"],
+[data-slot="navigation-menu-positioner"] [popover] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}

@@ -44,7 +44,11 @@ export const Pages: CollectionConfig = {
   },
   access: {
     read: () => true,
+    create: ({ req: { user } }) => !!user,
+    update: ({ req: { user } }) => !!user,
+    delete: ({ req: { user } }) => !!user,
   },
+  versions: { drafts: true },
   fields: [
     {
       name: "title",
@@ -69,8 +73,7 @@ export const Pages: CollectionConfig = {
       name: "layout",
       type: "blocks",
       required: true,
-      minRows: 1,
-      blocks: marketingBlocks as never,
+      blocks: marketingBlocks,
     },
   ],
 };

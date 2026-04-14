@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import type { HouseScore, HouseMatrixResult } from "../lib/house-matrix";
+import type { HouseScore, HouseMatrixResult } from "@/app/lib/house-matrix";
 import PlanetIcon from "./PlanetIcon";
 import SignIcon from "./SignIcon";
-import { PLANET_COLORS } from "../lib/planet-data";
+import { PLANET_COLORS } from "@/app/lib/planet-data";
 import styles from "./HouseMatrixCard.module.css";
 
 // ── Helpers ───────────────────────────────────────────────────────────────

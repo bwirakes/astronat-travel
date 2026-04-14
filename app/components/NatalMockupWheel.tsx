@@ -1,6 +1,6 @@
 import React from "react";
 import { SIGN_PATHS } from "./SignIcon";
-import { PLANET_COLORS } from "../lib/planet-data";
+import { PLANET_COLORS } from "@/app/lib/planet-data";
 
 // ═══════════════════════════════════════════════════════════════
 // CONSTANTS & COLORS

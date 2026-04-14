@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import ElonMapSVG from "@/app/(frontend)/geodetic/components/ElonMapSVG";
-import TrumpMapSVG from "@/app/(frontend)/geodetic/components/TrumpMapSVG";
+import ElonMapSVG from "@/app/geodetic/components/ElonMapSVG";
+import TrumpMapSVG from "@/app/geodetic/components/TrumpMapSVG";
 
 const elonPlanets = [
   {

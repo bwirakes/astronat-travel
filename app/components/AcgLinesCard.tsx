@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import PlanetIcon from "./PlanetIcon";
-import { PLANET_COLORS, getOrbStrengthColor } from "../lib/planet-data";
-import styles from "../flow/flow.module.css";
+import { PLANET_COLORS, getOrbStrengthColor } from "@/app/lib/planet-data";
+import styles from "@/app/(frontend)/(app)/flow/flow.module.css";
 
 interface PlanetLine {
     planet: string; angle: string; distance_km: number;

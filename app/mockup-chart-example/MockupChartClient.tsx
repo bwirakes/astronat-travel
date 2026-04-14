@@ -6,21 +6,21 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import ThemeToggle from "../components/ThemeToggle";
-import DashboardLayout from "../components/DashboardLayout";
-import { ChartWheel, type NatalData } from "../components/ChartWheel";
-import NatalMockupWheel from "../components/NatalMockupWheel";
-import { PLANET_COLORS } from "../lib/planet-data";
-import { AcgMap } from "../components/AcgMap";
-import AcgLinesCard from "../components/AcgLinesCard";
-import PlanetIcon from "../components/PlanetIcon";
-import AspectIcon from "../components/AspectIcon";
-import { essentialDignityLabel } from "../lib/dignity";
-import { PlanetHoverCard } from "../components/ui/planet-hover-card";
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "../components/ui/accordion";
-import { SectionHeader } from "../components/ui/section-header";
-import { PLANET_DOMAINS, HOUSE_DOMAINS, getOrdinal } from "../lib/astro-wording";
-import { ChartAiInterpreter } from "../components/ChartAiInterpreter";
+import ThemeToggle from "@/app/components/ThemeToggle";
+import DashboardLayout from "@/app/components/DashboardLayout";
+import { ChartWheel, type NatalData } from "@/app/components/ChartWheel";
+import NatalMockupWheel from "@/app/components/NatalMockupWheel";
+import { PLANET_COLORS } from "@/app/lib/planet-data";
+import { AcgMap } from "@/app/components/AcgMap";
+import AcgLinesCard from "@/app/components/AcgLinesCard";
+import PlanetIcon from "@/app/components/PlanetIcon";
+import AspectIcon from "@/app/components/AspectIcon";
+import { essentialDignityLabel } from "@/app/lib/dignity";
+import { PlanetHoverCard } from "@/app/components/ui/planet-hover-card";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/app/components/ui/accordion";
+import { SectionHeader } from "@/app/components/ui/section-header";
+import { PLANET_DOMAINS, HOUSE_DOMAINS, getOrdinal } from "@/app/lib/astro-wording";
+import { ChartAiInterpreter } from "@/app/components/ChartAiInterpreter";
 
 // ── Mock data for ?demo=true ───────────────────────────────────
 

@@ -38,7 +38,7 @@ export default function Footer({ variant = 'default' }: FooterProps) {
               Services
             </h5>
             <ul className="space-y-4 text-xs text-[var(--text-secondary)]">
-              <li><Link href="/b2b" className="hover:text-[var(--text-primary)] transition-colors inline-flex items-center gap-2">B2B Corporate Intel</Link></li>
+              <li><Link href="/b2b" className="hover:text-[var(--text-primary)] transition-colors inline-flex items-center gap-2">Corporate Intelligence</Link></li>
               <li><Link href="/geodetic" className="hover:text-[var(--text-primary)] transition-colors inline-flex items-center gap-2">Geodetic Astrology</Link></li>
               <li><Link href="/map-from-home" className="hover:text-[var(--text-primary)] transition-colors inline-flex items-center gap-2">Map From Home</Link></li>
             </ul>

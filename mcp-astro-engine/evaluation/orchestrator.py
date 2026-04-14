@@ -22,6 +22,10 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+from evaluation.negative_sampling import (
+    NEGATIVE_SAMPLING_VERSION,
+    build_negative_rows,
+)
 from evaluation.row_builder import EvalRow, build_positive_rows
 from evaluation.run_engine import (
     DEFAULT_ENDPOINT,
@@ -39,7 +43,8 @@ from evaluation.weight_scenarios import (
 
 
 EXP_ROOT = Path("evaluation/experiments")
-PIPELINE_VERSION = "v0.1-positive-only-macroscore"
+PIPELINE_VERSION = "v0.2-with-negatives"
+DEFAULT_CONTROL_CITIES = "data/control_cities.csv"
 
 
 def _git_commit() -> str:
@@ -57,15 +62,31 @@ def run(
     endpoint: str = DEFAULT_ENDPOINT,
     limit: int = 0,
     throttle_s: float = 0.0,
+    include_negatives: bool = True,
+    control_cities_csv: str = DEFAULT_CONTROL_CITIES,
+    k_temporal: int = 3,
+    k_geographic: int = 5,
+    seed: int = 42,
 ) -> Path:
     out_dir = EXP_ROOT / exp_id
     out_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Building positive rows from {db_path} ...")
-    rows: list[EvalRow] = build_positive_rows(db_path)
+    positive_rows: list[EvalRow] = build_positive_rows(db_path)
+    negative_rows: list[EvalRow] = []
+    if include_negatives:
+        print(f"Building negative rows (k_temporal={k_temporal}, k_geographic={k_geographic}) ...")
+        negative_rows = build_negative_rows(
+            db_path=db_path, control_cities_csv=control_cities_csv,
+            seed=seed, k_temporal=k_temporal, k_geographic=k_geographic,
+        )
+    rows: list[EvalRow] = list(positive_rows) + list(negative_rows)
     if limit:
         rows = rows[:limit]
-    print(f"  {len(rows)} rows to score")
+    n_pos = sum(1 for r in rows if r.row_type == "positive")
+    n_temp = sum(1 for r in rows if r.row_type == "temporal_neg")
+    n_geo = sum(1 for r in rows if r.row_type == "geographic_neg")
+    print(f"  {len(rows)} total: {n_pos} positive, {n_temp} temporal_neg, {n_geo} geographic_neg")
 
     started = datetime.now(timezone.utc).isoformat()
     pred_path = out_dir / "predictions.csv"
@@ -79,6 +100,9 @@ def run(
         "macro_score", "macro_verdict",
         "love", "career", "community", "growth", "relocation",
         "is_c_case",
+        # Path-dependency features (present on negative rows only)
+        "years_since_last_positive",
+        "trajectory_phase",
     ]
     # Per-house scores
     for h in range(1, 13):
@@ -141,6 +165,8 @@ def run(
                 "growth": gp.get("growth"),
                 "relocation": gp.get("relocation"),
                 "is_c_case": gp.get("is_c_case", False),
+                "years_since_last_positive": gp.get("_years_since_last_positive"),
+                "trajectory_phase": gp.get("_trajectory_phase"),
             }
             # Populate per-house + per-scenario columns
             if result.status == "ok" and result.houses:
@@ -191,6 +217,7 @@ def run(
         "exp_id": exp_id,
         "pipeline_version": PIPELINE_VERSION,
         "scenario_version": SCENARIO_VERSION,
+        "negative_sampling_version": NEGATIVE_SAMPLING_VERSION if include_negatives else None,
         "scenarios": list(scenario_names()),
         "started_at": started,
         "finished_at": finished,
@@ -198,19 +225,32 @@ def run(
         "git_commit": _git_commit(),
         "db_path": db_path,
         "row_count": len(rows),
+        "row_counts_by_type": {
+            "positive": n_pos,
+            "temporal_neg": n_temp,
+            "geographic_neg": n_geo,
+        },
         "rows_ok": stats["rows_ok"],
         "rows_error": stats["rows_error"],
         "avg_macro_score": (stats["macro_score_sum"] / stats["macro_score_count"]
                              if stats["macro_score_count"] else None),
         "verdict_distribution": stats["per_verdict"],
         "errors_sample": stats["errors_sample"],
+        "negative_sampling": {
+            "enabled": include_negatives,
+            "k_temporal": k_temporal,
+            "k_geographic": k_geographic,
+            "seed": seed,
+            "control_cities": control_cities_csv,
+        },
         "caveats": [
             "ACG lines computed via engine/astrocartography.py, filtered to ≤700 km",
             "Parans passed as empty array — pending integration",
             "Transit sample_date anchored at noon UTC (no hour-of-day resolution)",
             "Lot of Fortune / Spirit not explicitly computed — engine derives internally",
-            "Negative sampling not performed; only positive event rows scored",
-            "Per-house + per-goal scores now extracted; 5 weight scenarios evaluated",
+            ("Negative sampling enabled (v" + NEGATIVE_SAMPLING_VERSION + ")")
+                if include_negatives else "Negative sampling disabled",
+            "Per-house + per-goal scores extracted; 5 weight scenarios evaluated",
             "External validity limited per docs/ml-evaluation/04 §7",
         ],
     }
@@ -228,6 +268,12 @@ def main() -> int:
     ap.add_argument("--endpoint", default=DEFAULT_ENDPOINT)
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--throttle", type=float, default=0.0)
+    ap.add_argument("--no-negatives", action="store_true",
+                    help="Positive rows only (legacy behaviour)")
+    ap.add_argument("--control-cities", default=DEFAULT_CONTROL_CITIES)
+    ap.add_argument("--k-temporal", type=int, default=3)
+    ap.add_argument("--k-geographic", type=int, default=5)
+    ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
 
     out = run(
@@ -236,6 +282,11 @@ def main() -> int:
         endpoint=args.endpoint,
         limit=args.limit,
         throttle_s=args.throttle,
+        include_negatives=not args.no_negatives,
+        control_cities_csv=args.control_cities,
+        k_temporal=args.k_temporal,
+        k_geographic=args.k_geographic,
+        seed=args.seed,
     )
     print(f"\nExperiment dir: {out}")
     return 0

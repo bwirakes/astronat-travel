@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { AcgMap } from "../components/AcgMap";
-import NatalMockupWheel from "../components/NatalMockupWheel";
+import { AcgMap } from "@/app/components/AcgMap";
+import NatalMockupWheel from "@/app/components/NatalMockupWheel";
 
 const MOCK_NATAL = {
   sun: { longitude: 45 },
