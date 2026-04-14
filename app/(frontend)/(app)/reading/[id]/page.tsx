@@ -46,6 +46,13 @@ function ReadingContent() {
     return () => observer.disconnect();
   }, []);
 
+  const DEFAULT_AI_INSIGHTS = {
+    primary: { label: "MACRO OVERVIEW", title: "The Astrological Verdict", content: "Evaluating relocation matrix..." },
+    highest: { label: "HIGHEST ENERGY", title: "Peak Resonance", content: "Evaluating relocation matrix..." },
+    vulnerable: { label: "FRICTION POINT", title: "Vulnerability Score", content: "Evaluating relocation matrix..." },
+    timing: { label: "OPTIMAL ACTION WINDOW", title: "Peak Timing", content: "Evaluating relocation matrix..." }
+  };
+
   useEffect(() => {
     async function fetchReading() {
       setLoading(true);
@@ -53,7 +60,15 @@ function ReadingContent() {
       if (isDemo) {
         const mockId = typeof params.id === 'string' ? params.id : "1";
         const mockData = MOCK_READING_DETAILS[mockId] || MOCK_READING_DETAILS["1"];
-        setReading(mockData);
+        setReading({
+          ...mockData,
+          destination: mockData.destination || "Unknown Destination",
+          destinationLat: mockData.destinationLat || 37.7749,
+          destinationLon: mockData.destinationLon || -122.4194,
+          planetaryLines: mockData.planetaryLines || [],
+          relocatedCusps: mockData.relocatedCusps || [],
+          aiInsights: mockData.aiInsights || DEFAULT_AI_INSIGHTS
+        });
         setLoading(false);
         return;
       }
@@ -85,12 +100,7 @@ function ReadingContent() {
             planetaryLines: ((data.details as any).planetaryLines || []),
             natalPlanets: (data.details as any).natalPlanets || [],
             relocatedCusps: (data.details as any).relocatedCusps || [],
-            aiInsights: (data.details as any).aiInsights || {
-                primary: { label: "MACRO OVERVIEW", title: "The Astrological Verdict", content: "Evaluating relocation matrix..." },
-                highest: { label: "HIGHEST ENERGY", title: "Peak Resonance", content: "Evaluating relocation matrix..." },
-                vulnerable: { label: "FRICTION POINT", title: "Vulnerability Score", content: "Evaluating relocation matrix..." },
-                timing: { label: "OPTIMAL ACTION WINDOW", title: "Peak Timing", content: "Evaluating relocation matrix..." }
-            },
+            aiInsights: (data.details as any).aiInsights || DEFAULT_AI_INSIGHTS,
          });
       } else {
          console.warn("Failed to fetch reading:", error);
@@ -161,13 +171,15 @@ function ReadingContent() {
       longitude: p.longitude
   }));
 
-  const topAcgLine = reading.planetaryLines.length > 0 ? reading.planetaryLines[0] : null;
+  const topAcgLine = (reading.planetaryLines || []).length > 0 ? reading.planetaryLines[0] : null;
+
+  const insights = reading.aiInsights || DEFAULT_AI_INSIGHTS;
 
   const VERDICTS_WITH_COLORS = {
-      primary: { ...reading.aiInsights.primary, color: "var(--text-primary)" },
-      highest: { ...reading.aiInsights.highest, color: "var(--color-planet-jupiter)" },
-      vulnerable: { ...reading.aiInsights.vulnerable, color: "var(--color-planet-saturn)" },
-      timing: { ...reading.aiInsights.timing, color: "var(--color-y2k-blue)" }
+      primary: { ...(insights.primary || DEFAULT_AI_INSIGHTS.primary), color: "var(--text-primary)" },
+      highest: { ...(insights.highest || DEFAULT_AI_INSIGHTS.highest), color: "var(--color-planet-jupiter)" },
+      vulnerable: { ...(insights.vulnerable || DEFAULT_AI_INSIGHTS.vulnerable), color: "var(--color-planet-saturn)" },
+      timing: { ...(insights.timing || DEFAULT_AI_INSIGHTS.timing), color: "var(--color-y2k-blue)" }
   } as any;
 
   const transits = reading.transitWindows || [];
