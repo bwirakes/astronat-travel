@@ -20,7 +20,7 @@
 
 /* ── Content Grid ───────────────────────────────────────── */
 .content {
-    max-width: 1080px;
+    max-width: 1280px;
     margin: 0 auto;
     padding: 0 clamp(0.75rem, 2vw, 1.25rem) var(--space-2xl);
     display: flex;
@@ -34,7 +34,7 @@
 
 .dashboardGrid {
     display: flex;
-    flex-direction: column;
+    flex-direction: column-reverse;
     gap: var(--space-md);
 }
 
@@ -55,7 +55,7 @@
 
 .greeting {
     font-family: var(--font-primary);
-    font-size: clamp(1.6rem, 3.5vw, 2.5rem);
+    font-size: clamp(2.5rem, 6vw, 3.5rem);
     line-height: 1.1;
     letter-spacing: -0.02em;
     margin-top: 0.2rem;
@@ -128,7 +128,7 @@
 
 .bannerTitleMain {
     font-family: var(--font-primary);
-    font-size: clamp(2rem, 4vw, 3rem);
+    font-size: clamp(1.75rem, 4vw, 3rem);
     line-height: 0.9;
     color: #fff;
     text-transform: uppercase;
@@ -179,7 +179,7 @@
 .exploreGrid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: var(--space-sm);
+    gap: var(--space-md);
     padding-bottom: 0;
     flex-shrink: 0;
 }
@@ -296,11 +296,10 @@
 .fab {
     position: fixed;
     bottom: var(--space-xl);
-    right: clamp(1.25rem, 3vw, 3rem);
-    left: auto;
+    right: max(clamp(0.75rem, 2vw, 1.25rem), calc(50vw - 640px + clamp(0.75rem, 2vw, 1.25rem)));
     margin: 0;
-    width: max-content;
     z-index: 100;
+    width: max-content;
     background: var(--color-y2k-blue);
     color: #fff;
     border: none;
@@ -316,6 +315,7 @@
 
 .fab:hover {
     background: #0340c5;
+    transform: translateY(-2px);
 }
 
 /* ═══ RESPONSIVE — Tablet (≥768px): 2-column grid ════════ */
@@ -326,6 +326,10 @@
 
     .content {
         padding: 0 clamp(1rem, 2vw, 2rem) var(--space-xl);
+    }
+    
+    .fab {
+        right: max(clamp(1rem, 2vw, 2rem), calc(50vw - 640px + clamp(1rem, 2vw, 2rem)));
     }
 
     .dashboardGrid {
@@ -363,7 +367,7 @@
 @media (min-width: 1200px) {
     .dashboardGrid {
         grid-template-columns: 3fr 2fr;
-        gap: var(--space-2xl);
+        gap: var(--space-xl);
     }
 
     .greeting {

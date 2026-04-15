@@ -1,7 +1,7 @@
 export const B2B_STATS = [
   { n: '40+', label: 'Countries Mapped', bg: 'var(--bg-raised)' },
-  { n: '12+', label: 'Years Practising', bg: 'var(--color-acqua)', color: '#111b2e' },
-  { n: 'CIA', label: 'Faculty Affiliated', bg: 'var(--color-y2k-blue)', color: '#fcfaf1' },
+  { n: '700+', label: 'Clients Served', bg: 'var(--color-acqua)', color: '#111b2e' },
+  { n: '32', label: 'Sectors Covered', bg: 'var(--color-y2k-blue)', color: '#fcfaf1' },
   { n: 'NDA', label: 'Full Confidentiality', bg: 'var(--color-spiced-life)', color: '#111b2e' }
 ];
 

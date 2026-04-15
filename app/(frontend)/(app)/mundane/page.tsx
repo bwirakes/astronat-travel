@@ -8,7 +8,7 @@ import Image from "next/image";
 import ThemeToggle from "@/app/components/ThemeToggle";
 import { COUNTRY_CHARTS, type CountryChart } from "@/lib/astro/mundane-charts";
 import { MundaneCard } from "@/app/components/MundaneCard";
-import { ChartWheel, type NatalData } from "@/app/components/ChartWheel";
+import ChartClient from "../chart/ChartClient";
 
 // ── Mock Synastry Data ───────────────────────────────────────
 
@@ -19,25 +19,7 @@ const MOCK_SYNASTRY = [
   { description: "Jupiter sextile Country MC", harmonyScore: 92 },
 ];
 
-// ── Helpers ────────────────────────────────────────────────────
 
-function getCountryNatal(country: CountryChart): NatalData {
-  // In a real app, we'd fetch from /api/natal
-  // For demo, we return stable mock data derived from founding
-  return {
-    sun: { longitude: 143 },
-    moon: { longitude: 228 },
-    mercury: { longitude: 156 },
-    venus: { longitude: 108 },
-    mars: { longitude: 280 },
-    jupiter: { longitude: 252 },
-    saturn: { longitude: 335 },
-    uranus: { longitude: 295 },
-    neptune: { longitude: 282 },
-    pluto: { longitude: 219 },
-    houses: [296, 350, 30, 56, 75, 94, 116, 170, 210, 236, 255, 274],
-  };
-}
 
 // ── Verdict Label (Simple version for Mundane) ────────────────
 
@@ -131,47 +113,7 @@ function MundaneClient() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
             >
-              <div style={{ 
-                background: 'var(--surface)', border: '1px solid var(--surface-border)', 
-                borderRadius: 'var(--radius-md)', padding: 'var(--space-lg)',
-                marginBottom: 'var(--space-lg)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-md)' }}>
-                    <div>
-                        <h2 style={{ fontFamily: 'var(--font-secondary)', fontSize: '1.5rem', margin: 0 }}>Natal Chart</h2>
-                        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>
-                            {selectedCountry.note}
-                        </p>
-                    </div>
-                    <span style={{ fontSize: '2.5rem' }}>{selectedCountry.flag}</span>
-                </div>
-                
-                <ChartWheel natal={getCountryNatal(selectedCountry)} size={420} />
-              </div>
-
-              <div style={{ 
-                background: 'var(--surface)', border: '1px solid var(--surface-border)', 
-                borderRadius: 'var(--radius-md)', padding: 'var(--space-lg)'
-              }}>
-                 <h3 style={{ 
-                    fontFamily: 'var(--font-body)', fontSize: '0.75rem', 
-                    textTransform: 'uppercase', letterSpacing: '0.12em', 
-                    color: 'var(--text-secondary)', marginBottom: 'var(--space-md)' 
-                }}>
-                    YOUR RESONANCE WITH {selectedCountry.name.toUpperCase()}
-                 </h3>
-                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
-                    {MOCK_SYNASTRY.map((a, i) => (
-                        <div key={i} style={{ 
-                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                            padding: '0.75rem 0', borderBottom: i < MOCK_SYNASTRY.length - 1 ? '1px solid var(--surface-border)' : 'none'
-                        }}>
-                            <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.9rem', fontWeight: 600 }}>{a.description}</span>
-                            <VerdictLabel score={a.harmonyScore} />
-                        </div>
-                    ))}
-                 </div>
-              </div>
+              <ChartClient isMundane={true} countrySlug={selectedCountry.slug} countryName={selectedCountry.name} />
             </motion.div>
           ) : (
             <motion.div

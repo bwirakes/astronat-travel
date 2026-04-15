@@ -83,7 +83,7 @@ export default function Navbar({ activeHref, centerContent, logoHref = "/", hide
                                   <NavigationMenuContent>
                                     <ul className="grid w-full gap-0 p-0 text-[var(--color-charcoal)]">
                                       <li>
-                                        <NavigationMenuLink render={<Link href="/b2b" />} className="flex items-center justify-between select-none px-4 py-3 leading-none outline-none transition-all hover:bg-[var(--color-y2k-blue)] hover:text-white group border-b border-[var(--color-charcoal)]/10">
+                                        <NavigationMenuLink render={<Link href="/corporate-intelligence" />} className="flex items-center justify-between select-none px-4 py-3 leading-none outline-none transition-all hover:bg-[var(--color-y2k-blue)] hover:text-white group border-b border-[var(--color-charcoal)]/10">
                                           <span className="font-secondary text-[1.05rem]">Corporate Intelligence</span>
                                           <span className="font-mono text-[0.6rem] opacity-40 group-hover:opacity-100 uppercase tracking-tighter">01</span>
                                         </NavigationMenuLink>
@@ -98,12 +98,6 @@ export default function Navbar({ activeHref, centerContent, logoHref = "/", hide
                                         <NavigationMenuLink render={<Link href="/map-from-home" />} className="flex items-center justify-between select-none px-4 py-3 leading-none outline-none transition-all hover:bg-[var(--color-y2k-blue)] hover:text-white group border-b border-[var(--color-charcoal)]/10">
                                           <span className="font-secondary text-[1.05rem]">Map From Home</span>
                                           <span className="font-mono text-[0.6rem] opacity-40 group-hover:opacity-100 uppercase tracking-tighter">03</span>
-                                        </NavigationMenuLink>
-                                      </li>
-                                      <li>
-                                        <NavigationMenuLink render={<Link href="/app" />} className="flex items-center justify-between select-none px-4 py-3 leading-none outline-none transition-all hover:bg-[var(--color-y2k-blue)] hover:text-white group">
-                                          <span className="font-secondary text-[1.05rem]">AstroNat App</span>
-                                          <span className="font-mono text-[0.6rem] opacity-40 group-hover:opacity-100 uppercase tracking-tighter">04</span>
                                         </NavigationMenuLink>
                                       </li>
                                     </ul>
@@ -147,10 +141,9 @@ export default function Navbar({ activeHref, centerContent, logoHref = "/", hide
                 <div className={styles.drawer}>
                     <div className="font-mono text-[9px] uppercase tracking-widest opacity-50 px-4 py-2 mt-2 text-[var(--text-primary)]">Services</div>
 
-                    <Link href="/b2b" className={styles.drawerLink} onClick={() => setOpen(false)}>Corporate Intelligence</Link>
+                    <Link href="/corporate-intelligence" className={styles.drawerLink} onClick={() => setOpen(false)}>Corporate Intelligence</Link>
                     <Link href="/geodetic" className={styles.drawerLink} onClick={() => setOpen(false)}>Geodetic Astrology</Link>
                     <Link href="/map-from-home" className={styles.drawerLink} onClick={() => setOpen(false)}>Map From Home</Link>
-                    <Link href="/app" className={styles.drawerLink} onClick={() => setOpen(false)}>The App</Link>
 
                     <div className="font-mono text-[9px] uppercase tracking-widest opacity-50 px-4 py-2 mt-4 text-[var(--text-primary)]">Menu</div>
                     <div className="px-4 py-3 mt-2 mb-2">

@@ -18,22 +18,13 @@ const renderHtml = (htmlContent: any) => {
 const getBlockTheme = (bgToken: string | undefined) => {
   const token = bgToken?.toLowerCase();
   
-  if (token === 'charcoal') {
-    return {
-      bgClass: "bg-[var(--color-charcoal)]",
-      textClass: "text-[var(--text-on-charcoal)]",
-      mutedClass: "text-[var(--text-on-charcoal)] opacity-70",
-      borderClass: "border-[var(--surface-border)]",
-      isDark: true
-    };
-  }
-  
+  // BRAND COLORS
   if (token === 'y2k-blue' || token === 'y2kblue') {
     return {
       bgClass: "bg-[var(--color-y2k-blue)]",
       textClass: "text-[var(--text-on-y2k-blue)]",
       mutedClass: "text-[var(--text-on-y2k-blue)] opacity-70",
-      borderClass: "border-white/10",
+      borderClass: "border-white/20",
       isDark: true
     };
   }
@@ -44,43 +35,56 @@ const getBlockTheme = (bgToken: string | undefined) => {
       textClass: "text-[var(--text-on-acqua)]",
       mutedClass: "text-[var(--text-on-acqua)] opacity-70",
       borderClass: "border-[var(--surface-border)]",
-      isDark: false // Note: Acqua is dark in light mode, but the variable handles it
+      isDark: false
+    };
+  }
+
+  if (token === 'spiced-life' || token === 'spiced') {
+    return {
+      bgClass: "bg-[var(--color-spiced-life)]",
+      textClass: "text-[#FCFAF1]", 
+      mutedClass: "text-[#FCFAF1] opacity-70",
+      borderClass: "border-white/20",
+      isDark: true
+    };
+  }
+
+  // NEUTRAL / EDITORIAL COLORS
+  if (token === 'eggshell') {
+    return {
+      bgClass: "bg-[var(--color-eggshell)]",
+      textClass: "text-[var(--color-charcoal)]",
+      mutedClass: "text-[var(--color-charcoal)] opacity-70",
+      borderClass: "border-black/5",
+      isDark: false
     };
   }
   
+  // SAFE BRAND DARKS (Remapping Charcoal/Black to Venus Pink)
+  if (token === 'charcoal' || token === 'black') {
+    return {
+      bgClass: "bg-[var(--color-spiced-life)]",
+      textClass: "text-[#FCFAF1]",
+      mutedClass: "text-[#FCFAF1] opacity-70",
+      borderClass: "border-white/20",
+      isDark: true
+    };
+  }
+
+  // NEUTRAL EDITORIAL
   if (token === 'raised') {
     return {
       bgClass: "bg-[var(--bg-raised)]",
       textClass: "text-[var(--text-primary)]",
       mutedClass: "text-[var(--text-secondary)]",
       borderClass: "border-[var(--surface-border)]",
-      isDark: false
+      isDark: false 
     };
   }
 
-  if (token === 'eggshell') {
-    return {
-      bgClass: "bg-[var(--color-eggshell)]",
-      textClass: "text-[var(--text-primary)]",
-      mutedClass: "text-[var(--text-secondary)]",
-      borderClass: "border-[var(--surface-border)]",
-      isDark: false
-    };
-  }
-  
-  if (token === 'black') {
-    return {
-      bgClass: "bg-[var(--bg-raised)]", // Map black to bg-raised (soft dark)
-      textClass: "text-[var(--text-on-charcoal)]",
-      mutedClass: "text-[var(--text-on-charcoal)] opacity-70",
-      borderClass: "border-white/10",
-      isDark: true
-    };
-  }
-
-  // Default fallback (usually transparent/global bg)
+  // DEFAULT SAFE FALLBACK (No more transparent cards)
   return {
-    bgClass: "",
+    bgClass: "bg-[var(--bg-raised)]",
     textClass: "text-[var(--text-primary)]",
     mutedClass: "text-[var(--text-secondary)]",
     borderClass: "border-[var(--surface-border)]",
@@ -168,9 +172,15 @@ export const HeroSection: React.FC<any> = ({ block }) => {
 };
 
 export const StatsStrip: React.FC<any> = ({ block }) => {
+  const cols = block.columns === "2" ? "md:grid-cols-2" : 
+               block.columns === "3" ? "md:grid-cols-3" : 
+               block.columns === "4" ? "md:grid-cols-4" : 
+               block.columns === "5" ? "md:grid-cols-5" : 
+               "md:grid-cols-4";
+
   return (
     <div className="max-w-7xl mx-auto px-6 pt-5 mb-10 border-t border-[var(--surface-border)] relative z-10">
-      <div className={`grid grid-cols-2 md:grid-cols-${block.columns || '4'} gap-8`}>
+      <div className={`grid grid-cols-2 ${cols} gap-8`}>
         {block.stats?.map((s: any, i: number) => (
           <div key={i} className="flex flex-col">
             <span className="font-secondary text-3xl font-semibold text-[var(--text-primary)] leading-none">{s.n}</span>
@@ -194,6 +204,31 @@ export const StatementBand: React.FC<any> = ({ block }) => {
     );
   }
 
+  if (block.variant === "full-width") {
+    return (
+      <section className="relative overflow-hidden py-20 md:py-32 border-t-2 border-b border-[var(--surface-border)]">
+        {/* Decorative background monogram */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none select-none absolute -top-8 right-0 font-secondary text-[22rem] md:text-[32rem] leading-none text-[var(--text-primary)] opacity-[0.035] -translate-x-16"
+        >
+          ♄
+        </span>
+        <div className="relative z-10 max-w-7xl mx-auto px-6">
+          {block.kicker && (
+            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--text-tertiary)] mb-12">
+              {block.kicker}
+            </div>
+          )}
+          <div
+            className="font-secondary text-2xl leading-relaxed text-[var(--text-primary)] max-w-4xl"
+            dangerouslySetInnerHTML={{ __html: renderHtml(block.bodyHtml) }}
+          />
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="py-16 md:py-24 border-b border-[var(--surface-border)]">
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-[1fr_2.5fr] gap-8 md:gap-20 items-center">
@@ -209,7 +244,7 @@ export const CardGrid: React.FC<any> = ({ block }) => {
   const sectionTheme = getBlockTheme(block.sectionBg);
 
   return (
-    <section className={`py-16 md:py-24 theme-block-h ${sectionTheme.bgClass} ${sectionTheme.textClass}`}>
+    <section id={block.anchorId ?? undefined} className={`py-16 md:py-24 theme-block-h ${sectionTheme.bgClass} ${sectionTheme.textClass}`}>
       <div className="max-w-7xl mx-auto px-6">
         <div className={`flex justify-between items-end mb-16 border-b ${sectionTheme.borderClass} pb-4`}>
           <div>
@@ -223,14 +258,23 @@ export const CardGrid: React.FC<any> = ({ block }) => {
             </h2>
           </div>
           {block.sidebarText && (
-            <p className={`hidden md:block font-body text-sm leading-relaxed ${sectionTheme.mutedClass} max-w-sm`}>
+            <p className={`hidden md:block font-body text-sm leading-relaxed ${sectionTheme.mutedClass} max-w-lg`}>
               {block.sidebarText}
             </p>
           )}
         </div>
         
-        <div className={`grid grid-cols-1 md:grid-cols-${block.columns || '2'} gap-6`}>
-          {block.cards?.map((p: any, i: number) => {
+        {/* Helper to ensure Tailwind doesn't purge dynamic grid classes */}
+        {(() => {
+          const cols = block.columns === "1" ? "md:grid-cols-1" : 
+                       block.columns === "2" ? "md:grid-cols-2" : 
+                       block.columns === "3" ? "md:grid-cols-3" : 
+                       block.columns === "4" ? "md:grid-cols-4" : 
+                       "md:grid-cols-2";
+          
+          return (
+            <div className={`grid grid-cols-1 ${cols} gap-6`}>
+              {block.cards?.map((p: any, i: number) => {
             if (isPricing) {
               return (
                 <div key={i} className={`relative p-8 border flex flex-col h-full bg-[var(--surface)] ${p.primary ? 'border-[var(--color-y2k-blue)] shadow-[8px_8px_0px_var(--color-y2k-blue)]' : 'border-[var(--surface-border)]'} rounded-[2rem]`}>
@@ -276,6 +320,8 @@ export const CardGrid: React.FC<any> = ({ block }) => {
             );
           })}
         </div>
+      );
+    })()}
       </div>
     </section>
   );
@@ -335,13 +381,13 @@ export const SplitContent: React.FC<any> = ({ block }) => {
              {block.leftCol && (
                <div className="space-y-6">
                   <h3 className="font-secondary text-2xl md:text-3xl text-[var(--text-primary)] mb-6">{block.leftCol.title}</h3>
-                  <div className="font-body text-sm md:text-base leading-relaxed space-y-6 opacity-80 text-[var(--text-secondary)]" dangerouslySetInnerHTML={{ __html: renderHtml(block.leftCol.body) }} />
+                  <div className="font-body text-sm md:text-base leading-relaxed space-y-6 opacity-80 text-[var(--text-secondary)] prose-editorial" dangerouslySetInnerHTML={{ __html: renderHtml(block.leftCol.body) }} />
                </div>
              )}
              {block.rightCol && (
                <div className="space-y-6">
                   <h3 className="font-secondary text-2xl md:text-3xl text-[var(--text-primary)] mb-6">{block.rightCol.title}</h3>
-                  <div className="font-body text-sm md:text-base leading-relaxed space-y-6 opacity-80 text-[var(--text-secondary)]" dangerouslySetInnerHTML={{ __html: renderHtml(block.rightCol.body) }} />
+                  <div className="font-body text-sm md:text-base leading-relaxed space-y-6 opacity-80 text-[var(--text-secondary)] prose-editorial" dangerouslySetInnerHTML={{ __html: renderHtml(block.rightCol.body) }} />
                </div>
              )}
            </div>
@@ -353,12 +399,17 @@ export const SplitContent: React.FC<any> = ({ block }) => {
   const theme = getBlockTheme(block.bgToken);
   const isImageLeft = block.imageSide === "left";
   const textPaddingClass = isImageLeft 
-    ? `lg:pr-[max(1.5rem,calc((100vw-80rem)/2))] lg:pl-16` // Text on Right
+    ? `lg:pr-[max(1.5rem,calc((100vw-80rem)/2))] lg:pl-16` // Text on Right (80rem = 1280px)
     : `lg:pl-[max(1.5rem,calc((100vw-80rem)/2))] lg:pr-16`; // Text on Left
 
+  const gridColsClass = block.image && !block.rightPanel 
+    ? (isImageLeft ? 'lg:grid-cols-[1.1fr_0.9fr]' : 'lg:grid-cols-[0.9fr_1.1fr]')
+    : 'lg:grid-cols-2';
+
   return (
-    <section className={`border-y theme-block-h ${theme.borderClass} ${theme.bgClass} ${theme.textClass}`}>
-      <div className={`grid grid-cols-1 lg:grid-cols-${block.image && !block.rightPanel ? (isImageLeft ? '[1.1fr_0.9fr]' : '[0.9fr_1.1fr]') : '2'} min-h-[500px]`}>
+    <section className={`border-y theme-block-h ${theme.bgClass} ${theme.borderClass} ${theme.textClass}`} style={block.bgToken === 'acqua' ? { backgroundColor: '#CAF1F0', color: '#111b2e' } : undefined}>
+      <div className="max-w-7xl mx-auto w-full">
+      <div className={`grid grid-cols-1 ${gridColsClass} min-h-[500px]`}>
          {/* TEXT COLUMN */}
          <div className={`flex flex-col py-16 md:py-24 px-6 ${textPaddingClass} ${isImageLeft && block.image ? 'lg:order-2' : ''}`}>
             {block.kicker && <div className={`font-mono text-[10px] uppercase tracking-[0.2em] mb-4 ${theme.isDark ? 'text-[var(--color-acqua)]' : 'text-[var(--color-spiced-life)]'}`}>{block.kicker}</div>}
@@ -373,8 +424,8 @@ export const SplitContent: React.FC<any> = ({ block }) => {
               </h2>
             )}
 
-            {block.body && <div className={`text-sm md:text-base leading-relaxed mb-4 ${theme.mutedClass} prose prose-p:mb-4`} dangerouslySetInnerHTML={{ __html: renderHtml(block.body) }} />}
-            {block.body2 && <p className={`text-sm md:text-base leading-relaxed mb-12 ${theme.mutedClass}`}>{block.body2}</p>}
+            {block.body && <div className={`text-sm md:text-base leading-relaxed mb-4 ${theme.mutedClass} prose-editorial prose-editorial-p:mb-4`} dangerouslySetInnerHTML={{ __html: renderHtml(block.body) }} />}
+            {block.bodyHtml && <div className={`text-sm md:text-base leading-relaxed mb-4 ${theme.mutedClass} prose-editorial prose-editorial-p:mb-4`} dangerouslySetInnerHTML={{ __html: renderHtml(block.bodyHtml) }} />}
             
             {block.features && block.features.length > 0 && (
               <>
@@ -406,7 +457,7 @@ export const SplitContent: React.FC<any> = ({ block }) => {
             
             <div className="flex gap-4 flex-wrap mt-auto">
               {block.primaryCta?.label && (
-                <Link href={block.primaryCta.href || "#"} className={`self-start px-8 py-4 font-mono text-[11px] font-semibold uppercase tracking-widest rounded-full hover:opacity-80 transition-opacity ${theme.isDark ? 'bg-[var(--color-acqua)] text-[#111b2e]' : 'bg-[var(--color-y2k-blue)] text-white'}`}>
+                <Link href={block.primaryCta.href || "#"} className="self-start px-8 py-4 font-mono text-[11px] font-semibold uppercase tracking-widest rounded-full hover:opacity-80 transition-opacity bg-[var(--color-y2k-blue)] text-white">
                   {block.primaryCta.label} <ArrowRight size={14} className="inline-block flex-shrink-0" />
                 </Link>
               )}
@@ -421,39 +472,41 @@ export const SplitContent: React.FC<any> = ({ block }) => {
          
          {/* RIGHT COLUMN - IMAGE OR RETAINER PANEL */}
          {block.image ? (
-            <div className={`relative min-h-[400px] lg:min-h-full ${block.imageSide === "left" ? 'lg:order-1 border-r' : 'border-l'} ${theme.borderClass} overflow-hidden`}>
+            <div className={`relative h-full w-full min-h-[400px] lg:min-h-full ${block.imageSide === "left" ? 'lg:order-1 border-r' : 'border-l'} ${theme.borderClass} overflow-hidden`}>
                <Image src={block.image} alt="Section visual" fill className="object-cover" />
             </div>
          ) : block.rightPanel ? (
-            <div className={`flex flex-col pt-16 md:pt-32 pb-16 px-6 lg:pr-[max(1.5rem,calc((100vw-80rem)/2))] lg:pl-16 border-l ${theme.borderClass} relative ${theme.isDark ? 'bg-white/5' : 'bg-[var(--color-charcoal)]'}`}>
+            <div className="flex flex-col h-full w-full pt-16 md:pt-32 pb-16 px-6 lg:pr-[max(1.5rem,calc((100vw-80rem)/2))] lg:pl-16 border-l border-black/10 relative" style={{ backgroundColor: '#CAF1F0', color: '#111b2e' }}>
               <div className="sticky top-24">
-                 {block.rightPanel.kicker && <div className="font-mono text-[10px] uppercase tracking-widest text-[#567a83] mb-8 opacity-80">{block.rightPanel.kicker}</div>}
                  <div className="mb-4">
-                   <div className="font-mono text-[10px] uppercase tracking-[0.2em] opacity-50 mb-2 text-white">Investment</div>
-                   <div className="font-primary text-5xl md:text-7xl font-semibold leading-none text-white">
-                     <sup className="text-2xl font-normal opacity-90 pr-1">SGD</sup>{block.rightPanel.priceLine || "3,200"}
+                   <div className="font-mono text-[10px] uppercase tracking-[0.2em] opacity-50 mb-2 text-[var(--text-on-acqua)]">{block.rightPanel.kicker || "Engagement"}</div>
+                   <div className="font-primary text-4xl md:text-5xl font-semibold leading-none text-[var(--color-y2k-blue)]">
+                     {block.rightPanel.priceLine || "By Engagement"}
                    </div>
-                   <div className="font-body text-xs opacity-50 mt-4 font-light text-white leading-relaxed max-w-[280px]">{block.rightPanel.priceNote}</div>
+                   <div className="font-body text-xs opacity-60 mt-4 font-light leading-relaxed max-w-[280px] text-[var(--text-on-acqua)]">{block.rightPanel.priceNote}</div>
                  </div>
-                 
-                 <div className="flex items-center gap-3 mt-8 mb-10 font-mono text-[9px] uppercase tracking-widest text-white/50 max-w-[240px] leading-relaxed">
-                   <div className="w-2 h-2 rounded-full bg-[#3fb950] shrink-0 mt-0.5"></div>
+
+                 <div className="flex items-center gap-3 mt-8 mb-10 font-mono text-[9px] uppercase tracking-widest max-w-[240px] leading-relaxed text-[var(--text-on-acqua)] opacity-60">
+                   <div className="w-2 h-2 rounded-full bg-[#3fb950] shrink-0 mt-0.5 opacity-100"></div>
                    <span>{block.rightPanel.limitNote}</span>
                  </div>
-                 
+
                  {block.rightPanel.ctaLabel && (
-                   <Link href={block.rightPanel.ctaHref || "#"} style={{ backgroundColor: 'var(--color-acqua)', color: 'var(--color-charcoal)' }} className="w-full text-center py-5 px-6 font-semibold font-mono text-[10px] uppercase tracking-widest transition-opacity hover:opacity-80 mb-24 block">
+                   <Link href={block.rightPanel.ctaHref || "#"} className="w-full text-center py-5 px-6 font-semibold font-mono text-[10px] uppercase tracking-widest transition-opacity hover:opacity-80 mb-24 block bg-[var(--color-charcoal)] text-[var(--color-eggshell)]">
                       {block.rightPanel.ctaLabel}
                    </Link>
                  )}
 
-                 <div className="mt-20 border-t border-white/10 w-full pt-8">
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-[var(--color-y2k-blue)] shrink-0 mb-2">{block.rightPanel.testimonialKicker}</p>
-                    <div className="font-mono text-[9px] text-[#fcfaf1] opacity-50 mb-8 lowercase">{block.rightPanel.testimonialMeta}</div>
-                 </div>
+                 {block.rightPanel.testimonialQuote && (
+                   <div className="mt-20 border-t border-black/10 w-full pt-8">
+                      <p className="font-secondary italic text-base md:text-lg leading-snug text-[#111b2e] mb-6">&ldquo;{block.rightPanel.testimonialQuote}&rdquo;</p>
+                      <p className="font-mono text-[9px] uppercase tracking-widest text-[#111b2e] opacity-60">{block.rightPanel.testimonialKicker} · {block.rightPanel.testimonialMeta}</p>
+                   </div>
+                 )}
               </div>
             </div>
          ) : <div />}
+      </div>
       </div>
     </section>
   );
@@ -470,18 +523,29 @@ export const ProcessTimeline: React.FC<any> = ({ block }) => {
             </h2>
          </div>
          
-         <div className={`grid grid-cols-1 md:grid-cols-${block.steps?.length || 5} gap-8 overflow-hidden relative`}>
-            <div className="absolute top-8 left-0 right-0 h-px bg-[var(--color-y2k-blue)] opacity-10 md:block hidden" />
-            {block.steps?.map((step: any, i: number) => (
-               <div key={i} className="relative text-center flex flex-col items-center">
-                  <div className="w-16 h-16 rounded-full border border-[var(--color-y2k-blue)] bg-[var(--bg)] flex items-center justify-center font-primary text-xl mb-6 relative z-10 text-[var(--color-y2k-blue)]">
-                     {step.n}
+          {(() => {
+            const stepsLen = block.steps?.length || 5;
+            const cols = stepsLen === 3 ? "md:grid-cols-3" : 
+                         stepsLen === 4 ? "md:grid-cols-4" : 
+                         stepsLen === 5 ? "md:grid-cols-5" : 
+                         stepsLen === 6 ? "md:grid-cols-6" : 
+                         "md:grid-cols-5";
+            
+            return (
+              <div className={`grid grid-cols-1 ${cols} gap-8 overflow-hidden relative`}>
+                <div className="absolute top-8 left-0 right-0 h-px bg-[var(--color-y2k-blue)] opacity-10 md:block hidden" />
+                {block.steps?.map((step: any, i: number) => (
+                  <div key={i} className="relative text-center flex flex-col items-center">
+                    <div className="w-16 h-16 rounded-full border border-[var(--color-y2k-blue)] bg-[var(--bg)] flex items-center justify-center font-primary text-xl mb-6 relative z-10 text-[var(--color-y2k-blue)]">
+                       {step.n}
+                    </div>
+                    <h4 className="font-mono text-[10px] uppercase tracking-widest mb-2 text-[var(--text-primary)]">{step.title}</h4>
+                    <p className="text-[10px] opacity-60 leading-relaxed px-4 text-[var(--text-secondary)]">{step.body}</p>
                   </div>
-                  <h4 className="font-mono text-[10px] uppercase tracking-widest mb-2 text-[var(--text-primary)]">{step.title}</h4>
-                  <p className="text-[10px] opacity-60 leading-relaxed px-4 text-[var(--text-secondary)]">{step.body}</p>
-               </div>
-            ))}
-         </div>
+                ))}
+              </div>
+            );
+          })()}
       </div>
     </section>
   );
@@ -499,15 +563,14 @@ export const CtaBand: React.FC<any> = ({ block }) => {
             {block.accent && <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--text-on-acqua)] opacity-60 mb-6">{block.accent}</div>}
             <h2 className="font-primary text-5xl md:text-7xl uppercase leading-[0.85] text-[var(--text-on-acqua)] mb-6">
               {block.titleLine1}<br/>
-              <span className="font-secondary italic lowercase opacity-80">{block.titleLine2}</span>
+              <span className="font-secondary italic lowercase" style={{ color: 'var(--dispatch-color)' }}>{block.titleLine2}</span>
             </h2>
             <p className="font-body text-sm md:text-base leading-relaxed opacity-80 text-[var(--text-on-acqua)] max-w-md">{block.newsletterBody}</p>
           </div>
-          <div className={`${theme.isDark ? 'bg-white/5' : 'bg-[var(--bg-raised)]'} p-8 md:p-12 rounded-[2rem]`}>
-             <form className="flex flex-col gap-4">
-               <input type="email" placeholder="Email Address" className="bg-transparent border-b border-white/20 text-white pb-4 font-mono text-sm placeholder:opacity-50 focus:outline-none focus:border-[var(--color-y2k-blue)]" />
-               <button type="button" className="mt-8 bg-[var(--color-y2k-blue)] text-white px-8 py-4 font-mono text-[10px] uppercase tracking-widest hover:opacity-90">Subscribe</button>
-             </form>
+          <div className="bg-[var(--color-y2k-blue)] p-8 md:p-12 rounded-[2rem] flex flex-col items-center justify-center text-center gap-4">
+            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-white/60 mb-2">Newsletter</div>
+            <div className="font-primary text-4xl md:text-5xl uppercase leading-none text-white">Coming<br/>Soon</div>
+            <p className="font-body text-xs leading-relaxed text-white/70 max-w-[220px] mt-2">Launching shortly — stay tuned for the first dispatch.</p>
           </div>
         </div>
       </section>
@@ -532,13 +595,13 @@ export const CtaBand: React.FC<any> = ({ block }) => {
                 </Link>
              )}
            </div>
-           {block.perks && (
-              <div className="bg-[var(--bg-raised)] text-white p-10 md:p-12 rounded-[2rem]">
+            {block.perks && (
+              <div className={`${theme.isDark ? 'bg-white/5' : 'bg-[var(--bg-raised)]'} ${theme.isDark ? 'text-white' : 'text-[var(--text-primary)]'} p-10 md:p-12 rounded-[2rem]`}>
                  <ul className="space-y-6">
                    {block.perks.map((p: any, i: number) => (
                       <li key={i} className="flex gap-4">
                          <span className="text-[var(--color-y2k-blue)] shrink-0">✦</span>
-                         <span className="font-body text-sm leading-relaxed opacity-90">{p.line}</span>
+                         <span className="font-body text-sm leading-relaxed opacity-90 prose-editorial">{p.line}</span>
                       </li>
                    ))}
                  </ul>
@@ -554,7 +617,7 @@ export const CtaBand: React.FC<any> = ({ block }) => {
       <section className={`py-24 md:py-32 border-y theme-block-h ${theme.borderClass} text-center ${theme.bgClass} ${theme.textClass}`}>
          <div className="max-w-3xl mx-auto px-6">
             <h2 className="font-primary text-3xl md:text-5xl uppercase leading-tight mb-8">{block.heading}</h2>
-            <div className={`font-body text-sm md:text-base leading-relaxed ${theme.mutedClass} mb-10 space-y-6 prose prose-p:mb-4 mx-auto`} dangerouslySetInnerHTML={{ __html: renderHtml(block.body) }} />
+            <div className={`font-body text-sm md:text-base leading-relaxed ${theme.mutedClass} mb-10 space-y-6 prose-editorial prose-editorial-p:mb-4 mx-auto`} dangerouslySetInnerHTML={{ __html: renderHtml(block.body) }} />
             {block.closing && <p className="font-secondary text-xl md:text-2xl italic">{block.closing}</p>}
          </div>
       </section>
@@ -601,11 +664,13 @@ export const CtaBand: React.FC<any> = ({ block }) => {
     <section className="py-24 md:py-32 bg-[var(--color-y2k-blue)] overflow-hidden border-t border-white/5 relative">
       {block.decorativeElement === "rotating-svg" && (
         <>
-          <div className="absolute top-1/2 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] opacity-10 pointer-events-none animate-[spin_80s_linear_infinite] z-0 hidden lg:block">
-            <svg viewBox="0 0 200 200" fill="none"><circle cx="100" cy="100" r="96" stroke="#F8F5EC" strokeWidth=".5"/><ellipse cx="100" cy="100" rx="56" ry="96" stroke="#F8F5EC" strokeWidth=".4"/><ellipse cx="100" cy="100" rx="96" ry="28" stroke="#F8F5EC" strokeWidth=".3"/><ellipse cx="100" cy="100" rx="96" ry="58" stroke="#F8F5EC" strokeWidth=".3"/><line x1="4" y1="100" x2="196" y2="100" stroke="#F8F5EC" strokeWidth=".35"/><line x1="100" y1="4" x2="100" y2="196" stroke="#F8F5EC" strokeWidth=".35"/></svg>
+          {/* Large centered globe — main watermark */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(90vw,900px)] h-[min(90vw,900px)] opacity-[0.12] pointer-events-none animate-[spin_120s_linear_infinite] z-0">
+            <svg viewBox="0 0 200 200" fill="none" className="w-full h-full"><circle cx="100" cy="100" r="96" stroke="#F8F5EC" strokeWidth=".5"/><ellipse cx="100" cy="100" rx="56" ry="96" stroke="#F8F5EC" strokeWidth=".4"/><ellipse cx="100" cy="100" rx="30" ry="96" stroke="#F8F5EC" strokeWidth=".3"/><ellipse cx="100" cy="100" rx="96" ry="28" stroke="#F8F5EC" strokeWidth=".3"/><ellipse cx="100" cy="100" rx="96" ry="58" stroke="#F8F5EC" strokeWidth=".3"/><ellipse cx="100" cy="100" rx="96" ry="75" stroke="#F8F5EC" strokeWidth=".25"/><line x1="4" y1="100" x2="196" y2="100" stroke="#F8F5EC" strokeWidth=".35"/><line x1="100" y1="4" x2="100" y2="196" stroke="#F8F5EC" strokeWidth=".35"/></svg>
           </div>
-          <div className="absolute top-[80%] right-[-100px] -translate-y-1/2 w-[700px] h-[700px] opacity-10 pointer-events-none animate-[spin_80s_reverse_linear_infinite] z-0">
-            <svg viewBox="0 0 200 200" fill="none"><circle cx="100" cy="100" r="96" stroke="#F8F5EC" strokeWidth=".5"/><ellipse cx="100" cy="100" rx="56" ry="96" stroke="#F8F5EC" strokeWidth=".4"/><ellipse cx="100" cy="100" rx="96" ry="28" stroke="#F8F5EC" strokeWidth=".3"/><ellipse cx="100" cy="100" rx="96" ry="58" stroke="#F8F5EC" strokeWidth=".3"/><line x1="4" y1="100" x2="196" y2="100" stroke="#F8F5EC" strokeWidth=".35"/><line x1="100" y1="4" x2="100" y2="196" stroke="#F8F5EC" strokeWidth=".35"/></svg>
+          {/* Smaller offset globe — right side depth layer */}
+          <div className="absolute top-1/2 right-[-180px] -translate-y-1/2 w-[500px] h-[500px] opacity-[0.07] pointer-events-none animate-[spin_80s_reverse_linear_infinite] z-0 hidden lg:block">
+            <svg viewBox="0 0 200 200" fill="none" className="w-full h-full"><circle cx="100" cy="100" r="96" stroke="#F8F5EC" strokeWidth=".5"/><ellipse cx="100" cy="100" rx="56" ry="96" stroke="#F8F5EC" strokeWidth=".4"/><ellipse cx="100" cy="100" rx="96" ry="28" stroke="#F8F5EC" strokeWidth=".3"/><ellipse cx="100" cy="100" rx="96" ry="58" stroke="#F8F5EC" strokeWidth=".3"/><line x1="4" y1="100" x2="196" y2="100" stroke="#F8F5EC" strokeWidth=".35"/><line x1="100" y1="4" x2="100" y2="196" stroke="#F8F5EC" strokeWidth=".35"/></svg>
           </div>
         </>
       )}
@@ -619,15 +684,21 @@ export const CtaBand: React.FC<any> = ({ block }) => {
             ) : block.heading}
           </h2>
           <p className="text-sm md:text-base opacity-70 leading-relaxed mb-12 text-[#fcfaf1] max-w-lg mx-auto">{block.body}</p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
             {block.primaryCta?.label && (
-              <Link href={block.primaryCta.href || "#"} className="btn-primary bg-[#fcfaf1] text-[#111b2e] px-10 py-5 font-mono text-[10px] uppercase tracking-widest hover:bg-[var(--color-acqua)] border-none text-center rounded-none relative overflow-hidden">
-                <span className="relative z-10">{block.primaryCta.label}</span> <ArrowRight size={14} className="inline-block flex-shrink-0 relative z-10" />
+              <Link
+                href={block.primaryCta.href || "#"}
+                className="inline-flex items-center gap-3 bg-[#fcfaf1] text-[#111b2e] px-10 py-5 font-mono text-[10px] uppercase tracking-widest transition-transform duration-200 hover:scale-105 active:scale-95"
+              >
+                {block.primaryCta.label} <ArrowRight size={14} className="flex-shrink-0" />
               </Link>
             )}
             {block.secondaryCta?.label && (
-              <Link href={block.secondaryCta.href || "#"} className="btn-secondary border-white/30 text-[#fcfaf1] px-10 py-5 font-mono text-[10px] uppercase tracking-widest hover:border-white text-center rounded-none relative overflow-hidden">
-                <span className="relative z-10">{block.secondaryCta.label}</span>
+              <Link
+                href={block.secondaryCta.href || "#"}
+                className="font-mono text-[10px] uppercase tracking-widest text-[#fcfaf1] opacity-60 hover:opacity-100 underline underline-offset-4 transition-opacity duration-200"
+              >
+                {block.secondaryCta.label}
               </Link>
             )}
           </div>

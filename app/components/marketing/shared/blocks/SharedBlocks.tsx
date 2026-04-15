@@ -49,14 +49,14 @@ export const TestimonialGrid: React.FC<any> = ({ block }) => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {block.items?.map((item: any, i: number) => (
-            <div key={i} className="p-8 md:p-10 border border-[var(--surface-border)] rounded-[2rem] bg-[var(--bg)] flex flex-col h-full hover:border-[var(--color-y2k-blue)] transition-colors group">
-               <div className="text-[var(--color-y2k-blue)] font-primary text-5xl opacity-40 mb-4 leading-none">“</div>
-               <p className="font-body text-sm md:text-base leading-relaxed opacity-90 text-[var(--text-secondary)] mb-8 flex-1">
+            <div key={i} className="p-8 md:p-10 border border-[var(--surface-border)] rounded-[2rem] flex flex-col h-full transition-colors group" style={{ backgroundColor: 'var(--testimonial-card-bg)', color: 'var(--testimonial-card-text)' }}>
+               <div className="font-primary text-5xl opacity-40 mb-4 leading-none" style={{ color: 'var(--testimonial-card-accent)' }}>{'"'}</div>
+               <p className="font-body text-sm md:text-base leading-relaxed opacity-90 mb-8 flex-1">
                  {item.quote}
                </p>
-               <div className="flex flex-col border-t border-[var(--surface-border)] pt-4 mt-auto group-hover:border-[rgba(26,54,93,0.1)] transition-colors">
-                 <span className="font-primary font-semibold text-sm tracking-widest uppercase text-[var(--text-primary)]">{item.name}</span>
-                 <span className="font-mono text-[9px] opacity-50 mt-1 uppercase text-[var(--text-tertiary)]">{item.location}</span>
+               <div className="flex flex-col border-t pt-4 mt-auto" style={{ borderColor: 'var(--testimonial-card-border)' }}>
+                 <span className="font-primary font-semibold text-sm tracking-widest uppercase">{item.name}</span>
+                 <span className="font-mono text-[9px] opacity-50 mt-1 uppercase">{item.location}</span>
                </div>
             </div>
           ))}
@@ -102,7 +102,7 @@ export const PullQuote: React.FC<any> = ({ block }) => {
   return (
     <section className="py-24 md:py-32 border-y border-[var(--surface-border)]" style={{ background: bg, color }}>
       <div className="max-w-4xl mx-auto px-6 text-center">
-        <div style={{ color: accent }} className="font-secondary italic text-6xl md:text-8xl mb-8 leading-none opacity-40">“</div>
+        <div style={{ color: accent }} className="font-secondary italic text-6xl md:text-8xl mb-8 leading-none opacity-40">"</div>
         <div className="font-secondary text-2xl md:text-4xl lg:text-5xl leading-tight mb-8" dangerouslySetInnerHTML={{ __html: renderHtml(block.quote) }} />
         {block.attribution && (
            <div className="font-mono text-[10px] uppercase tracking-[0.2em] opacity-60">

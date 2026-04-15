@@ -1,6 +1,6 @@
 "use client";
 
-import GeodeticMapSVG from "@/app/geodetic/components/GeodeticMapSVG";
+import InteractiveGeodeticWorldMap from "@/app/geodetic/components/InteractiveGeodeticWorldMap";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Block = Record<string, any>;
@@ -30,24 +30,21 @@ export function GeoMapSection({ block }: { block: Block }) {
         )}
 
         {/* Sepharial map container */}
-        <div className="bg-[var(--color-charcoal)] pt-8 [clip-path:var(--cut-md)] border border-[var(--surface-border)]">
-          <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[rgba(248,245,236,0.35)] mb-4 px-8 hidden md:block">
-            Sepharial Geodetic System — 0° Aries anchored to 0° Longitude
-            (Greenwich Meridian)
+        <div className="bg-[#000000] pt-8 [clip-path:var(--cut-md)] border border-[var(--surface-border)]">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center px-8 mb-4">
+            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[rgba(248,245,236,0.35)] hidden md:block">
+              Sepharial Geodetic System — 0° Aries anchored to 0° Longitude
+              (Greenwich Meridian)
+            </div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--color-y2k-blue)] border border-[var(--color-y2k-blue)]/30 rounded-full px-3 py-1">
+              Hover or click to explore regions
+            </div>
           </div>
-          <GeodeticMapSVG className="w-full h-auto block" />
+          <InteractiveGeodeticWorldMap className="w-full h-auto block min-h-[400px]" />
           <div className="flex flex-wrap gap-8 py-5 px-8 border-t border-[rgba(248,245,236,0.08)] bg-[rgba(248,245,236,0.03)]">
             <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.1em] text-[rgba(248,245,236,0.35)]">
               <span className="w-4 h-1 bg-[rgba(230,122,122,0.7)] shrink-0" />
               0° Aries — Greenwich Meridian
-            </div>
-            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.1em] text-[rgba(248,245,236,0.35)]">
-              <span className="w-4 h-1 bg-[rgba(202,241,240,0.6)] shrink-0" />
-              Key city
-            </div>
-            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.1em] text-[rgba(248,245,236,0.35)]">
-              <span className="w-4 h-1 bg-[rgba(230,122,122,0.85)] shrink-0" />
-              Singapore (AstroNat base)
             </div>
             <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.1em] text-[rgba(248,245,236,0.35)]">
               <span className="w-4 h-1 bg-[rgba(248,245,236,0.12)] shrink-0" />

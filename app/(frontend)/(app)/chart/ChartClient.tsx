@@ -82,13 +82,21 @@ type Tab = "overview" | "map" | "aspects";
 
 // ── Main Page ─────────────────────────────────────────────────
 
-export default function ChartPage() {
+export default function ChartPage({ 
+  isMundane = false, 
+  countrySlug, 
+  countryName = "Country" 
+}: { 
+  isMundane?: boolean, 
+  countrySlug?: string, 
+  countryName?: string 
+} = {}) {
   const searchParams = useSearchParams();
   const isDemo = searchParams.get("demo") === "true";
   const [tab, setTab] = useState<Tab>("overview");
   const [computedLines, setComputedLines] = useState<{planet: string, angle: string, distance_km: number}[]>([]);
   const [isDark, setIsDark] = useState(true);
-  const [loading, setLoading] = useState(!isDemo);
+  const [loading, setLoading] = useState(!isDemo && (!isMundane || !!countrySlug));
   const [error, setError] = useState<string | null>(null);
   
   // Right pane toggle switch
@@ -116,8 +124,13 @@ export default function ChartPage() {
 
   useEffect(() => {
     if (!isDemo) {
+      if (isMundane && !countrySlug) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
-      fetch("/api/natal")
+      const endpoint = isMundane ? `/api/mundane-natal?slug=${countrySlug}` : "/api/natal";
+      fetch(endpoint)
         .then(async r => {
           if (!r.ok) {
             const err = await r.json();
@@ -178,13 +191,12 @@ export default function ChartPage() {
   })) : realPlanets.map(p => ({ planet: p.name, longitude: p.longitude, isAngle: p.isAngle }));
 
   // Date and Profile mock header
-  const profileName = isDemo ? "Brandy's" : "Your";
+  const profileName = isMundane ? countryName : (isDemo ? "Brandy's" : "Your");
 
   const remainingPlanets = displayPlanets.filter(x => !["Ascendant", "Sun", "Moon"].includes(x.planet));
 
-  return (
-    <DashboardLayout maxWidth="980px" backLabel="Home">
-
+  const content = (
+    <>
 
         {/* Tab Switcher */}
         <div style={{ display: "flex", gap: "0.5rem", marginBottom: "clamp(1rem, 3vw, 2rem)", overflowX: "auto", paddingBottom: "4px" }}>
@@ -489,7 +501,20 @@ export default function ChartPage() {
 
         </AnimatePresence>
 
+    </>
+  );
 
+  if (isMundane) {
+     return (
+        <div className="w-full mx-auto max-w-[980px]">
+           {content}
+        </div>
+     );
+  }
+
+  return (
+    <DashboardLayout maxWidth="980px" backLabel="Home">
+       {content}
     </DashboardLayout>
   );
 }

@@ -1,3 +1,5 @@
+import { B2B_STATS } from "../data/b2b";
+
 /** Default homepage layout using universal block types. */
 export const homeFallbackBlocksUniversal = [
   {
@@ -8,7 +10,7 @@ export const homeFallbackBlocksUniversal = [
       'Where In <em class="italic font-medium text-[var(--color-y2k-blue)]">The World</em><br/>Is Your Map<br/>Calling You?',
     subtitle:
       "Astrocartography, geodetic forecasting & travel electional astrology — read by a practitioner who takes both the stars and the evidence seriously.",
-    primaryCta: { label: "Read My Map →", href: "/flow" },
+    primaryCta: { label: "Read My Map →", href: "https://calendly.com/astronat/60min-acg-reading" },
     secondaryCta: { label: "View Services", href: "#services" },
     heroImage: "/astronat-hero.jpg",
     badge: { kicker: "Currently Exploring", title: "Europe & the Mediterranean" },
@@ -20,12 +22,7 @@ export const homeFallbackBlocksUniversal = [
   },
   {
     blockType: "statsStrip",
-    stats: [
-      { n: "500+", label: "Charts Read" },
-      { n: "12+", label: "Years Practising" },
-      { n: "40+", label: "Countries Mapped" },
-      { n: "CIA", label: "Affiliated Faculty" },
-    ],
+    stats: B2B_STATS.map(({ n, label }) => ({ n, label })),
     columns: "4",
   },
   {
@@ -44,14 +41,15 @@ export const homeFallbackBlocksUniversal = [
     blockType: "statementBand",
     kicker: "About the Practice",
     bodyHtml:
-      'AstroNat is an editorial travel astrology practice for those who seek more than just a destination. It is for the <em class="italic font-semibold text-[var(--color-y2k-blue)]">traveller, the expat, and the CEO</em> who recognises that where we are is as important as when we are.',
+      'The map doesn’t lie. Every city you’ve been drawn to, every place that broke you open, every country that felt like coming home — <em class="italic font-semibold text-[var(--color-y2k-blue)]">it was written in the sky at the moment you were born.</em> I help you read it with rigour, not guesswork.',
     variant: "statement",
   },
   {
     blockType: "cardGrid",
+    anchorId: "services",
     heading: "Readings & Services",
-    countLabel: "04 offerings",
-    columns: "4",
+    countLabel: "03 offerings",
+    columns: "3",
     variant: "numbered",
     cards: [
       {
@@ -66,8 +64,8 @@ export const homeFallbackBlocksUniversal = [
       },
       {
         num: "02 —",
-        title: "Annual Travel Electional",
-        desc: "The right day to depart, arrive, or sign contracts abroad changes everything. Precision timing meets cosmic timing — your travels, optimised by the chart.",
+        title: "Travel Astrology Intensive",
+        desc: "Precision timing meets cosmic timing. Learn how to map, timing, and score your ideal destinations with our signature methodology.",
         link: "/map-from-home",
         linkLabel: "Learn More →",
         bgToken: "bg",
@@ -76,23 +74,13 @@ export const homeFallbackBlocksUniversal = [
       },
       {
         num: "03 —",
-        title: "B2B & VIP Intelligence",
-        desc: "Strategic relocated intelligence for corporate expansion, global hiring, and high-frequency travel calendars. Data-driven celestial mapping for leaders.",
-        link: "/b2b",
+        title: "The AstroNat Planner",
+        desc: "High-precision ACG maps and travel planning software in your pocket. Calculate lines, timing, and score destinations on the go with our engine.",
+        link: "/app",
         linkLabel: "Explore →",
         bgToken: "y2k-blue",
         textToken: "eggshell",
         glyph: "☉",
-      },
-      {
-        num: "04 —",
-        title: "AstroNat Planner App",
-        desc: "High-precision ACG maps and travel planning software in your pocket. Calculate lines, timing, and score destinations on the go with our proprietary engine.",
-        link: "/app",
-        linkLabel: "Get the App →",
-        bgToken: "charcoal",
-        textToken: "eggshell",
-        glyph: "♅",
       },
     ],
   },
@@ -103,9 +91,9 @@ export const homeFallbackBlocksUniversal = [
     kicker: "Featured Workshop · May 2026",
     heading: "AstroNat Travel Astrology Intensive",
     headingHtml:
-      '<span style="font-family:var(--font-display-alt-2);font-size:clamp(2rem,3vw,3rem);color:var(--color-charcoal);font-weight:400" class="block mb-2">The Course</span>AstroNat <em class="italic font-light">Travel Astrology</em> Intensive',
+      '<span style="font-family:var(--font-display-alt-2);font-size:clamp(2rem,3vw,3rem);font-weight:400" class="block mb-2">The Course</span>AstroNat <em class="italic font-light">Travel Astrology</em> Intensive',
     body: "A 4-part deep dive into astrocartography, local space charts, geodetic frameworks, and how 2026's outer planet shifts shape your ideal destinations.",
-    image: "/workshop-promo-1.jpg",
+    image: "/workshop-promo-2.jpg",
     imageSide: "right",
     metaItems: [
       { label: "Format", value: "4 Live Sessions" },
@@ -134,25 +122,25 @@ export const homeFallbackBlocksUniversal = [
   },
   {
     blockType: "testimonialGrid",
-    heading: "Client Stories",
-    subheading: "03 voices",
+    heading: "What Clients Say",
+    subheading: "03 Reviews",
     items: [
       {
         quote:
-          "\u201cThe level of technical detail was unlike anything I\u2019d experienced. Nat doesn\u2019t just tell you where to go \u2014 she explains the celestial mechanics behind it.\u201d",
+          "“The level of technical detail was unlike anything I’d experienced. Nat doesn’t just tell you where to go — she explains the celestial mechanics behind it.”",
         name: "Rebecca T.",
         location: "London, UK",
       },
       {
         quote:
-          "\u201cMy relocation solar return reading was spot-on. Within the year, every theme she highlighted played out \u2014 in exactly the city she pointed to.\u201d",
-        name: "Marcos D",
+          "“My relocation solar return reading was spot-on. Within the year, every theme she highlighted played out — in exactly the city she pointed to.”",
+        name: "Marcos D.",
         location: "São Paulo, Brazil",
       },
       {
         quote:
-          "\u201cThe Travel Astrology Intensive changed how I plan every trip. I\u2019m now obsessed with eclipse paths and I have absolutely zero regrets.\u201d",
-        name: "Priya K",
+          "“The travel astrology intensive changed how I plan every trip. I’m now obsessed with eclipse paths and I have absolutely zero regrets.”",
+        name: "Priya K.",
         location: "Dubai, UAE",
       },
     ],

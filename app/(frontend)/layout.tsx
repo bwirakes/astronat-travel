@@ -38,7 +38,7 @@ const pinyonScript = Pinyon_Script({ subsets: ['latin'], weight: ['400'], variab
 const ibmPlexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['300', '400', '500'], variable: '--font-ibm' });
 
 export const metadata: Metadata = {
-  title: "Astronat",
+  title: "AstroNat - Astrocartography, Locational Astrology & Mundane Astrology",
   description: "Plan your travel by the stars. Astrocartography and locational astrology for the modern voyager.",
   keywords: "astrokea, travel, astrology, astrocartography, natal chart, cosmic planning",
 };

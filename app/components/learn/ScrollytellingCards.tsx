@@ -35,13 +35,18 @@ export function LearnIntroCard({ category, title, description, className }: Scro
 }
 
 /** Standard Side-Card for Scrollytelling Sections */
-export function LearnSectionCard({ title, description, className }: ScrollyCardProps) {
+export function LearnSectionCard({ title, description, category, className }: ScrollyCardProps) {
   return (
     <AstronatCard 
       variant="black" 
       shape="cut-md" 
       className={cn("p-10 md:p-14 shadow-2xl border-white/10 max-w-xl", className)}
     >
+      {category && (
+        <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--color-y2k-blue)] mb-4 block font-bold">
+          {category}
+        </span>
+      )}
       <h3 className="font-primary text-4xl md:text-6xl uppercase mb-8 text-[var(--color-eggshell)] leading-[0.85] tracking-tight">
         {title}
       </h3>
