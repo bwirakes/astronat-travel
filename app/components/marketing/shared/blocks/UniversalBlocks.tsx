@@ -307,7 +307,7 @@ export const CardGrid: React.FC<any> = ({ block }) => {
             const cardTheme = getBlockTheme(p.bgToken);
             
             return (
-              <div key={i} className={`p-10 md:p-12 min-h-[360px] flex flex-col rounded-[2rem] theme-block-h ${cardTheme.bgClass} ${cardTheme.textClass}`}>
+              <div key={i} className={`p-10 md:p-12 min-h-[360px] flex flex-col rounded-[2rem] theme-block-h ${cardTheme.bgClass} ${cardTheme.textClass}`} style={p.bgToken === 'acqua' ? { backgroundColor: '#CAF1F0', color: '#111b2e' } : undefined}>
                 {p.num && <div className="font-primary text-5xl mb-8 leading-none opacity-40 shrink-0">{p.num}</div>}
                 <h3 className="font-secondary text-2xl md:text-3xl mb-4 leading-tight lowercase">{p.title}</h3>
                 <p className={`font-body text-sm leading-relaxed ${cardTheme.mutedClass} flex-1`}>{p.desc}</p>
