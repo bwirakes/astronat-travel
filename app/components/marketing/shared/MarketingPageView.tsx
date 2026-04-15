@@ -2,15 +2,19 @@ import React from "react";
 import { GeoCaseStudiesEmbed } from "./blocks/GeoCaseStudiesEmbed";
 import { GeoMapSection } from "./blocks/GeoMapSection";
 import { GeoMundaneCycles } from "./blocks/GeoMundaneCycles";
-import { 
-  HeroSection, 
-  StatsStrip, 
-  StatementBand, 
-  CardGrid, 
-  SplitContent, 
-  ProcessTimeline, 
-  CtaBand 
+import {
+  HeroSection,
+  StatsStrip,
+  StatementBand,
+  CardGrid,
+  SplitContent,
+  ProcessTimeline,
+  CtaBand
 } from "./blocks/UniversalBlocks";
+import { IntakeFormBlock } from "./blocks/IntakeFormBlock";
+
+// Wrapper so IntakeFormBlock fits the block renderer interface
+const IntakeFormRenderer: React.FC<any> = () => <IntakeFormBlock />;
 import {
   TickerMarquee,
   TestimonialGrid,
@@ -33,6 +37,7 @@ const defaultRenderers: Record<string, React.FC<any>> = {
   "splitContent": SplitContent,
   "processTimeline": ProcessTimeline,
   "ctaBand": CtaBand,
+  "intakeForm": IntakeFormRenderer,
   "tickerMarquee": TickerMarquee,
   "testimonialGrid": TestimonialGrid,
   "faqAccordion": FaqAccordion,

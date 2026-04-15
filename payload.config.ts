@@ -51,6 +51,7 @@ export default buildConfig({
   collections: [Users, Media, Pages],
   db: postgresAdapter({
     pool: dbPool,
+    schemaName: "payload",
   }),
   editor: lexicalEditor(),
   plugins: [

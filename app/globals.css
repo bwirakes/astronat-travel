@@ -63,6 +63,18 @@
   --text-secondary: #CCCCCC;
   --text-tertiary: #999999;
 
+  /* Theme-aware Text Colors for Brand Backgrounds */
+  --text-on-charcoal: #F8F5EC;
+  --text-on-y2k-blue: #F8F5EC;
+  --text-on-acqua: #111b2E; /* Acqua is light in dark mode, use dark text */
+  --dispatch-color: #111b2e; /* dark mode: dark text on light acqua */
+
+  /* Testimonial card — blue in dark mode */
+  --testimonial-card-bg: var(--color-y2k-blue);
+  --testimonial-card-text: #F8F5EC;
+  --testimonial-card-accent: #F8F5EC;
+  --testimonial-card-border: rgba(255, 255, 255, 0.2);
+
   /* Spacing */
   --space-xs: 0.5rem;
   --space-sm: 1rem;
@@ -132,6 +144,13 @@
   --text-on-charcoal: #F8F5EC; /* Force legibility on dark blocks in light mode */
   --text-on-y2k-blue: #F8F5EC;
   --text-on-acqua: #111b2e; /* Acqua is teal in light mode, use dark text */
+  --dispatch-color: #ffffff; /* light mode: white text on dark teal acqua */
+
+  /* Testimonial card — original bg in light mode */
+  --testimonial-card-bg: var(--bg);
+  --testimonial-card-text: var(--color-charcoal);
+  --testimonial-card-accent: var(--color-y2k-blue);
+  --testimonial-card-border: rgba(0, 0, 0, 0.1);
 }
 
 /* ── Block Theming Utilities ────────────────────────────────── */
@@ -142,6 +161,59 @@
 .theme-block-h h5, 
 .theme-block-h h6 {
   color: inherit !important;
+}
+
+/* Editorial Typography Inheritance Helper */
+.prose-editorial p,
+.prose-editorial li,
+.prose-editorial ul,
+.prose-editorial strong,
+.prose-editorial em,
+.prose-editorial span,
+.prose-editorial {
+  color: inherit !important;
+}
+
+/* ── Intake Form Theme Variables ────────────────────────────── */
+:root {
+  /* Dark mode (default) */
+  --form-bg: var(--color-charcoal);
+  --form-text: var(--color-eggshell);
+  --form-text-muted: rgba(248, 245, 236, 0.45);
+  --form-text-faint: rgba(248, 245, 236, 0.2);
+  --form-border: rgba(255, 255, 255, 0.15);
+  --form-section-border: rgba(255, 255, 255, 0.1);
+  --form-option-bg: rgba(255, 255, 255, 0.05);
+  --form-option-bg-hover: rgba(255, 255, 255, 0.09);
+  --form-option-selected-bg: var(--color-y2k-blue);
+  --form-option-selected-text: #ffffff;
+  --form-option-selected-border: var(--color-y2k-blue);
+  --form-radio-border: rgba(255, 255, 255, 0.3);
+  --form-input-border: rgba(255, 255, 255, 0.2);
+  --form-placeholder: rgba(248, 245, 236, 0.25);
+  --form-textarea-bg: rgba(255, 255, 255, 0.05);
+  --form-submit-bg: var(--color-eggshell);
+  --form-submit-text: var(--color-charcoal);
+}
+
+[data-theme="light"] {
+  --form-bg: var(--color-eggshell);
+  --form-text: var(--color-charcoal);
+  --form-text-muted: rgba(27, 27, 27, 0.5);
+  --form-text-faint: rgba(27, 27, 27, 0.2);
+  --form-border: rgba(27, 27, 27, 0.2);
+  --form-section-border: rgba(27, 27, 27, 0.1);
+  --form-option-bg: rgba(255, 255, 255, 0.75);
+  --form-option-bg-hover: rgba(255, 255, 255, 1);
+  --form-option-selected-bg: var(--color-y2k-blue);
+  --form-option-selected-text: #ffffff;
+  --form-option-selected-border: var(--color-y2k-blue);
+  --form-radio-border: rgba(27, 27, 27, 0.3);
+  --form-input-border: rgba(27, 27, 27, 0.25);
+  --form-placeholder: rgba(27, 27, 27, 0.3);
+  --form-textarea-bg: rgba(255, 255, 255, 0.6);
+  --form-submit-bg: var(--color-charcoal);
+  --form-submit-text: var(--color-eggshell);
 }
 
 /* ── Reset ──────────────────────────────────────────────────── */

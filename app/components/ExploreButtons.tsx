@@ -67,3 +67,27 @@ export function WorldChartsButton({ onClick }: ExploreButtonProps) {
     </button>
   );
 }
+
+export function TransitsButton({ onClick }: ExploreButtonProps) {
+  return (
+    <button className={`${styles.card} ${styles.transits} editorial-btn`} onClick={onClick}>
+      <div className={styles.transitsKicker}>CURRENT ASTRO WEATHER</div>
+      <div className={styles.transitsMain}>TRANSITS</div>
+      <div className={styles.transitsSub}>What does the universe have planned for you right now?</div>
+    </button>
+  );
+}
+
+export function LearnButton({ onClick }: ExploreButtonProps) {
+  return (
+    <button className={`${styles.card} ${styles.learn} editorial-btn`} onClick={onClick}>
+      <div className={styles.learnHeader}>
+        <span className={styles.learnPill}>HUB</span>
+      </div>
+      <div className={styles.learnContent}>
+        <div className={styles.learnScript}>Discover</div>
+        <div className={styles.learnMain}>LEARN</div>
+      </div>
+    </button>
+  );
+}

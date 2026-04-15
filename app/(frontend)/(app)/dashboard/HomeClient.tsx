@@ -8,7 +8,7 @@ import { ScoreRing, getVerdict } from "@/app/components/ScoreRing";
 import { useRouter } from "next/navigation";
 import ThemeToggle from "@/app/components/ThemeToggle";
 import DashboardLayout from "@/app/components/DashboardLayout";
-import { LifeGoalsButton, CouplesButton, MyChartButton, WorldChartsButton } from "@/app/components/ExploreButtons";
+import { LifeGoalsButton, CouplesButton, MyChartButton, WorldChartsButton, TransitsButton, LearnButton } from "@/app/components/ExploreButtons";
 
 
 export default function HomeClient({ profile, sunSignData, recentSearches }: any) {
@@ -94,23 +94,23 @@ export default function HomeClient({ profile, sunSignData, recentSearches }: any
 
 
             <div className={styles.content}>
+                {/* Global Hero Greeting */}
+                <div className={`${styles.hero} dashboard-hero`} style={{ opacity: 0 }}>
+                    <span className={styles.pill}>{sunSignData?.emoji} {sunSignData?.name} Sun</span>
+                    <h1 className={styles.greeting}>
+                        Hello, <em className={styles.greetingName} style={{ display: "inline-block", perspective: "400px" }}>
+                            {profile.first_name.split("").map((char: string, i: number) => (
+                                <span key={i} className="greeting-char" style={{ display: "inline-block", opacity: 0 }}>
+                                    {char === " " ? "\u00A0" : char}
+                                </span>
+                            ))}
+                        </em>
+                    </h1>
+                </div>
+
                 {/* ── 2-Column Grid fills full height ── */}
                 <div className={styles.dashboardGrid}>
                     <section className={styles.exploreSection}>
-                        {/* Hero lives inside left col so readings align to top */}
-                        <div className={`${styles.hero} dashboard-hero`} style={{ opacity: 0 }}>
-                            <span className={styles.pill}>{sunSignData?.emoji} {sunSignData?.name} Sun</span>
-                            <h1 className={styles.greeting}>
-                                Hello, <em className={styles.greetingName} style={{ display: "inline-block", perspective: "400px" }}>
-                                    {profile.first_name.split("").map((char: string, i: number) => (
-                                        <span key={i} className="greeting-char" style={{ display: "inline-block", opacity: 0 }}>
-                                            {char === " " ? "\u00A0" : char}
-                                        </span>
-                                    ))}
-                                </em>
-                            </h1>
-                        </div>
-
                         {/* Birthday Optimizer — flat strip */}
                         <button
                             className={`${styles.banner} dashboard-banner`}
@@ -122,10 +122,10 @@ export default function HomeClient({ profile, sunSignData, recentSearches }: any
                                     <path key={i} d="M50 50 C 40 10, 90 10, 100 50" transform={`rotate(${i * 30} 50 50)`} />
                                 ))}
                             </svg>
-                            <div className={styles.bannerTag}>BIRTHDAY OPTIMIZER</div>
+                            <div className={styles.bannerTag}>SOLAR RETURN</div>
                             <div>
-                                <span className={styles.bannerTitleMain}>SOLAR</span>
-                                <span className={styles.bannerTitleScript}>Return</span>
+                                <span className={styles.bannerTitleMain}>BIRTHDAY</span>
+                                <span className={styles.bannerTitleScript}>Optimizer</span>
                             </div>
                             <div className={styles.bannerSub}>How will you make the best of your solar return?</div>
                         </button>
@@ -135,9 +135,11 @@ export default function HomeClient({ profile, sunSignData, recentSearches }: any
                         </div>
                         <div className={styles.exploreGrid}>
                             <LifeGoalsButton onClick={() => router.push("/goals?demo=true")} />
-                            <CouplesButton onClick={() => router.push("/reading/new?type=couples")} />
+                            <CouplesButton onClick={() => router.push("/couples?demo=true")} />
                             <MyChartButton onClick={() => router.push("/chart?demo=true")} />
                             <WorldChartsButton onClick={() => router.push("/mundane?demo=true")} />
+                            <TransitsButton onClick={() => router.push("/reading/new?type=transits")} />
+                            <LearnButton onClick={() => router.push("/learn")} />
                         </div>
                     </section>
                     <section className={styles.readingsSection}>
@@ -181,7 +183,7 @@ export default function HomeClient({ profile, sunSignData, recentSearches }: any
             <button
                 className={`${styles.fab} dashboard-fab`}
                 style={{ opacity: 0 }}
-                onClick={() => router.push("/reading/new")}
+                onClick={() => router.push("/flow")}
             >
                 + New Reading
             </button>

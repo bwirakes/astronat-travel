@@ -229,6 +229,108 @@
     z-index: 2;
 }
 
+/* ── 5. Transits — Wes Anderson TV bg ───────────────────────────── */
+.transits {
+    background-color: #1B1B1B;
+    background-image: linear-gradient(rgba(27, 27, 27, 0.7), rgba(27, 27, 27, 0.85)), url('/transits_retro_generated.png'); 
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    color: #F8F5EC;
+    justify-content: flex-start;
+    align-items: flex-start;
+    text-align: left;
+}
+
+.transitsKicker {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    color: var(--color-y2k-blue);
+    margin-bottom: var(--space-xs);
+}
+
+.transitsMain {
+    font-family: var(--font-primary);
+    font-weight: 800;
+    font-size: clamp(2.5rem, 4vw, 3.5rem);
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    color: #F8F5EC;
+    line-height: 0.9;
+    margin-bottom: var(--space-xs);
+    position: relative;
+    z-index: 1;
+}
+
+.transitsSub {
+    font-family: var(--font-secondary);
+    font-size: clamp(0.9rem, 2vw, 1rem);
+    line-height: 1.3;
+    color: rgba(248, 245, 236, 0.85);
+    position: relative;
+    z-index: 2;
+    max-width: 95%;
+}
+
+/* ── 6. Learn — Wes Anderson Typewriter bg ────────────────── */
+.learn {
+    background-color: #F8F5EC;
+    background-image: linear-gradient(rgba(248, 245, 236, 0.2), rgba(248, 245, 236, 0.85)), url('/learn_retro_generated.png'); 
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    color: #1B1B1B;
+    justify-content: space-between;
+    align-items: center;
+    text-align: center;
+    overflow: hidden;
+}
+
+.learnHeader {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.learnPill {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    border: 1px solid currentColor;
+    border-radius: 20px;
+    padding: 0.3rem 0.8rem;
+    letter-spacing: 0.1em;
+}
+
+.learnContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--space-lg);
+    width: 100%;
+}
+
+.learnScript {
+    font-family: var(--font-display-alt-2);
+    font-size: clamp(3rem, 5vw, 4rem);
+    color: var(--color-y2k-blue);
+    line-height: 0.5;
+    margin-right: 15%;
+    margin-bottom: -5px; /* Pull the block closer */
+    position: relative;
+    z-index: 2;
+    transform: rotate(-5deg);
+}
+
+.learnMain {
+    font-family: var(--font-display-alt-1); /* Monigue */
+    font-size: clamp(2.8rem, 4.5vw, 3.8rem);
+    color: #1B1B1B;
+    position: relative;
+    z-index: 1;
+}
+
 /* ── Responsive ──────────────────────────────────────────── */
 @media (min-width: 768px) {
     .card {

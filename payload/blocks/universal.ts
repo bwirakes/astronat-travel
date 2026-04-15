@@ -43,16 +43,22 @@ export const cardGrid: Block = {
     { name: "heading", type: "text" },
     { name: "headingHtml", type: "textarea" },
     { name: "kicker", type: "text" },
-    { name: "variant", type: "select", options: ["numbered", "pricing"], defaultValue: "numbered" },
+    { name: "variant", type: "select", options: [ { label: "Numbered Grid", value: "numbered" }, { label: "Pricing Tables", value: "pricing" } ], defaultValue: "numbered" },
     { name: "columns", type: "number", defaultValue: 2 },
-    { name: "sectionBg", type: "select", options: ["raised", "charcoal", "bg"], defaultValue: "bg" },
+    { name: "sectionBg", type: "select", options: ["raised", "bg"], defaultValue: "bg" },
     { name: "cards", type: "array", fields: [
       { name: "num", type: "text" },
       { name: "title", type: "text" },
       { name: "desc", type: "textarea" },
       { name: "tag", type: "text" },
       { name: "glyph", type: "text" },
-      { name: "bgToken", type: "text" },
+      { name: "bgToken", type: "select", options: [
+        { label: "Raised (Editorial Gray)", value: "raised" },
+        { label: "Eggshell (Cream)", value: "eggshell" },
+        { label: "Y2K Blue (Signature)", value: "y2k-blue" },
+        { label: "Acqua (Teal)", value: "acqua" },
+        { label: "Spiced Life (Venus Pink)", value: "spiced-life" }
+      ], defaultValue: "raised" },
       { name: "textToken", type: "text" },
       { name: "tier", type: "text" },
       { name: "tagline", type: "text" },
@@ -70,7 +76,13 @@ export const splitContent: Block = {
   labels: { singular: "Split content", plural: "Split contents" },
   fields: [
     { name: "layout", type: "select", options: ["standard", "methodology", "two-column-text"], defaultValue: "standard" },
-    { name: "bgToken", type: "text" },
+    { name: "bgToken", type: "select", options: [
+        { label: "Raised (Editorial Gray)", value: "raised" },
+        { label: "Eggshell (Cream)", value: "eggshell" },
+        { label: "Y2K Blue (Signature)", value: "y2k-blue" },
+        { label: "Acqua (Teal)", value: "acqua" },
+        { label: "Spiced Life (Venus Pink)", value: "spiced-life" }
+      ], defaultValue: "raised" },
     { name: "kicker", type: "text" },
     { name: "heading", type: "text" },
     { name: "headingHtml", type: "textarea" },
@@ -112,7 +124,13 @@ export const ctaBand: Block = {
   labels: { singular: "CTA band", plural: "CTA bands" },
   fields: [
     { name: "layout", type: "select", options: ["standard", "newsletter", "cta-cards", "centered", "two-column"], defaultValue: "standard" },
-    { name: "bgToken", type: "text" },
+    { name: "bgToken", type: "select", options: [
+        { label: "Raised (Editorial Gray)", value: "raised" },
+        { label: "Eggshell (Cream)", value: "eggshell" },
+        { label: "Y2K Blue (Signature)", value: "y2k-blue" },
+        { label: "Acqua (Teal)", value: "acqua" },
+        { label: "Spiced Life (Venus Pink)", value: "spiced-life" }
+      ], defaultValue: "raised" },
     { name: "accent", type: "text" },
     { name: "heading", type: "text" },
     { name: "headingHtml", type: "textarea" },
