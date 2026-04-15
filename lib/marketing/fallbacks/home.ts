@@ -1,3 +1,5 @@
+import { B2B_STATS } from "../data/b2b";
+
 /** Default homepage layout using universal block types. */
 export const homeFallbackBlocksUniversal = [
   {
@@ -20,12 +22,7 @@ export const homeFallbackBlocksUniversal = [
   },
   {
     blockType: "statsStrip",
-    stats: [
-      { n: "500+", label: "Charts Read" },
-      { n: "12+", label: "Years Practising" },
-      { n: "40+", label: "Countries Mapped" },
-      { n: "CIA", label: "Affiliated Faculty" },
-    ],
+    stats: B2B_STATS.map(({ n, label }) => ({ n, label })),
     columns: "4",
   },
   {
