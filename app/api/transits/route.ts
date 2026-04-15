@@ -46,9 +46,7 @@ export async function POST(req: NextRequest) {
                 return {
                     month,
                     quality,
-                    score,
-                    personalScore: pScore,
-                    collectiveScore: cScore,
+                    score: pScore + cScore,
                     reason: `${a.transit_planet} ${a.aspect} natal ${a.natal_planet}`,
                     house: "9th House (Travel)",
                 } satisfies TravelWindow;

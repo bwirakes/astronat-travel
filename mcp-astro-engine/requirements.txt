@@ -1,0 +1,8 @@
+pyswisseph>=2.10
+fastmcp>=2.0
+pydantic>=2.0
+pytest>=8.0
+pandas>=2.0
+geopy>=2.4.0
+kerykeion>=5.0
+cairosvg>=2.7

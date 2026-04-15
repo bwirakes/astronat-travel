@@ -1,6 +1,6 @@
 "use client";
 
-import styles from "../flow/flow.module.css";
+import styles from "@/app/(frontend)/(app)/flow/flow.module.css";
 
 /** Renders a markdown table from pipe-delimited text. */
 function renderMarkdownTable(tableText: string) {

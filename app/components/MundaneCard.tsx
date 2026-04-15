@@ -1,6 +1,6 @@
 "use client";
 
-import { type CountryChart } from "../../lib/mundane-charts";
+import { type CountryChart } from "@/lib/astro/mundane-charts";
 
 export function MundaneCard({ country, onClick }: { country: CountryChart; onClick?: () => void }) {
   return (

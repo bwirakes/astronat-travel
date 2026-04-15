@@ -1,0 +1,341 @@
+/* ═══ About — about.module.css (Astro-Brand Refactor) ════════════════════════════════ */
+
+.pageRoot {
+    min-height: 100vh;
+    background-color: var(--color-black);
+    color: var(--text-primary);
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* ── Atmospheric Background ─────────────────────────────────────── */
+.atmosphericBg {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-color: var(--color-black);
+}
+
+.grainOverlay {
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    background-size: 256px 256px;
+    opacity: 0.85;
+    mix-blend-mode: overlay;
+}
+
+:global([data-theme="light"]) .atmosphericBg {
+    background-color: var(--color-eggshell);
+}
+
+:global([data-theme="light"]) .grainOverlay {
+    opacity: 0.4;
+}
+
+/* ── Starfield ──────────────────────────────────────────────────── */
+.starField {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    transition: opacity var(--duration) var(--ease);
+    opacity: 0.5;
+}
+
+:global([data-theme="light"]) .starField {
+    opacity: 0;
+}
+
+.star {
+    position: absolute;
+    background: var(--color-eggshell);
+    border-radius: 0;
+}
+
+/* ── Hero Section ───────────────────────────────────────────── */
+.heroSection {
+    background: transparent;
+    color: var(--text-primary);
+    padding: var(--space-xl) 0 var(--space-2xl);
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+}
+
+.heroGrid {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: var(--space-xl);
+    align-items: center;
+}
+
+.heroContent {
+    position: relative;
+    z-index: 2;
+}
+
+.kicker {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-md);
+    display: block;
+}
+
+.headline {
+    font-family: var(--font-primary);
+    font-size: clamp(2.2rem, 6vw, 4.5rem);
+    line-height: 0.85;
+    text-transform: uppercase;
+    margin-bottom: var(--space-lg);
+    letter-spacing: -0.04em;
+    color: var(--text-primary);
+}
+
+.headlineAccent {
+    color: var(--color-y2k-blue);
+}
+
+.lead {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.7;
+    max-width: 440px;
+    margin-bottom: var(--space-xl);
+    color: var(--text-secondary);
+    opacity: 0.9;
+}
+
+.avatarGroup {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.avatar {
+    width: 64px;
+    height: 64px;
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+}
+
+.avatarIcon {
+    filter: invert(1) brightness(1.2);
+    display: block;
+}
+
+:global([data-theme="light"]) .avatarIcon {
+    filter: none;
+}
+
+.avatarLabel {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+}
+
+.heroImageContainer {
+    position: relative;
+    height: 380px;
+}
+
+.organicImage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: var(--shape-organic-1);
+    overflow: hidden;
+}
+
+.heroScript {
+    position: absolute;
+    bottom: -10%;
+    right: -10%;
+    font-family: var(--font-display-alt-2);
+    font-size: 10rem;
+    color: var(--color-y2k-blue);
+    opacity: 0.65;
+    pointer-events: none;
+    line-height: 0.5;
+    z-index: 10;
+}
+
+/* ── Story Section ──────────────────────────────────────────── */
+.storySection {
+    background: var(--color-eggshell);
+    color: var(--color-charcoal);
+    padding: var(--space-3xl) 0;
+    border-top: 1px solid var(--color-charcoal);
+    position: relative;
+    z-index: 1;
+}
+
+:global([data-theme="light"]) .storySection {
+    background: var(--color-charcoal);
+    color: var(--color-eggshell);
+}
+
+.storyGrid {
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: var(--space-3xl);
+    align-items: center;
+}
+
+.sectionHeading {
+    font-family: var(--font-secondary);
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    margin-bottom: var(--space-2xl);
+    font-weight: 400;
+    color: var(--text-primary);
+}
+
+.bodyCopy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
+.bodyCopy p {
+    font-family: var(--font-body);
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: var(--text-secondary);
+}
+
+.bodyCopy em {
+    font-family: var(--font-secondary);
+    font-style: italic;
+    color: var(--color-acqua);
+}
+
+/* Fallback for light mode to ensure emphasis stands out nicely */
+:global([data-theme="light"]) .bodyCopy em {
+    color: var(--color-y2k-blue);
+}
+
+.storyGraphic {
+    position: relative;
+    height: 480px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.cutImage {
+    position: relative;
+    width: 90%;
+    height: 100%;
+    clip-path: var(--cut-xl);
+    overflow: hidden;
+}
+
+.sideScript {
+    position: absolute;
+    top: 50%;
+    right: -5%;
+    transform: translateY(-50%);
+    font-family: var(--font-display-alt-1);
+    font-size: clamp(16rem, 28vw, 24rem);
+    color: var(--color-spiced-life);
+    opacity: 0.8;
+    pointer-events: none;
+    z-index: 10;
+    line-height: 0.5;
+}
+
+/* ── Values Section ─────────────────────────────────────────── */
+.valuesSection {
+    background: transparent;
+    color: var(--text-primary);
+    padding: var(--space-3xl) 0;
+    text-align: center;
+    border-top: 1px solid var(--surface-border);
+    position: relative;
+    z-index: 1;
+}
+
+.valuesContent {
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+.valueTitle {
+    font-family: var(--font-primary);
+    font-size: 3rem;
+    letter-spacing: -0.02em;
+    margin-bottom: var(--space-lg);
+    color: var(--text-primary);
+}
+
+.valueDescription {
+    font-family: var(--font-body);
+    font-size: 1.1rem;
+    line-height: 1.8;
+    margin-bottom: var(--space-3xl);
+    color: var(--text-secondary);
+}
+
+.ctaGroup {
+    display: flex;
+    gap: var(--space-md);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* ── Footer ────────────────────────────────────────────────── */
+.footer {
+    background: transparent;
+    color: var(--text-tertiary);
+    padding: var(--space-xl) 0;
+    border-top: 1px solid var(--surface-border);
+    position: relative;
+    z-index: 1;
+}
+
+.footerInner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.monoLabel {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+}
+
+.objectCover {
+    object-fit: cover;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 960px) {
+    .heroGrid, .storyGrid {
+        grid-template-columns: 1fr;
+        gap: var(--space-2xl);
+    }
+    
+    .heroImageContainer, .storyGraphic {
+        height: 380px;
+    }
+    
+    .heroScript {
+        font-size: 10rem;
+        right: 0;
+    }
+    
+    .sideScript {
+        font-size: 14rem;
+        right: -10%;
+    }
+}

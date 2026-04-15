@@ -1,9 +1,9 @@
 "use client";
 
 import PlanetIcon from "./PlanetIcon";
-import { PLANET_COLORS } from "../lib/planet-data";
-import { geodeticMCSign, geodeticASCSign } from "../lib/geodetic";
-import styles from "../flow/flow.module.css";
+import { PLANET_COLORS } from "@/app/lib/planet-data";
+import { geodeticMCSign, geodeticASCSign } from "@/app/lib/geodetic";
+import styles from "@/app/(frontend)/(app)/flow/flow.module.css";
 
 interface MundanePlanet {
     name: string;

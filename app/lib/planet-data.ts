@@ -316,16 +316,23 @@ export const PLANET_MEANINGS: Record<string, Record<string, PlanetAngleMeaning>>
 };
 
 export const PLANET_COLORS: Record<string, string> = {
-    Sun: "#f5c542",
-    Moon: "#c4c9d4",
-    Mercury: "#7ecbf5",
-    Venus: "#f5a0c8",
-    Mars: "#e85d4a",
-    Jupiter: "#f5a623",
-    Saturn: "#8b8fa3",
-    Uranus: "#42d4c8",
-    Neptune: "#6b7cff",
-    Pluto: "#9b6bff",
+    Sun: "var(--color-planet-sun)",
+    Moon: "var(--color-planet-moon)",
+    Mercury: "var(--color-planet-mercury)",
+    Venus: "var(--color-planet-venus)",
+    Mars: "var(--color-planet-mars)",
+    Jupiter: "var(--color-planet-jupiter)",
+    Saturn: "var(--color-planet-saturn)",
+    Uranus: "var(--color-planet-uranus)",
+    Neptune: "var(--color-planet-neptune)",
+    Pluto: "var(--color-planet-pluto)",
+    Ascendant: "var(--color-planet-sun)",
+    MC: "var(--color-planet-sun)",
+    IC: "var(--color-planet-moon)",
+    DC: "var(--color-planet-moon)",
+    "North Node": "var(--color-planet-mercury)",
+    "South Node": "var(--color-planet-venus)",
+    Chiron: "var(--color-planet-jupiter)",
 };
 
 // Zodiac sign from birth date (simplified — no ephemeris needed for sun sign)
@@ -495,26 +502,24 @@ export interface TravelWindow {
     month: string;
     quality: "excellent" | "good" | "caution" | "avoid";
     score: number;
-    personalScore: number;
-    collectiveScore: number;
     reason: string;
     house: string;
 }
 
 // Pattern that cycles through 12 months of transit quality & reasons
 const WINDOW_PATTERNS: Array<Omit<TravelWindow, "month">> = [
-    { quality: "excellent", score: 85, personalScore: 60, collectiveScore: 25, reason: "Venus trine natal Jupiter — social expansion", house: "9th House (Travel)" },
-    { quality: "good",      score: 70, personalScore: 50, collectiveScore: 20, reason: "Sun sextile natal Venus — pleasant, low-friction", house: "9th House (Travel)" },
-    { quality: "caution",   score: 55, personalScore: 40, collectiveScore: 15, reason: "Mars square natal Saturn — low energy, delays", house: "6th House (Health)" },
-    { quality: "good",      score: 70, personalScore: 50, collectiveScore: 20, reason: "Mercury trine natal Mercury — clear communication", house: "3rd House (Learning)" },
-    { quality: "excellent", score: 85, personalScore: 60, collectiveScore: 25, reason: "Jupiter conjunct natal MC — career visibility abroad", house: "10th House (Career)" },
-    { quality: "good",      score: 70, personalScore: 50, collectiveScore: 20, reason: "Venus sextile natal Moon — emotional ease", house: "4th House (Home)" },
-    { quality: "caution",   score: 55, personalScore: 40, collectiveScore: 15, reason: "Saturn opposite natal Sun — heavy, restrictive", house: "7th House (Relationships)" },
-    { quality: "good",      score: 70, personalScore: 50, collectiveScore: 20, reason: "Sun trine natal Jupiter — expansive mood", house: "9th House (Travel)" },
-    { quality: "excellent", score: 85, personalScore: 60, collectiveScore: 25, reason: "Venus conjunct natal Venus return — peak harmony", house: "5th House (Pleasure)" },
-    { quality: "good",      score: 70, personalScore: 50, collectiveScore: 20, reason: "Mercury sextile natal Sun — mental clarity", house: "3rd House (Learning)" },
-    { quality: "caution",   score: 55, personalScore: 40, collectiveScore: 15, reason: "Mars opposition natal Moon — emotional friction", house: "1st House (Self)" },
-    { quality: "excellent", score: 85, personalScore: 60, collectiveScore: 25, reason: "Jupiter trine natal Sun — best window of the year", house: "9th House (Travel)" },
+    { quality: "excellent", score: 85, reason: "Venus trine natal Jupiter — social expansion", house: "9th House (Travel)" },
+    { quality: "good",      score: 70, reason: "Sun sextile natal Venus — pleasant, low-friction", house: "9th House (Travel)" },
+    { quality: "caution",   score: 55, reason: "Mars square natal Saturn — low energy, delays", house: "6th House (Health)" },
+    { quality: "good",      score: 70, reason: "Mercury trine natal Mercury — clear communication", house: "3rd House (Learning)" },
+    { quality: "excellent", score: 85, reason: "Jupiter conjunct natal MC — career visibility abroad", house: "10th House (Career)" },
+    { quality: "good",      score: 70, reason: "Venus sextile natal Moon — emotional ease", house: "4th House (Home)" },
+    { quality: "caution",   score: 55, reason: "Saturn opposite natal Sun — heavy, restrictive", house: "7th House (Relationships)" },
+    { quality: "good",      score: 70, reason: "Sun trine natal Jupiter — expansive mood", house: "9th House (Travel)" },
+    { quality: "excellent", score: 85, reason: "Venus conjunct natal Venus return — peak harmony", house: "5th House (Pleasure)" },
+    { quality: "good",      score: 70, reason: "Mercury sextile natal Sun — mental clarity", house: "3rd House (Learning)" },
+    { quality: "caution",   score: 55, reason: "Mars opposition natal Moon — emotional friction", house: "1st House (Self)" },
+    { quality: "excellent", score: 85, reason: "Jupiter trine natal Sun — best window of the year", house: "9th House (Travel)" },
 ];
 
 /**
@@ -631,13 +636,11 @@ export function generateWindowsFromTransits(
             const slot = WINDOW_PATTERNS[i % 12];
             quality = slot.quality;
             score   = slot.score;
-            pScore  = slot.personalScore;
-            cScore  = slot.collectiveScore;
             reason  = slot.reason;
             house   = slot.house;
         }
 
-        return { month, quality, score, personalScore: pScore, collectiveScore: cScore, reason, house };
+        return { month, quality, score, reason, house };
     });
 }
 

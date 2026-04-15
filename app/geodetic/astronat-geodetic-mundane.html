@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Geodetic & Mundane Astrology — AstroNat | Astrocartography & Locational Astrology</title>
+<meta name="description" content="Explore geodetic astrology and mundane astrology with AstroNat. Understand how planetary cycles, ingresses, and world chart alignments shape collective events — and what they mean for your location.">
+<meta name="keywords" content="geodetic astrology, mundane astrology, geodetic equivalents, world astrology, planetary cycles, ingress chart, national charts, locational astrology, astrocartography, collective astrology">
+<link rel="canonical" href="https://astronat.co/geodetic-mundane-astrology">
+
+<!-- Open Graph -->
+<meta property="og:title" content="Geodetic & Mundane Astrology — AstroNat">
+<meta property="og:description" content="Where the sky meets the earth. Discover how geodetic astrology maps the zodiac onto the globe — and how mundane cycles reveal the astrology of nations, places, and collective turning points.">
+<meta property="og:type" content="website">
+
+<!-- Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Geodetic & Mundane Astrology",
+  "description": "A deep-dive into geodetic astrology and mundane astrology — their methods, history, and applications for understanding collective and locational cycles.",
+  "url": "https://astronat.co/geodetic-mundane-astrology",
+  "publisher": {
+    "@type": "Person",
+    "name": "AstroNat",
+    "url": "https://astronat.co"
+  }
+}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=Pinyon+Script&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --egg:   #F8F5EC;
+  --char:  #1B1B1B;
+  --blue:  #0456FB;
+  --aqua:  #CAF1F0;
+  --coral: #E67A7A;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--egg);color:var(--char);font-family:'DM Sans',sans-serif;font-size:16px;line-height:1.6;overflow-x:hidden;}
+
+/* ── NAV (identical to brand) ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:1rem 2.5rem;display:flex;align-items:center;justify-content:space-between;background:var(--egg);border-bottom:1px solid rgba(27,27,27,0.1);}
+.nav-logo{font-family:'Cormorant Garamond',serif;font-size:1.35rem;font-weight:600;color:var(--char);text-decoration:none;letter-spacing:-0.02em;}
+.nav-links{display:flex;gap:2.25rem;list-style:none;}
+.nav-links a{font-size:0.7rem;font-weight:500;letter-spacing:0.16em;text-transform:uppercase;color:var(--char);text-decoration:none;transition:color .2s;}
+.nav-links a:hover,.nav-links a.active{color:var(--blue);}
+.nav-cta{font-size:0.7rem;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--egg);background:var(--char);border:none;padding:0.6rem 1.4rem;cursor:pointer;text-decoration:none;transition:background .2s;display:inline-block;}
+.nav-cta:hover{background:var(--blue);}
+
+/* ── TICKER ── */
+.ticker{background:var(--blue);padding:0.7rem 0;overflow:hidden;white-space:nowrap;margin-top:65px;}
+.ticker-track{display:inline-flex;animation:scroll 32s linear infinite;}
+@keyframes scroll{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
+.tick-item{font-size:0.68rem;font-weight:500;letter-spacing:0.22em;text-transform:uppercase;color:var(--egg);padding:0 2.5rem;}
+.tick-dot{color:var(--aqua);}
+
+/* ── PAGE HERO ── */
+.page-hero{padding:5rem 2.5rem 4rem;display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:end;border-bottom:1px solid rgba(27,27,27,0.1);position:relative;overflow:hidden;}
+.page-hero-bg{position:absolute;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(rgba(27,27,27,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(27,27,27,0.04) 1px,transparent 1px);background-size:60px 60px;}
+.page-hero-left{position:relative;z-index:1;}
+.page-eyebrow{display:flex;align-items:center;gap:0.75rem;margin-bottom:2rem;}
+.page-eyebrow-line{width:48px;height:1px;background:var(--blue);}
+.page-eyebrow-text{font-size:0.68rem;font-weight:500;letter-spacing:0.22em;text-transform:uppercase;color:var(--blue);}
+.page-script{font-family:'Pinyon Script',cursive;font-size:clamp(2rem,3.5vw,3rem);color:var(--coral);line-height:0.9;display:block;margin-bottom:0.1em;}
+.page-h1{font-family:'Cormorant Garamond',serif;font-size:clamp(3rem,6vw,5.5rem);font-weight:600;line-height:0.88;letter-spacing:-0.025em;color:var(--char);margin-bottom:2rem;}
+.page-h1 em{font-style:italic;color:var(--blue);font-weight:500;}
+.page-hero-right{position:relative;z-index:1;}
+.page-hero-desc{font-size:1rem;font-weight:300;color:rgba(27,27,27,0.6);line-height:1.8;margin-bottom:2rem;max-width:480px;}
+.page-hero-actions{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;}
+.btn-p{font-size:0.72rem;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--egg);background:var(--blue);border:none;padding:0.9rem 2rem;cursor:pointer;text-decoration:none;display:inline-block;transition:background .2s;}
+.btn-p:hover{background:var(--char);}
+.btn-o{font-size:0.72rem;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--char);background:transparent;border:1px solid rgba(27,27,27,0.3);padding:0.9rem 2rem;cursor:pointer;text-decoration:none;display:inline-block;transition:all .2s;}
+.btn-o:hover{background:var(--char);color:var(--egg);border-color:var(--char);}
+.page-hero-note{margin-top:1.25rem;display:flex;align-items:center;gap:0.6rem;}
+.page-hero-note-dot{width:6px;height:6px;border-radius:50%;background:var(--coral);flex-shrink:0;}
+.page-hero-note-text{font-size:0.72rem;color:rgba(27,27,27,0.45);letter-spacing:0.04em;}
+
+/* ── BREADCRUMB / META STRIP ── */
+.meta-strip{padding:1rem 2.5rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(27,27,27,0.08);background:var(--egg);}
+.breadcrumb{display:flex;align-items:center;gap:0.5rem;font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:rgba(27,27,27,0.35);}
+.breadcrumb a{color:rgba(27,27,27,0.35);text-decoration:none;transition:color .2s;}
+.breadcrumb a:hover{color:var(--blue);}
+.breadcrumb-sep{color:rgba(27,27,27,0.2);}
+.meta-tags{display:flex;gap:0.5rem;}
+.tag{font-size:0.6rem;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;padding:0.3rem 0.7rem;border:1px solid rgba(27,27,27,0.18);color:rgba(27,27,27,0.5);}
+.tag.active-tag{background:var(--char);color:var(--egg);border-color:var(--char);}
+
+/* ── INTRO QUOTE ── */
+.intro-quote{padding:5rem 2.5rem;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.5fr);gap:5rem;align-items:center;border-bottom:1px solid rgba(27,27,27,0.1);}
+.intro-label{font-size:0.65rem;font-weight:500;letter-spacing:0.22em;text-transform:uppercase;color:rgba(27,27,27,0.35);}
+.intro-body{font-family:'Cormorant Garamond',serif;font-size:clamp(1.6rem,2.8vw,2.4rem);font-weight:400;line-height:1.35;color:var(--char);}
+.intro-body strong{font-weight:600;font-style:italic;color:var(--blue);}
+
+/* ── SECTION GENERIC ── */
+.sec-header{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid rgba(27,27,27,0.1);padding-bottom:1.25rem;margin-bottom:2.5rem;}
+.sec-title{font-family:'Cormorant Garamond',serif;font-size:clamp(2rem,3.5vw,2.8rem);font-weight:600;color:var(--char);line-height:1;}
+.sec-count{font-size:0.65rem;letter-spacing:0.18em;text-transform:uppercase;color:rgba(27,27,27,0.35);}
+
+/* ── EXPLAINER: WHAT IS GEODETIC ── */
+.explainer{padding:5rem 2.5rem;border-bottom:1px solid rgba(27,27,27,0.1);}
+.explainer-grid{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:start;margin-top:2.5rem;}
+.explainer-text h3{font-family:'Cormorant Garamond',serif;font-size:clamp(1.6rem,2.5vw,2rem);font-weight:600;color:var(--char);line-height:1.1;margin-bottom:1rem;}
+.explainer-text p{font-size:0.9rem;font-weight:300;color:rgba(27,27,27,0.6);line-height:1.85;margin-bottom:1.25rem;}
+.explainer-text p strong{font-weight:500;color:var(--char);}
+.explainer-visual{position:relative;}
+
+/* SVG Geodetic map */
+.geo-map-wrap{background:var(--char);padding:2.5rem;position:relative;overflow:hidden;}
+.geo-map-label{font-size:0.62rem;font-weight:500;letter-spacing:0.2em;text-transform:uppercase;color:rgba(248,245,236,0.4);margin-bottom:1.25rem;}
+.geo-map-svg{width:100%;display:block;}
+.geo-fact-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:0;}
+.geo-fact{padding:1.5rem;border:1px solid rgba(27,27,27,0.1);border-top:none;}
+.geo-fact:not(:first-child){border-left:none;}
+.geo-fact-n{font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:600;color:var(--blue);line-height:1;}
+.geo-fact-l{font-size:0.62rem;font-weight:400;letter-spacing:0.14em;text-transform:uppercase;color:rgba(27,27,27,0.38);margin-top:0.25rem;}
+
+/* ── TECHNIQUE CARDS ── */
+.techniques{padding:5rem 2.5rem;border-bottom:1px solid rgba(27,27,27,0.1);}
+.technique-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-top:2.5rem;}
+.tech-card{padding:2.25rem;position:relative;overflow:hidden;min-height:380px;display:flex;flex-direction:column;justify-content:space-between;}
+.tech-card.dark{background:var(--char);}
+.tech-card.light{background:var(--egg);border:1px solid rgba(27,27,27,0.14);}
+.tech-card.blue{background:var(--blue);}
+.tech-num{font-size:0.65rem;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:rgba(248,245,236,0.3);margin-bottom:1.5rem;}
+.tech-card.light .tech-num{color:rgba(27,27,27,0.25);}
+.tech-name{font-family:'Cormorant Garamond',serif;font-size:clamp(1.4rem,2vw,1.75rem);font-weight:600;color:var(--egg);line-height:1.1;margin-bottom:0.75rem;}
+.tech-card.light .tech-name{color:var(--char);}
+.tech-desc{font-size:0.82rem;font-weight:300;color:rgba(248,245,236,0.55);line-height:1.8;margin-bottom:1.25rem;flex:1;}
+.tech-card.light .tech-desc{color:rgba(27,27,27,0.55);}
+.tech-link{font-size:0.68rem;font-weight:500;letter-spacing:0.15em;text-transform:uppercase;text-decoration:none;color:var(--aqua);display:inline-block;}
+.tech-card.light .tech-link{color:var(--blue);}
+.tech-glyph{position:absolute;bottom:1.5rem;right:1.75rem;font-family:'Cormorant Garamond',serif;font-size:5.5rem;line-height:1;color:rgba(248,245,236,0.05);pointer-events:none;user-select:none;}
+.tech-card.light .tech-glyph{color:rgba(27,27,27,0.05);}
+
+/* ── MUNDANE SECTION ── */
+.mundane{padding:5rem 2.5rem;border-bottom:1px solid rgba(27,27,27,0.1);}
+.mundane-layout{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:start;margin-top:2.5rem;}
+.mundane-text h3{font-family:'Cormorant Garamond',serif;font-size:clamp(1.5rem,2.2vw,1.9rem);font-weight:600;line-height:1.1;color:var(--char);margin-bottom:1rem;}
+.mundane-text p{font-size:0.9rem;font-weight:300;color:rgba(27,27,27,0.6);line-height:1.85;margin-bottom:1.25rem;}
+.mundane-text p strong{font-weight:500;color:var(--char);}
+.cycle-list{list-style:none;margin-top:1.5rem;}
+.cycle-item{display:grid;grid-template-columns:2.5rem 1fr;gap:1rem;align-items:start;padding:1rem 0;border-top:1px solid rgba(27,27,27,0.08);}
+.cycle-item:last-child{border-bottom:1px solid rgba(27,27,27,0.08);}
+.cycle-glyph{font-family:'Cormorant Garamond',serif;font-size:1.4rem;color:var(--blue);text-align:center;line-height:1;padding-top:0.1rem;}
+.cycle-body{}
+.cycle-name{font-size:0.75rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--char);margin-bottom:0.2rem;}
+.cycle-desc{font-size:0.82rem;font-weight:300;color:rgba(27,27,27,0.5);line-height:1.7;}
+.mundane-panel{background:var(--char);padding:2.5rem;}
+.mundane-panel-label{font-size:0.62rem;font-weight:500;letter-spacing:0.2em;text-transform:uppercase;color:rgba(248,245,236,0.35);margin-bottom:1.5rem;}
+.mundane-panel-title{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:600;color:var(--egg);line-height:1.2;margin-bottom:1rem;}
+.mundane-panel-body{font-size:0.82rem;font-weight:300;color:rgba(248,245,236,0.5);line-height:1.8;margin-bottom:1.75rem;}
+.mundane-events{display:flex;flex-direction:column;gap:0.75rem;}
+.event-row{display:flex;align-items:center;gap:1rem;padding:0.85rem 1rem;background:rgba(248,245,236,0.04);border-left:2px solid var(--blue);}
+.event-date{font-size:0.65rem;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--aqua);min-width:80px;}
+.event-text{font-size:0.8rem;font-weight:300;color:rgba(248,245,236,0.6);line-height:1.4;}
+
+/* ── INTERSECTION SECTION ── */
+.intersection{margin:0 2.5rem;background:var(--coral);padding:0;display:grid;grid-template-columns:1fr 420px;gap:0;overflow:hidden;}
+.inter-text{padding:4rem;}
+.inter-eyebrow{font-size:0.65rem;font-weight:500;letter-spacing:0.22em;text-transform:uppercase;color:rgba(27,27,27,0.45);margin-bottom:0.75rem;}
+.inter-script{font-family:'Pinyon Script',cursive;font-size:clamp(2rem,3.5vw,3rem);color:var(--char);line-height:0.95;display:block;margin-bottom:0.15em;}
+.inter-h2{font-family:'Cormorant Garamond',serif;font-size:clamp(2.5rem,4vw,3.5rem);font-weight:600;line-height:0.9;color:var(--egg);margin-bottom:1.25rem;}
+.inter-h2 em{font-style:italic;font-weight:300;}
+.inter-body{font-size:0.875rem;font-weight:300;color:rgba(27,27,27,0.65);max-width:440px;line-height:1.75;margin-bottom:2rem;}
+.inter-steps{list-style:none;margin-bottom:2.25rem;display:flex;flex-direction:column;gap:0.75rem;}
+.inter-step{display:flex;align-items:flex-start;gap:1rem;}
+.inter-step-n{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:600;color:var(--egg);line-height:1;min-width:2rem;}
+.inter-step-body{font-size:0.82rem;font-weight:300;color:rgba(27,27,27,0.6);line-height:1.65;}
+.inter-step-body strong{font-weight:500;color:var(--char);}
+.inter-visual{background:var(--char);position:relative;overflow:hidden;min-height:500px;display:flex;align-items:center;justify-content:center;}
+.inter-diagram{padding:2.5rem;width:100%;}
+
+/* ── FAQ / DEEP DIVE ── */
+.faq{padding:5rem 2.5rem;border-bottom:1px solid rgba(27,27,27,0.1);}
+.faq-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:5rem;margin-top:2.5rem;}
+.faq-sidebar-label{font-size:0.65rem;font-weight:500;letter-spacing:0.22em;text-transform:uppercase;color:rgba(27,27,27,0.35);margin-bottom:1.5rem;}
+.faq-sidebar-nav{list-style:none;display:flex;flex-direction:column;gap:0.25rem;}
+.faq-sidebar-nav li a{font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:400;color:rgba(27,27,27,0.45);text-decoration:none;line-height:1.6;display:block;padding:0.35rem 0;border-left:2px solid transparent;padding-left:0.75rem;transition:all .2s;}
+.faq-sidebar-nav li a:hover,.faq-sidebar-nav li a.active{color:var(--char);border-left-color:var(--blue);}
+.faq-items{display:flex;flex-direction:column;gap:0;}
+.faq-item{border-top:1px solid rgba(27,27,27,0.1);padding:2rem 0;}
+.faq-item:last-child{border-bottom:1px solid rgba(27,27,27,0.1);}
+.faq-q{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:600;color:var(--char);line-height:1.2;margin-bottom:1rem;}
+.faq-a{font-size:0.88rem;font-weight:300;color:rgba(27,27,27,0.6);line-height:1.85;}
+.faq-a strong{font-weight:500;color:var(--char);}
+.faq-a a{color:var(--blue);text-decoration:none;}
+
+/* ── CTA STRIP ── */
+.cta-strip{padding:5rem 2.5rem;display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center;background:var(--char);}
+.cta-left{}
+.cta-eyebrow{font-size:0.65rem;font-weight:500;letter-spacing:0.22em;text-transform:uppercase;color:rgba(248,245,236,0.35);margin-bottom:0.75rem;}
+.cta-h2{font-family:'Cormorant Garamond',serif;font-size:clamp(2rem,3.5vw,3rem);font-weight:600;line-height:1.05;color:var(--egg);margin-bottom:1.25rem;}
+.cta-h2 em{font-style:italic;color:var(--coral);}
+.cta-body{font-size:0.9rem;font-weight:300;color:rgba(248,245,236,0.5);line-height:1.8;}
+.cta-right{}
+.cta-options{display:flex;flex-direction:column;gap:1rem;}
+.cta-option{padding:1.75rem 2rem;display:flex;align-items:center;justify-content:space-between;gap:1.5rem;text-decoration:none;transition:background .2s;}
+.cta-option.primary{background:var(--blue);}
+.cta-option.secondary{background:rgba(248,245,236,0.06);border:1px solid rgba(248,245,236,0.12);}
+.cta-option:hover.primary{background:#0040d0;}
+.cta-option:hover.secondary{background:rgba(248,245,236,0.1);}
+.cta-option-text{}
+.cta-option-label{font-size:0.62rem;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:rgba(248,245,236,0.5);margin-bottom:0.25rem;}
+.cta-option-title{font-family:'Cormorant Garamond',serif;font-size:1.25rem;font-weight:600;color:var(--egg);line-height:1.1;}
+.cta-option-arrow{font-size:1.5rem;color:rgba(248,245,236,0.4);flex-shrink:0;}
+
+/* ── RELATED READING ── */
+.related{padding:5rem 2.5rem;border-bottom:1px solid rgba(27,27,27,0.1);}
+.related-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-top:2.5rem;}
+.related-card{border:1px solid rgba(27,27,27,0.12);padding:2rem;text-decoration:none;display:block;transition:border-color .2s;}
+.related-card:hover{border-color:var(--blue);}
+.related-tag{font-size:0.6rem;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--blue);margin-bottom:0.75rem;}
+.related-title{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:600;color:var(--char);line-height:1.15;margin-bottom:0.6rem;}
+.related-desc{font-size:0.8rem;font-weight:300;color:rgba(27,27,27,0.5);line-height:1.7;}
+.related-arrow{font-size:0.72rem;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--blue);margin-top:1.25rem;display:block;}
+
+/* ── FOOTER ── */
+footer{background:var(--char);padding:4rem 2.5rem;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:3rem;}
+.foot-tag{font-size:0.8rem;font-weight:300;color:rgba(248,245,236,0.4);line-height:1.75;max-width:280px;margin-top:1rem;}
+.foot-col-title{font-size:0.62rem;font-weight:500;letter-spacing:0.2em;text-transform:uppercase;color:rgba(248,245,236,0.3);margin-bottom:1.25rem;}
+.foot-links{list-style:none;display:flex;flex-direction:column;gap:0.6rem;}
+.foot-links a{font-size:0.82rem;font-weight:300;color:rgba(248,245,236,0.5);text-decoration:none;transition:color .2s;}
+.foot-links a:hover{color:var(--egg);}
+.foot-bottom{background:var(--char);padding:1.25rem 2.5rem;display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(248,245,236,0.08);}
+.foot-copy{font-size:0.65rem;letter-spacing:0.1em;color:rgba(248,245,236,0.2);}
+.foot-social{display:flex;gap:1.5rem;}
+.foot-social a{font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:rgba(248,245,236,0.3);text-decoration:none;transition:color .2s;}
+.foot-social a:hover{color:var(--egg);}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .page-hero,.mundane-layout,.explainer-grid,.intersection,.cta-strip,.faq-grid{grid-template-columns:1fr;}
+  .technique-grid,.related-grid,.geo-fact-strip{grid-template-columns:1fr 1fr;}
+  footer{grid-template-columns:1fr 1fr;}
+  .inter-visual{min-height:300px;}
+}
+@media(max-width:600px){
+  .technique-grid,.related-grid,.geo-fact-strip{grid-template-columns:1fr;}
+  nav .nav-links{display:none;}
+  footer{grid-template-columns:1fr;}
+  .intersection{margin:0;}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="/">AstroNat</a>
+  <ul class="nav-links">
+    <li><a href="#">Astrocartography</a></li>
+    <li><a href="#" class="active">Geodetic & Mundane</a></li>
+    <li><a href="#">Travel Astrology</a></li>
+    <li><a href="#">Workshops</a></li>
+    <li><a href="#">Research</a></li>
+    <li><a href="#">About</a></li>
+  </ul>
+  <a class="nav-cta" href="#">Book a Reading</a>
+</nav>
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-track">
+    <span class="tick-item">Geodetic Astrology <span class="tick-dot">✦</span></span>
+    <span class="tick-item">Mundane Cycles <span class="tick-dot">✦</span></span>
+    <span class="tick-item">Ingress Charts <span class="tick-dot">✦</span></span>
+    <span class="tick-item">National Horoscopes <span class="tick-dot">✦</span></span>
+    <span class="tick-item">Saturn–Jupiter Conjunctions <span class="tick-dot">✦</span></span>
+    <span class="tick-item">Geodetic Equivalents <span class="tick-dot">✦</span></span>
+    <span class="tick-item">Eclipse Paths <span class="tick-dot">✦</span></span>
+    <span class="tick-item">World Points <span class="tick-dot">✦</span></span>
+    <span class="tick-item">Geodetic Astrology <span class="tick-dot">✦</span></span>
+    <span class="tick-item">Mundane Cycles <span class="tick-dot">✦</span></span>
+    <span class="tick-item">Ingress Charts <span class="tick-dot">✦</span></span>
+    <span class="tick-item">National Horoscopes <span class="tick-dot">✦</span></span>
+    <span class="tick-item">Saturn–Jupiter Conjunctions <span class="tick-dot">✦</span></span>
+    <span class="tick-item">Geodetic Equivalents <span class="tick-dot">✦</span></span>
+    <span class="tick-item">Eclipse Paths <span class="tick-dot">✦</span></span>
+    <span class="tick-item">World Points <span class="tick-dot">✦</span></span>
+  </div>
+</div>
+
+<!-- META STRIP -->
+<div class="meta-strip">
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a>
+    <span class="breadcrumb-sep">/</span>
+    <a href="#">Learn</a>
+    <span class="breadcrumb-sep">/</span>
+    <span>Geodetic & Mundane Astrology</span>
+  </nav>
+  <div class="meta-tags">
+    <span class="tag active-tag">Geodetic</span>
+    <span class="tag">Mundane</span>
+    <span class="tag">Techniques</span>
+  </div>
+</div>
+
+<!-- PAGE HERO -->
+<section class="page-hero" aria-labelledby="page-h1">
+  <div class="page-hero-bg"></div>
+  <div class="page-hero-left">
+    <div class="page-eyebrow">
+      <span class="page-eyebrow-line"></span>
+      <span class="page-eyebrow-text">Geodetic & Mundane Astrology</span>
+    </div>
+    <h1 class="page-h1" id="page-h1">
+      <span class="page-script">The world</span>
+      Where the <em>Sky</em><br>
+      Meets the<br>
+      Earth
+    </h1>
+  </div>
+  <div class="page-hero-right">
+    <p class="page-hero-desc">Most people think astrology is personal. But for centuries, the most rigorous branch of the tradition has been turned outward — tracking the astrology of <strong>nations, places, and collective turning points.</strong> Geodetic astrology and mundane astrology are where celestial mechanics meets geopolitics, economics, and the lived conditions of a location.</p>
+    <p class="page-hero-desc" style="margin-top:0;">Here is what these disciplines actually are, how they work together, and why they matter for anyone serious about locational astrology.</p>
+    <div class="page-hero-actions">
+      <a class="btn-p" href="#">Book a Geodetic Reading →</a>
+      <a class="btn-o" href="#">Explore the Course</a>
+    </div>
+    <div class="page-hero-note">
+      <span class="page-hero-note-dot"></span>
+      <span class="page-hero-note-text">Analytical, evidence-led practice — not prediction theatre.</span>
+    </div>
+  </div>
+</section>
+
+<!-- INTRO QUOTE -->
+<div class="intro-quote">
+  <div class="intro-label">On these disciplines</div>
+  <p class="intro-body">"Mundane astrology is the oldest branch of the tradition. Geodetic astrology is one of its most precise tools — mapping the zodiac onto longitude, so that every degree of the ecliptic corresponds to <strong>a specific line of longitude on earth.</strong> When a planet transits your geodetic Midheaven, your country feels it."</p>
+</div>
+
+<!-- EXPLAINER: GEODETIC -->
+<section class="explainer" aria-labelledby="geodetic-heading">
+  <div class="sec-header">
+    <h2 class="sec-title" id="geodetic-heading">What is Geodetic Astrology?</h2>
+    <span class="sec-count">01 / 04</span>
+  </div>
+  <div class="explainer-grid">
+    <div class="explainer-text">
+      <h3>A zodiac fixed to the globe</h3>
+      <p>Geodetic astrology is a system in which 0° Aries is permanently anchored to the <strong>Greenwich Meridian (0° longitude)</strong>. From there, each degree of the tropical zodiac corresponds to one degree of geographical longitude. The result is a static planetary map of the world — a kind of collective natal chart baked into the earth itself.</p>
+      <p>The technique gives every location on the planet its own <strong>geodetic Ascendant and Midheaven</strong> — fixed reference points that describe the inherent character and exposure of a place. Unlike astrocartography, which shifts with your birth chart, the geodetic chart belongs to the location, not to you.</p>
+      <p>When outer planets <strong>transit a location's geodetic angles</strong>, the conditions of that place tend to shift in ways that align with the planetary archetype. Pluto crossing a country's geodetic Midheaven has historically correlated with governance crises, power restructuring, and moments of collective reckoning. Saturn with consolidation, austerity, or institutional pressure. Jupiter with expansion, growth, and increased visibility on the world stage.</p>
+      <h3 style="margin-top:1.5rem;">Geodetic equivalents</h3>
+      <p>The <strong>geodetic equivalent</strong> of a planet in your natal chart is the longitude on earth where that planet "falls" in the geodetic system. It is one of the most underused tools in locational astrology — revealing places where you are likely to feel a particular planetary energy more acutely, simply because the geography resonates with your chart.</p>
+      <p>A natal Venus at 15° Taurus, for example, has its geodetic equivalent along approximately 45° East longitude — a line running through parts of East Africa, the Arabian Peninsula, and into Russia. People with strong Venus placements often describe feeling unusually creative, socially activated, or relationship-oriented when they are near these longitudes.</p>
+    </div>
+    <div class="explainer-visual">
+      <!-- Geodetic world map SVG -->
+      <div class="geo-map-wrap">
+        <div class="geo-map-label">Geodetic System — 0° Aries anchored to 0° Longitude (Greenwich)</div>
+        <svg class="geo-map-svg" viewBox="0 0 480 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Simplified geodetic world map showing zodiac sign assignments to longitude bands">
+          <defs>
+            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(248,245,236,0.06)" stroke-width="0.5"/>
+            </pattern>
+          </defs>
+          <rect width="480" height="240" fill="#1B1B1B"/>
+          <rect width="480" height="240" fill="url(#grid)"/>
+
+          <!-- Simplified continent shapes -->
+          <!-- Americas -->
+          <path d="M30,60 Q50,50 65,70 Q70,90 60,120 Q55,150 65,180 Q55,195 45,190 Q35,175 40,150 Q30,130 25,100 Z" fill="rgba(4,86,251,0.15)" stroke="rgba(4,86,251,0.3)" stroke-width="0.75"/>
+          <!-- Europe/Africa -->
+          <path d="M180,40 Q210,35 220,55 Q225,80 215,100 Q220,125 210,160 Q200,195 190,195 Q175,185 175,160 Q165,130 170,100 Q165,70 175,50 Z" fill="rgba(4,86,251,0.15)" stroke="rgba(4,86,251,0.3)" stroke-width="0.75"/>
+          <!-- Asia -->
+          <path d="M240,35 Q310,28 340,45 Q360,60 355,85 Q345,115 330,125 Q300,135 270,130 Q245,120 235,100 Q228,75 240,55 Z" fill="rgba(4,86,251,0.15)" stroke="rgba(4,86,251,0.3)" stroke-width="0.75"/>
+          <!-- Australia -->
+          <path d="M330,155 Q370,145 385,160 Q390,185 375,198 Q350,205 335,192 Q320,178 330,162 Z" fill="rgba(4,86,251,0.15)" stroke="rgba(4,86,251,0.3)" stroke-width="0.75"/>
+
+          <!-- Zodiac longitude bands — 12 bands of 40px each -->
+          <!-- Aries 0° -->
+          <line x1="240" y1="0" x2="240" y2="240" stroke="rgba(230,122,122,0.6)" stroke-width="1.5" stroke-dasharray="3,3"/>
+          <text x="243" y="12" fill="rgba(230,122,122,0.9)" font-size="7" font-family="serif" letter-spacing="0.05em">♈ 0°</text>
+
+          <!-- Every 30° = 40px -->
+          <line x1="280" y1="0" x2="280" y2="240" stroke="rgba(248,245,236,0.12)" stroke-width="0.75"/>
+          <text x="283" y="12" fill="rgba(248,245,236,0.35)" font-size="6" font-family="serif">♉</text>
+
+          <line x1="320" y1="0" x2="320" y2="240" stroke="rgba(248,245,236,0.12)" stroke-width="0.75"/>
+          <text x="323" y="12" fill="rgba(248,245,236,0.35)" font-size="6" font-family="serif">♊</text>
+
+          <line x1="360" y1="0" x2="360" y2="240" stroke="rgba(248,245,236,0.12)" stroke-width="0.75"/>
+          <text x="363" y="12" fill="rgba(248,245,236,0.35)" font-size="6" font-family="serif">♋</text>
+
+          <line x1="400" y1="0" x2="400" y2="240" stroke="rgba(248,245,236,0.12)" stroke-width="0.75"/>
+          <text x="403" y="12" fill="rgba(248,245,236,0.35)" font-size="6" font-family="serif">♌</text>
+
+          <line x1="440" y1="0" x2="440" y2="240" stroke="rgba(248,245,236,0.12)" stroke-width="0.75"/>
+          <text x="443" y="12" fill="rgba(248,245,236,0.35)" font-size="6" font-family="serif">♍</text>
+
+          <!-- West of Greenwich -->
+          <line x1="200" y1="0" x2="200" y2="240" stroke="rgba(248,245,236,0.12)" stroke-width="0.75"/>
+          <text x="183" y="12" fill="rgba(248,245,236,0.35)" font-size="6" font-family="serif">♓</text>
+
+          <line x1="160" y1="0" x2="160" y2="240" stroke="rgba(248,245,236,0.12)" stroke-width="0.75"/>
+          <text x="143" y="12" fill="rgba(248,245,236,0.35)" font-size="6" font-family="serif">♒</text>
+
+          <line x1="120" y1="0" x2="120" y2="240" stroke="rgba(248,245,236,0.12)" stroke-width="0.75"/>
+          <text x="103" y="12" fill="rgba(248,245,236,0.35)" font-size="6" font-family="serif">♑</text>
+
+          <line x1="80" y1="0" x2="80" y2="240" stroke="rgba(248,245,236,0.12)" stroke-width="0.75"/>
+          <text x="63" y="12" fill="rgba(248,245,236,0.35)" font-size="6" font-family="serif">♐</text>
+
+          <line x1="40" y1="0" x2="40" y2="240" stroke="rgba(248,245,236,0.12)" stroke-width="0.75"/>
+          <text x="23" y="12" fill="rgba(248,245,236,0.35)" font-size="6" font-family="serif">♏</text>
+
+          <!-- Equator -->
+          <line x1="0" y1="120" x2="480" y2="120" stroke="rgba(202,241,240,0.2)" stroke-width="0.75" stroke-dasharray="6,4"/>
+          <text x="4" y="117" fill="rgba(202,241,240,0.4)" font-size="6" letter-spacing="0.08em" font-family="sans-serif">EQUATOR</text>
+
+          <!-- Sample planet position marker -->
+          <circle cx="240" cy="90" r="4" fill="var(--coral)" opacity="0.9"/>
+          <text x="246" y="88" fill="var(--coral)" font-size="7" font-family="serif">♄ Saturn transit</text>
+          <line x1="240" y1="94" x2="240" y2="240" stroke="rgba(230,122,122,0.35)" stroke-width="0.75"/>
+
+          <!-- Legend -->
+          <rect x="4" y="220" width="8" height="8" fill="rgba(4,86,251,0.3)"/>
+          <text x="15" y="228" fill="rgba(248,245,236,0.4)" font-size="6" font-family="sans-serif" letter-spacing="0.06em">LANDMASS</text>
+          <circle cx="95" cy="224" r="3" fill="var(--coral)" opacity="0.9"/>
+          <text x="101" y="228" fill="rgba(248,245,236,0.4)" font-size="6" font-family="sans-serif" letter-spacing="0.06em">PLANET TRANSIT</text>
+          <line x1="175" y1="224" x2="190" y2="224" stroke="rgba(230,122,122,0.6)" stroke-width="1.5" stroke-dasharray="3,3"/>
+          <text x="193" y="228" fill="rgba(248,245,236,0.4)" font-size="6" font-family="sans-serif" letter-spacing="0.06em">GREENWICH / 0° ARIES</text>
+        </svg>
+      </div>
+      <!-- Fact strip -->
+      <div class="geo-fact-strip">
+        <div class="geo-fact">
+          <div class="geo-fact-n">1°</div>
+          <div class="geo-fact-l">Zodiac = 1° Longitude</div>
+        </div>
+        <div class="geo-fact">
+          <div class="geo-fact-n">360°</div>
+          <div class="geo-fact-l">Globe mapped to zodiac</div>
+        </div>
+        <div class="geo-fact">
+          <div class="geo-fact-n">12</div>
+          <div class="geo-fact-l">Signs — 30° / 30° long. each</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TECHNIQUE CARDS -->
+<section class="techniques" aria-labelledby="techniques-heading">
+  <div class="sec-header">
+    <h2 class="sec-title" id="techniques-heading">Core Geodetic Techniques</h2>
+    <span class="sec-count">02 / 04</span>
+  </div>
+  <div class="technique-grid">
+
+    <div class="tech-card dark">
+      <div>
+        <div class="tech-num">01</div>
+        <div class="tech-name">Geodetic Ascendant & Midheaven</div>
+        <p class="tech-desc">Every location has a fixed Ascendant (determined by latitude) and Midheaven (determined by longitude) that belong to the earth, not to any individual. These angles reveal the <em>inherent character</em> of a place — its public face, its social atmosphere, and what planetary energies tend to be amplified there. Transits and progressions to these angles describe collective timing.</p>
+      </div>
+      <a class="tech-link" href="#">Explore this technique →</a>
+      <span class="tech-glyph">AC</span>
+    </div>
+
+    <div class="tech-card light">
+      <div>
+        <div class="tech-num">02</div>
+        <div class="tech-name">Geodetic Equivalents</div>
+        <p class="tech-desc">Your natal planets each have a "geodetic equivalent" — the longitude on earth where that planet sits in the geodetic system. These longitudes describe places where the planet's themes are activated for you at a collective level: Venus equivalents for relational and creative richness; Saturn equivalents for discipline, structure, or constraint; Pluto equivalents for transformation and intensity.</p>
+      </div>
+      <a class="tech-link" href="#">Learn more →</a>
+      <span class="tech-glyph" style="color:rgba(27,27,27,0.04);">♀</span>
+    </div>
+
+    <div class="tech-card blue">
+      <div>
+        <div class="tech-num">03</div>
+        <div class="tech-name">Outer Planet Transits to Geodetic Angles</div>
+        <p class="tech-desc">One of the most historically verifiable applications: tracking when slow-moving outer planets (Jupiter through Pluto) station on or transit the geodetic angles of a city or nation. The correlations with political upheaval, economic shifts, natural events, and cultural turning points are striking — and deeply useful for understanding the <em>timing</em> of collective change.</p>
+      </div>
+      <a class="tech-link" href="#">See research →</a>
+      <span class="tech-glyph">♄</span>
+    </div>
+
+    <div class="tech-card light">
+      <div>
+        <div class="tech-num">04</div>
+        <div class="tech-name">Local Space & Geodetic Combined</div>
+        <p class="tech-desc">Layering geodetic techniques with local space astrology creates a multi-dimensional map of how your natal chart interacts with geography. Where your geodetic Venus equivalent intersects with your local space Venus line, for example, tends to be an exceptionally powerful location for relational and creative activation.</p>
+      </div>
+      <a class="tech-link" href="#">Read the research →</a>
+      <span class="tech-glyph" style="color:rgba(27,27,27,0.04);">∗</span>
+    </div>
+
+    <div class="tech-card dark">
+      <div>
+        <div class="tech-num">05</div>
+        <div class="tech-name">Geodetic Solar & Lunar Returns</div>
+        <p class="tech-desc">A Solar Return relocated to a place that activates your geodetic angles can intensify the themes of that location for the entire year. Similarly, Geodetic Lunar Returns can be used for monthly timing — identifying when the Moon's geodetic position activates sensitive points in your chart as it moves through longitude bands globally.</p>
+      </div>
+      <a class="tech-link" href="#">Explore returns →</a>
+      <span class="tech-glyph">☽</span>
+    </div>
+
+    <div class="tech-card dark" style="background:var(--egg);border:1px solid rgba(27,27,27,0.14);">
+      <div>
+        <div class="tech-num" style="color:rgba(27,27,27,0.25);">06</div>
+        <div class="tech-name" style="color:var(--char);">Ingress Charts Cast for Location</div>
+        <p class="tech-desc" style="color:rgba(27,27,27,0.55);">Casting an Aries Ingress, Cancer Ingress, or other seasonal chart for a specific city is a foundational mundane technique. The geodetic Ascendant and Midheaven of that city can then be used as additional sensitive points — integrating geodetic and mundane methods into a single, layered forecast framework.</p>
+      </div>
+      <a class="tech-link" style="color:var(--blue);" href="#">See examples →</a>
+      <span class="tech-glyph" style="color:rgba(27,27,27,0.04);">♈</span>
+    </div>
+
+  </div>
+</section>
+
+<!-- MUNDANE ASTROLOGY -->
+<section class="mundane" aria-labelledby="mundane-heading">
+  <div class="sec-header">
+    <h2 class="sec-title" id="mundane-heading">What is Mundane Astrology?</h2>
+    <span class="sec-count">03 / 04</span>
+  </div>
+  <div class="mundane-layout">
+    <div class="mundane-text">
+      <h3>The astrology of the collective</h3>
+      <p>Mundane astrology is the branch of astrology concerned with <strong>nations, governments, natural phenomena, economic cycles, wars, pandemics, and collective cultural shifts</strong>. It is the oldest strand of the tradition — practiced by Babylonian, Hellenistic, Arabic, and Renaissance astrologers long before personal natal astrology became dominant.</p>
+      <p>Where natal astrology asks "what does this mean for me?", mundane astrology asks "what does this mean for us?" — for a city, a country, a generation, a civilisation. Its tools are the charts of nations (often cast for independence moments, constitutional signings, or founding events), <strong>ingress charts</strong> cast for capitals and key cities, lunation cycles, eclipse paths, and — most powerfully — the great outer planet cycles.</p>
+      <p>The <strong>Saturn–Jupiter conjunction cycle</strong> (~20 years) is foundational: it has long been observed to correlate with shifts in economic paradigms and political leadership. The <strong>Saturn–Pluto cycle</strong> (~35 years) with periods of structural breakdown and hard consolidation. The <strong>Pluto ingresses</strong> into new signs bring generational-scale transformations visible in hindsight across many centuries of recorded history.</p>
+      <p>Mundane astrology does not claim to <em>predict</em> specific events. It identifies archetypal pressures, timing windows, and thematic signatures. The actual events that manifest depend on the specific national chart, the historical context, and the broader ecosystem of transits active at the same time.</p>
+
+      <ul class="cycle-list">
+        <li class="cycle-item">
+          <span class="cycle-glyph">♃♄</span>
+          <div class="cycle-body">
+            <div class="cycle-name">Jupiter–Saturn Conjunction (~20 yrs)</div>
+            <div class="cycle-desc">The "great chronocrator" cycle. Historically correlated with political regime changes, economic paradigm shifts, and collective reorientation toward new institutions and ideologies.</div>
+          </div>
+        </li>
+        <li class="cycle-item">
+          <span class="cycle-glyph">♄♇</span>
+          <div class="cycle-body">
+            <div class="cycle-name">Saturn–Pluto Cycle (~35 yrs)</div>
+            <div class="cycle-desc">Associated with periods of structural hard reset — austerity, authoritarian pressure, and the dismantling of what is no longer sustainable. Followed eventually by regeneration.</div>
+          </div>
+        </li>
+        <li class="cycle-item">
+          <span class="cycle-glyph">♆♇</span>
+          <div class="cycle-body">
+            <div class="cycle-name">Neptune–Pluto Cycle (~493 yrs)</div>
+            <div class="cycle-desc">The longest observable outer planet cycle. Correlated with civilisation-level transformations: Renaissance, Industrial Revolution, and the emergence of entirely new cultural paradigms.</div>
+          </div>
+        </li>
+        <li class="cycle-item">
+          <span class="cycle-glyph">☊</span>
+          <div class="cycle-body">
+            <div class="cycle-name">Eclipse Cycles & Saros Series</div>
+            <div class="cycle-desc">Eclipses activate the nodal axis and the eclipse degree for months. When an eclipse falls on a nation's Ascendant, Sun, or ruler's planet, events tied to that archetype tend to crystallise in the following months.</div>
+          </div>
+        </li>
+        <li class="cycle-item">
+          <span class="cycle-glyph">♈</span>
+          <div class="cycle-body">
+            <div class="cycle-name">Aries Ingress & Seasonal Charts</div>
+            <div class="cycle-desc">The Sun's entry into Aries marks the astrological new year. A chart cast for this moment at the capital of any nation functions as a forecast chart for the coming twelve months — one of mundane astrology's most consistently applied tools.</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Mundane panel -->
+    <div>
+      <div class="mundane-panel">
+        <div class="mundane-panel-label">In the Research Notes</div>
+        <div class="mundane-panel-title">Mundane cycles currently active — and what they may mean for your location</div>
+        <div class="mundane-panel-body">An ongoing series tracking major outer planet ingresses, conjunctions, and eclipse cycles — with geodetic overlays for key cities and nations. The research is empirical, not predictive. These are patterns to watch, not prophecies.</div>
+        <div class="mundane-events">
+          <div class="event-row">
+            <span class="event-date">2024–2026</span>
+            <span class="event-text">Pluto into Aquarius — collective systems, networks, and the reshaping of power structures at scale</span>
+          </div>
+          <div class="event-row">
+            <span class="event-date">Ongoing</span>
+            <span class="event-text">Neptune in Aries (from 2025) — the impulse toward new myths, dissolution of old identities, and spiritual pioneering</span>
+          </div>
+          <div class="event-row">
+            <span class="event-date">2025</span>
+            <span class="event-text">Saturn–Neptune conjunction — themes of reality vs. illusion; structural dissolution; the material limits of idealism</span>
+          </div>
+          <div class="event-row">
+            <span class="event-date">Regional</span>
+            <span class="event-text">Geodetic overlays for SE Asia, Europe & Middle East updated quarterly in Research Notes</span>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:1.25rem;">
+        <a class="btn-o" style="width:100%;text-align:center;" href="#">Read the Research Notes →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INTERSECTION SECTION -->
+<section class="intersection" aria-labelledby="intersection-heading">
+  <div class="inter-text">
+    <div class="inter-eyebrow">Where the disciplines meet</div>
+    <span class="inter-script">Together</span>
+    <h2 class="inter-h2" id="intersection-heading">Geodetic + Mundane:<br><em>The Full Picture</em></h2>
+    <p class="inter-body">Geodetic astrology and mundane astrology are most powerful when used together. Geodetic techniques tell you how a location is <em>inherently wired</em>. Mundane cycles tell you <em>when</em> those wires are being activated. Together, they let you understand not just where to be — but when the timing for a particular place is most significant.</p>
+    <ol class="inter-steps">
+      <li class="inter-step">
+        <span class="inter-step-n">1.</span>
+        <div class="inter-step-body"><strong>Establish the geodetic angles</strong> for your location — its Ascendant, Midheaven, and what planets currently occupy those angles geodetically.</div>
+      </li>
+      <li class="inter-step">
+        <span class="inter-step-n">2.</span>
+        <div class="inter-step-body"><strong>Overlay the mundane cycle</strong> — identify which outer planet cycles are currently activating the nation's chart, and when the next ingress or eclipse falls near these geodetic points.</div>
+      </li>
+      <li class="inter-step">
+        <span class="inter-step-n">3.</span>
+        <div class="inter-step-body"><strong>Check your personal chart</strong> against both layers — where do your natal planets align with the geodetic angles and current mundane transits? This three-way convergence is where individual experience and collective events intersect most directly.</div>
+      </li>
+      <li class="inter-step">
+        <span class="inter-step-n">4.</span>
+        <div class="inter-step-body"><strong>Track over time</strong> — mundane cycles unfold slowly. A single reading captures a moment; sustained attention to the cycles reveals the full arc of meaning for a location and its relationship to you.</div>
+      </li>
+    </ol>
+    <a class="btn-p" href="#" style="background:var(--char);">Book a Geodetic & Mundane Reading →</a>
+  </div>
+  <div class="inter-visual">
+    <!-- Stylised diagram: three overlapping circles -->
+    <div class="inter-diagram">
+      <svg viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:320px;display:block;margin:0 auto;" role="img" aria-label="Venn diagram showing the intersection of Geodetic Astrology, Mundane Astrology, and Your Natal Chart">
+        <circle cx="140" cy="120" r="90" fill="rgba(4,86,251,0.12)" stroke="rgba(4,86,251,0.45)" stroke-width="1"/>
+        <circle cx="200" cy="120" r="90" fill="rgba(230,122,122,0.1)" stroke="rgba(230,122,122,0.4)" stroke-width="1"/>
+        <circle cx="170" cy="185" r="90" fill="rgba(202,241,240,0.08)" stroke="rgba(202,241,240,0.35)" stroke-width="1"/>
+
+        <text x="100" y="95" fill="rgba(4,86,251,0.9)" font-size="9" font-family="'DM Sans',sans-serif" font-weight="500" letter-spacing="0.08em" text-anchor="middle">GEODETIC</text>
+        <text x="100" y="107" fill="rgba(4,86,251,0.9)" font-size="9" font-family="'DM Sans',sans-serif" font-weight="500" letter-spacing="0.08em" text-anchor="middle">ASTROLOGY</text>
+
+        <text x="240" y="95" fill="rgba(230,122,122,0.9)" font-size="9" font-family="'DM Sans',sans-serif" font-weight="500" letter-spacing="0.08em" text-anchor="middle">MUNDANE</text>
+        <text x="240" y="107" fill="rgba(230,122,122,0.9)" font-size="9" font-family="'DM Sans',sans-serif" font-weight="500" letter-spacing="0.08em" text-anchor="middle">ASTROLOGY</text>
+
+        <text x="170" y="270" fill="rgba(202,241,240,0.8)" font-size="9" font-family="'DM Sans',sans-serif" font-weight="500" letter-spacing="0.08em" text-anchor="middle">YOUR NATAL</text>
+        <text x="170" y="282" fill="rgba(202,241,240,0.8)" font-size="9" font-family="'DM Sans',sans-serif" font-weight="500" letter-spacing="0.08em" text-anchor="middle">CHART</text>
+
+        <!-- Centre intersection label -->
+        <text x="170" y="158" fill="rgba(248,245,236,0.9)" font-family="'Cormorant Garamond',serif" font-size="11" font-weight="600" text-anchor="middle">The full</text>
+        <text x="170" y="172" fill="rgba(248,245,236,0.9)" font-family="'Cormorant Garamond',serif" font-size="11" font-weight="600" text-anchor="middle">picture</text>
+
+        <!-- Decorative stars -->
+        <text x="55" y="180" fill="rgba(248,245,236,0.15)" font-size="18" font-family="serif">✦</text>
+        <text x="285" y="65" fill="rgba(248,245,236,0.15)" font-size="12" font-family="serif">✦</text>
+        <text x="170" y="30" fill="rgba(248,245,236,0.1)" font-size="22" font-family="serif">✦</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ / DEEP DIVE -->
+<section class="faq" aria-labelledby="faq-heading">
+  <div class="sec-header">
+    <h2 class="sec-title" id="faq-heading">Frequently Asked Questions</h2>
+    <span class="sec-count">04 / 04</span>
+  </div>
+  <div class="faq-grid">
+    <div>
+      <div class="faq-sidebar-label">In this section</div>
+      <ul class="faq-sidebar-nav">
+        <li><a href="#faq1" class="active">Geodetic vs astrocartography</a></li>
+        <li><a href="#faq2">Is geodetic astrology accurate?</a></li>
+        <li><a href="#faq3">What is a mundane chart?</a></li>
+        <li><a href="#faq4">How do I find my geodetic equivalents?</a></li>
+        <li><a href="#faq5">Can mundane astrology predict events?</a></li>
+        <li><a href="#faq6">Do I need a birth time?</a></li>
+        <li><a href="#faq7">Geodetic & relocation combined</a></li>
+      </ul>
+    </div>
+    <div class="faq-items">
+
+      <div class="faq-item" id="faq1">
+        <h3 class="faq-q">What is the difference between geodetic astrology and astrocartography?</h3>
+        <p class="faq-a">Astrocartography (ACG) is a personal system: it projects your natal planets onto the globe based on where each planet was rising, setting, culminating, or at the nadir at the moment of your birth. The lines shift depending on <em>your</em> birth chart. <strong>Geodetic astrology is impersonal and fixed</strong> — it assigns zodiac degrees to longitudes based on a permanent rule (0° Aries = Greenwich), regardless of when you were born. ACG shows where your chart is most activated; geodetics shows the inherent character of a location, plus where your natal planets happen to land in that fixed system. Used together, they are considerably more powerful than either alone.</p>
+      </div>
+
+      <div class="faq-item" id="faq2">
+        <h3 class="faq-q">Is geodetic astrology actually accurate? What does the evidence say?</h3>
+        <p class="faq-a">This is the right question to ask. The honest answer is: the evidence is <strong>suggestive but not definitive</strong>. There is a significant body of case studies — many published in research journals like <em>Correlation</em> — showing striking correlations between outer planet transits to geodetic angles and major collective events. Researchers like Chris McRae and others have documented historical examples that are difficult to dismiss as mere coincidence. However, geodetic astrology has not been subjected to the kind of rigorous double-blind statistical testing that would satisfy peer-reviewed scientific standards. My position is that it is a tool worth using seriously, with appropriate epistemic humility — treating it as a <strong>heuristic framework for pattern recognition</strong> rather than a deterministic oracle.</p>
+      </div>
+
+      <div class="faq-item" id="faq3">
+        <h3 class="faq-q">What exactly is a mundane chart, and how is it different from a natal chart?</h3>
+        <p class="faq-a">A natal chart is cast for a specific person at the moment of their birth. A <strong>mundane chart</strong> is cast for a collective entity or event — a nation (typically at the moment of independence or constitutional founding), a city, an institution, or a significant collective moment (such as a planetary ingress, eclipse, or lunation). The chart is then treated analogously to a natal chart: the Ascendant describes the entity's public presentation, the Midheaven its reputation and leadership, the 8th house shared resources and crisis, and so on. Transits and progressions to these charts are used to understand <a href="#">collective timing and cycles</a>.</p>
+      </div>
+
+      <div class="faq-item" id="faq4">
+        <h3 class="faq-q">How do I find my geodetic equivalent positions?</h3>
+        <p class="faq-a">The calculation is straightforward. Take any natal planet's tropical zodiac degree. Convert that degree to a raw number from 0–360 (0° Aries = 0, 0° Taurus = 30, etc.). The geodetic equivalent longitude is simply that number minus 180 (to convert from the Aries-anchored system to standard East/West longitude). The resulting figure gives you the longitude on earth where that planet has its geodetic resonance. <strong>For example</strong>: a natal Venus at 15° Taurus = 45° in the geodetic system = 45° East longitude — a line running through Ethiopia, Saudi Arabia, and western Russia. A reading with me will map all your significant planets onto the globe and explain what each longitude band tends to activate for you personally.</p>
+      </div>
+
+      <div class="faq-item" id="faq5">
+        <h3 class="faq-q">Can mundane astrology predict future events?</h3>
+        <p class="faq-a">Astrology — including mundane astrology — <strong>does not predict specific events</strong>. What it identifies are archetypal pressures, timing windows of heightened sensitivity, and thematic patterns that tend to correlate with certain types of collective experience. Whether a Saturn–Pluto transit to a nation's Sun manifests as an economic crisis, a political upheaval, a natural disaster, or a slow structural reform depends on an enormous range of factors that no astrological technique can specify in advance. What mundane astrology offers is a <em>framework for understanding why certain periods feel the way they do</em> — and for identifying windows in which particular kinds of collective action or experience are more or less likely to gain traction.</p>
+      </div>
+
+      <div class="faq-item" id="faq6">
+        <h3 class="faq-q">Do I need an accurate birth time for geodetic work?</h3>
+        <p class="faq-a">For the core geodetic equivalent technique (mapping your planets to longitudes), <strong>you do not need an accurate birth time</strong> — only your birth date and approximate year. The slow-moving planets (Jupiter through Pluto) move so slowly that a day's margin of error is usually irrelevant for longitude calculations. For faster-moving planets like the Moon, an approximate time (within a few hours) is helpful. Where birth time matters more is when we incorporate your natal Ascendant and Midheaven into the analysis — those angles shift significantly within a single day. In such cases, I can work with a birth time range, or we can set aside the angles and focus on planetary positions alone.</p>
+      </div>
+
+      <div class="faq-item" id="faq7">
+        <h3 class="faq-q">How does geodetic astrology work alongside relocation astrology and ACG?</h3>
+        <p class="faq-a">Think of it as three complementary lenses. <strong>Astrocartography</strong> shows your personal planetary lines — where your chart is most activated. <strong>Geodetic equivalents</strong> show the inherent longitudinal resonance of your natal planets — locations that carry those planetary themes at a collective, earth-level frequency. <strong>Relocation astrology</strong> recalculates your chart as if you were born at a new location, revealing how your house cusps and planetary house placements shift when you move. Using all three together gives a remarkably rich picture: where you are most personally energised (ACG), where you resonate collectively (geodetics), and how your psychological landscape reshapes itself when you arrive (relocation). A full Astrocartography Deep Dive reading typically incorporates elements of all three.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- CTA STRIP -->
+<section class="cta-strip" aria-labelledby="cta-heading">
+  <div class="cta-left">
+    <div class="cta-eyebrow">Ready to go deeper</div>
+    <h2 class="cta-h2" id="cta-heading">Your chart, your location,<br><em>your collective context.</em></h2>
+    <p class="cta-body">A geodetic & mundane reading layers all three: your natal chart, the inherent geodetic signature of your current and future locations, and the major mundane cycles currently active. It is one of the most contextually rich readings available through this practice.</p>
+  </div>
+  <div class="cta-right">
+    <div class="cta-options">
+      <a class="cta-option primary" href="#">
+        <div class="cta-option-text">
+          <div class="cta-option-label">Most popular</div>
+          <div class="cta-option-title">ACG Deep Dive — includes geodetic overlay</div>
+        </div>
+        <span class="cta-option-arrow">→</span>
+      </a>
+      <a class="cta-option secondary" href="#">
+        <div class="cta-option-text">
+          <div class="cta-option-label">Self-study</div>
+          <div class="cta-option-title">Geodetic & Mundane Intensive Course</div>
+        </div>
+        <span class="cta-option-arrow">→</span>
+      </a>
+      <a class="cta-option secondary" href="#">
+        <div class="cta-option-text">
+          <div class="cta-option-label">Free resource</div>
+          <div class="cta-option-title">Research Notes — ongoing mundane cycle analysis</div>
+        </div>
+        <span class="cta-option-arrow">→</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- RELATED READING -->
+<section class="related" aria-labelledby="related-heading">
+  <div class="sec-header">
+    <h2 class="sec-title" id="related-heading">Related Reading</h2>
+    <span class="sec-count">Continue exploring</span>
+  </div>
+  <div class="related-grid">
+    <a class="related-card" href="#">
+      <div class="related-tag">Technique</div>
+      <div class="related-title">Astrocartography: How Your Lines Actually Work</div>
+      <p class="related-desc">A rigorous, myth-busting guide to astrocartography — what the lines mean, what they don't, and how to read them without falling into oversimplification.</p>
+      <span class="related-arrow">Read →</span>
+    </a>
+    <a class="related-card" href="#">
+      <div class="related-tag">Technique</div>
+      <div class="related-title">Relocation Astrology vs. Astrocartography: What's the Difference?</div>
+      <p class="related-desc">Two distinct but complementary tools for understanding geography and the natal chart. Here's how to tell them apart and when to use each.</p>
+      <span class="related-arrow">Read →</span>
+    </a>
+    <a class="related-card" href="#">
+      <div class="related-tag">Research</div>
+      <div class="related-title">Pluto in Aquarius: A Geodetic Analysis for Key Cities</div>
+      <p class="related-desc">Tracking Pluto's ingress into Aquarius through geodetic angles for Singapore, London, New York, and Nairobi — with notes on what the historical record suggests.</p>
+      <span class="related-arrow">Read →</span>
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div>
+    <span style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:600;color:var(--egg);">AstroNat</span>
+    <p class="foot-tag">Astrocartography, geodetic & mundane astrology for the curious, the analytical, and the perpetually wandering. Based in Singapore.</p>
+  </div>
+  <div>
+    <p class="foot-col-title">Services</p>
+    <ul class="foot-links">
+      <li><a href="#">ACG Deep Dive</a></li>
+      <li><a href="#">Travel Electional</a></li>
+      <li><a href="#">Geodetic Reading</a></li>
+      <li><a href="#">Relocation Solar Return</a></li>
+    </ul>
+  </div>
+  <div>
+    <p class="foot-col-title">Learn</p>
+    <ul class="foot-links">
+      <li><a href="#">Travel Intensive</a></li>
+      <li><a href="#">Geodetic Course</a></li>
+      <li><a href="#">Free Resources</a></li>
+      <li><a href="#">Research Notes</a></li>
+    </ul>
+  </div>
+  <div>
+    <p class="foot-col-title">Connect</p>
+    <ul class="foot-links">
+      <li><a href="#">Instagram</a></li>
+      <li><a href="#">YouTube</a></li>
+      <li><a href="#">Substack</a></li>
+      <li><a href="#">Contact</a></li>
+    </ul>
+  </div>
+</footer>
+<div class="foot-bottom">
+  <p class="foot-copy">© 2026 AstroNat. All rights reserved. Singapore.</p>
+  <div class="foot-social">
+    <a href="#">Instagram</a>
+    <a href="#">YouTube</a>
+    <a href="#">Substack</a>
+  </div>
+</div>
+
+</body>
+</html>

@@ -14,6 +14,7 @@ import {
 } from "./house-matrix";
 import { type TravelWindow } from "./planet-data";
 import { computeRelocatedAscLon } from "./geodetic";
+import { determineSect } from "./arabic-parts";
 
 export interface ComputeWindowsParams {
     startDateStr: string;
@@ -51,6 +52,14 @@ async function getScoreForDate(
     const mappedTransits = mapTransitsToMatrix(mundane.worldTransits, natalPlanets, relocatedCusps, birthLat);
     const globalPenalty = computeGlobalPenalty(mundane.worldTransits);
 
+    // Compute sect from natal Sun vs relocated ASC
+    const sunForSect = natalPlanets.find(
+        p => (p.planet || (p as any).name || "").toLowerCase() === "sun"
+    );
+    const sect = sunForSect
+        ? determineSect(sunForSect.longitude, relocatedCusps[0] ?? 0)
+        : undefined;
+
     const matrix = computeHouseMatrix({
         natalPlanets,
         relocatedCusps,
@@ -63,16 +72,15 @@ async function getScoreForDate(
         birthLat,
         lotOfFortuneLon,
         lotOfSpiritLon,
+        sect,
     });
 
-    const score = matrix.macroScore;
-    const personalScore = matrix.personalScore;
-    const collectiveScore = matrix.collectiveScore;
+    const macroScore = matrix.macroScore;
 
     let quality: TravelWindow["quality"] = "good";
-    if (score >= 80) quality = "excellent";
-    else if (score < 35) quality = "avoid";
-    else if (score < 50) quality = "caution";
+    if (macroScore >= 80) quality = "excellent";
+    else if (macroScore < 35) quality = "avoid";
+    else if (macroScore < 50) quality = "caution";
 
     // Aggregate house summary (top 3 houses)
     const sortedHouses = [...matrix.houses].sort((a, b) => b.score - a.score);
@@ -94,10 +102,9 @@ async function getScoreForDate(
 
     return {
         month,
+        // Basic quality binning based on the normalized V4 macroScore
         quality,
-        score,
-        personalScore,
-        collectiveScore,
+        score: macroScore,
         reason,
         house: houseLabel
     };
@@ -130,10 +137,8 @@ export async function compute12MonthWindows(params: ComputeWindowsParams): Promi
             results.push({
                 month: d.toLocaleDateString("en-GB", { month: "short", year: "numeric" }),
                 quality: "good",
-                score: 50,
-                personalScore: 35,
-                collectiveScore: 15,
-                reason: "Data unavailable",
+                score: 50, // Default for 0 transits
+                reason: "General baseline window",
                 house: "9th House (Travel)"
             });
         }

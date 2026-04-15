@@ -4,11 +4,11 @@ import { useState, useEffect } from "react";
 import styles from "./TripScoreCard.module.css";
 
 export const BAND_CONFIG = {
-    highlyProductive: { label: "Highly Productive", color: "#5A9E78", ring: "#5A9E78", glow: "rgba(90,158,120,0.28)" },
-    productive:       { label: "Productive",        color: "#7B9E87", ring: "#7B9E87", glow: "rgba(123,158,135,0.25)" },
-    mixed:            { label: "Mixed",             color: "#C17B3F", ring: "#C17B3F", glow: "rgba(193,123,63,0.25)" },
-    challenging:      { label: "Challenging",       color: "#C4622D", ring: "#C4622D", glow: "rgba(196,98,45,0.25)" },
-    hostile:          { label: "Hostile",           color: "#A63020", ring: "#A63020", glow: "rgba(166,48,32,0.30)" },
+    highlyProductive: { label: "Highly Productive", color: "var(--text-primary)", ring: "var(--color-y2k-blue)", glow: "rgba(4,86,251,0.28)" },
+    productive:       { label: "Productive",        color: "var(--text-primary)", ring: "var(--color-y2k-blue)", glow: "rgba(4,86,251,0.25)" },
+    mixed:            { label: "Mixed",             color: "var(--text-primary)", ring: "var(--color-acqua)", glow: "rgba(202,241,240,0.25)" },
+    challenging:      { label: "Challenging",       color: "var(--text-primary)", ring: "var(--color-spiced-life)", glow: "rgba(230,122,122,0.25)" },
+    hostile:          { label: "Hostile",           color: "var(--text-primary)", ring: "var(--color-spiced-life)", glow: "rgba(230,122,122,0.30)" },
 };
 
 export type Verdict = keyof typeof BAND_CONFIG;
@@ -54,7 +54,7 @@ export function ScoreRing({ score, verdict }: { score: number; verdict: Verdict 
                     transform="rotate(135 70 70)" style={{ filter: `drop-shadow(0 0 6px ${cfg.ring}88)`, transition: "stroke-dasharray 0.05s linear" }} />
             </svg>
             <div className={styles.ringCenter}>
-                <span className={styles.ringScore} style={{ color: cfg.color }}>{displayed}</span>
+                <span className={styles.ringScore} style={{ color: cfg.color, fontFamily: "var(--font-primary)" }}>{displayed}</span>
             </div>
             <span className={styles.ringLabel}>{cfg.label}</span>
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
-import type { TravelWindow } from "../lib/planet-data";
-import styles from "../flow/flow.module.css";
+import type { TravelWindow } from "@/app/lib/planet-data";
+import styles from "@/app/(frontend)/(app)/flow/flow.module.css";
 
 interface TravelWindowsCardProps {
     windows: TravelWindow[];
@@ -56,7 +56,7 @@ export default function TravelWindowsCard({ windows, travelDate }: TravelWindows
                                 <span className={`${styles.qDot} ${styles[`qd_${w.quality}`]}`} />
                                 {w.quality}
                                 <span style={{ marginLeft: "auto", fontSize: "0.6rem", opacity: 0.8, fontWeight: 500 }}>
-                                    {w.score}/100 ({w.personalScore}P + {w.collectiveScore}C)
+                                    {w.score}/100
                                 </span>
                             </div>
                             <div className={styles.windowReason}>{w.reason}</div>

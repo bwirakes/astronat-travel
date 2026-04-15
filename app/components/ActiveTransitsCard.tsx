@@ -2,8 +2,8 @@
 
 import PlanetIcon from "./PlanetIcon";
 import AspectIcon from "./AspectIcon";
-import { PLANET_COLORS } from "../lib/planet-data";
-import styles from "../flow/flow.module.css";
+import { PLANET_COLORS } from "@/app/lib/planet-data";
+import styles from "@/app/(frontend)/(app)/flow/flow.module.css";
 
 interface Transit {
     planets: string;

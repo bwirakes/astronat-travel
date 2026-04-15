@@ -1,244 +1,168 @@
-/**
- * POST /api/natal
- * Computes a natal chart from birth data using circular-natal-horoscope-js.
- * Returns planets (with longitudinal data), house cusps, and aspects.
- */
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { getProfile, getNatalChart, saveNatalChart } from "@/lib/db";
+import { SwissEphSingleton, getHouse, ZODIAC_SIGNS, computeRealtimePositions } from "@/lib/astro/transits";
 
-import { geocodeCity } from "@/app/lib/astro-client";
-import { getHouseSystemForLatitude } from "@/app/lib/house-system";
-import { computeLotOfFortune, computeLotOfSpirit, determineSect, longitudeToSignDegree } from "@/app/lib/arabic-parts";
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-/** Map sign index (0=Aries) to sign name */
-const SIGNS = [
-    "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
-    "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces",
-];
+    // Support demo mode directly via API if needed, or fallback
+    const { searchParams } = new URL(request.url);
+    const userId = user?.id || searchParams.get("userId");
 
-/** Map circular-natal-horoscope-js planet names to our display names */
-const PLANET_NAME_MAP: Record<string, string> = {
-    sun: "Sun",
-    moon: "Moon",
-    mercury: "Mercury",
-    venus: "Venus",
-    mars: "Mars",
-    jupiter: "Jupiter",
-    saturn: "Saturn",
-    uranus: "Uranus",
-    neptune: "Neptune",
-    pluto: "Pluto",
-    chiron: "Chiron",
-    northnode: "North Node",
-    southnode: "South Node",
-    sirius: "Sirius",
-};
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-export async function POST(req: NextRequest) {
-    try {
-        const body = await req.json();
-        const { dob, time, birthplace, originalBirthplace } = body;
+    // 1. Check if natal chart already exists
+    const cached = await getNatalChart(userId);
+    if (cached && cached.ephemeris_data) {
+      return NextResponse.json(cached.ephemeris_data);
+    }
 
-        if (!dob || !birthplace) {
-            return NextResponse.json({ error: "dob and birthplace are required" }, { status: 400 });
-        }
+    // 2. Fetch user profile for birth data
+    const profile = await getProfile(userId);
+    if (!profile || !profile.birth_date || !profile.birth_time || profile.birth_lat == null || profile.birth_lon == null) {
+      return NextResponse.json({ error: "Incomplete birth data in profile" }, { status: 400 });
+    }
 
-        // Parse date + time
-        const [year, month, day] = dob.split("-").map(Number);
-        const [hour, minute] = (time || "12:00").split(":").map(Number);
+    // We must find the correct UTC time based on the user's local birth_time and birth_city coordinates.
+    const { find } = await import('geo-tz');
+    const tzStr = find(profile.birth_lat, profile.birth_lon)[0];
+    const time = profile.birth_time.length === 5 ? profile.birth_time + ':00' : profile.birth_time;
+    const localIso = `${profile.birth_date}T${time}`;
+    
+    // Iteratively find the exact UTC time by comparing timezone offsets
+    let dtUtc = new Date(`${localIso}Z`);
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: tzStr,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false
+    });
+    
+    for (let i = 0; i < 2; i++) {
+        const parts = formatter.formatToParts(dtUtc);
+        const getPart = (type: string) => parts.find(p => p.type === type)?.value;
+        let h = getPart('hour')!;
+        if (h === '24') h = '00';
+        
+        const fLocal = new Date(`${getPart('year')}-${getPart('month')}-${getPart('day')}T${h}:${getPart('minute')}:${getPart('second')}Z`);
+        const offset = fLocal.getTime() - dtUtc.getTime();
+        dtUtc = new Date(new Date(`${localIso}Z`).getTime() - offset);
+    }
 
-        // Geocode birthplace (this is the destination for relocation, or natal place for natal)
-        const coords = await geocodeCity(birthplace);
-        const lat = coords?.lat ?? 40.7128;
-        const lon = coords?.lon ?? -74.006;
+    const swe = await SwissEphSingleton.getInstance();
+    const year = dtUtc.getUTCFullYear();
+    const month = dtUtc.getUTCMonth() + 1;
+    const day = dtUtc.getUTCDate();
+    const hour = dtUtc.getUTCHours() + dtUtc.getUTCMinutes() / 60.0 + dtUtc.getUTCSeconds() / 3600.0;
+    
+    const jd = swe.julday(year, month, day, hour);
+    
+    // Calculate houses (Placidus except extreme latitudes)
+    const sys = Math.abs(profile.birth_lat) >= 66 ? 'W' : 'P';
+    const h = swe.houses(jd, profile.birth_lat, profile.birth_lon, sys) as any;
+    
+    const cuspsArray: number[] = [];
+    for (let i = 1; i <= 12; i++) {
+        cuspsArray.push(h.cusps[i.toString()]);
+    }
 
-        const { Origin, Horoscope } = await import("circular-natal-horoscope-js");
+    // Compute standard planets
+    const computedPlanets = await computeRealtimePositions(dtUtc, cuspsArray);
 
-        const isRelocation = originalBirthplace && originalBirthplace !== birthplace;
+    const { essentialDignityLabel } = await import("@/app/lib/dignity");
+    const { calculateAspect } = await import("@/lib/astro/aspects");
 
-        // For relocation: compute the chart at the ORIGINAL birthplace first to get the UTC moment,
-        // then compute at the destination coords using that same UTC moment.
-        // For natal: just compute directly.
-        let chartLat = lat;
-        let chartLon = lon;
-        let chartYear = year;
-        let chartMonth = month;
-        let chartDay = day;
-        let chartHour = hour;
-        let chartMinute = minute;
+    // Map planets to add dignity and format
+    const planets = computedPlanets.map((p: any) => ({
+        ...p,
+        dignity: essentialDignityLabel(p.name, p.sign).toUpperCase(),
+    }));
 
-        if (isRelocation) {
-            const origCoords = await geocodeCity(originalBirthplace);
-            if (origCoords) {
-                // Step 1: Compute natal chart at original birthplace to get the true UTC date/time
-                const origOrigin = new Origin({
-                    year, month: month - 1, date: day,
-                    hour, minute,
-                    latitude: origCoords.lat, longitude: origCoords.lon,
+    // Compute Aspects (Unique Pairs)
+    const aspects = [];
+    for (let i = 0; i < planets.length; i++) {
+        for (let j = i + 1; j < planets.length; j++) {
+            const p1 = planets[i];
+            const p2 = planets[j];
+            const result = calculateAspect(p1.longitude, p2.longitude, p1.name, p2.name);
+            if (result) {
+                // Ensure the verdict translates easily for the UI (higher = tighter orb/better aspect)
+                let baseVerdict = 50;
+                if (result.aspect === 'Trine' || result.aspect === 'Sextile') baseVerdict = 80;
+                if (result.aspect === 'Conjunction') baseVerdict = 70;
+                if (result.aspect === 'Opposition' || result.aspect === 'Square') baseVerdict = 30;
+                
+                // Slightly adjust verdict by orb exactly like mock data
+                const verdict = Math.max(0, Math.min(100, Math.round(baseVerdict + (5 - result.orb) * 4)));
+
+                aspects.push({
+                    aspect: `${p1.name} ${result.aspect.toLowerCase()} ${p2.name}`,
+                    type: result.aspect,
+                    orb: `${Math.floor(result.orb)}° ${Math.round((result.orb % 1) * 60).toString().padStart(2, '0')}′`,
+                    verdict,
+                    planet1: p1.name,
+                    planet2: p2.name,
                 });
-
-                // The Origin.utcTime should be a Date object representing the UTC moment of birth.
-                // We need to extract the UTC components from this to feed into a new Origin at the destination.
-                const utcDate = origOrigin.utcTime;
-                if (utcDate instanceof Date && !isNaN(utcDate.getTime())) {
-                    chartYear = utcDate.getUTCFullYear();
-                    chartMonth = utcDate.getUTCMonth() + 1; // back to 1-indexed
-                    chartDay = utcDate.getUTCDate();
-                    chartHour = utcDate.getUTCHours();
-                    chartMinute = utcDate.getUTCMinutes();
-
-                    console.log("[Relocation] Original local:", { year, month, day, hour, minute, place: originalBirthplace });
-                    console.log("[Relocation] UTC from Origin:", { chartYear, chartMonth, chartDay, chartHour, chartMinute });
-                    console.log("[Relocation] Dest:", { birthplace, lat, lon });
-
-                    // Step 2: We need to find what LOCAL time at the destination corresponds to this UTC moment.
-                    // The Origin constructor expects LOCAL time, so we convert UTC → destination local.
-                    const utcMs = utcDate.getTime();
-                    const destFormatter = new Intl.DateTimeFormat('en-US', {
-                        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, // we'll detect below
-                        year: 'numeric', month: 'numeric', day: 'numeric',
-                        hour: 'numeric', minute: 'numeric', second: 'numeric',
-                        hour12: false,
-                    });
-
-                    // Use a temporary Origin at destination to discover its timezone string
-                    const tmpOrigin = new Origin({
-                        year, month: month - 1, date: day,
-                        hour: 12, minute: 0,
-                        latitude: lat, longitude: lon,
-                    });
-                    const destTz = tmpOrigin.timezone || "UTC";
-
-                    const locFormatter = new Intl.DateTimeFormat('en-US', {
-                        timeZone: destTz,
-                        year: 'numeric', month: 'numeric', day: 'numeric',
-                        hour: 'numeric', minute: 'numeric', second: 'numeric',
-                        hour12: false,
-                    });
-                    const parts = locFormatter.formatToParts(utcDate);
-                    const pt = (type: string) => parts.find(p => p.type === type)?.value;
-
-                    chartYear = Number(pt('year'));
-                    chartMonth = Number(pt('month'));
-                    chartDay = Number(pt('day'));
-                    chartHour = Number(pt('hour')) === 24 ? 0 : Number(pt('hour'));
-                    chartMinute = Number(pt('minute'));
-
-                    console.log("[Relocation] Dest local time:", { chartYear, chartMonth, chartDay, chartHour, chartMinute, destTz });
-                } else {
-                    // utcTime is not a Date — try using julianDate approach
-                    console.warn("[Relocation] Origin.utcTime is not a Date:", typeof utcDate, utcDate);
-                    // Fallback: manually compute UTC from local time + timezone offset
-                    // Jakarta is UTC+7, so 22:15 Jakarta = 15:15 UTC
-                    // We'll use a simple geo-based timezone estimate: lon/15 hours
-                    const origOffsetH = Math.round(origCoords.lon / 15);
-                    const destOffsetH = Math.round(lon / 15);
-                    const diffH = destOffsetH - origOffsetH;
-                    chartHour = hour + diffH;
-                    // Handle day rollover
-                    if (chartHour >= 24) { chartHour -= 24; chartDay += 1; }
-                    if (chartHour < 0) { chartHour += 24; chartDay -= 1; }
-                    console.log("[Relocation] Fallback offset:", { origOffsetH, destOffsetH, diffH, chartHour });
-                }
-
-                chartLat = lat;
-                chartLon = lon;
             }
         }
-
-        const origin = new Origin({
-            year: chartYear,
-            month: chartMonth - 1,
-            date: chartDay,
-            hour: chartHour,
-            minute: chartMinute,
-            latitude: chartLat,
-            longitude: chartLon,
-        });
-
-        // Determine house system based on birth latitude
-        const houseSystemType = getHouseSystemForLatitude(chartLat);
-        const libraryHouseSystem = houseSystemType === "whole-sign" ? "whole-sign" : "placidus";
-
-        const horoscope = new Horoscope({
-            origin,
-            houseSystem: libraryHouseSystem,
-            zodiac: "tropical",
-            aspectPoints: ["bodies", "points", "angles"],
-            aspectWithPoints: ["bodies", "points", "angles"],
-            aspectTypes: ["major"],
-            customOrbs: {},
-            language: "en",
-        });
-
-        // Extract planet data
-        const celestialBodies = horoscope.CelestialBodies;
-        const planets = Object.entries(celestialBodies)
-            .filter(([, body]: [string, any]) => body && body.ChartPosition)
-            .map(([key, body]: [string, any]) => {
-                const lon360 = body.ChartPosition.Ecliptic?.DecimalDegrees ?? 0;
-                const signIndex = Math.floor(lon360 / 30) % 12;
-                const degreeInSign = lon360 % 30;
-                return {
-                    planet: PLANET_NAME_MAP[key] ?? key,
-                    sign: SIGNS[signIndex],
-                    degree: degreeInSign,
-                    longitude: lon360,
-                    retrograde: body.isRetrograde ?? false,
-                    house: body.House?.id ?? 1,
-                };
-            });
-
-        // Extract house cusps
-        const cusps = horoscope.Houses?.map((h: any) => h.ChartPosition?.StartPosition?.Ecliptic?.DecimalDegrees ?? 0) ?? [];
-
-        // Extract aspects
-        const aspects = ((horoscope.Aspects as any)?.all ?? []).map((asp: any) => ({
-            point1: PLANET_NAME_MAP[asp.point1?.name] ?? asp.point1?.name,
-            point2: PLANET_NAME_MAP[asp.point2?.name] ?? asp.point2?.name,
-            aspect: asp.aspect?.label ?? asp.aspect?.name,
-            orb: Math.round((asp.orb ?? 0) * 10) / 10,
-        }));
-
-        // Ascendant + MC
-        const ascendant = horoscope.Angles?.Ascendant?.ChartPosition?.Ecliptic?.DecimalDegrees ?? null;
-        const mc = horoscope.Angles?.Midheaven?.ChartPosition?.Ecliptic?.DecimalDegrees ?? null;
-
-        // Compute Lot of Fortune / Spirit
-        let lotOfFortune = null;
-        let lotOfSpirit = null;
-        const sunP = planets.find(p => p.planet === "Sun");
-        const moonP = planets.find(p => p.planet === "Moon");
-        if (ascendant !== null && sunP && moonP) {
-            const sect = determineSect(sunP.longitude, ascendant);
-            const fortuneLon = computeLotOfFortune(ascendant, sunP.longitude, moonP.longitude, sect);
-            const spiritLon = computeLotOfSpirit(ascendant, sunP.longitude, moonP.longitude, sect);
-            lotOfFortune = {
-                longitude: Math.round(fortuneLon * 10) / 10,
-                ...longitudeToSignDegree(fortuneLon),
-                sect,
-            };
-            lotOfSpirit = {
-                longitude: Math.round(spiritLon * 10) / 10,
-                ...longitudeToSignDegree(spiritLon),
-                sect,
-            };
-        }
-
-        return NextResponse.json({
-            planets,
-            cusps,
-            aspects,
-            ascendant: ascendant !== null ? Math.round(ascendant * 10) / 10 : null,
-            mc: mc !== null ? Math.round(mc * 10) / 10 : null,
-            houseSystem: houseSystemType,
-            lotOfFortune,
-            lotOfSpirit,
-            birthplace,
-            coords: { lat: chartLat, lon: chartLon },
-        });
-    } catch (err) {
-        console.error("[/api/natal] error:", err);
-        return NextResponse.json({ error: "Failed to compute natal chart", detail: String(err) }, { status: 500 });
     }
-}
 
+    // Compute Angles (Ascendant, MC, DC, IC)
+    const asc = h.ascmc["0"];
+    const mc = h.ascmc["1"];
+    const ic = (mc + 180) % 360;
+    const dc = (asc + 180) % 360;
+
+    const generateAngle = (name: string, lon: number) => {
+        const signIdx = Math.floor(lon / 30);
+        const degInSign = lon % 30;
+        return {
+            name,
+            planet: name, // alias
+            longitude: Number(lon.toFixed(6)),
+            sign: ZODIAC_SIGNS[signIdx],
+            degree_in_sign: Number(degInSign.toFixed(4)),
+            degree_minutes: Math.floor((degInSign - Math.floor(degInSign)) * 60),
+            speed: 0,
+            is_retrograde: false,
+            computed_at_utc: dtUtc.toISOString(),
+            house: getHouse(lon, cuspsArray),
+            isAngle: true
+        };
+    };
+
+    const angles = [
+        generateAngle("Ascendant", asc),
+        generateAngle("MC", mc),
+        generateAngle("IC", ic),
+        generateAngle("DC", dc)
+    ];
+
+    const resultData = {
+        planets,
+        angles,
+        aspects,
+        cusps: cuspsArray,
+        profile_time: dtUtc.toISOString(),
+        birth_city: profile.birth_city,
+        birth_date: profile.birth_date,
+        birth_time: profile.birth_time,
+        birth_lat: profile.birth_lat,
+        birth_lon: profile.birth_lon
+    };
+
+    // Save to DB
+    await saveNatalChart(userId, resultData, { cusps: cuspsArray });
+
+    return NextResponse.json(resultData);
+
+  } catch (err: any) {
+    console.error("[/api/natal] Error:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}

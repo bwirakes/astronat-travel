@@ -4,8 +4,8 @@ import React, { useRef, useState, useEffect } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import Navbar from "../components/Navbar";
-import { SIGN_PATHS } from "../components/SignIcon";
+import Navbar from "@/app/components/Navbar";
+import { SIGN_PATHS } from "@/app/components/SignIcon";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(useGSAP, ScrollTrigger);

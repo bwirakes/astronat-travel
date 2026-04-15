@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import PlanetIcon from "./PlanetIcon";
-import { PLANET_COLORS, getOrbStrengthColor } from "../lib/planet-data";
-import styles from "../flow/flow.module.css";
+import { PLANET_COLORS, getOrbStrengthColor } from "@/app/lib/planet-data";
+import styles from "@/app/(frontend)/(app)/flow/flow.module.css";
 
 interface PlanetLine {
     planet: string; angle: string; distance_km: number;
@@ -86,6 +86,13 @@ export default function AcgLinesCard({ planetLines, destination }: AcgLinesCardP
             <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", marginBottom: "var(--space-sm)" }}>
                 {acgLines.length} lines near {destination} · sorted by proximity
             </p>
+
+            {acgLines.length === 0 && paranLines.length === 0 && (
+                <div className="mt-4 p-6 border border-dashed border-[var(--surface-border)] rounded-[var(--shape-asymmetric-md)] bg-[var(--surface)] opacity-80 flex flex-col items-center text-center">
+                    <span className="font-mono text-xs tracking-widest uppercase text-[var(--color-y2k-blue)] mb-2">Neutral Zone</span>
+                    <p className="font-body text-sm text-[var(--text-secondary)]">There are no major planetary lines intersecting near this region. This indicates a quiet geographic space, free from extreme angular spikes. Good for rest or building from an uninfluenced baseline.</p>
+                </div>
+            )}
 
             {acgLines.length > 0 && (
                 <div className={styles.lineSection}>

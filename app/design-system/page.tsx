@@ -37,6 +37,7 @@ export default function DesignSystemPage() {
           <ColorSwatch name="Acqua" varName="--color-acqua" hex="#CAF1F0" textColor="var(--color-charcoal)" />
           <ColorSwatch name="Black" varName="--color-black" hex="#000000" />
           <ColorSwatch name="Eggshell" varName="--color-eggshell" hex="#F8F5EC" textColor="var(--color-charcoal)" />
+          <ColorSwatch name="Cream" varName="--color-cream" hex="#F1EFE7" textColor="var(--color-charcoal)" />
           <ColorSwatch name="Spiced Life" varName="--color-spiced-life" hex="#E67A7A" textColor="var(--color-charcoal)" />
           <ColorSwatch name="Neon Green" varName="--sage" hex="#00FD00" textColor="var(--color-charcoal)" />
         </div>
@@ -51,17 +52,17 @@ export default function DesignSystemPage() {
         <div style={{ marginTop: 'var(--space-lg)' }}>
           <div style={{ marginBottom: 'var(--space-lg)' }}>
             <h4 style={{ color: 'var(--y2k-blue)' }}>Primary / Display (--font-primary)</h4>
-            <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.5rem' }}>Asset: BETTER DAYS</p>
-            <h1 style={{ fontFamily: 'var(--font-primary)', fontSize: '4rem', textTransform: 'uppercase' }}>BETTER DAYS</h1>
+            <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.5rem' }}>Asset: CORMORANT UPRIGHT</p>
+            <h1 style={{ fontFamily: 'var(--font-primary)', fontSize: '4rem', textTransform: 'uppercase' }}>Better Days</h1>
           </div>
           <div style={{ marginBottom: 'var(--space-lg)' }}>
             <h4 style={{ color: 'var(--accent)' }}>Secondary / Serif (--font-secondary)</h4>
-            <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.5rem' }}>Asset: PERFECTLY NINETIES</p>
+            <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.5rem' }}>Asset: LIBRE BASKERVILLE</p>
             <h2 style={{ fontFamily: 'var(--font-secondary)', fontSize: '3rem' }}>Perfectly Nineties</h2>
           </div>
           <div style={{ marginBottom: 'var(--space-lg)' }}>
             <h4 style={{ color: 'var(--sage)' }}>Body (--font-body)</h4>
-            <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.5rem' }}>Asset: GARET</p>
+            <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.5rem' }}>Asset: MANROPE</p>
             <p style={{ fontFamily: 'var(--font-body)', fontSize: '1.25rem', maxWidth: '600px' }}>
               I'm baby tattooed humblebrag mustache vinyl la croix keytar 90's ascot vexillologist 8-bit dreamcatcher. Poutine VHS yr quinoa direct trade, live-edge fit tilde hexagon asymmetrical hashtag banh mi vibecession.
             </p>
@@ -70,12 +71,12 @@ export default function DesignSystemPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-md)' }}>
             <div style={{ marginBottom: 'var(--space-lg)' }}>
               <h4 style={{ color: 'var(--text-secondary)' }}>Display Alt 1 (--font-display-alt-1)</h4>
-              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.5rem' }}>Asset: MONIGUE</p>
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.5rem' }}>Asset: MONIGUE (LOCAL.OTF)</p>
               <p style={{ fontFamily: 'var(--font-display-alt-1)', fontSize: '2.5rem' }}>Monigue Typeface</p>
             </div>
             <div style={{ marginBottom: 'var(--space-lg)' }}>
               <h4 style={{ color: 'var(--text-secondary)' }}>Display Alt 2 (--font-display-alt-2)</h4>
-              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.5rem' }}>Asset: SLOOP SCRIPT</p>
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', opacity: 0.6, marginBottom: '0.5rem' }}>Asset: PINYON SCRIPT</p>
               <p style={{ fontFamily: 'var(--font-display-alt-2)', fontSize: '3.5rem' }}>Sloop Script</p>
             </div>
           </div>
@@ -99,7 +100,7 @@ export default function DesignSystemPage() {
 
       <section style={{ marginBottom: 'var(--space-xl)' }}>
         <h2 style={{ marginBottom: 'var(--space-xs)' }}>Identity SVG Avatars</h2>
-        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 'var(--space-lg)' }}>Vector assets extracted from IDENTITY/EXPORTS/SVG/AVATAR</p>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 'var(--space-lg)' }}>Vector assets extracted from public/brand/EXPORTS/SVG/AVATAR</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 'var(--space-lg)', alignItems: 'center' }}>
           <div style={{ padding: 'var(--space-md)', background: 'var(--color-black)', borderRadius: '50%', display: 'flex', justifyContent: 'center' }}>
             <Image src="/avatar/logo-stacked.svg" alt="Stacked Logo" width={80} height={80} style={{ filter: theme === 'dark' ? 'invert(1)' : 'invert(1)' }}/>
@@ -163,6 +164,52 @@ export default function DesignSystemPage() {
           />
         </div>
       </section>
+
+      <hr style={{ border: 'none', borderTop: '2px solid var(--surface-border)', margin: 'var(--space-xl) 0' }} />
+
+      <section style={{ marginBottom: 'var(--space-3xl)' }}>
+        <h2 style={{ fontFamily: 'var(--font-primary)', fontSize: '4rem', marginBottom: 'var(--space-xs)', textTransform: 'uppercase' }}>Editorial Action Buttons</h2>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 'var(--space-2xl)' }}>
+          Rich, interactive typographic lockups translating the brand guidelines into clickable components.
+        </p>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2xl)', alignItems: 'flex-start' }}>
+          <CourseWorkshopButton />
+          <BlogFeatureButton />
+          <DiveIntoButton />
+        </div>
+      </section>
+
+      <hr style={{ border: 'none', borderTop: '2px solid var(--surface-border)', margin: 'var(--space-xl) 0' }} />
+
+      <section style={{ marginBottom: 'var(--space-3xl)' }}>
+        <h2 style={{ fontFamily: 'var(--font-primary)', fontSize: '4rem', marginBottom: 'var(--space-md)', textTransform: 'uppercase' }}>Forms & Contrast</h2>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 'var(--space-xl)' }}>
+          Testing semantic contrast across inputs and labels. High-legibility overrides active for Light Mode.
+        </p>
+
+        <div style={{ maxWidth: '500px', background: 'var(--surface)', padding: 'var(--space-xl)', border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-md)' }}>
+           <div className="input-group" style={{ marginBottom: 'var(--space-md)' }}>
+              <label className="input-label">Explorer Identification</label>
+              <input type="text" className="input-field" placeholder="Enter your name..." defaultValue="Starman Odyssey" />
+           </div>
+           
+           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
+              <div className="input-group">
+                <label className="input-label">Origin Point</label>
+                <input type="text" className="input-field" defaultValue="Cape Canaveral" />
+              </div>
+              <div className="input-group">
+                <label className="input-label">Launch Date</label>
+                <input type="date" className="input-field" defaultValue="2025-01-05" />
+              </div>
+           </div>
+           
+           <button className="btn btn-primary" style={{ marginTop: 'var(--space-lg)', width: '100%' }}>
+             Initialize Sequence
+           </button>
+        </div>
+      </section>
     </div>
   );
 }
@@ -223,5 +270,110 @@ function EbookConcept({ title, imageSrc, themeMode, scriptLetter }: { title: str
         </div>
       </div>
     </div>
+  );
+}
+
+function CourseWorkshopButton() {
+  return (
+    <button className="editorial-btn" style={{
+      background: '#1B1B1B', // Charcoal 
+      color: '#F8F5EC', // Eggshell
+      border: 'none',
+      padding: '2rem 1.5rem',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      width: '320px',
+      height: '320px',
+      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+      position: 'relative',
+      overflow: 'hidden'
+    }}>
+      <div style={{ fontFamily: 'var(--font-secondary)', fontSize: '2rem', textAlign: 'center', lineHeight: 0.95, letterSpacing: '-0.03em' }}>
+        Astro Nat<br/>&ldquo;The Course&rdquo;
+      </div>
+      <div style={{ fontFamily: 'var(--font-display-alt-2)', fontSize: '4.5rem', lineHeight: 0.6, marginTop: '2rem', color: '#F8F5EC' }}>
+        Worth
+      </div>
+      <div style={{ fontFamily: 'var(--font-primary)', fontSize: '3rem', textTransform: 'uppercase', color: 'var(--color-spiced-life)', lineHeight: 0.85, marginTop: '1.5rem', whiteSpace: 'nowrap' }}>
+        WORKSHOP
+      </div>
+      <div style={{ fontFamily: 'var(--font-secondary)', fontSize: '1.4rem', marginTop: '2rem', letterSpacing: '2px' }}>
+        01 / 05 / 25
+      </div>
+    </button>
+  );
+}
+
+function BlogFeatureButton() {
+  return (
+    <button className="editorial-btn" style={{
+      background: '#F8F5EC', // Eggshell
+      color: '#1B1B1B', // Charcoal
+      border: '1px solid rgba(0,0,0,0.1)',
+      padding: '2rem',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      width: '320px',
+      height: '320px',
+      textAlign: 'left',
+      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+      position: 'relative'
+    }}>
+      <div style={{ width: '32px', height: '32px', position: 'relative', marginBottom: '1.5rem' }}>
+        {[0, 30, 60, 90, 120, 150].map((deg) => (
+          <div key={deg} style={{
+            position: 'absolute', top: '50%', left: 0, width: '100%', height: '1px',
+            background: '#1B1B1B', transform: `translateY(-50%) rotate(${deg}deg)`,
+            opacity: 0.7
+          }} />
+        ))}
+      </div>
+      
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.1em', marginBottom: '1rem', textTransform: 'uppercase' }}>
+        ASTRO 101
+      </div>
+      
+      <div style={{ fontFamily: 'var(--font-secondary)', fontSize: '2.1rem', lineHeight: 1.05, letterSpacing: '-0.03em' }}>
+        Vape echo park blog neutra, <span style={{ fontStyle: 'italic' }}>forage</span> same tousled gluten-free <span style={{ color: 'var(--color-y2k-blue)' }}>vexillologist</span> af.
+      </div>
+    </button>
+  );
+}
+
+function DiveIntoButton() {
+  return (
+    <button className="editorial-btn" style={{
+      background: '#F8F5EC', // Eggshell
+      color: '#1B1B1B', // Charcoal
+      border: '1px solid rgba(0,0,0,0.1)',
+      padding: '2rem',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      width: '320px',
+      height: '320px',
+      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+      position: 'relative'
+    }}>
+      <div style={{ fontFamily: 'var(--font-primary)', fontSize: '6rem', textTransform: 'uppercase', lineHeight: 0.75, color: '#1B1B1B', zIndex: 1, position: 'relative', letterSpacing: '-0.04em' }}>
+        DIVE
+      </div>
+      
+      <div style={{ fontFamily: 'var(--font-display-alt-2)', fontSize: '4.5rem', color: 'var(--color-spiced-life)', lineHeight: 0.4, zIndex: 2, position: 'relative', marginTop: '-0.25rem', marginLeft: '0.5rem' }}>
+        INTO
+      </div>
+      
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.12em', marginTop: '2.5rem', textTransform: 'uppercase', textAlign: 'right', width: '100%', lineHeight: 1.4 }}>
+        CELESTIAL<br/>MONEY COURSE
+      </div>
+    </button>
   );
 }

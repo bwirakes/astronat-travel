@@ -1,9 +1,9 @@
 "use client";
 
 import PlanetIcon from "./PlanetIcon";
-import { PLANET_COLORS } from "../lib/planet-data";
-import { detectCountry } from "../lib/country-charts";
-import styles from "../flow/flow.module.css";
+import { PLANET_COLORS } from "@/app/lib/planet-data";
+import { detectCountry } from "@/app/lib/country-charts";
+import styles from "@/app/(frontend)/(app)/flow/flow.module.css";
 
 interface WorldTransit {
     p1: string; p2: string; aspect: string; symbol: string; orb: number;

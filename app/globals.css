@@ -1,20 +1,19 @@
 /* ═══ Astro Nat — Elevated Editorial + 90s Vibe ════════════════════════════ */
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* Astro-Brand Strategy Typography */
-  --font-primary: 'BETTER DAYS', 'Space Grotesk', sans-serif;
-  --font-secondary: 'PERFECTLY NINETIES', 'Cormorant Garamond', serif;
-  --font-body: 'GARET', 'Space Grotesk', sans-serif;
-  --font-display-alt-1: 'MONIGUE', 'Cormorant Garamond', serif;
-  --font-display-alt-2: 'SLOOP SCRIPT', cursive;
+  /* Astro-Brand Strategy Authentic Local Fonts */
+  --font-primary: var(--font-perfectly-nineties), var(--font-garamond), serif;
+  --font-secondary: var(--font-perfectly-nineties), var(--font-garamond), serif;
+  --font-body: var(--font-garet), var(--font-dm-sans), sans-serif;
+  --font-display-alt-1: var(--font-monigue), serif;
+  --font-display-alt-2: var(--font-pinyon), cursive;
 
   --font-display: var(--font-secondary);
-  --font-mono: 'IBM Plex Mono', monospace;
+  --font-mono: var(--font-ibm), monospace;
 
   /* Astro-Brand Strategy Colors */
   --color-charcoal: #1B1B1B;
@@ -22,13 +21,14 @@
   --color-acqua: #CAF1F0;
   --color-black: #000000;
   --color-eggshell: #F8F5EC;
+  --color-cream: #F1EFE7;
   --color-spiced-life: #E67A7A;
 
   /* Dark Theme (Default) mapped to Brand Colors */
   --bg: var(--color-charcoal);
   --bg-raised: #212121;
-  --surface: var(--color-black);
-  --surface-border: rgba(255, 255, 255, 0.1);
+  --surface: #121212; /* Softer than pure black */
+  --surface-border: rgba(255, 255, 255, 0.12);
 
   /* Esoteric / Atmospheric Palette */
   --accent: var(--color-spiced-life);
@@ -60,8 +60,8 @@
   --color-planet-pluto: #8E24AA;
 
   --text-primary: var(--color-eggshell);
-  --text-secondary: #AAAAAA;
-  --text-tertiary: #666666;
+  --text-secondary: #CCCCCC;
+  --text-tertiary: #999999;
 
   /* Spacing */
   --space-xs: 0.5rem;
@@ -100,26 +100,48 @@
 /* Light Theme (Astro-Brand mappings) */
 [data-theme="light"] {
   --bg: var(--color-eggshell);
-  --bg-raised: #FFFFFF;
-  --surface: var(--color-eggshell);
+  --bg-raised: var(--color-cream);
+  --surface: var(--color-cream);
   --surface-border: rgba(0, 0, 0, 0.08);
 
   --accent: var(--color-spiced-life);
-  --accent-soft: rgba(230, 122, 122, 0.12);
-  --cyan: var(--color-acqua);
-  --cyan-soft: rgba(202, 241, 240, 0.2);
-
-  --sage: #00FD00;
-  --sage-soft: rgba(0, 253, 0, 0.15);
+  --cyan: #007676; /* Dark teal replacing Acqua */
+  --color-acqua: #007676; 
+  --sage: #007A00; /* Deep green replacing neon */
   --amber: #C17B3F;
-  --amber-soft: rgba(193, 123, 63, 0.1);
-
-  --gold: #C9A96E;
+  --gold: #A67C00; /* Darker gold for text contrast */
   --gold-soft: rgba(201, 169, 110, 0.12);
 
+  /* Planet Palette - Light Mode Overrides for Legibility */
+  --color-planet-sun: #A58B5A;
+  --color-planet-moon: #8794A6;
+  --color-planet-mercury: var(--color-charcoal);
+  --color-planet-venus: #C34949;
+  --color-planet-mars: #A52020;
+  --color-planet-jupiter: #985925;
+  --color-planet-saturn: #555555;
+  --color-planet-uranus: #0340B5;
+  --color-planet-neptune: var(--color-y2k-blue);
+  --color-planet-pluto: #6C1582;
+
   --text-primary: var(--color-charcoal);
-  --text-secondary: #4A4A4A;
-  --text-tertiary: #666666;
+  --text-secondary: var(--color-charcoal);
+  --text-tertiary: #555555;
+
+  /* Theme-aware Text Colors for Brand Backgrounds */
+  --text-on-charcoal: #F8F5EC; /* Force legibility on dark blocks in light mode */
+  --text-on-y2k-blue: #F8F5EC;
+  --text-on-acqua: #111b2e; /* Acqua is teal in light mode, use dark text */
+}
+
+/* ── Block Theming Utilities ────────────────────────────────── */
+.theme-block-h h1, 
+.theme-block-h h2, 
+.theme-block-h h3, 
+.theme-block-h h4, 
+.theme-block-h h5, 
+.theme-block-h h6 {
+  color: inherit !important;
 }
 
 /* ── Reset ──────────────────────────────────────────────────── */
@@ -203,8 +225,9 @@ h6 {
 }
 
 p {
-  line-height: 1.7;
+  line-height: 1.6;
   color: var(--text-secondary);
+  font-weight: 300;
 }
 
 a {
@@ -398,6 +421,21 @@ a {
     white-space: nowrap;
 }
 
+.btn-ghost {
+  border: 1px solid var(--surface-border);
+  color: var(--text-primary);
+  background: transparent;
+}
+.btn-ghost:hover {
+  background: var(--bg-raised);
+}
+
+/* ── Editorial Action Components ───────────────────────── */
+.editorial-btn:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+}
+
 .expandable-title {
     font-family: var(--font-secondary);
     font-weight: 400;
@@ -464,4 +502,60 @@ a {
 }
 [data-theme="light"] .onboarding-logo {
   filter: none;
+}
+
+/* ── Accordion Animations ── */
+.astro-accordion-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+.astro-accordion-trigger:hover {
+  opacity: 0.8;
+}
+.astro-accordion-content[data-state="open"] {
+  animation: slideDown 0.3s cubic-bezier(0.87, 0, 0.13, 1);
+}
+.astro-accordion-content[data-state="closed"] {
+  animation: slideUp 0.3s cubic-bezier(0.87, 0, 0.13, 1);
+}
+@keyframes slideDown {
+  from { height: 0; opacity: 0; }
+  to   { height: var(--radix-accordion-content-height); opacity: 1; }
+}
+@keyframes slideUp {
+  from { height: var(--radix-accordion-content-height); opacity: 1; }
+  to   { height: 0; opacity: 0; }
+}
+
+/* HoverCard pop animation */
+.planet-hover-card-pop[data-state="open"] {
+  animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(4px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Astro Loader ── */
+@keyframes astro-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── Home Layout V2 (100vh lock on Desktop only) - Removed to allow scrolling ── */
+
+/* ── Base UI Navigation Menu — force transparent containers ── */
+[data-slot="navigation-menu-positioner"],
+[data-slot="navigation-menu-positioner"] > *,
+[data-slot="navigation-menu-positioner"] [role="dialog"],
+[data-slot="navigation-menu-positioner"] [popover] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }

@@ -53,9 +53,10 @@ async function syncSubscriptionToProfile(
     null
 
   const endsAt = periodEnd ? new Date(periodEnd * 1000).toISOString() : null
+  const startsAt = sub.current_period_start ? new Date(sub.current_period_start * 1000).toISOString() : null
 
-
-  const { error } = await supabase
+  // 1. Sync Fast Boolean to Profiles (for RLS Performance)
+  const { error: profileError } = await supabase
     .from('profiles')
     .update({
       is_subscribed: isActive,
@@ -65,10 +66,29 @@ async function syncSubscriptionToProfile(
     })
     .eq('id', resolvedUserId)
 
-  if (error) {
-    console.error('[webhook] Failed to update profile subscription fields:', error.message)
+  if (profileError) {
+    console.error('[webhook] Failed to update profile:', profileError.message)
+  }
+
+  // 2. Sync Full Record to Subscriptions Table (Source of Truth)
+  // Use stripe_subscription_id for upsert logic if the table schema supports it, 
+  // currently we treat stripe_subscription_id as UNIQUE in our migration.
+  const { error: subError } = await supabase
+    .from('subscriptions')
+    .upsert({
+      user_id: resolvedUserId,
+      stripe_customer_id: typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id,
+      stripe_subscription_id: subscription.id,
+      status: status,
+      current_period_start: startsAt,
+      current_period_end: endsAt,
+      plan_id: sub.items?.data?.[0]?.price?.id ?? null,
+    }, { onConflict: 'stripe_subscription_id' })
+
+  if (subError) {
+    console.error('[webhook] Failed to update subscriptions table:', subError.message)
   } else {
-    console.log(`[webhook] Synced subscription ${subscription.id} → user ${resolvedUserId} | status=${status}`)
+    console.log(`[webhook] Fully synced ${subscription.id} for user ${resolvedUserId}`)
   }
 
   return resolvedUserId

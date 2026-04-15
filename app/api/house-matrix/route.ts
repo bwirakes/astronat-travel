@@ -1,6 +1,6 @@
 /**
  * POST /api/house-matrix
- * Computes the 12-House scoring matrix for a destination.
+ * Computes the 12-House scoring matrix and Generalized Event Scores for a destination.
  *
  * Request body:
  *   {
@@ -13,7 +13,7 @@
  *     destLon: number,
  *   }
  *
- * Response: HouseMatrixResult
+ * Response: { ...HouseMatrixResult, eventScores: FinalEventScore[] }
  */
 import { NextRequest, NextResponse } from "next/server";
 import {
@@ -25,8 +25,9 @@ import {
     type MatrixTransit,
     type MatrixParan,
 } from "@/app/lib/house-matrix";
-import { SIGN_RULERS, BENEFIC_PLANETS } from "@/app/lib/astro-constants";
-import { signFromLongitude, houseFromLongitude } from "@/app/lib/geodetic";
+import { houseFromLongitude } from "@/app/lib/geodetic";
+import { computeEventScores, type OccupancyPlanet } from "@/app/lib/scoring-engine";
+import { determineSect } from "@/app/lib/arabic-parts";
 
 export async function POST(req: NextRequest) {
     try {
@@ -52,7 +53,15 @@ export async function POST(req: NextRequest) {
         const mappedTransits = mapTransitsToMatrix(transits, natalPlanets, relocatedCusps);
         const globalPenalty = computeGlobalPenalty(transits);
 
-        const result = computeHouseMatrix({
+        // Compute sect from natal Sun position vs relocated ASC
+        const sunEntry = (natalPlanets as MatrixNatalPlanet[]).find(
+            (p) => (p.planet || (p as any).name || "").toLowerCase() === "sun"
+        );
+        const sect = sunEntry
+            ? determineSect(sunEntry.longitude, (relocatedCusps as number[])[0] ?? 0)
+            : undefined;
+
+        const matrixResult = computeHouseMatrix({
             natalPlanets: natalPlanets as MatrixNatalPlanet[],
             relocatedCusps: relocatedCusps as number[],
             acgLines: acgLines as MatrixACGLine[],
@@ -61,9 +70,20 @@ export async function POST(req: NextRequest) {
             destLat,
             destLon,
             globalPenalty,
+            sect,
         });
 
-        return NextResponse.json(result);
+        // Compute Relocated Occupancy (P_occ) for scoring engine
+        const ascLon = relocatedCusps[0] ?? 0;
+        const relocatedPlanets: OccupancyPlanet[] = natalPlanets.map((p: any) => ({
+            name: p.planet,
+            house: houseFromLongitude(p.longitude, ascLon),
+        }));
+
+        // Execute Memo Part 2: Vectorizing Life Events
+        const eventScores = computeEventScores(matrixResult, relocatedPlanets);
+
+        return NextResponse.json({ ...matrixResult, eventScores });
     } catch (err) {
         console.error("[/api/house-matrix]", err);
         return NextResponse.json(
