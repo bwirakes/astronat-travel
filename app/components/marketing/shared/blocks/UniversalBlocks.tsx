@@ -461,19 +461,19 @@ export const SplitContent: React.FC<any> = ({ block }) => {
                   {block.primaryCta.label} <ArrowRight size={14} className="inline-block flex-shrink-0" />
                 </Link>
               )}
-              {block.priceBadge && (
-                <div className={`flex flex-col items-center justify-center p-4 border rounded-2xl md:ml-auto shrink-0 min-w-32 ${theme.isDark ? 'bg-white/5 border-white/10' : 'bg-[var(--surface)] border-[var(--surface-border)]'}`}>
-                   <span className={`font-mono text-[8px] uppercase tracking-widest mb-1 opacity-50 text-center leading-tight whitespace-pre-wrap`}>{block.priceBadge.kicker}</span>
-                   <span className={`font-primary text-xl font-medium tracking-tight`}>{block.priceBadge.line2}</span>
-                </div>
-              )}
             </div>
          </div>
-         
+
          {/* RIGHT COLUMN - IMAGE OR RETAINER PANEL */}
          {block.image ? (
             <div className={`relative h-full w-full min-h-[400px] lg:min-h-full ${block.imageSide === "left" ? 'lg:order-1 border-r' : 'border-l'} ${theme.borderClass} overflow-hidden`}>
                <Image src={block.image} alt="Section visual" fill className="object-cover" />
+               {block.priceBadge && (
+                 <div className="absolute bottom-8 right-8 w-32 h-32 rounded-full bg-[var(--color-charcoal)] flex flex-col items-center justify-center text-center shadow-xl">
+                   <span className="font-mono text-[8px] uppercase tracking-widest text-[var(--color-acqua)] leading-tight whitespace-pre-wrap mb-1">{block.priceBadge.kicker}</span>
+                   <span className="font-primary text-2xl font-medium tracking-tight text-[var(--color-eggshell)]">{block.priceBadge.line2}</span>
+                 </div>
+               )}
             </div>
          ) : block.rightPanel ? (
             <div className="flex flex-col h-full w-full pt-16 md:pt-32 pb-16 px-6 lg:pr-[max(1.5rem,calc((100vw-80rem)/2))] lg:pl-16 border-l border-black/10 relative" style={{ backgroundColor: '#CAF1F0', color: '#111b2e' }}>
