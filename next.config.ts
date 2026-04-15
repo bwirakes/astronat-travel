@@ -1,10 +1,7 @@
 import { withPayload } from "@payloadcms/next/withPayload";
 
 const nextConfig = {
-  // --- IGNORE ALL ESLINT + TS ERRORS DURING BUILD ---
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // --- IGNORE TS ERRORS DURING BUILD ---
   typescript: {
     ignoreBuildErrors: true,
   },
