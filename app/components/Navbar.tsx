@@ -100,12 +100,6 @@ export default function Navbar({ activeHref, centerContent, logoHref = "/", hide
                                           <span className="font-mono text-[0.6rem] opacity-40 group-hover:opacity-100 uppercase tracking-tighter">03</span>
                                         </NavigationMenuLink>
                                       </li>
-                                      <li>
-                                        <NavigationMenuLink render={<Link href="/app" />} className="flex items-center justify-between select-none px-4 py-3 leading-none outline-none transition-all hover:bg-[var(--color-y2k-blue)] hover:text-white group">
-                                          <span className="font-secondary text-[1.05rem]">AstroNat App</span>
-                                          <span className="font-mono text-[0.6rem] opacity-40 group-hover:opacity-100 uppercase tracking-tighter">04</span>
-                                        </NavigationMenuLink>
-                                      </li>
                                     </ul>
                                   </NavigationMenuContent>
                                 </NavigationMenuItem>
@@ -150,7 +144,6 @@ export default function Navbar({ activeHref, centerContent, logoHref = "/", hide
                     <Link href="/corporate-intelligence" className={styles.drawerLink} onClick={() => setOpen(false)}>Corporate Intelligence</Link>
                     <Link href="/geodetic" className={styles.drawerLink} onClick={() => setOpen(false)}>Geodetic Astrology</Link>
                     <Link href="/map-from-home" className={styles.drawerLink} onClick={() => setOpen(false)}>Map From Home</Link>
-                    <Link href="/app" className={styles.drawerLink} onClick={() => setOpen(false)}>The App</Link>
 
                     <div className="font-mono text-[9px] uppercase tracking-widest opacity-50 px-4 py-2 mt-4 text-[var(--text-primary)]">Menu</div>
                     <div className="px-4 py-3 mt-2 mb-2">
