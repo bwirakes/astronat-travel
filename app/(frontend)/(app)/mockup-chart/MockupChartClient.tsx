@@ -27,6 +27,7 @@ import PlanetIcon from "@/app/components/PlanetIcon";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/app/components/ui/accordion";
 import { PLANET_COLORS } from "@/app/lib/planet-data";
 import { HOUSE_DOMAINS, PLANET_DOMAINS, getOrdinal } from "@/app/lib/astro-wording";
+import { SIGN_RULERS } from "@/app/lib/astro-constants";
 
 // ─── Per-house travel implications (the AstroNat spine) ─────────
 const HOUSE_TRAVEL: Record<number, string> = {
@@ -43,6 +44,75 @@ const HOUSE_TRAVEL: Record<number, string> = {
   11: "The community and networks you build in transit.",
   12: "Foreign lands where you retreat or dissolve.",
 };
+
+// ─── Compose a 2-sentence interpretation from the user's actual data ─
+// Deterministic template: occupants phrasing, then ruler phrasing.
+// (A future iteration could swap this for per-house Gemini calls; today
+// the template keeps the mockup zero-dependency.)
+function houseInterpretation({
+  house,
+  sphere,
+  cuspSign,
+  occupants,
+  ruler,
+  rulerHouse,
+  rulerSign,
+  rulerDignity,
+}: {
+  house: number;
+  sphere: string;
+  cuspSign: string;
+  occupants: Array<{ name: string; sign: string; dignity?: string }>;
+  ruler: string | null;
+  rulerHouse: number | null;
+  rulerSign: string | null;
+  rulerDignity?: string | null;
+}): string {
+  const lowerSphere = sphere.toLowerCase();
+
+  // ── Occupant sentence ─────────────────────────────────────────
+  let occupantSentence: string;
+  if (occupants.length === 0) {
+    occupantSentence = `Empty of planets — your ${lowerSphere} runs on ${cuspSign}'s cue.`;
+  } else {
+    const names = occupants.map((o) => o.name);
+    const joined = names.length === 1
+      ? names[0]
+      : names.length === 2
+        ? `${names[0]} and ${names[1]}`
+        : `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`;
+    const verb = names.length === 1 ? "occupies" : "occupy";
+    // Note dignity of first occupant if notable
+    const standoutDignity = occupants.find((o) => {
+      const d = (o.dignity ?? "").toLowerCase();
+      return d.includes("domicile") || d.includes("exalt") || d.includes("detriment") || d.includes("fall");
+    });
+    const dignityTag = standoutDignity
+      ? ` (${standoutDignity.name} in ${standoutDignity.dignity?.toLowerCase()})`
+      : "";
+    occupantSentence = `${joined} ${verb} your ${lowerSphere} in ${cuspSign}${dignityTag}.`;
+  }
+
+  // ── Ruler sentence ─────────────────────────────────────────────
+  let rulerSentence: string;
+  if (!ruler) {
+    rulerSentence = "";
+  } else if (rulerHouse === house) {
+    rulerSentence = `${ruler} rules here and lives here — self-contained, no translation needed.`;
+  } else if (rulerHouse && rulerSign) {
+    const dig = (rulerDignity ?? "").toLowerCase();
+    let dignityClause = "";
+    if (dig.includes("domicile")) dignityClause = ", where it operates at full strength";
+    else if (dig.includes("exalt")) dignityClause = ", where it's amplified";
+    else if (dig.includes("detriment")) dignityClause = ", where it sits in detriment and scatters";
+    else if (dig.includes("fall")) dignityClause = ", where it's in fall";
+    rulerSentence = `${ruler} rules from H${rulerHouse} in ${rulerSign}${dignityClause}.`;
+  } else {
+    rulerSentence = `${ruler} rules the sign on the cusp.`;
+  }
+
+  return rulerSentence ? `${occupantSentence} ${rulerSentence}` : occupantSentence;
+}
 
 type Tab = "overview" | "houses" | "aspects" | "map";
 
@@ -519,6 +589,22 @@ export default function MockupChartClient() {
                 const occupants = occupantsByHouse.get(h) ?? [];
                 const sphere = HOUSE_DOMAINS[h] ?? "Life";
 
+                // Ruler lookup: sign on cusp → traditional ruler → find that planet natally
+                const rulerName = SIGN_RULERS[sign] ?? null;
+                const rulerPlanet = rulerName
+                  ? planets.find((p: any) => (p.name ?? "").toLowerCase() === rulerName.toLowerCase())
+                  : null;
+                const interpretation = houseInterpretation({
+                  house: h,
+                  sphere,
+                  cuspSign: sign,
+                  occupants: occupants.map((o: any) => ({ name: o.name, sign: o.sign, dignity: o.dignity })),
+                  ruler: rulerName,
+                  rulerHouse: rulerPlanet?.house ?? null,
+                  rulerSign: rulerPlanet?.sign ?? null,
+                  rulerDignity: rulerPlanet?.dignity ?? null,
+                });
+
                 return (
                   <AccordionItem value={`house-${h}`} key={h}>
                     <AccordionTrigger
@@ -546,23 +632,27 @@ export default function MockupChartClient() {
                     <AccordionContent>
                       <div style={{ padding: "0 0 1.5rem 3rem", display: "flex", flexDirection: "column", gap: "0.75rem", maxWidth: "760px" }}>
 
-                        {/* Occupants detail */}
-                        {occupants.length > 0 ? (
-                          <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "var(--text-secondary)", lineHeight: 1.7 }}>
+                        {/* Interpretation — data-driven reading of this house */}
+                        <p style={{
+                          fontFamily: "var(--font-body)", fontSize: "0.95rem", lineHeight: 1.55,
+                          color: "var(--text-primary)", margin: 0,
+                        }}>
+                          {interpretation}
+                        </p>
+
+                        {/* Occupants detail (reference) */}
+                        {occupants.length > 0 && (
+                          <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--text-tertiary)", lineHeight: 1.7, paddingLeft: "0.5rem", borderLeft: "1px solid var(--surface-border)" }}>
                             {occupants.map((o: any, i: number) => (
                               <div key={i}>
-                                <strong style={{ color: "var(--text-primary)" }}>{o.name}</strong> in {o.sign} ({o.degree_in_sign !== undefined ? `${Math.floor(o.degree_in_sign)}° ${o.degree_minutes}′` : ""})
+                                <strong style={{ color: "var(--text-secondary)" }}>{o.name}</strong> · {o.sign} {o.degree_in_sign !== undefined ? `${Math.floor(o.degree_in_sign)}° ${o.degree_minutes}′` : ""}
                                 {o.dignity && o.dignity !== "PEREGRINE" && (
-                                  <span style={{ color: "var(--color-y2k-blue)", marginLeft: "0.5rem", fontSize: "0.65rem", letterSpacing: "0.12em" }}>
+                                  <span style={{ color: "var(--color-y2k-blue)", marginLeft: "0.5rem", fontSize: "0.6rem", letterSpacing: "0.1em" }}>
                                     {o.dignity}
                                   </span>
                                 )}
                               </div>
                             ))}
-                          </div>
-                        ) : (
-                          <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
-                            No planets in residence — this sphere runs on its ruler and any aspects into it.
                           </div>
                         )}
 
