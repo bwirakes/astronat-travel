@@ -68,3 +68,40 @@ test-houses.ts
 *.pdf
 proxy.ts
 update-notion.mjs
+
+# Unused public assets
+public/test.gif
+public/file.svg
+public/dashboard-light.png
+public/brand/EXPORTS/PNG/logo-stacked-transparent.png
+public/brand/EXPORTS/PNG/AVATAR/saturn-o.png
+public/brand/EXPORTS/PNG/AVATAR/saturn-o-stars.png
+public/brand/EXPORTS/PNG/AVATAR/logo-stacked.png
+public/brand/EXPORTS/PNG/AVATAR/saturn-monogram.png
+public/brand/AI/logo-final.ai
+public/press/economic-times.svg
+public/press/tripzilla.png
+public/workshop-promo-1.jpg
+public/workshop-hero.jpg
+public/reels/reel3.webp
+public/reels/Screen Recording 2026-04-17 at 1.49.13 PM.mov
+public/reels/reel2.webp
+public/reels/reel1_trimmed.webp
+public/reels/8c6269c2b5cf54f0e3aa768fffa8b1ce.webm
+public/reels/reel3.mp4
+public/reels/reel2.mp4
+public/reels/reel1.mp4
+public/reels/reel1.webp
+public/reels/reel1.webm
+public/reels/Screen Recording 2026-04-17 at 1.49.43 PM.mov
+public/reels/Screen Recording 2026-04-17 at 1.50.08 PM.mov
+public/onboarding-hero.png
+public/vercel.svg
+public/couples_retro_suits.png
+public/next.svg
+public/README.txt
+public/my_chart_retro.png
+public/globe.svg
+public/window.svg
+public/dashboard-dark.png
+public/indonesia_map_bg.png
