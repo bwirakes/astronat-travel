@@ -7,6 +7,8 @@ import Footer from "@/app/components/Footer";
 import { RichText } from "@payloadcms/richtext-lexical/react";
 import { ArrowLeft } from "lucide-react";
 
+console.log("IMPORTED RICHTEXT IS:", RichText, "from", require("@payloadcms/richtext-lexical/react"));
+
 export const revalidate = 60;
 
 export default async function BlogPost({ params }: { params: Promise<{ slug: string }> }) {
