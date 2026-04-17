@@ -22,15 +22,17 @@ const slideVariants = {
   exit: (d: number) => ({ x: d > 0 ? -40 : 40, opacity: 0 }),
 };
 
-export default function ReadingFlow() {
+export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | "relocation" | "couples" } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
-  const [screen, setScreen] = useState(0);
+
+  // When the wizard is embedded on a type-specific surface (e.g. /couples),
+  // skip the type-picker step and land directly on the first type-relevant step.
+  const [screen, setScreen] = useState(defaultType ? 1 : 0);
   const [dir, setDir] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  const [type, setType] = useState<"travel" | "relocation" | "couples">("travel");
+  const [type, setType] = useState<"travel" | "relocation" | "couples">(defaultType ?? "travel");
   const [goals, setGoals] = useState<string[]>([]);
   const [destination, setDestination] = useState("");
   const [destLat, setDestLat] = useState<number | null>(null);
@@ -109,11 +111,13 @@ export default function ReadingFlow() {
   };
 
   const DEST_SCREEN = type === "couples" ? 3 : 2;
-  const totalSteps = type === "couples" ? 4 : 3;
+  const totalSteps = (type === "couples" ? 4 : 3) - (defaultType ? 1 : 0);
+  const displayStep = (s: number) => defaultType ? s : s + 1;
+  const minScreen = defaultType ? 1 : 0;
 
   const go = (n: number) => { setDir(n > screen ? 1 : -1); setScreen(n); };
   const next = () => go(Math.min(screen + 1, DEST_SCREEN));
-  const back = () => go(Math.max(screen - 1, 0));
+  const back = () => go(Math.max(screen - 1, minScreen));
 
   const toggleGoal = (id: string) => {
     if (goals.includes(id)) {
@@ -198,7 +202,7 @@ export default function ReadingFlow() {
           <motion.div key="type" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
               <div style={{ maxWidth: "480px", width: "100%" }}>
-                <h5 style={{ marginBottom: "0.35rem" }}>Step 1 of {totalSteps}</h5>
+                <h5 style={{ marginBottom: "0.35rem" }}>Step {displayStep(0)} of {totalSteps}</h5>
                 <h2 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(2rem, 4vw, 3rem)", color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase" }}>
                   What kind of <span style={{ color: "var(--color-acqua)" }}>reading</span>?
                 </h2>
@@ -244,7 +248,7 @@ export default function ReadingFlow() {
           <motion.div key="partner" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
               <div style={{ maxWidth: "480px", width: "100%" }}>
-                <h5 style={{ marginBottom: "0.35rem" }}>Step 2 of 4</h5>
+                <h5 style={{ marginBottom: "0.35rem" }}>Step {displayStep(1)} of {totalSteps}</h5>
                 <h2 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(2rem, 4vw, 3rem)", color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase" }}>
                   Who is your <span style={{ color: "var(--color-spiced-life)" }}>partner?</span>
                 </h2>
@@ -329,7 +333,9 @@ export default function ReadingFlow() {
                 )}
 
                 <div style={{ display: "flex", gap: "0.6rem" }}>
-                  <button className="btn btn-secondary" onClick={back} style={{ padding: "0.75rem 1.25rem" }}><ArrowLeft size={14} /> Back</button>
+                  {screen > minScreen && (
+                    <button className="btn btn-secondary" onClick={back} style={{ padding: "0.75rem 1.25rem" }}><ArrowLeft size={14} /> Back</button>
+                  )}
                   <button className="btn btn-primary" style={{ flex: 1, justifyContent: "center", padding: "0.75rem", borderRadius: "var(--shape-asymmetric-md)", opacity: partnerId ? 1 : 0.3 }}
                     disabled={!partnerId}
                     onClick={next}>
@@ -345,7 +351,7 @@ export default function ReadingFlow() {
           <motion.div key="goals" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
               <div style={{ maxWidth: "540px", width: "100%" }}>
-                <h5 style={{ marginBottom: "0.35rem" }}>Step {type === "couples" ? "3 of 4" : "2 of 3"}</h5>
+                <h5 style={{ marginBottom: "0.35rem" }}>Step {displayStep(type === "couples" ? 2 : 1)} of {totalSteps}</h5>
                 <h2 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(1.8rem, 4vw, 3rem)", color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase" }}>
                   What are you <span style={{ color: "var(--color-spiced-life)" }}>looking for?</span>
                 </h2>
@@ -398,7 +404,7 @@ export default function ReadingFlow() {
           <motion.div key="dest" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
               <div style={{ maxWidth: "480px", width: "100%" }}>
-                <h5 style={{ marginBottom: "0.35rem" }}>Step {totalSteps} of {totalSteps}</h5>
+                <h5 style={{ marginBottom: "0.35rem" }}>Step {displayStep(DEST_SCREEN)} of {totalSteps}</h5>
                 <h2 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(2rem, 4vw, 3rem)", color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase" }}>
                   Where are <span style={{ color: "var(--gold)" }}>you going?</span>
                 </h2>

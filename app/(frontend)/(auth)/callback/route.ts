@@ -19,26 +19,20 @@ export async function GET(request: Request) {
       const { data: { user } } = await supabase.auth.getUser()
 
       if (user) {
-        // Fetch profile + subscription status in one query
+        // Check whether the user has completed onboarding (has birth data saved)
         const { data: profile } = await supabase
           .from('profiles')
-          .select('id, is_subscribed')
+          .select('id, birth_date')
           .eq('id', user.id)
           .maybeSingle()
 
-        if (!profile) {
-          // ── Brand new user: no profile yet → send to onboarding flow (step 0)
-          return NextResponse.redirect(`${origin}/flow`)
+        // Profile exists with birth data → straight to the app; gating happens in-route.
+        if (profile?.birth_date) {
+          return NextResponse.redirect(`${origin}/dashboard`)
         }
 
-        if (!profile.is_subscribed) {
-          // ── Has a profile but never subscribed (or subscription lapsed)
-          // → Drop them at the paywall step inside the flow
-          return NextResponse.redirect(`${origin}/flow?step=1`)
-        }
-
-        // ── Fully subscribed returning user → go straight to the dashboard
-        return NextResponse.redirect(`${origin}/dashboard`)
+        // Otherwise send them through onboarding to capture birth details.
+        return NextResponse.redirect(`${origin}/flow`)
       }
     }
   }

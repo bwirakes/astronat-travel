@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import ThemeToggle from "@/app/components/ThemeToggle";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import { ChartWheel, type NatalData } from "@/app/components/ChartWheel";
@@ -82,7 +81,75 @@ const DEMO_CITY = { lat: -6.2088, lon: 106.8456, name: "Jakarta" };
 
 type Tab = "overview" | "map" | "aspects";
 
+// ── Interpretation block (streaming-friendly) ─────────────────
 
+function InterpretationBlock({
+  section,
+  kicker,
+  loading,
+  fallback,
+  variant = "default",
+}: {
+  section?: { title: string; content: string } | null;
+  kicker: string;
+  loading?: boolean;
+  fallback?: string;
+  variant?: "default" | "hero" | "panel";
+}) {
+  if (!section) {
+    if (!loading) return null;
+    return (
+      <div style={{
+        fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--text-tertiary)",
+        padding: "1.5rem 0", letterSpacing: "0.1em", textTransform: "uppercase",
+      }} className="animate-pulse">
+        {fallback ?? "Synthesizing..."}
+      </div>
+    );
+  }
+
+  const titleSize =
+    variant === "hero" ? "clamp(1.25rem, 2.2vw, 1.6rem)"
+    : variant === "panel" ? "1.05rem"
+    : "clamp(1.1rem, 1.8vw, 1.3rem)";
+  const bodySize = "0.95rem";
+
+  const wrapperStyle: React.CSSProperties = variant === "panel"
+    ? {
+        display: "flex", flexDirection: "column", gap: "0.45rem",
+        background: "var(--surface)", border: "1px solid var(--surface-border)",
+        borderRadius: "var(--radius-md)", padding: "1rem 1.25rem",
+      }
+    : { display: "flex", flexDirection: "column", gap: "0.5rem" };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      style={wrapperStyle}
+    >
+      <div style={{
+        fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.2em",
+        color: "var(--text-tertiary)", textTransform: "uppercase", fontWeight: 600,
+      }}>
+        {kicker}
+      </div>
+      <h3 style={{
+        fontFamily: "var(--font-secondary, var(--font-primary))", fontSize: titleSize,
+        margin: 0, lineHeight: 1.2, color: "var(--text-primary)",
+      }}>
+        {section.title}
+      </h3>
+      <p style={{
+        fontFamily: "var(--font-body)", fontSize: bodySize, lineHeight: 1.55,
+        color: "var(--text-secondary)", margin: 0, whiteSpace: "pre-wrap",
+      }}>
+        {section.content}
+      </p>
+    </motion.div>
+  );
+}
 
 // ── Main Page ─────────────────────────────────────────────────
 
@@ -156,6 +223,9 @@ export default function ChartPage({
 
   const [realAspects, setRealAspects] = useState<any[]>(initialNatalData ? (initialNatalData.aspects || []) : []);
 
+  const [interpretation, setInterpretation] = useState<Record<string, any> | null>(null);
+  const [interpretLoading, setInterpretLoading] = useState(false);
+
   useEffect(() => {
     if (!isDemo && !initialNatalData) {
       if (isMundane && !countrySlug) {
@@ -178,14 +248,18 @@ export default function ChartPage({
                 setRealPlanets(combined);
                 setRealAspects(data.aspects || []);
                 
-                const formatNatal: any = { 
+                const formatNatal: any = {
                   houses: data.cusps,
+                  first_name: data.first_name,
+                  last_name: data.last_name,
                   birth_city: data.birth_city,
                   birth_date: data.birth_date,
                   birth_time: data.birth_time,
                   birth_lon: data.birth_lon,
-                  profile_time: data.profile_time
+                  profile_time: data.profile_time,
+                  interpretation: data.interpretation ?? null,
                 };
+                if (data.interpretation) setInterpretation(data.interpretation);
                 combined.forEach((p: any) => { 
                    formatNatal[p.name.toLowerCase()] = { 
                      longitude: p.longitude,
@@ -202,6 +276,66 @@ export default function ChartPage({
         .finally(() => setLoading(false));
     }
   }, [isDemo]);
+
+  // Fetch interpretation once natal data is available. Streams NDJSON; sections
+  // render progressively as each Gemini call completes.
+  useEffect(() => {
+    if (isDemo || isMundane || !realNatal) return;
+    if (interpretation || interpretLoading) return;
+    // If the initial /api/natal fetch already included cached interpretation,
+    // we will have set it above — don't re-fetch.
+    if (realNatal.interpretation) return;
+
+    let cancelled = false;
+    setInterpretLoading(true);
+    console.log("[interpret] fetching /api/chart/interpret (no cache)...");
+
+    (async () => {
+      try {
+        const res = await fetch("/api/chart/interpret", { method: "POST" });
+        console.log("[interpret] response status:", res.status);
+        if (!res.ok || !res.body) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        const acc: Record<string, any> = {};
+
+        while (!cancelled) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+              const msg = JSON.parse(line);
+              if (msg.section && msg.data) {
+                acc[msg.section] = msg.data;
+                setInterpretation({ ...acc });
+              } else if (msg.done) {
+                setInterpretLoading(false);
+              } else if (msg.error) {
+                console.warn("[interpret] partial error:", msg.error);
+              }
+            } catch {
+              console.warn("[interpret] bad NDJSON line:", line);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("[interpret] stream failed:", err);
+      } finally {
+        if (!cancelled) setInterpretLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [realNatal, isDemo, isMundane, interpretation, interpretLoading]);
 
   // In real mode this would fetch from Supabase + /api/natal
   const natal = isDemo ? DEMO_NATAL : realNatal;
@@ -225,7 +359,12 @@ export default function ChartPage({
   })) : realPlanets.map(p => ({ planet: p.name, longitude: p.longitude, isAngle: p.isAngle }));
 
   // Date and Profile mock header
-  const profileName = isMundane ? countryName : (isDemo ? "Brandy's" : "Your");
+  const firstName = (realNatal?.first_name ?? "").trim();
+  const profileName = isMundane
+    ? countryName
+    : isDemo
+      ? "Brandy's"
+      : firstName ? `${firstName}'s` : "Your";
 
   const remainingPlanets = displayPlanets.filter(x => !["Ascendant", "Sun", "Moon"].includes(x.planet));
 
@@ -233,7 +372,7 @@ export default function ChartPage({
     <>
 
         {/* Tab Switcher */}
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "clamp(1rem, 3vw, 2rem)", overflowX: "auto", paddingBottom: "4px" }}>
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "var(--space-md)", overflowX: "auto", paddingBottom: "4px" }}>
           {(["overview", "map", "aspects"] as Tab[]).map(t => (
             <button
               key={t}
@@ -278,7 +417,7 @@ export default function ChartPage({
                       </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-y-16 md:gap-8 lg:gap-10 items-start mb-16">
+                  <div className="grid grid-cols-12 gap-y-16 md:gap-8 lg:gap-10 items-start mb-10">
                     
                     {/* LEFT PANE: The Keys To Your Chart */}
                     <div className="col-span-12 md:col-span-6 order-2 md:order-1">
@@ -368,8 +507,37 @@ export default function ChartPage({
                     </div>
                   </div>
 
+                  {/* ── Chart Essence (editorial pull-quote, below the wheel) ── */}
+                  {!isDemo && !isMundane && (interpretation?.chartEssence || interpretLoading) && (
+                    <div style={{
+                      maxWidth: "720px", marginBottom: "var(--space-2xl)",
+                      paddingLeft: "clamp(1rem, 3vw, 1.5rem)",
+                      borderLeft: "2px solid var(--text-primary)",
+                    }}>
+                      <InterpretationBlock
+                        kicker="Chart Essence"
+                        loading={interpretLoading}
+                        section={interpretation?.chartEssence}
+                        fallback="Synthesizing archetype..."
+                      />
+                    </div>
+                  )}
+
                   {/* BOTTOM ACCORDIONS (Full Width) */}
                   <div style={{ width: "100%", marginTop: "var(--space-2xl)" }}>
+
+                    {/* ── House Architecture (houses interpretation) ── */}
+                    {!isDemo && !isMundane && (interpretation?.houseArchitecture || interpretLoading) && (
+                      <div style={{ marginBottom: "var(--space-3xl)", maxWidth: "780px" }}>
+                        <InterpretationBlock
+                          kicker="House Architecture"
+                          loading={interpretLoading}
+                          section={interpretation?.houseArchitecture}
+                          fallback="Computing house pressures..."
+                        />
+                      </div>
+                    )}
+
                     {/* The Planets Accordion */}
                     <div style={{ marginBottom: "var(--space-3xl)" }}>
                         <SectionHeader title={`THE PLANETS`} size="sm" />
@@ -441,6 +609,18 @@ export default function ChartPage({
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.25 }}
             >
+              {/* ── Natural Angles (ACG interpretation) ── */}
+              {!isDemo && !isMundane && (interpretation?.naturalAngles || interpretLoading) && (
+                <div style={{ marginBottom: "var(--space-lg)", maxWidth: "780px" }}>
+                  <InterpretationBlock
+                    kicker="Natural Angles"
+                    loading={interpretLoading}
+                    section={interpretation?.naturalAngles}
+                    fallback="Reading planetary lines near your birthplace..."
+                  />
+                </div>
+              )}
+
               <div style={{
                 background: "var(--surface)",
                 border: "1px solid var(--surface-border)",
@@ -498,6 +678,18 @@ export default function ChartPage({
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.25 }}
             >
+              {/* ── Aspect Geometry (aspects interpretation) ── */}
+              {!isDemo && !isMundane && (interpretation?.aspectWeaver || interpretLoading) && (
+                <div style={{ marginBottom: "var(--space-lg)", maxWidth: "780px" }}>
+                  <InterpretationBlock
+                    kicker="Aspect Geometry"
+                    loading={interpretLoading}
+                    section={interpretation?.aspectWeaver}
+                    fallback="Reading geometric pressure patterns..."
+                  />
+                </div>
+              )}
+
               <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
                 <SectionHeader title="PLANETARY GEOMETRY (ASPECTS)" size="sm" />
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "1rem" }}>
@@ -539,8 +731,9 @@ export default function ChartPage({
   );
 
   return (
-    <DashboardLayout 
-      maxWidth="980px" 
+    <DashboardLayout
+      maxWidth="1280px"
+      paddingTop="var(--space-md)"
       backLabel={isMundane ? "Explore Mundane" : "Home"}
       backHref={isMundane ? "/mundane" : undefined}
     >

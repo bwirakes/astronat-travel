@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { geocodeCity } from "@/app/lib/astro-client";
+import { geocodeCity } from "@/lib/geo/geocode";
 
 export async function GET(req: NextRequest) {
     try {

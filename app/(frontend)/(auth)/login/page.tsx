@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useSearchParams } from 'next/navigation'
 
 function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -16,17 +17,34 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   )
 }
 
+function sanitizeNext(raw: string | null): string {
+  // Only allow same-origin relative paths to avoid open-redirect.
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/dashboard"
+  return raw
+}
+
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  )
+}
+
+function LoginForm() {
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const supabase = createClient()
+  const searchParams = useSearchParams()
+  const next = sanitizeNext(searchParams.get('next'))
 
   const handleGoogleLogin = async () => {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
         queryParams: {
             prompt: 'select_account',
             access_type: 'offline',
@@ -35,15 +53,32 @@ export default function LoginPage() {
     })
   }
 
-  const handleMagicLink = async (e: React.FormEvent) => {
+  const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setMessage('')
-    
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) {
+      setMessage(`Error: ${error.message}`)
+      setLoading(false)
+      return
+    }
+    window.location.href = next
+  }
+
+  const handleMagicLink = async () => {
+    if (!email) {
+      setMessage('Enter your email first to get a magic link.')
+      return
+    }
+    setLoading(true)
+    setMessage('')
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
       },
     })
 
@@ -59,16 +94,16 @@ export default function LoginPage() {
     setLoading(true)
     setMessage('')
     const { error } = await supabase.auth.signInWithPassword({
-      email: 'builder@astronat.local',
-      password: 'password123'
+      email: 'test@astronat.local',
+      password: 'astronat-test-2026'
     })
 
     if (error) {
-      setMessage(`Demo Error: ${error.message}. Please check your Supabase Anon Key in .env.local`)
-    } else {
-      window.location.href = '/dashboard'
+      setMessage(`Demo Error: ${error.message}. Run: bun run scripts/create-test-user.ts`)
+      setLoading(false)
+      return
     }
-    setLoading(false)
+    window.location.href = next
   }
 
   return (
@@ -107,23 +142,42 @@ export default function LoginPage() {
           <div className="h-px flex-1" style={{ backgroundColor: 'var(--surface-border)' }} />
         </div>
 
-        <form onSubmit={handleMagicLink} className="input-group">
-          <label htmlFor="email" className="input-label">Email via Magic Link</label>
-          <input 
+        <form onSubmit={handlePasswordLogin} className="input-group">
+          <label htmlFor="email" className="input-label">Email</label>
+          <input
             id="email"
-            type="email" 
+            type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
             placeholder="nat@astronat.com"
+            autoComplete="email"
             className="input-field w-full mb-3"
           />
-          <button 
-            type="submit" 
-            className="btn btn-secondary w-full justify-center"
-            disabled={loading}
+          <label htmlFor="password" className="input-label">Password</label>
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            autoComplete="current-password"
+            className="input-field w-full mb-3"
+          />
+          <button
+            type="submit"
+            className="btn btn-primary w-full justify-center mb-2"
+            disabled={loading || !email || !password}
           >
-            {loading ? 'Sending...' : 'Send Magic Link'}
+            {loading ? 'Signing in…' : 'Sign in'}
+          </button>
+          <button
+            type="button"
+            onClick={handleMagicLink}
+            className="btn btn-secondary w-full justify-center"
+            disabled={loading || !email}
+          >
+            {loading ? 'Sending…' : 'Send magic link instead'}
           </button>
         </form>
 
@@ -159,7 +213,7 @@ export default function LoginPage() {
         <div className="mt-8 pt-6 border-t text-center" style={{ borderColor: 'var(--surface-border)' }}>
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
             Don't have an account?{' '}
-            <Link href="/auth/signup" className="underline hover:text-white transition-colors" style={{ color: 'var(--color-y2k-blue)' }}>
+            <Link href="/signup" className="underline hover:text-white transition-colors" style={{ color: 'var(--color-y2k-blue)' }}>
               Sign up
             </Link>
           </p>

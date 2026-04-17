@@ -74,6 +74,20 @@ export async function POST(req: Request) {
 
     console.log('[checkout] Derived baseUrl:', baseUrl, '| APP_URL:', process.env.NEXT_PUBLIC_APP_URL, '| VERCEL_URL:', process.env.VERCEL_URL, '| origin:', req.headers.get('origin'))
 
+    // Optional body: { returnTo?: string } — where to send the user after subscribing
+    let returnTo: string | null = null
+    try {
+      const body = await req.clone().json().catch(() => ({}))
+      if (typeof body?.returnTo === 'string' && body.returnTo.startsWith('/')) {
+        returnTo = body.returnTo
+      }
+    } catch {}
+
+    const successUrl = returnTo
+      ? `${baseUrl}/api/checkout/success?session_id={CHECKOUT_SESSION_ID}&returnTo=${encodeURIComponent(returnTo)}`
+      : `${baseUrl}/api/checkout/success?session_id={CHECKOUT_SESSION_ID}`
+    const cancelUrl = returnTo ? `${baseUrl}${returnTo}` : `${baseUrl}/dashboard`
+
     // Create a Checkout Session for Subscription
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -85,8 +99,8 @@ export async function POST(req: Request) {
         },
       ],
       mode: 'subscription',
-      success_url: `${baseUrl}/api/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/flow?step=1`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       client_reference_id: user.id,
     })
 

@@ -19,8 +19,12 @@ export const Posts: CollectionConfig = {
       ({ doc }) => {
         const slug = doc?.slug as string | undefined;
         if (slug) {
-          revalidatePath(`/blog/${slug}`);
-          revalidatePath(`/blog`);
+          try {
+            revalidatePath(`/blog/${slug}`);
+            revalidatePath(`/blog`);
+          } catch(e) {
+            // Ignore error when running in local Node scripts outside Next.js
+          }
         }
       },
     ],

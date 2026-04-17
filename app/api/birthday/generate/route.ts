@@ -58,10 +58,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Incomplete birth data in profile" }, { status: 400 });
     }
 
-    // Solar Return is essentially the user's birth date shifted to the selected year
+    // Solar Return is essentially the user's birth date shifted to the selected year.
+    // Use the same timezone-correct conversion helper as /api/natal so houses
+    // aren't rotated by the tz offset.
+    const { birthToUtc } = await import("@/lib/astro/birth-utc");
     const birthMonthDay = profile.birth_date.substring(5); // MM-DD
-    const solarReturnDateStr = `${year}-${birthMonthDay}T${profile.birth_time.length === 5 ? profile.birth_time + ':00' : profile.birth_time}Z`;
-    const dtUtc = new Date(solarReturnDateStr);
+    const dtUtc = await birthToUtc(
+      `${year}-${birthMonthDay}`,
+      profile.birth_time,
+      profile.birth_lat ?? 0,
+      profile.birth_lon ?? 0,
+    );
 
     const swe = await SwissEphSingleton.getInstance();
     const dtYear = dtUtc.getUTCFullYear();

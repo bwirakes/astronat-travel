@@ -62,15 +62,12 @@ function ReadingsContent() {
   }, [isDemo]);
 
   return (
-    <DashboardLayout title="Your Readings" kicker="HISTORY" backLabel="Home">
-      <div style={{ maxWidth: "800px", margin: "0 auto" }}>
-
-
-        <div style={{ 
-          display: "flex", 
-          flexWrap: "wrap",
-          gap: "var(--space-md)",
-          alignItems: "stretch" 
+    <DashboardLayout title="Your Readings" kicker="HISTORY" backLabel="Home" backHref="/dashboard" maxWidth="1280px" paddingTop="var(--space-lg)">
+      <div style={{ width: "100%" }}>
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 0,
         }}>
           {loading ? (
              <div style={{ width: "100%", padding: "2rem", textAlign: "center", color: "var(--text-tertiary)" }}>Loading readings...</div>
@@ -87,35 +84,39 @@ function ReadingsContent() {
                   transition={{ delay: i * 0.08 }}
                   onClick={() => router.push(`/reading/${r.id}${isDemo ? '?demo=true' : ''}`)}
                   style={{
-                    flex: "1 1 300px",
-                    maxWidth: "100%",
-                    background: "var(--surface)", border: "1px solid var(--surface-border)",
-                    borderRadius: "var(--shape-asymmetric-md)", padding: "var(--space-md)",
-                    display: "flex", flexDirection: "column", gap: "var(--space-md)",
-                    cursor: "pointer", transition: "transform 0.15s ease",
+                    width: "100%",
+                    background: "var(--surface)",
+                    borderTop: i === 0 ? "1px solid var(--surface-border)" : "none",
+                    borderBottom: "1px solid var(--surface-border)",
+                    borderLeft: "1px solid var(--surface-border)",
+                    borderRight: "1px solid var(--surface-border)",
+                    borderRadius: 0,
+                    padding: "var(--space-md) var(--space-lg)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "var(--space-md)",
+                    cursor: "pointer",
+                    transition: "background 0.15s ease",
                   }}
-                  whileHover={{ y: -2 }}
+                  whileHover={{ backgroundColor: "var(--bg-raised)" }}
                 >
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
-                      <div style={{ transform: "scale(0.6)", transformOrigin: "left center", marginRight: "-30px", flexShrink: 0 }}>
-                        <ScoreRing score={r.score} verdict={verdict} />
-                      </div>
-                      <div style={{ paddingTop: "0.2rem" }}>
-                        <div style={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "1rem", lineHeight: 1.2 }}>{r.destination}</div>
-                        <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-tertiary)", letterSpacing: "0.05em", marginTop: "0.3rem" }}>
-                          {new Date(r.travelDate).toLocaleDateString("en-US", { month: "short", year: "numeric", day: "numeric" })} · {r.travelType}
-                        </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", minWidth: 0, flex: 1 }}>
+                    <div style={{ transform: "scale(0.6)", transformOrigin: "left center", marginRight: "-30px", flexShrink: 0 }}>
+                      <ScoreRing score={r.score} verdict={verdict} />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "1rem", lineHeight: 1.2 }}>{r.destination}</div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-tertiary)", letterSpacing: "0.05em", marginTop: "0.3rem" }}>
+                        {new Date(r.travelDate).toLocaleDateString("en-US", { month: "short", year: "numeric", day: "numeric" })} · {r.travelType}
                       </div>
                     </div>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                    <button style={{
-                      background: "transparent", border: "1px solid var(--surface-border)", color: "var(--text-primary)",
-                      borderRadius: "var(--radius-full)", padding: "0.35rem 1rem", fontSize: "0.75rem",
-                      fontFamily: "var(--font-body)", fontWeight: 500, cursor: "pointer",
-                    }}>View &rsaquo;</button>
-                  </div>
+                  <button style={{
+                    background: "transparent", border: "1px solid var(--surface-border)", color: "var(--text-primary)",
+                    borderRadius: "var(--radius-full)", padding: "0.35rem 1rem", fontSize: "0.75rem",
+                    fontFamily: "var(--font-body)", fontWeight: 500, cursor: "pointer", flexShrink: 0,
+                  }}>View &rsaquo;</button>
                 </motion.div>
               );
             })

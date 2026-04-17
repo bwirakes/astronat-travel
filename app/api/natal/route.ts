@@ -11,48 +11,123 @@ export async function GET(request: NextRequest) {
     // Support demo mode directly via API if needed, or fallback
     const { searchParams } = new URL(request.url);
     const userId = user?.id || searchParams.get("userId");
+    const refresh = searchParams.get("refresh") === "1";
 
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 1. Check if natal chart already exists
-    const cached = await getNatalChart(userId);
-    if (cached && cached.ephemeris_data) {
-      return NextResponse.json(cached.ephemeris_data);
-    }
-
-    // 2. Fetch user profile for birth data
+    // 1. Fetch user profile first — birth metadata is always served from the
+    //    profile (source of truth), not from the cached ephemeris blob, because
+    //    some code paths save the chart without birth_date/time/city fields.
     const profile = await getProfile(userId);
     if (!profile || !profile.birth_date || !profile.birth_time || profile.birth_lat == null || profile.birth_lon == null) {
       return NextResponse.json({ error: "Incomplete birth data in profile" }, { status: 400 });
     }
 
-    // We must find the correct UTC time based on the user's local birth_time and birth_city coordinates.
-    const { find } = await import('geo-tz');
-    const tzStr = find(profile.birth_lat, profile.birth_lon)[0];
-    const time = profile.birth_time.length === 5 ? profile.birth_time + ':00' : profile.birth_time;
-    const localIso = `${profile.birth_date}T${time}`;
-    
-    // Iteratively find the exact UTC time by comparing timezone offsets
-    let dtUtc = new Date(`${localIso}Z`);
-    const formatter = new Intl.DateTimeFormat('en-US', {
-        timeZone: tzStr,
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit', second: '2-digit',
-        hour12: false
-    });
-    
-    for (let i = 0; i < 2; i++) {
-        const parts = formatter.formatToParts(dtUtc);
-        const getPart = (type: string) => parts.find(p => p.type === type)?.value;
-        let h = getPart('hour')!;
-        if (h === '24') h = '00';
-        
-        const fLocal = new Date(`${getPart('year')}-${getPart('month')}-${getPart('day')}T${h}:${getPart('minute')}:${getPart('second')}Z`);
-        const offset = fLocal.getTime() - dtUtc.getTime();
-        dtUtc = new Date(new Date(`${localIso}Z`).getTime() - offset);
+    const birthMeta = {
+      first_name: (profile as any).first_name ?? null,
+      last_name: (profile as any).last_name ?? null,
+      birth_city: profile.birth_city,
+      birth_date: profile.birth_date,
+      birth_time: profile.birth_time,
+      birth_lat: profile.birth_lat,
+      birth_lon: profile.birth_lon,
+    };
+
+    // 2. Check if natal chart already exists — merge profile birth metadata
+    //    so the UI always shows Date/Time/Location correctly. Also backfill
+    //    angles + aspects from the cached planets/cusps when they're missing
+    //    (older save paths only persisted {planets, cusps, asc, mc}, so the
+    //    chart page renders without Ascendant + aspects when reading the cache).
+    //
+    //    Pass ?refresh=1 to bypass cache — needed after the timezone-fix
+    //    migration (old caches have houses rotated by the tz offset).
+    if (refresh) {
+      await supabase.from("natal_charts").delete().eq("user_id", userId).eq("chart_type", "natal");
     }
+    const cached = refresh ? null : await getNatalChart(userId);
+    if (cached && cached.ephemeris_data) {
+      const cachedData = cached.ephemeris_data as any;
+      const planets: any[] = cachedData.planets || [];
+      const cusps: number[] = cachedData.cusps || [];
+
+      let angles = cachedData.angles;
+      if ((!angles || angles.length === 0) && cusps.length === 12) {
+        const asc = typeof cachedData.asc === "number" ? cachedData.asc : cusps[0];
+        const mc = typeof cachedData.mc === "number" ? cachedData.mc : cusps[9];
+        const ic = (mc + 180) % 360;
+        const dc = (asc + 180) % 360;
+
+        const makeAngle = (name: string, lon: number) => {
+          const signIdx = Math.floor(lon / 30);
+          const degInSign = lon % 30;
+          return {
+            name,
+            planet: name,
+            longitude: Number(lon.toFixed(6)),
+            sign: ZODIAC_SIGNS[signIdx],
+            degree_in_sign: Number(degInSign.toFixed(4)),
+            degree_minutes: Math.floor((degInSign - Math.floor(degInSign)) * 60),
+            speed: 0,
+            is_retrograde: false,
+            house: getHouse(lon, cusps),
+            isAngle: true,
+          };
+        };
+
+        angles = [
+          makeAngle("Ascendant", asc),
+          makeAngle("MC", mc),
+          makeAngle("IC", ic),
+          makeAngle("DC", dc),
+        ];
+      }
+
+      let aspects = cachedData.aspects;
+      if ((!aspects || aspects.length === 0) && planets.length > 0) {
+        const { calculateAspect } = await import("@/lib/astro/aspects");
+        aspects = [];
+        for (let i = 0; i < planets.length; i++) {
+          for (let j = i + 1; j < planets.length; j++) {
+            const p1 = planets[i];
+            const p2 = planets[j];
+            const p1Name = p1.name || p1.planet;
+            const p2Name = p2.name || p2.planet;
+            const result = calculateAspect(p1.longitude, p2.longitude, p1Name, p2Name);
+            if (result) {
+              let baseVerdict = 50;
+              if (result.aspect === "Trine" || result.aspect === "Sextile") baseVerdict = 80;
+              if (result.aspect === "Conjunction") baseVerdict = 70;
+              if (result.aspect === "Opposition" || result.aspect === "Square") baseVerdict = 30;
+              const verdict = Math.max(0, Math.min(100, Math.round(baseVerdict + (5 - result.orb) * 4)));
+              aspects.push({
+                aspect: `${p1Name} ${result.aspect.toLowerCase()} ${p2Name}`,
+                type: result.aspect,
+                orb: `${Math.floor(result.orb)}° ${Math.round((result.orb % 1) * 60).toString().padStart(2, "0")}′`,
+                verdict,
+                planet1: p1Name,
+                planet2: p2Name,
+              });
+            }
+          }
+        }
+      }
+
+      // interpretation (if generated previously) ships alongside the chart
+      // so the client renders it immediately without a second fetch.
+      const interpretation = cachedData.interpretation ?? null;
+
+      return NextResponse.json({ ...cachedData, angles, aspects, interpretation, ...birthMeta });
+    }
+
+    const { birthToUtc } = await import("@/lib/astro/birth-utc");
+    const dtUtc = await birthToUtc(
+      profile.birth_date,
+      profile.birth_time,
+      profile.birth_lat,
+      profile.birth_lon,
+    );
 
     const swe = await SwissEphSingleton.getInstance();
     const year = dtUtc.getUTCFullYear();
@@ -156,10 +231,10 @@ export async function GET(request: NextRequest) {
         birth_lon: profile.birth_lon
     };
 
-    // Save to DB
+    // Save to DB (without first/last name — those belong on the profile)
     await saveNatalChart(userId, resultData, { cusps: cuspsArray });
 
-    return NextResponse.json(resultData);
+    return NextResponse.json({ ...resultData, ...birthMeta });
 
   } catch (err: any) {
     console.error("[/api/natal] Error:", err);

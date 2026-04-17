@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getReadingAccess } from "@/lib/access";
 import { getNatalChart, getPartnerNatalChart, getProfile, saveNatalChart, savePartnerNatalChart } from "@/lib/db";
 import { SwissEphSingleton, computeRealtimePositions } from "@/lib/astro/transits";
 import { resolveACGFull, computeParans } from "@/lib/astro/acg-lines";
@@ -7,6 +8,7 @@ import { solve12MonthTransits } from "@/lib/astro/transit-solver";
 import { computeHouseMatrix, mapTransitsToMatrix, computeGlobalPenalty } from "@/app/lib/house-matrix";
 import { computeEventScores } from "@/app/lib/scoring-engine";
 import { houseFromLongitude } from "@/app/lib/geodetic";
+import { birthToUtc } from "@/lib/astro/birth-utc";
 import { determineSect, computeLotOfFortune, computeLotOfSpirit } from "@/app/lib/arabic-parts";
 import { generateObject } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
@@ -22,13 +24,19 @@ const google = createGoogleGenerativeAI({
 /** Compute bi-directional synastry aspects between two sets of natal planets. */
 function computeSynastryAspects(planetsA: any[], planetsB: any[]) {
   const ASPECTS = [
-    { name: "conjunction", angle: 0, orb: 8 },
-    { name: "opposition", angle: 180, orb: 8 },
-    { name: "trine", angle: 120, orb: 6 },
-    { name: "square", angle: 90, orb: 6 },
-    { name: "sextile", angle: 60, orb: 4 },
+    { name: "conjunction", angle: 0, orb: 8, tone: "neutral" as const },
+    { name: "opposition", angle: 180, orb: 8, tone: "tense" as const },
+    { name: "trine", angle: 120, orb: 6, tone: "harmonious" as const },
+    { name: "square", angle: 90, orb: 6, tone: "tense" as const },
+    { name: "sextile", angle: 60, orb: 4, tone: "harmonious" as const },
   ];
-  const results: { planet1: string; planet2: string; aspect: string; orb: number }[] = [];
+  const results: {
+    planet1: string;
+    planet2: string;
+    aspect: string;
+    orb: number;
+    tone: "harmonious" | "tense" | "neutral";
+  }[] = [];
   for (const pA of planetsA) {
     for (const pB of planetsB) {
       const diff = Math.abs((pA.longitude - pB.longitude + 360) % 360);
@@ -41,12 +49,40 @@ function computeSynastryAspects(planetsA: any[], planetsB: any[]) {
             planet2: pB.planet || pB.name,
             aspect: asp.name,
             orb: parseFloat(orb.toFixed(2)),
+            tone: asp.tone,
           });
         }
       }
     }
   }
   return results;
+}
+
+/** Classify a house by user/partner score divergence. */
+function classifyHouseBucket(
+  userScore: number,
+  partnerScore: number,
+): "overlap" | "excitement" | "friction" | "neutral" {
+  const delta = Math.abs(userScore - partnerScore);
+  const avg = (userScore + partnerScore) / 2;
+  const max = Math.max(userScore, partnerScore);
+  const min = Math.min(userScore, partnerScore);
+  if (avg >= 70 && delta < 15) return "overlap";
+  if (max >= 80 && delta >= 15) return "excitement";
+  if (delta >= 20 && min <= 55) return "friction";
+  return "neutral";
+}
+
+/** Determine recommendation badge from bucket counts. */
+function computeRecommendation(
+  houseComparison: { bucket: string }[],
+  scoreDelta: number,
+): "go" | "caution" | "avoid" {
+  const overlap = houseComparison.filter((h) => h.bucket === "overlap").length;
+  const friction = houseComparison.filter((h) => h.bucket === "friction").length;
+  if (overlap >= 3 && friction <= 1) return "go";
+  if (friction >= 3 || (friction >= 2 && scoreDelta > 25)) return "avoid";
+  return "caution";
 }
 
 export async function POST(req: Request) {
@@ -90,17 +126,14 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Subscription gate — require an active or trialing subscription
-    const { data: subscription } = await supabase
-      .from("subscriptions")
-      .select("id, status")
-      .eq("user_id", user.id)
-      .in("status", ["active", "trialing"])
-      .maybeSingle();
-
-    if (!subscription) {
+    // 2. Access gate — first reading is free for everyone; after that, require subscription
+    const access = await getReadingAccess(user.id);
+    if (!access.canRead) {
       return NextResponse.json(
-        { error: "Active subscription required to generate readings.", code: "SUBSCRIPTION_REQUIRED" },
+        {
+          error: "Free reading already used. Subscribe for unlimited readings.",
+          code: "FREE_TIER_LIMIT",
+        },
         { status: 402 },
       );
     }
@@ -131,12 +164,12 @@ export async function POST(req: Request) {
     let cachedChart = await getNatalChart(user.id);
     let natalPlanets: any[];
 
-    const birthDtStr = `${profile.birth_date}T${
-      profile.birth_time.length === 5
-        ? profile.birth_time + ":00"
-        : profile.birth_time
-    }Z`;
-    const dtUtcBirth = new Date(birthDtStr);
+    const dtUtcBirth = await birthToUtc(
+      profile.birth_date,
+      profile.birth_time,
+      profile.birth_lat,
+      profile.birth_lon,
+    );
 
     if (!cachedChart || !cachedChart.ephemeris_data?.planets) {
       const sweInit = await SwissEphSingleton.getInstance();
@@ -176,22 +209,27 @@ export async function POST(req: Request) {
     // 4b. Synastry: compute partner chart and cross-aspects for couples readings
     let partnerNatalPlanets: any[] | null = null;
     let synastryAspects: ReturnType<typeof computeSynastryAspects> = [];
+    let partnerProfile: any = null;
+    let dtUtcPartner: Date | null = null;
 
     if (readingCategory === "synastry" && partner_id) {
-      const { data: partnerProfile } = await supabase
+      const { data: pp } = await supabase
         .from("partner_profiles")
         .select("*")
         .eq("id", partner_id)
         .eq("owner_id", user.id) // ownership guard
         .maybeSingle();
+      partnerProfile = pp;
 
       if (partnerProfile && partnerProfile.birth_lat != null && partnerProfile.birth_lon != null) {
         const cachedPartnerChart = await getPartnerNatalChart(partner_id);
 
-        const pBirthTimeStr = partnerProfile.birth_time?.length === 5
-          ? partnerProfile.birth_time + ":00"
-          : (partnerProfile.birth_time || "12:00:00");
-        const dtUtcPartner = new Date(`${partnerProfile.birth_date}T${pBirthTimeStr}Z`);
+        dtUtcPartner = await birthToUtc(
+          partnerProfile.birth_date,
+          partnerProfile.birth_time || "12:00:00",
+          partnerProfile.birth_lat,
+          partnerProfile.birth_lon,
+        );
 
         if (!cachedPartnerChart || !cachedPartnerChart.ephemeris_data?.planets) {
           const sweP = await SwissEphSingleton.getInstance();
@@ -321,6 +359,149 @@ export async function POST(req: Request) {
 
     const eventScores = computeEventScores(matrixResult, relocatedPlanets);
 
+    // 9b. Synastry: mirror the compute pipeline for the partner so we have
+    // partner macro score, houses, ACG lines, and relocated cusps at the same
+    // destination. Guarded so astrocartography readings skip this entirely.
+    let partnerMatrix: {
+      macroScore: number;
+      macroVerdict: string;
+      houses: { house: number; score: number }[];
+      acgLines: any[];
+      relocatedCusps: number[];
+    } | null = null;
+
+    if (
+      readingCategory === "synastry"
+      && partnerNatalPlanets
+      && partnerProfile
+      && dtUtcPartner
+      && partnerProfile.birth_lat != null
+      && partnerProfile.birth_lon != null
+    ) {
+      const sweP2 = await SwissEphSingleton.getInstance();
+      const pYear = dtUtcPartner.getUTCFullYear();
+      const pMonth = dtUtcPartner.getUTCMonth() + 1;
+      const pDay = dtUtcPartner.getUTCDate();
+      const pHour =
+        dtUtcPartner.getUTCHours()
+        + dtUtcPartner.getUTCMinutes() / 60.0
+        + dtUtcPartner.getUTCSeconds() / 3600.0;
+      const pJd = sweP2.julday(pYear, pMonth, pDay, pHour);
+      const pSys = Math.abs(targetLat) >= 66 ? "W" : "P";
+      const pH = sweP2.houses(pJd, targetLat, targetLon, pSys) as any;
+      const pRelocatedCusps: number[] = [];
+      for (let i = 1; i <= 12; i++) pRelocatedCusps.push(pH.cusps[i.toString()]);
+
+      const { cityLines: pAcgLines, allLines: pAcgAllLines } = await resolveACGFull(
+        dtUtcPartner,
+        targetLat,
+        targetLon,
+      );
+
+      const pRefDate = travelDate ? new Date(travelDate) : new Date();
+      const pRawTransits = await solve12MonthTransits(partnerNatalPlanets, pRefDate);
+      const pMappedTransits = mapTransitsToMatrix(
+        pRawTransits,
+        partnerNatalPlanets,
+        pRelocatedCusps,
+        partnerProfile.birth_lat ?? undefined,
+      );
+      const pGlobalPenalty = computeGlobalPenalty(pMappedTransits);
+      const pParans = computeParans(pAcgAllLines, targetLat);
+
+      const pSunPlanet = partnerNatalPlanets.find(
+        (p: any) => (p.planet || p.name || "").toLowerCase() === "sun",
+      );
+      const pMoonPlanet = partnerNatalPlanets.find(
+        (p: any) => (p.planet || p.name || "").toLowerCase() === "moon",
+      );
+      const pRelocatedAsc = pRelocatedCusps[0] ?? 0;
+      const pSect = pSunPlanet
+        ? determineSect(pSunPlanet.longitude, pRelocatedAsc)
+        : undefined;
+      const pLotOfFortuneLon = (pSunPlanet && pMoonPlanet)
+        ? computeLotOfFortune(pRelocatedAsc, pSunPlanet.longitude, pMoonPlanet.longitude, pSect)
+        : undefined;
+      const pLotOfSpiritLon = (pSunPlanet && pMoonPlanet)
+        ? computeLotOfSpirit(pRelocatedAsc, pSunPlanet.longitude, pMoonPlanet.longitude, pSect)
+        : undefined;
+
+      const pMatrixResult = computeHouseMatrix({
+        natalPlanets: partnerNatalPlanets,
+        relocatedCusps: pRelocatedCusps,
+        acgLines: pAcgLines,
+        transits: pMappedTransits,
+        parans: pParans,
+        destLat: targetLat,
+        destLon: targetLon,
+        globalPenalty: pGlobalPenalty,
+        birthLat: partnerProfile.birth_lat ?? undefined,
+        lotOfFortuneLon: pLotOfFortuneLon,
+        lotOfSpiritLon: pLotOfSpiritLon,
+        sect: pSect,
+        selectedGoals,
+      });
+
+      partnerMatrix = {
+        macroScore: pMatrixResult.macroScore,
+        macroVerdict: pMatrixResult.macroVerdict,
+        houses: pMatrixResult.houses.map((h) => ({ house: h.house, score: h.score })),
+        acgLines: pAcgLines,
+        relocatedCusps: pRelocatedCusps,
+      };
+    }
+
+    // 9c. Derive houseComparison[] + scoreDelta + recommendation when synastry.
+    let synastryDerived: {
+      houseComparison: {
+        house: number;
+        userScore: number;
+        partnerScore: number;
+        delta: number;
+        avg: number;
+        bucket: "overlap" | "excitement" | "friction" | "neutral";
+      }[];
+      scoreDelta: number;
+      averageScore: number;
+      recommendation: "go" | "caution" | "avoid";
+    } | null = null;
+
+    if (partnerMatrix) {
+      const userHousesMap = new Map(
+        matrixResult.houses.map((h) => [h.house, h.score]),
+      );
+      const partnerHousesMap = new Map(
+        partnerMatrix.houses.map((h) => [h.house, h.score]),
+      );
+      const houseComparison = Array.from({ length: 12 }, (_, i) => {
+        const houseNum = i + 1;
+        const userScore = userHousesMap.get(houseNum) ?? 0;
+        const partnerScore = partnerHousesMap.get(houseNum) ?? 0;
+        return {
+          house: houseNum,
+          userScore,
+          partnerScore,
+          delta: Math.abs(userScore - partnerScore),
+          avg: (userScore + partnerScore) / 2,
+          bucket: classifyHouseBucket(userScore, partnerScore),
+        };
+      });
+
+      const scoreDelta = Math.abs(
+        matrixResult.macroScore - partnerMatrix.macroScore,
+      );
+      const averageScore =
+        (matrixResult.macroScore + partnerMatrix.macroScore) / 2;
+      const recommendation = computeRecommendation(houseComparison, scoreDelta);
+
+      synastryDerived = {
+        houseComparison,
+        scoreDelta,
+        averageScore,
+        recommendation,
+      };
+    }
+
     // 10. AI insights — graceful fallback if Gemini fails
     const DEFAULT_AI_INSIGHTS = {
       primary:   { label: "MACRO OVERVIEW",         title: "The Astrological Verdict", content: "Chart matrix computed. AI synthesis unavailable." },
@@ -369,6 +550,7 @@ Your task is to synthesize this data into 4 specific editorial "Verdict" paragra
       destinationLat:  targetLat,
       destinationLon:  targetLon,
       travelType,
+      travelDate:      travelDate || null,
       goals:           selectedGoals ?? [],
       macroScore:      matrixResult.macroScore,
       macroVerdict:    matrixResult.macroVerdict,
@@ -388,6 +570,28 @@ Your task is to synthesize this data into 4 specific editorial "Verdict" paragra
       ...(matrixResult.lotOfFortune ? { lotOfFortune: matrixResult.lotOfFortune } : {}),
       ...(matrixResult.lotOfSpirit  ? { lotOfSpirit:  matrixResult.lotOfSpirit  } : {}),
       ...(partnerNatalPlanets ? { partnerNatalPlanets, synastryAspects } : {}),
+      ...(partnerMatrix && synastryDerived
+        ? {
+            // Explicit per-side fields for the couples comparison UI.
+            userMacroScore: matrixResult.macroScore,
+            userMacroVerdict: matrixResult.macroVerdict,
+            userHouses: matrixResult.houses.map((h) => ({ house: h.house, score: h.score })),
+            userPlanetaryLines: acgLines,
+            userRelocatedCusps: relocatedCusps,
+
+            partnerMacroScore: partnerMatrix.macroScore,
+            partnerMacroVerdict: partnerMatrix.macroVerdict,
+            partnerHouses: partnerMatrix.houses,
+            partnerPlanetaryLines: partnerMatrix.acgLines,
+            partnerRelocatedCusps: partnerMatrix.relocatedCusps,
+            partnerName: partnerProfile?.first_name ?? "Partner",
+
+            scoreDelta: synastryDerived.scoreDelta,
+            averageScore: synastryDerived.averageScore,
+            houseComparison: synastryDerived.houseComparison,
+            recommendation: synastryDerived.recommendation,
+          }
+        : {}),
     };
 
     // 12. Write to `readings` table

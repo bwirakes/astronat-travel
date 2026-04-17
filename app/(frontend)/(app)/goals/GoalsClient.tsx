@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Heart, Briefcase, Users, Clock, Sprout, Home, ArrowLeft } from 'lucide-react';
+import { Heart, Briefcase, Users, Clock, Sprout, Home } from 'lucide-react';
+import { BackButton } from '@/components/app/back-button';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
 
 const GOALS = [
   {
@@ -57,7 +57,6 @@ const GOALS = [
 ];
 
 export default function GoalsClient({ userId, initialGoals }: { userId: string, initialGoals: string[] }) {
-  const router = useRouter();
   const supabase = createClient();
   const [selected, setSelected] = useState<string[]>(initialGoals);
   const [isSaving, setIsSaving] = useState(false);
@@ -94,14 +93,7 @@ export default function GoalsClient({ userId, initialGoals }: { userId: string, 
 
   return (
     <>
-      <button onClick={() => router.push("/dashboard")} style={{
-        background: "none", border: "none", color: "var(--text-tertiary)",
-        fontFamily: "var(--font-mono)", fontSize: "0.6rem", cursor: "pointer",
-        letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "var(--space-md)",
-        display: "flex", alignItems: "center", gap: "0.3rem",
-      }}>
-        <ArrowLeft size={12} /> Home
-      </button>
+      <BackButton href="/dashboard" />
 
       <div style={{
         display: 'flex',

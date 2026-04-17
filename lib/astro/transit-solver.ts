@@ -115,10 +115,14 @@ export async function solve12MonthTransits(
     current = new Date(current.getTime() + SAMPLE_INTERVAL_DAYS * 86_400_000);
   }
 
-  // Sort: chronological first, then tightest orb within same date.
+  // Sort: closest to the reference date first (so "top" hits reflect the user's
+  // travel window, not whatever happened nearest the start of the 12-month scan),
+  // then tightest orb as a tie-breaker.
+  const refTime = referenceDate.getTime();
   results.sort((a, b) => {
-    const d = new Date(a.date).getTime() - new Date(b.date).getTime();
-    return d !== 0 ? d : a.orb - b.orb;
+    const da = Math.abs(new Date(a.date).getTime() - refTime);
+    const db = Math.abs(new Date(b.date).getTime() - refTime);
+    return da !== db ? da - db : a.orb - b.orb;
   });
 
   const hits = results.slice(0, MAX_RESULTS);
