@@ -3,7 +3,8 @@
  * Get 12-month transit windows for a registered user.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { get12MonthTransits } from "@/app/lib/astro-client";
+import { getNatalChart } from "@/lib/db";
+import { solve12MonthTransits } from "@/lib/astro/transit-solver";
 import { generateTravelWindows, TravelWindow } from "@/app/lib/planet-data";
 
 export async function POST(req: NextRequest) {
@@ -17,15 +18,22 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Missing user_id or start_date" }, { status: 400 });
         }
 
-        const result = await get12MonthTransits(user_id, start_date);
+        const chart = await getNatalChart(user_id);
+        if (!chart?.ephemeris_data?.planets) {
+            return NextResponse.json({ windows: generateTravelWindows(start_date), mock: true });
+        }
 
-        if (!result) {
+        const natalPlanets = chart.ephemeris_data.planets;
+        const refDate = new Date(start_date);
+        const result = await solve12MonthTransits(natalPlanets, refDate);
+
+        if (!result || result.length === 0) {
             // Generate windows starting from the actual travel date
             return NextResponse.json({ windows: generateTravelWindows(start_date), mock: true });
         }
 
         // Convert raw aspect hits to TravelWindow format
-        const windows: TravelWindow[] = (result.major_aspects || [])
+        const windows: TravelWindow[] = result
             .slice(0, 12)
             .map((a) => {
                 const isChallenging = ["square", "opposition"].includes(a.aspect.toLowerCase());

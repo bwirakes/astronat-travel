@@ -1,0 +1,74 @@
+{
+  "row_id": "pos:65893f88-5ab8-424c-8889-1e03f9835e81",
+  "subject": {
+    "name": "Nietzsche, Friedrich",
+    "rodden_rating": "B",
+    "birth_date": "1844-10-15",
+    "birth_lat": 51.233333333333334,
+    "birth_lon": 12.116666666666667
+  },
+  "event": {
+    "sample_date": "1869-04-22",
+    "location_name": "R\u00f5cken, Germany",
+    "location_lat": 51.233333333333334,
+    "location_lon": 12.116666666666667,
+    "goal_label": {
+      "relocation": 1
+    }
+  },
+  "macro_score": {
+    "score": 42,
+    "verdict": "Challenging"
+  },
+  "house_scores": {
+    "H1": 55.0,
+    "H2": 52.0,
+    "H3": 48.0,
+    "H4": 67.0,
+    "H5": 54.0,
+    "H6": 35.0,
+    "H7": 43.0,
+    "H8": 35.0,
+    "H9": 35.0,
+    "H10": 32.0,
+    "H11": 49.0,
+    "H12": 35.0
+  },
+  "scenarios": {
+    "default": {
+      "love": 46.3,
+      "career": 37.3,
+      "community": 47.55,
+      "growth": 37.6,
+      "relocation": 58.75
+    },
+    "hellenistic_strict": {
+      "love": 43.0,
+      "career": 32.0,
+      "community": 49.0,
+      "growth": 35.0,
+      "relocation": 67.0
+    },
+    "material_heavy": {
+      "love": 43.7,
+      "career": 39.9,
+      "community": 48.6,
+      "growth": 39.5,
+      "relocation": 56.5
+    },
+    "network_weighted": {
+      "love": 46.15,
+      "career": 40.55,
+      "community": 47.95,
+      "growth": 40.45,
+      "relocation": 56.35
+    },
+    "angular_only": {
+      "love": 47.8,
+      "career": 38.9,
+      "community": 49.0,
+      "growth": 61.0,
+      "relocation": 62.8
+    }
+  }
+}

@@ -30,7 +30,7 @@ export default function DashboardLayout({
   backHref,
   backLabel = "Back",
   maxWidth = "960px",
-  paddingTop = "var(--space-3xl)",
+  paddingTop = "var(--space-lg)",
   paddingBottom = "var(--space-3xl)",
 }: DashboardLayoutProps) {
   const router = useRouter();
@@ -43,13 +43,21 @@ export default function DashboardLayout({
   const handleBack = () => {
     if (backHref) {
       router.push(backHref);
+      return;
+    }
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    // No history entry (direct-landed tab) — pick a sensible parent.
+    if (pathname.includes("/reading/")) {
+      router.push("/readings");
+    } else if (pathname.startsWith("/learn/")) {
+      router.push("/learn");
+    } else if (pathname.startsWith("/mundane/")) {
+      router.push("/mundane");
     } else {
-      // If we're deepening into a resource, back might be better to go to a specific parent
-      if (pathname.includes("/reading/")) {
-        router.push("/readings?demo=true");
-      } else {
-        router.push("/dashboard");
-      }
+      router.push("/dashboard");
     }
   };
 
@@ -84,7 +92,7 @@ export default function DashboardLayout({
               cursor: "pointer",
               letterSpacing: "0.12em",
               textTransform: "uppercase",
-              marginBottom: "var(--space-md)",
+              marginBottom: "var(--space-xs)",
               display: "flex",
               alignItems: "center",
               gap: "0.4rem",
@@ -99,7 +107,7 @@ export default function DashboardLayout({
         )}
 
         {(title || kicker) && (
-          <div style={{ marginBottom: "var(--space-xl)" }}>
+          <div style={{ marginBottom: "var(--space-md)" }}>
             {kicker && (
               <span
                 style={{

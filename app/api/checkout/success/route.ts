@@ -7,12 +7,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_fallback', {
 })
 
 export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url)
+  const returnToRaw = searchParams.get('returnTo')
+  const returnTo = returnToRaw && returnToRaw.startsWith('/') ? returnToRaw : '/dashboard'
+
   try {
-    const { searchParams } = new URL(req.url)
     const sessionId = searchParams.get('session_id')
 
     if (!sessionId) {
-      return NextResponse.redirect(new URL('/flow?step=1', req.url))
+      return NextResponse.redirect(new URL(returnTo, req.url))
     }
 
     const session = await stripe.checkout.sessions.retrieve(sessionId)
@@ -54,11 +57,10 @@ export async function GET(req: Request) {
       }
     }
 
-    // Now safely proceed to step 2 with state guaranteed synced
-    return NextResponse.redirect(new URL('/flow?step=2', req.url))
+    // Return to the page they came from (dashboard by default)
+    return NextResponse.redirect(new URL(returnTo, req.url))
   } catch (error) {
     console.error('[checkout/success] Error verifying session:', error)
-    // If something horribly fails, gracefully drop them onto step 1
-    return NextResponse.redirect(new URL('/flow?step=1', req.url))
+    return NextResponse.redirect(new URL(returnTo, req.url))
   }
 }

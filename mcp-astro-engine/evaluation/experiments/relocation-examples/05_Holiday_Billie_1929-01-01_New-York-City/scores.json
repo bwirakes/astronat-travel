@@ -1,0 +1,74 @@
+{
+  "row_id": "pos:97d7dbe2-4383-4623-9ba4-96d54e3d257f",
+  "subject": {
+    "name": "Holiday, Billie",
+    "rodden_rating": "AA",
+    "birth_date": "1915-04-07",
+    "birth_lat": 39.95,
+    "birth_lon": -75.16666666666667
+  },
+  "event": {
+    "sample_date": "1929-01-01",
+    "location_name": "New York City",
+    "location_lat": 40.712777777,
+    "location_lon": -74.006111111,
+    "goal_label": {
+      "relocation": 1
+    }
+  },
+  "macro_score": {
+    "score": 71,
+    "verdict": "Productive"
+  },
+  "house_scores": {
+    "H1": 65.0,
+    "H2": 64.0,
+    "H3": 48.0,
+    "H4": 58.0,
+    "H5": 30.0,
+    "H6": 39.0,
+    "H7": 56.0,
+    "H8": 35.0,
+    "H9": 46.0,
+    "H10": 60.0,
+    "H11": 56.0,
+    "H12": 40.0
+  },
+  "scenarios": {
+    "default": {
+      "love": 45.15,
+      "career": 56.0,
+      "community": 54.0,
+      "growth": 44.3,
+      "relocation": 56.75
+    },
+    "hellenistic_strict": {
+      "love": 56.0,
+      "career": 60.0,
+      "community": 56.0,
+      "growth": 46.0,
+      "relocation": 58.0
+    },
+    "material_heavy": {
+      "love": 45.3,
+      "career": 54.7,
+      "community": 55.2,
+      "growth": 47.2,
+      "relocation": 57.65
+    },
+    "network_weighted": {
+      "love": 47.4,
+      "career": 56.25,
+      "community": 54.8,
+      "growth": 47.3,
+      "relocation": 55.65
+    },
+    "angular_only": {
+      "love": 56.4,
+      "career": 61.5,
+      "community": 60.5,
+      "growth": 61.5,
+      "relocation": 60.45
+    }
+  }
+}

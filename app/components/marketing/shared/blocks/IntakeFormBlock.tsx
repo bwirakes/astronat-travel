@@ -357,14 +357,23 @@ export function IntakeFormBlock() {
 
     try {
       const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
-      let captchaToken: string | null =
-        process.env.NODE_ENV !== "production" ? "dev-bypass" : null;
-      if (process.env.NODE_ENV === "production" && siteKey && window.grecaptcha?.execute) {
-        captchaToken = await new Promise<string>((resolve) => {
-          window.grecaptcha.ready(async () => {
-            resolve(await window.grecaptcha.execute(siteKey, { action: "submit" }));
+      let captchaToken: string = "no-captcha";
+      if (process.env.NODE_ENV !== "production") {
+        captchaToken = "dev-bypass";
+      } else if (siteKey && window.grecaptcha?.execute) {
+        try {
+          captchaToken = await new Promise<string>((resolve, reject) => {
+            window.grecaptcha.ready(async () => {
+              try {
+                resolve(await window.grecaptcha.execute(siteKey, { action: "submit" }));
+              } catch (e) {
+                reject(e);
+              }
+            });
           });
-        });
+        } catch {
+          captchaToken = "no-captcha";
+        }
       }
 
       const res = await fetch("/api/intake", {

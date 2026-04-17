@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { LogOut, Save, ArrowLeft, Loader2, CreditCard } from "lucide-react";
+import { LogOut, Save, Loader2, CreditCard } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -111,8 +111,8 @@ export default function ProfilePage() {
       
     setSaving(false);
     if (error) {
-      console.error(error);
-      setToast("Error saving profile");
+      console.error("[profile save]", error);
+      setToast(`Error saving profile: ${error.message || error.code || "unknown"}`);
     } else {
       setToast("Profile saved");
     }
@@ -142,7 +142,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <DashboardLayout title="Your Profile" backLabel="Home">
+    <DashboardLayout title="Your Profile" backLabel="Home" backHref="/dashboard">
       <div style={{ maxWidth: "600px", margin: "0 auto" }}>
         <p style={{ fontFamily: "var(--font-body)", color: "var(--text-secondary)", marginBottom: "var(--space-md)" }}>
           Manage your birth data and account settings.

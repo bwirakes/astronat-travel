@@ -1,0 +1,74 @@
+{
+  "row_id": "pos:e08498a1-fc24-44e8-8a90-fbcf6ddb4b29",
+  "subject": {
+    "name": "Hemingway, Ernest",
+    "rodden_rating": "AA",
+    "birth_date": "1899-07-21",
+    "birth_lat": 41.88333333333333,
+    "birth_lon": -87.78333333333333
+  },
+  "event": {
+    "sample_date": "1923-12-31",
+    "location_name": "Paris",
+    "location_lat": 48.856666666,
+    "location_lon": 2.352222222,
+    "goal_label": {
+      "relocation": 1
+    }
+  },
+  "macro_score": {
+    "score": 55,
+    "verdict": "Mixed"
+  },
+  "house_scores": {
+    "H1": 63.0,
+    "H2": 32.0,
+    "H3": 32.0,
+    "H4": 46.0,
+    "H5": 40.0,
+    "H6": 35.0,
+    "H7": 56.0,
+    "H8": 33.0,
+    "H9": 48.0,
+    "H10": 43.0,
+    "H11": 39.0,
+    "H12": 48.0
+  },
+  "scenarios": {
+    "default": {
+      "love": 47.25,
+      "career": 39.35,
+      "community": 40.65,
+      "growth": 44.8,
+      "relocation": 43.95
+    },
+    "hellenistic_strict": {
+      "love": 56.0,
+      "career": 43.0,
+      "community": 39.0,
+      "growth": 48.0,
+      "relocation": 46.0
+    },
+    "material_heavy": {
+      "love": 43.5,
+      "career": 36.55,
+      "community": 37.9,
+      "growth": 43.2,
+      "relocation": 41.85
+    },
+    "network_weighted": {
+      "love": 46.3,
+      "career": 38.95,
+      "community": 40.5,
+      "growth": 43.35,
+      "relocation": 40.85
+    },
+    "angular_only": {
+      "love": 54.0,
+      "career": 49.0,
+      "community": 59.5,
+      "growth": 54.5,
+      "relocation": 51.95
+    }
+  }
+}

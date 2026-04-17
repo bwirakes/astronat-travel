@@ -1,0 +1,74 @@
+{
+  "row_id": "pos:77da12ba-08d1-449b-99e3-8cad50a6e88e",
+  "subject": {
+    "name": "Joyce, James",
+    "rodden_rating": "A",
+    "birth_date": "1882-02-02",
+    "birth_lat": 53.333333333333336,
+    "birth_lon": -6.25
+  },
+  "event": {
+    "sample_date": "1915-01-01",
+    "location_name": "Dublin, Ireland",
+    "location_lat": 53.333333333333336,
+    "location_lon": -6.25,
+    "goal_label": {
+      "relocation": 1
+    }
+  },
+  "macro_score": {
+    "score": 46,
+    "verdict": "Challenging"
+  },
+  "house_scores": {
+    "H1": 48.0,
+    "H2": 45.0,
+    "H3": 32.0,
+    "H4": 57.0,
+    "H5": 48.0,
+    "H6": 41.0,
+    "H7": 47.0,
+    "H8": 35.0,
+    "H9": 62.0,
+    "H10": 45.0,
+    "H11": 55.0,
+    "H12": 40.0
+  },
+  "scenarios": {
+    "default": {
+      "love": 46.0,
+      "career": 45.2,
+      "community": 47.65,
+      "growth": 48.3,
+      "relocation": 51.9
+    },
+    "hellenistic_strict": {
+      "love": 47.0,
+      "career": 45.0,
+      "community": 55.0,
+      "growth": 62.0,
+      "relocation": 57.0
+    },
+    "material_heavy": {
+      "love": 43.4,
+      "career": 43.2,
+      "community": 46.95,
+      "growth": 48.35,
+      "relocation": 50.1
+    },
+    "network_weighted": {
+      "love": 47.65,
+      "career": 47.4,
+      "community": 50.35,
+      "growth": 50.25,
+      "relocation": 52.4
+    },
+    "angular_only": {
+      "love": 49.0,
+      "career": 45.9,
+      "community": 47.5,
+      "growth": 52.5,
+      "relocation": 53.85
+    }
+  }
+}

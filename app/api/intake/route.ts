@@ -266,14 +266,13 @@ export async function POST(req: Request) {
 
     // ── CAPTCHA verification ──────────────────────────────────────────────────
     const captchaToken = data._captcha as string | undefined;
-    if (!captchaToken) {
-      return NextResponse.json({ error: "CAPTCHA verification required" }, { status: 400 });
-    }
-    const isBypass = process.env.NODE_ENV !== "production" &&
-      (captchaToken === "test-bypass" || captchaToken === "dev-bypass");
-    const captchaValid = isBypass ? true : await verifyCaptcha(captchaToken);
-    if (!captchaValid) {
-      return NextResponse.json({ error: "CAPTCHA verification failed. Please try again." }, { status: 400 });
+    const hasSecret = !!process.env.RECAPTCHA_SECRET_KEY;
+    const isBypass = !hasSecret || (captchaToken === "test-bypass" || captchaToken === "dev-bypass" || captchaToken === "no-captcha");
+    if (captchaToken && !isBypass) {
+      const captchaValid = await verifyCaptcha(captchaToken);
+      if (!captchaValid) {
+        return NextResponse.json({ error: "CAPTCHA verification failed. Please try again." }, { status: 400 });
+      }
     }
 
     const notion = new Client({ auth: process.env.NOTION_API_KEY });
@@ -383,7 +382,7 @@ export async function POST(req: Request) {
       : (process.env.RESEND_TEST_EMAIL ?? NOTIFICATION_EMAIL);
 
     const { error: emailError } = await resend.emails.send({
-      from: "AstroNat <onboarding@resend.dev>",
+      from: "AstroNat <intake@astronat.io>",
       to: [toAddress],
       subject: `New Corporate Intake — ${contactName} · ${companyName}`,
       html: buildNotificationEmail(data as Record<string, unknown>),

@@ -9,9 +9,11 @@ import { useRouter } from "next/navigation";
 import ThemeToggle from "@/app/components/ThemeToggle";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import { LifeGoalsButton, CouplesButton, MyChartButton, WorldChartsButton, TransitsButton, LearnButton } from "@/app/components/ExploreButtons";
+import ReadingCreditPill from "@/app/components/ReadingCreditPill";
+import type { ReadingAccess } from "@/lib/access";
 
 
-export default function HomeClient({ profile, sunSignData, recentSearches }: any) {
+export default function HomeClient({ profile, sunSignData, recentSearches, access }: { profile: any; sunSignData: any; recentSearches: any; access?: ReadingAccess }) {
     const router = useRouter();
     const container = useRef<HTMLDivElement>(null);
 
@@ -89,14 +91,19 @@ export default function HomeClient({ profile, sunSignData, recentSearches }: any
     }, { scope: container });
 
     return (
-        <DashboardLayout showBack={false} maxWidth="100%">
+        <DashboardLayout showBack={false} maxWidth="100%" paddingTop="var(--space-lg)">
             <div className={styles.page} ref={container}>
 
 
             <div className={styles.content}>
                 {/* Global Hero Greeting */}
                 <div className={`${styles.hero} dashboard-hero`} style={{ opacity: 0 }}>
-                    <span className={styles.pill}>{sunSignData?.emoji} {sunSignData?.name} Sun</span>
+                    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center", marginBottom: "0.35rem" }}>
+                        <span className={styles.pill}>{sunSignData?.emoji} {sunSignData?.name} Sun</span>
+                        {access && (
+                            <ReadingCreditPill hasSubscription={access.hasSubscription} freeUsed={access.freeUsed} />
+                        )}
+                    </div>
                     <h1 className={styles.greeting}>
                         Hello, <em className={styles.greetingName} style={{ display: "inline-block", perspective: "400px" }}>
                             {profile.first_name.split("").map((char: string, i: number) => (
@@ -183,7 +190,7 @@ export default function HomeClient({ profile, sunSignData, recentSearches }: any
             <button
                 className={`${styles.fab} dashboard-fab`}
                 style={{ opacity: 0 }}
-                onClick={() => router.push("/flow")}
+                onClick={() => router.push("/reading/new")}
             >
                 + New Reading
             </button>

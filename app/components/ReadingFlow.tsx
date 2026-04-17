@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ArrowLeft, Heart, Briefcase, Users, Clock, Sprout, Home, Plane, Building, Loader2 } from "lucide-react";
 import CityAutocomplete from "./CityAutocomplete";
+import { createClient } from "@/lib/supabase/client";
 
 const LIFE_GOALS = [
   { id: "love", label: "Love & Relationships", icon: Heart, color: "var(--color-spiced-life)", sub: "Venus lines · 5th & 7th house" },
@@ -21,20 +22,29 @@ const slideVariants = {
   exit: (d: number) => ({ x: d > 0 ? -40 : 40, opacity: 0 }),
 };
 
-export default function ReadingFlow() {
+export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | "relocation" | "couples" } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
-  const [screen, setScreen] = useState(0);
+
+  // When the wizard is embedded on a type-specific surface (e.g. /couples),
+  // skip the type-picker step and land directly on the first type-relevant step.
+  const [screen, setScreen] = useState(defaultType ? 1 : 0);
   const [dir, setDir] = useState(1);
   const [loading, setLoading] = useState(false);
-  
-  const [type, setType] = useState<"travel" | "relocation" | "couples">("travel");
+
+  const [type, setType] = useState<"travel" | "relocation" | "couples">(defaultType ?? "travel");
   const [goals, setGoals] = useState<string[]>([]);
   const [destination, setDestination] = useState("");
   const [destLat, setDestLat] = useState<number | null>(null);
   const [destLon, setDestLon] = useState<number | null>(null);
   const [date, setDate] = useState("");
+
+  // Couples / synastry state
+  const [partnerId, setPartnerId] = useState<string | null>(null);
+  const [partners, setPartners] = useState<Array<{ id: string; first_name: string; birth_date: string; birth_city: string; label: string }>>([]);
+  const [showAddPartner, setShowAddPartner] = useState(false);
+  const [newPartner, setNewPartner] = useState({ firstName: "", birthDate: "", birthTime: "12:00", birthCity: "", birthLat: null as number | null, birthLon: null as number | null });
+  const [partnerSaving, setPartnerSaving] = useState(false);
 
   useEffect(() => {
     const qType = searchParams.get("type");
@@ -43,9 +53,71 @@ export default function ReadingFlow() {
     else if (qType === "travel") setType("travel");
   }, [searchParams]);
 
+  // Load saved partner profiles when couples type is active
+  useEffect(() => {
+    if (type !== "couples") return;
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase
+        .from("partner_profiles")
+        .select("id, first_name, birth_date, birth_city, label")
+        .eq("owner_id", user.id)
+        .order("created_at", { ascending: false })
+        .then(({ data }) => { if (data) setPartners(data); });
+    });
+  }, [type]);
+
+  const handleSavePartner = async () => {
+    if (!newPartner.firstName || !newPartner.birthDate || !newPartner.birthCity) return;
+    setPartnerSaving(true);
+
+    let lat = newPartner.birthLat;
+    let lon = newPartner.birthLon;
+    if (newPartner.birthCity && lat === null) {
+      try {
+        const geo = await fetch(`/api/geocode?city=${encodeURIComponent(newPartner.birthCity)}`).then(r => r.json());
+        if (geo?.lat) { lat = parseFloat(geo.lat); lon = parseFloat(geo.lon); }
+      } catch { /* coordinates will be null */ }
+    }
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setPartnerSaving(false); return; }
+
+    const { data, error } = await supabase
+      .from("partner_profiles")
+      .insert({
+        owner_id: user.id,
+        label: "Partner",
+        first_name: newPartner.firstName,
+        birth_date: newPartner.birthDate,
+        birth_time: newPartner.birthTime + ":00",
+        birth_time_known: true,
+        birth_city: newPartner.birthCity,
+        birth_lat: lat,
+        birth_lon: lon,
+      })
+      .select("id, first_name, birth_date, birth_city, label")
+      .single();
+
+    if (!error && data) {
+      setPartners(prev => [data, ...prev]);
+      setPartnerId(data.id);
+      setShowAddPartner(false);
+      setNewPartner({ firstName: "", birthDate: "", birthTime: "12:00", birthCity: "", birthLat: null, birthLon: null });
+    }
+    setPartnerSaving(false);
+  };
+
+  const DEST_SCREEN = type === "couples" ? 3 : 2;
+  const totalSteps = (type === "couples" ? 4 : 3) - (defaultType ? 1 : 0);
+  const displayStep = (s: number) => defaultType ? s : s + 1;
+  const minScreen = defaultType ? 1 : 0;
+
   const go = (n: number) => { setDir(n > screen ? 1 : -1); setScreen(n); };
-  const next = () => go(Math.min(screen + 1, 3));
-  const back = () => go(Math.max(screen - 1, 0));
+  const next = () => go(Math.min(screen + 1, DEST_SCREEN));
+  const back = () => go(Math.max(screen - 1, minScreen));
 
   const toggleGoal = (id: string) => {
     if (goals.includes(id)) {
@@ -103,7 +175,8 @@ export default function ReadingFlow() {
           targetLat,
           targetLon,
           travelDate: date || new Date().toISOString().split('T')[0],
-          goals
+          goals,
+          ...(type === "couples" && partnerId ? { partner_id: partnerId } : {}),
         })
       });
 
@@ -129,7 +202,7 @@ export default function ReadingFlow() {
           <motion.div key="type" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
               <div style={{ maxWidth: "480px", width: "100%" }}>
-                <h5 style={{ marginBottom: "0.35rem" }}>Step 1 of 3</h5>
+                <h5 style={{ marginBottom: "0.35rem" }}>Step {displayStep(0)} of {totalSteps}</h5>
                 <h2 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(2rem, 4vw, 3rem)", color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase" }}>
                   What kind of <span style={{ color: "var(--color-acqua)" }}>reading</span>?
                 </h2>
@@ -171,11 +244,114 @@ export default function ReadingFlow() {
           </motion.div>
         )}
 
-        {screen === 1 && (
+        {screen === 1 && type === "couples" && (
+          <motion.div key="partner" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
+              <div style={{ maxWidth: "480px", width: "100%" }}>
+                <h5 style={{ marginBottom: "0.35rem" }}>Step {displayStep(1)} of {totalSteps}</h5>
+                <h2 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(2rem, 4vw, 3rem)", color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase" }}>
+                  Who is your <span style={{ color: "var(--color-spiced-life)" }}>partner?</span>
+                </h2>
+                <p style={{ color: "var(--text-secondary)", marginBottom: "1.25rem", fontSize: "0.85rem" }}>
+                  Select a saved partner or add a new one to compute the synastry overlay.
+                </p>
+
+                {partners.length > 0 && !showAddPartner && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1rem" }}>
+                    {partners.map(p => (
+                      <button key={p.id} onClick={() => setPartnerId(p.id)} style={{
+                        display: "flex", alignItems: "center", gap: "0.8rem", padding: "0.9rem 1rem",
+                        border: `1px solid ${partnerId === p.id ? "var(--color-spiced-life)" : "var(--surface-border)"}`,
+                        borderRadius: "var(--radius-sm)",
+                        background: partnerId === p.id ? "rgba(255,60,60,0.06)" : "var(--surface)",
+                        cursor: "pointer", transition: "all 0.2s ease", textAlign: "left",
+                      }}>
+                        <Heart size={16} color={partnerId === p.id ? "var(--color-spiced-life)" : "var(--text-tertiary)"} />
+                        <div>
+                          <div style={{ fontFamily: "var(--font-body)", fontWeight: 600, fontSize: "0.85rem", color: partnerId === p.id ? "var(--text-primary)" : "var(--text-secondary)" }}>
+                            {p.first_name}
+                          </div>
+                          <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", color: "var(--text-tertiary)" }}>
+                            {p.birth_date} · {p.birth_city}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                    <button onClick={() => setShowAddPartner(true)} style={{
+                      padding: "0.75rem", border: "1px dashed var(--surface-border)",
+                      borderRadius: "var(--radius-sm)", background: "transparent",
+                      color: "var(--text-tertiary)", fontFamily: "var(--font-body)", fontSize: "0.8rem",
+                      cursor: "pointer",
+                    }}>
+                      + Add new partner
+                    </button>
+                  </div>
+                )}
+
+                {(partners.length === 0 || showAddPartner) && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1rem", padding: "1rem", border: "1px solid var(--surface-border)", borderRadius: "var(--radius-sm)", background: "var(--surface)" }}>
+                    <div className="input-group">
+                      <label className="input-label">Partner name</label>
+                      <input className="input-field" type="text" placeholder="e.g. Alex" value={newPartner.firstName}
+                        onChange={e => setNewPartner(p => ({ ...p, firstName: e.target.value }))} />
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                      <div className="input-group">
+                        <label className="input-label">Date of birth</label>
+                        <input className="input-field" type="date" value={newPartner.birthDate}
+                          onChange={e => setNewPartner(p => ({ ...p, birthDate: e.target.value }))} />
+                      </div>
+                      <div className="input-group">
+                        <label className="input-label">Time of birth</label>
+                        <input className="input-field" type="time" value={newPartner.birthTime}
+                          onChange={e => setNewPartner(p => ({ ...p, birthTime: e.target.value }))} />
+                      </div>
+                    </div>
+                    <CityAutocomplete
+                      id="partner-birth-city"
+                      label="City of birth"
+                      value={newPartner.birthCity}
+                      onChange={val => setNewPartner(p => ({ ...p, birthCity: val, birthLat: null, birthLon: null }))}
+                      onSelect={s => setNewPartner(p => ({ ...p, birthCity: s.label, birthLat: s.lat, birthLon: s.lon }))}
+                      placeholder="e.g. Paris, France"
+                    />
+                    <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                      <button
+                        className="btn btn-primary"
+                        onClick={handleSavePartner}
+                        disabled={partnerSaving || !newPartner.firstName || !newPartner.birthDate || !newPartner.birthCity}
+                        style={{ padding: "0.6rem 1.25rem" }}>
+                        {partnerSaving ? <Loader2 className="animate-spin" size={14} /> : "Save partner"}
+                      </button>
+                      {showAddPartner && (
+                        <button onClick={() => setShowAddPartner(false)} style={{ background: "transparent", border: "none", color: "var(--text-tertiary)", fontSize: "0.75rem", cursor: "pointer", padding: 0 }}>
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display: "flex", gap: "0.6rem" }}>
+                  {screen > minScreen && (
+                    <button className="btn btn-secondary" onClick={back} style={{ padding: "0.75rem 1.25rem" }}><ArrowLeft size={14} /> Back</button>
+                  )}
+                  <button className="btn btn-primary" style={{ flex: 1, justifyContent: "center", padding: "0.75rem", borderRadius: "var(--shape-asymmetric-md)", opacity: partnerId ? 1 : 0.3 }}
+                    disabled={!partnerId}
+                    onClick={next}>
+                    Continue <ArrowRight size={15} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {screen === (type === "couples" ? 2 : 1) && (
           <motion.div key="goals" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
               <div style={{ maxWidth: "540px", width: "100%" }}>
-                <h5 style={{ marginBottom: "0.35rem" }}>Step 2 of 3</h5>
+                <h5 style={{ marginBottom: "0.35rem" }}>Step {displayStep(type === "couples" ? 2 : 1)} of {totalSteps}</h5>
                 <h2 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(1.8rem, 4vw, 3rem)", color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase" }}>
                   What are you <span style={{ color: "var(--color-spiced-life)" }}>looking for?</span>
                 </h2>
@@ -224,11 +400,11 @@ export default function ReadingFlow() {
           </motion.div>
         )}
 
-        {screen === 2 && (
+        {screen === DEST_SCREEN && (
           <motion.div key="dest" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
               <div style={{ maxWidth: "480px", width: "100%" }}>
-                <h5 style={{ marginBottom: "0.35rem" }}>Step 3 of 3</h5>
+                <h5 style={{ marginBottom: "0.35rem" }}>Step {displayStep(DEST_SCREEN)} of {totalSteps}</h5>
                 <h2 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(2rem, 4vw, 3rem)", color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase" }}>
                   Where are <span style={{ color: "var(--gold)" }}>you going?</span>
                 </h2>

@@ -1,0 +1,74 @@
+{
+  "row_id": "pos:10385364-985e-4acb-8486-27a2948b47e2",
+  "subject": {
+    "name": "Garland, Judy",
+    "rodden_rating": "AA",
+    "birth_date": "1922-06-10",
+    "birth_lat": 47.233333333333334,
+    "birth_lon": -93.53333333333333
+  },
+  "event": {
+    "sample_date": "1926-01-01",
+    "location_name": "Grand Rapids, Minnesota",
+    "location_lat": 47.233333333333334,
+    "location_lon": -93.53333333333333,
+    "goal_label": {
+      "relocation": 1
+    }
+  },
+  "macro_score": {
+    "score": 66,
+    "verdict": "Productive"
+  },
+  "house_scores": {
+    "H1": 56.0,
+    "H2": 37.0,
+    "H3": 35.0,
+    "H4": 46.0,
+    "H5": 32.0,
+    "H6": 34.0,
+    "H7": 55.0,
+    "H8": 61.0,
+    "H9": 69.0,
+    "H10": 66.0,
+    "H11": 46.0,
+    "H12": 49.0
+  },
+  "scenarios": {
+    "default": {
+      "love": 48.55,
+      "career": 53.25,
+      "community": 45.05,
+      "growth": 55.2,
+      "relocation": 43.85
+    },
+    "hellenistic_strict": {
+      "love": 55.0,
+      "career": 66.0,
+      "community": 46.0,
+      "growth": 69.0,
+      "relocation": 46.0
+    },
+    "material_heavy": {
+      "love": 50.4,
+      "career": 48.95,
+      "community": 42.8,
+      "growth": 53.1,
+      "relocation": 42.5
+    },
+    "network_weighted": {
+      "love": 48.05,
+      "career": 50.85,
+      "community": 45.7,
+      "growth": 53.15,
+      "relocation": 42.85
+    },
+    "angular_only": {
+      "love": 53.2,
+      "career": 63.0,
+      "community": 55.5,
+      "growth": 51.0,
+      "relocation": 49.5
+    }
+  }
+}

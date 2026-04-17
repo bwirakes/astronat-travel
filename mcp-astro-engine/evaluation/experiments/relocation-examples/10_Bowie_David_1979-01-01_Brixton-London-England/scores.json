@@ -1,0 +1,74 @@
+{
+  "row_id": "pos:290380c0-7eff-4473-9a22-f77f7cb71939",
+  "subject": {
+    "name": "Bowie, David",
+    "rodden_rating": "A",
+    "birth_date": "1947-01-08",
+    "birth_lat": 51.483333333333334,
+    "birth_lon": -0.1
+  },
+  "event": {
+    "sample_date": "1979-01-01",
+    "location_name": "Brixton (London), England",
+    "location_lat": 51.483333333333334,
+    "location_lon": -0.1,
+    "goal_label": {
+      "relocation": 1
+    }
+  },
+  "macro_score": {
+    "score": 50,
+    "verdict": "Mixed"
+  },
+  "house_scores": {
+    "H1": 35.0,
+    "H2": 46.0,
+    "H3": 35.0,
+    "H4": 35.0,
+    "H5": 45.0,
+    "H6": 35.0,
+    "H7": 45.0,
+    "H8": 35.0,
+    "H9": 57.0,
+    "H10": 70.0,
+    "H11": 43.0,
+    "H12": 38.0
+  },
+  "scenarios": {
+    "default": {
+      "love": 43.0,
+      "career": 56.7,
+      "community": 41.4,
+      "growth": 45.95,
+      "relocation": 36.65
+    },
+    "hellenistic_strict": {
+      "love": 45.0,
+      "career": 70.0,
+      "community": 43.0,
+      "growth": 57.0,
+      "relocation": 35.0
+    },
+    "material_heavy": {
+      "love": 42.1,
+      "career": 51.1,
+      "community": 41.65,
+      "growth": 46.35,
+      "relocation": 38.3
+    },
+    "network_weighted": {
+      "love": 43.6,
+      "career": 53.05,
+      "community": 42.1,
+      "growth": 45.45,
+      "relocation": 38.25
+    },
+    "angular_only": {
+      "love": 43.0,
+      "career": 59.5,
+      "community": 40.0,
+      "growth": 35.0,
+      "relocation": 35.0
+    }
+  }
+}

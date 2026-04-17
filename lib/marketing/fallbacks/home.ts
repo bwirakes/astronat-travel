@@ -54,8 +54,8 @@ export const homeFallbackBlocksUniversal = [
     cards: [
       {
         num: "01 —",
-        title: "Personal Relocation Reading",
-        desc: "A comprehensive 90-minute reading of your ACG map, local space lines, geodetic chart, and current transit overlays. Know exactly where to go — and why.",
+        title: "Astrocartography Deep Dive",
+        desc: "A comprehensive 90-minute reading of your ACG map, local space lines, geodetic chart, and current transit overlays. Know exactly where to go — and why your body already knew.",
         link: "https://calendly.com/astronat/60min-acg-reading",
         linkLabel: "Book a Session →",
         bgToken: "charcoal",
@@ -64,8 +64,8 @@ export const homeFallbackBlocksUniversal = [
       },
       {
         num: "02 —",
-        title: "Travel Astrology Intensive",
-        desc: "Precision timing meets cosmic timing. Learn how to map, timing, and score your ideal destinations with our signature methodology.",
+        title: "Travel Electional",
+        desc: "The right day to depart, arrive, or sign contracts abroad changes everything. Precision timing meets cosmic timing — your travels, optimised by the chart.",
         link: "/map-from-home",
         linkLabel: "Learn More →",
         bgToken: "bg",
@@ -74,8 +74,8 @@ export const homeFallbackBlocksUniversal = [
       },
       {
         num: "03 —",
-        title: "The AstroNat Planner",
-        desc: "High-precision ACG maps and travel planning software in your pocket. Calculate lines, timing, and score destinations on the go with our engine.",
+        title: "Relocation Solar Return",
+        desc: "Your annual chart, cast for the city you choose to spend your solar return year. Where should you be for career breakthroughs, love, or deep healing?",
         link: "/app",
         linkLabel: "Explore →",
         bgToken: "y2k-blue",
@@ -101,7 +101,7 @@ export const homeFallbackBlocksUniversal = [
       { label: "Launch", value: "19–20 May 2026" },
     ],
     primaryCta: { label: "Waitlist Now →", href: "/map-from-home" },
-    priceBadge: { kicker: "Enrol\nNow", line1: "SGD", line2: "$297" },
+    priceBadge: { kicker: "Enrol\nNow", line1: "SGD", line2: "$397" },
   },
   {
     blockType: "splitContent",

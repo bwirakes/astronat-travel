@@ -1,0 +1,74 @@
+{
+  "row_id": "pos:8aabaf55-6cdf-4ae1-a485-a4d8ae9ffb54",
+  "subject": {
+    "name": "Hepburn, Audrey",
+    "rodden_rating": "AA",
+    "birth_date": "1929-05-04",
+    "birth_lat": 50.833333333333336,
+    "birth_lon": 4.366666666666666
+  },
+  "event": {
+    "sample_date": "1948-01-01",
+    "location_name": "Ixelles, Belgium",
+    "location_lat": 50.833333333333336,
+    "location_lon": 4.366666666666666,
+    "goal_label": {
+      "relocation": 1
+    }
+  },
+  "macro_score": {
+    "score": 65,
+    "verdict": "Productive"
+  },
+  "house_scores": {
+    "H1": 70.0,
+    "H2": 45.0,
+    "H3": 41.0,
+    "H4": 68.0,
+    "H5": 49.0,
+    "H6": 43.0,
+    "H7": 37.0,
+    "H8": 32.0,
+    "H9": 35.0,
+    "H10": 49.0,
+    "H11": 37.0,
+    "H12": 32.0
+  },
+  "scenarios": {
+    "default": {
+      "love": 41.4,
+      "career": 46.0,
+      "community": 38.0,
+      "growth": 35.15,
+      "relocation": 61.0
+    },
+    "hellenistic_strict": {
+      "love": 37.0,
+      "career": 49.0,
+      "community": 37.0,
+      "growth": 35.0,
+      "relocation": 68.0
+    },
+    "material_heavy": {
+      "love": 38.7,
+      "career": 44.7,
+      "community": 39.2,
+      "growth": 36.5,
+      "relocation": 57.55
+    },
+    "network_weighted": {
+      "love": 39.5,
+      "career": 43.9,
+      "community": 37.6,
+      "growth": 35.65,
+      "relocation": 54.6
+    },
+    "angular_only": {
+      "love": 43.2,
+      "career": 55.3,
+      "community": 53.5,
+      "growth": 69.0,
+      "relocation": 68.7
+    }
+  }
+}

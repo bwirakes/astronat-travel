@@ -1,0 +1,74 @@
+{
+  "row_id": "pos:305091ad-c334-4ccf-af6a-7f2170993359",
+  "subject": {
+    "name": "Carrey, Jim",
+    "rodden_rating": "A",
+    "birth_date": "1962-01-17",
+    "birth_lat": 44.05,
+    "birth_lon": -79.46666666666667
+  },
+  "event": {
+    "sample_date": "1980-01-01",
+    "location_name": "Newmarket, Ontario",
+    "location_lat": 44.05,
+    "location_lon": -79.46666666666667,
+    "goal_label": {
+      "relocation": 1
+    }
+  },
+  "macro_score": {
+    "score": 78,
+    "verdict": "Productive"
+  },
+  "house_scores": {
+    "H1": 66.0,
+    "H2": 52.0,
+    "H3": 66.0,
+    "H4": 65.0,
+    "H5": 54.0,
+    "H6": 48.0,
+    "H7": 46.0,
+    "H8": 60.0,
+    "H9": 35.0,
+    "H10": 70.0,
+    "H11": 60.0,
+    "H12": 35.0
+  },
+  "scenarios": {
+    "default": {
+      "love": 51.45,
+      "career": 61.9,
+      "community": 58.7,
+      "growth": 41.2,
+      "relocation": 60.6
+    },
+    "hellenistic_strict": {
+      "love": 46.0,
+      "career": 70.0,
+      "community": 60.0,
+      "growth": 35.0,
+      "relocation": 65.0
+    },
+    "material_heavy": {
+      "love": 52.4,
+      "career": 58.3,
+      "community": 58.9,
+      "growth": 42.2,
+      "relocation": 58.65
+    },
+    "network_weighted": {
+      "love": 52.2,
+      "career": 61.0,
+      "community": 58.8,
+      "growth": 45.9,
+      "relocation": 59.5
+    },
+    "angular_only": {
+      "love": 49.8,
+      "career": 68.8,
+      "community": 56.0,
+      "growth": 65.5,
+      "relocation": 65.35
+    }
+  }
+}

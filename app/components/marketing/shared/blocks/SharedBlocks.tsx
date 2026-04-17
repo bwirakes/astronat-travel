@@ -95,8 +95,8 @@ export const FaqAccordion: React.FC<any> = ({ block }) => {
 };
 
 export const PullQuote: React.FC<any> = ({ block }) => {
-  const bg = block.bgToken === "black" ? "#111b2e" : "var(--bg-raised)";
-  const color = block.bgToken === "black" ? "#fcfaf1" : "var(--text-primary)";
+  const bg = block.bgToken === "black" ? "var(--color-charcoal)" : "var(--bg-raised)";
+  const color = block.bgToken === "black" ? "var(--color-eggshell)" : "var(--text-primary)";
   const accent = block.bgToken === "black" ? "var(--color-acqua)" : "var(--color-y2k-blue)";
 
   return (

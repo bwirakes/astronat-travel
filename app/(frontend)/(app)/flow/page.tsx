@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, Heart, Briefcase, Users, Clock, Sprout, Home, Lock, Sun, Moon, TrendingUp, Plane, Building, Loader2 } from "lucide-react";
+import { ArrowRight, ArrowLeft, Sun, Moon, TrendingUp, Loader2 } from "lucide-react";
 import Image from "next/image";
 import ThemeToggle from "@/app/components/ThemeToggle";
 import { useOnboardingStore } from "@/lib/store/onboardingStore";
@@ -11,16 +11,7 @@ import { Suspense } from "react";
 import { createClient } from '@/lib/supabase/client';
 import coupleHero from "@/public/couples_flow_hero.png";
 
-const SCREENS = ["Sign Up", "Pro", "Birth", "Aha", "Goals", "Destination"];
-
-const LIFE_GOALS = [
-  { id: "love", label: "Love & Relationships", icon: Heart, color: "var(--color-spiced-life)", sub: "Venus lines · 5th & 7th house" },
-  { id: "career", label: "Career & Ambition", icon: Briefcase, color: "var(--color-y2k-blue)", sub: "MC lines · 10th & 6th house" },
-  { id: "community", label: "Community & Friends", icon: Users, color: "var(--color-acqua)", sub: "Jupiter lines · 11th & 3rd house" },
-  { id: "timing", label: "Timing & Transitions", icon: Clock, color: "var(--gold)", sub: "Personal transits · travel windows" },
-  { id: "growth", label: "Personal Growth", icon: Sprout, color: "var(--sage)", sub: "Neptune lines · 9th & 12th house" },
-  { id: "relocation", label: "Relocation / Living", icon: Home, color: "var(--gold)", sub: "IC lines · 4th house patterns" },
-];
+const SCREENS = ["Sign Up", "Birth", "Aha"];
 
 const SIGN_GLYPHS: Record<string, string> = {
   Aries: "♈", Taurus: "♉", Gemini: "♊", Cancer: "♋", Leo: "♌", Virgo: "♍",
@@ -47,16 +38,6 @@ const slideVariants = {
   exit: (d: number) => ({ x: d > 0 ? -40 : 40, opacity: 0 }),
 };
 
-/* ── Y2K Starburst accent SVG ── */
-const Starburst = ({ size = 48, color = "var(--color-y2k-blue)", style = {} }: { size?: number; color?: string; style?: React.CSSProperties }) => (
-  <svg width={size} height={size} viewBox="0 0 100 100" style={style}>
-    <polygon
-      points="50,0 58,35 95,25 65,50 95,75 58,65 50,100 42,65 5,75 35,50 5,25 42,35"
-      fill={color} opacity={0.8}
-    />
-  </svg>
-);
-
 export default function FlowPage() {
   return (
     <Suspense fallback={<div style={{ minHeight: "100vh", background: "var(--bg)" }}></div>}>
@@ -67,15 +48,12 @@ export default function FlowPage() {
 
 function FlowPageInner() {
   const searchParams = useSearchParams();
-  const isDemo = searchParams.get("demo") === "true";
   const store = useOnboardingStore();
 
   const [screen, setScreen] = useState(0);
   const [dir, setDir] = useState(1);
   const [loadingChart, setLoadingChart] = useState(false);
-  const [loadingResults, setLoadingResults] = useState(false);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [macroScore, setMacroScore] = useState<number | null>(null);
+  const [finishLoading, setFinishLoading] = useState(false);
 
   // Auth State
   const [email, setEmail] = useState("");
@@ -99,7 +77,7 @@ function FlowPageInner() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { 
-        redirectTo: `${origin}/auth/callback?next=/flow?step=1`,
+        redirectTo: `${origin}/auth/callback?next=${encodeURIComponent('/flow?step=1')}`,
         queryParams: {
             prompt: 'select_account',
             access_type: 'offline',
@@ -116,7 +94,7 @@ function FlowPageInner() {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${origin}/auth/callback?next=/flow?step=1` },
+      options: { emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent('/flow?step=1')}` },
     });
     if (error) {
       setAuthMessage(`Error: ${error.message}`);
@@ -162,18 +140,8 @@ function FlowPageInner() {
     next();
   };
 
-  const handleAnalyze = async () => {
-    setLoadingResults(true);
-    try {
-      const destGeo = await fetch(`/api/geocode?city=${encodeURIComponent(store.destination)}`)
-        .then(r => r.json())
-        .catch(() => null);
-      if (destGeo?.lat) store.setDestCoords(parseFloat(destGeo.lat), parseFloat(destGeo.lon));
-    } catch {
-      console.log("Geocode failed");
-    }
-    
-    // Persist all onboarding data directly to Supabase profile
+  const handleFinishOnboarding = async () => {
+    setFinishLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -186,52 +154,13 @@ function FlowPageInner() {
           birth_city: store.birthCity || null,
           birth_lat: store.birthLat || null,
           birth_lon: store.birthLon || null,
-          life_goals: store.lifeGoals
         });
       }
     } catch (err) {
       console.error("Failed to sync profile:", err);
     }
-    
-    // For onboarding flow, mock the final result calculation score to create excitement before they hit the gate.
-    setTimeout(() => {
-      setMacroScore(87); // mocked value
-      setLoadingResults(false);
-      next();
-    }, 1500);
+    window.location.href = "/dashboard";
   };
-
-  const handleCheckout = async () => {
-    setCheckoutLoading(true);
-    try {
-      const res = await fetch('/api/checkout', { method: 'POST' });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        alert(data.error || 'Failed to initialize checkout. Please ensure you are logged in.');
-        setCheckoutLoading(false);
-      }
-    } catch (err) {
-      console.error(err);
-      setCheckoutLoading(false);
-    }
-  };
-
-  /* ─── Pill badge component ─── */
-  const Pill = ({ label, filled = false }: { label: string; filled?: boolean }) => (
-    <span style={{
-      display: "inline-block",
-      padding: "0.3rem 1rem",
-      fontFamily: "var(--font-mono)", fontSize: "0.55rem",
-      letterSpacing: "0.12em", textTransform: "uppercase",
-      color: filled ? "var(--color-eggshell)" : "var(--color-y2k-blue)",
-      background: filled ? "var(--color-y2k-blue)" : "rgba(255, 255, 255, 0.95)",
-      border: `1.5px solid var(--color-y2k-blue)`,
-      borderRadius: "var(--radius-full)",
-      whiteSpace: "nowrap",
-    }}>{label}</span>
-  );
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column" }}>
@@ -393,119 +322,13 @@ function FlowPageInner() {
             </motion.div>
           )}
 
-          {/* ════════════════ SCREEN 1: PRO UPSELL ════════════════ */}
+          {/* ════════════════ SCREEN 1: BIRTH DATA ════════════════ */}
           {screen === 1 && (
-            <motion.div key="pro" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit"
-              transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-              style={{ flex: 1, display: "flex", flexDirection: "column" }}
-            >
-              <div className="flex-1 flex flex-wrap w-full h-full max-w-[1080px] mx-auto items-center">
-                {/* Left: Ebook Aesthetic Image Card */}
-                <div style={{ 
-                  flex: 1, minWidth: "300px", minHeight: "30vh", maxHeight: "100%", 
-                  background: "var(--bg)", position: "relative", 
-                  display: "flex", alignItems: "center", justifyContent: "center", 
-                  overflow: "hidden" 
-                }} className="py-2 px-4 md:py-2 md:px-8">
-                  {/* Container for Image, Overlays and Pills */}
-                  <div className="relative w-full max-w-[460px] flex flex-col h-[28vh] md:aspect-[4/5] md:h-auto md:min-h-[400px]">
-                    
-                    {/* The Image */}
-                    <div className="w-full h-full relative overflow-hidden rounded-[var(--shape-organic-1)] border border-[var(--surface-border)]">
-                      <Image src="/excited_pro_user.png" alt="Astronat Pro" fill style={{ objectFit: "cover", objectPosition: "center top" }} priority />
-                      
-                      {/* Gradient overlay to ensure overlay visibility */}
-                      <div style={{
-                        position: "absolute", inset: 0,
-                        background: "linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 40%)",
-                      }} />
-                    </div>
-                    
-                    {/* Saturn Constellation Overlay */}
-                    <span style={{
-                      position: 'absolute',
-                      top: '65%', right: '4%',
-                      fontFamily: 'var(--font-display-alt-2)', fontSize: 'clamp(5rem, 15vw, 10rem)',
-                      lineHeight: 0.5, color: "var(--color-y2k-blue)",
-                      pointerEvents: 'none', opacity: 0.85,
-                      textShadow: "0 0 30px rgba(4,86,251,0.3)"
-                    }}>♄</span>
-
-                    {/* Pills Constrained to Image Box */}
-                    <div style={{ 
-                      position: "absolute", bottom: "5%", left: "5%", 
-                      display: 'flex', gap: '0.4rem', zIndex: 10 
-                    }}>
-                      <Pill label="12-MONTH" />
-                      <Pill label="TRANSITS" filled />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right: Payment Logic */}
-                <div className="flex-1 flex flex-col justify-center gap-3 p-3 md:gap-5 md:p-8 md:text-left mx-auto w-full max-w-[460px]">
-                  <div className="text-center md:text-left">
-                    <h5 style={{ marginBottom: "0.35rem" }}>Step 2 of 6</h5>
-                    <h2 style={{
-                      fontFamily: "var(--font-primary)", fontSize: "clamp(1.8rem, 4vw, 3rem)",
-                      color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase",
-                    }}>
-                      Unlock <span style={{ color: "var(--color-y2k-blue)" }}>Astronat Pro</span>
-                    </h2>
-                    <p className="mx-auto md:mx-0" style={{ color: "var(--text-secondary)", fontSize: "0.85rem", lineHeight: 1.5, maxWidth: "400px" }}>
-                      Get unrestricted access to your complete astrocartography mapping, 12-month travel windows, and unlimited partner charts.
-                    </p>
-                  </div>
-
-                  <div style={{
-                    padding: "1.25rem", background: "rgba(4,86,251,0.06)",
-                    border: "1px solid rgba(4,86,251,0.12)",
-                    borderRadius: "var(--cut-md)", clipPath: "var(--cut-md)"
-                  }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.6rem" }}>
-                      <span style={{ fontFamily: "var(--font-body)", fontWeight: 600, color: "var(--text-primary)", fontSize: "1rem" }}>Astro Pro Membership</span>
-                      <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.8rem", color: "var(--color-y2k-blue)" }}>$19.99<span style={{fontSize: "0.8rem", color: "var(--text-secondary)"}}>/mo</span></span>
-                    </div>
-                    <ul style={{ listStyle: "none", padding: 0, margin: "0 0 1rem 0", display: "flex", flexDirection: "column", gap: "0.45rem" }}>
-                      {["Unlimited readings & searches across the globe", "High-fidelity precise ACG mapping", "12-month personal transit windows", "Save unlimited partner charts for couples trips"].map(item => (
-                        <li key={item} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                          <Starburst size={12} style={{ flexShrink: 0 }} />
-                          <span style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "var(--text-secondary)" }}>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <button 
-                      className="btn btn-primary" 
-                      style={{ width: "100%", justifyContent: "center", padding: "0.9rem", fontSize: "0.9rem", letterSpacing: "0.02em" }}
-                      onClick={handleCheckout}
-                      disabled={checkoutLoading}
-                    >
-                      {checkoutLoading ? <><Loader2 className="animate-spin" size={15}/> Redirecting to Secure Checkout...</> : "Subscribe to Pro \u2014 $19.99/mo"}
-                    </button>
-                    {isDemo && (
-                      <button 
-                        className="btn" 
-                        onClick={next}
-                        style={{ 
-                          width: "100%", justifyContent: "center", padding: "0.85rem", marginTop: "0.5rem",
-                          background: "transparent", color: "var(--text-secondary)", border: "1px dashed var(--surface-border)"
-                        }}>
-                        Skip / Continue to Chart Setup (Demo)
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* ════════════════ SCREEN 2: BIRTH DATA ════════════════ */}
-          {screen === 2 && (
             <motion.div key="birth" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit"
               transition={{ duration: 0.3 }} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
               <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
                 <div style={{ maxWidth: "480px", width: "100%" }}>
-                  <h5 style={{ marginBottom: "0.35rem" }}>Step 3 of 6</h5>
+                  <h5 style={{ marginBottom: "0.35rem" }}>Step 2 of 3</h5>
                   <h2 style={{
                     fontFamily: "var(--font-primary)", fontSize: "clamp(2rem, 4vw, 3rem)",
                     color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase",
@@ -592,8 +415,8 @@ function FlowPageInner() {
             </motion.div>
           )}
 
-          {/* ════════════════ SCREEN 3: AHA MOMENT ════════════════ */}
-          {screen === 3 && (
+          {/* ════════════════ SCREEN 2: AHA MOMENT ════════════════ */}
+          {screen === 2 && (
             <motion.div key="aha" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit"
               transition={{ duration: 0.3 }} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
               <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
@@ -649,11 +472,11 @@ function FlowPageInner() {
                     </div>
 
                     <div style={{ display: "flex", gap: "0.6rem", marginTop: "1.5rem", justifyContent: "center" }}>
-                      <button className="btn btn-secondary" onClick={back} style={{ padding: "0.75rem 1.25rem" }}>
+                      <button className="btn btn-secondary" onClick={back} style={{ padding: "0.75rem 1.25rem" }} disabled={finishLoading}>
                         <ArrowLeft size={14} /> Back
                       </button>
-                      <button className="btn btn-primary" onClick={next} style={{ padding: "0.9rem 2.5rem" }}>
-                        Show me where <ArrowRight size={15} />
+                      <button className="btn btn-primary" onClick={handleFinishOnboarding} style={{ padding: "0.9rem 2.5rem" }} disabled={finishLoading}>
+                        {finishLoading ? <><Loader2 className="animate-spin" size={15}/> Entering…</> : <>Enter Astronat <ArrowRight size={15} /></>}
                       </button>
                     </div>
                   </motion.div>
@@ -662,132 +485,7 @@ function FlowPageInner() {
             </motion.div>
           )}
 
-          {/* ════════════════ SCREEN 4: LIFE GOALS ════════════════ */}
-          {screen === 4 && (
-            <motion.div key="goals" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit"
-              transition={{ duration: 0.3 }} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
-                <div style={{ maxWidth: "540px", width: "100%" }}>
-                  <h5 style={{ marginBottom: "0.35rem" }}>Step 5 of 6</h5>
-                  <h2 style={{
-                    fontFamily: "var(--font-primary)", fontSize: "clamp(1.8rem, 4vw, 3rem)",
-                    color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase",
-                  }}>
-                    What are you <span style={{ color: "var(--color-spiced-life)" }}>looking for?</span>
-                  </h2>
-                  <p style={{ color: "var(--text-secondary)", marginBottom: "1.25rem", fontSize: "0.8rem" }}>
-                    Select up to 3. We&apos;ll prioritize the planetary lines that matter most.
-                  </p>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "1.5rem" }}>
-                    {LIFE_GOALS.map(({ id, label, icon: Icon, color, sub }) => {
-                      const active = store.lifeGoals.includes(id);
-                      return (
-                        <motion.button key={id} onClick={() => store.toggleLifeGoal(id)} whileTap={{ scale: 0.97 }}
-                          style={{
-                            display: "flex", alignItems: "flex-start", gap: "0.5rem",
-                            padding: "0.65rem 0.75rem", textAlign: "left",
-                            background: active ? `${color}15` : "var(--surface)",
-                            border: `1px solid ${active ? color : "var(--surface-border)"}`,
-                            borderRadius: active ? "var(--shape-asymmetric-md)" : "var(--radius-sm)",
-                            cursor: "pointer", transition: "all 0.2s ease",
-                            opacity: (!active && store.lifeGoals.length >= 3) ? 0.3 : 1,
-                          }}>
-                          <Icon size={15} color={active ? color : "var(--text-tertiary)"} style={{ flexShrink: 0, marginTop: "1px" }} />
-                          <div>
-                            <div style={{ fontFamily: "var(--font-body)", fontWeight: 600, color: active ? "var(--text-primary)" : "var(--text-secondary)", fontSize: "0.75rem", marginBottom: "0.1rem" }}>
-                              {label}
-                            </div>
-                            <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.48rem", color: active ? color : "var(--text-tertiary)", letterSpacing: "0.05em" }}>
-                              {sub}
-                            </div>
-                          </div>
-                        </motion.button>
-                      );
-                    })}
-                  </div>
-
-                  <div style={{ display: "flex", gap: "0.6rem" }}>
-                    <button className="btn btn-secondary" onClick={back} style={{ padding: "0.75rem 1.25rem" }}><ArrowLeft size={14} /> Back</button>
-                    <button className="btn btn-primary" style={{ flex: 1, justifyContent: "center", padding: "0.75rem", opacity: store.lifeGoals.length > 0 ? 1 : 0.3 }}
-                      disabled={store.lifeGoals.length === 0}
-                      onClick={next}>
-                      Continue <ArrowRight size={15} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* ════════════════ SCREEN 5: DESTINATION ════════════════ */}
-          {screen === 5 && (
-            <motion.div key="destination" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit"
-              transition={{ duration: 0.3 }} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
-                <div style={{ maxWidth: "480px", width: "100%" }}>
-                  <h5 style={{ marginBottom: "0.35rem" }}>Step 6 of 6</h5>
-                  <h2 style={{
-                    fontFamily: "var(--font-primary)", fontSize: "clamp(2rem, 4vw, 3rem)",
-                    color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase",
-                  }}>
-                    Where are <span style={{ color: "var(--color-acqua)" }}>you going?</span>
-                  </h2>
-                  <p style={{ color: "var(--text-secondary)", marginBottom: "1.25rem", fontSize: "0.85rem" }}>
-                    We&apos;ll find the best windows around your target date.
-                  </p>
-
-                  <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                    <div>
-                      <label className="input-label" style={{ display: "block", marginBottom: "0.4rem" }}>Travel type</label>
-                      <div style={{ display: "flex", gap: "0.4rem" }}>
-                        {(["trip", "relocation"] as const).map(type => (
-                          <button key={type} onClick={() => store.setTravelType(type)} style={{
-                            flex: 1, padding: "0.6rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem",
-                            border: `1px solid ${store.travelType === type ? "var(--color-y2k-blue)" : "var(--surface-border)"}`,
-                            borderRadius: "var(--radius-sm)", background: store.travelType === type ? "rgba(4,86,251,0.1)" : "transparent",
-                            color: store.travelType === type ? "var(--text-primary)" : "var(--text-tertiary)",
-                            fontFamily: "var(--font-body)", fontSize: "0.78rem", cursor: "pointer",
-                            transition: "all 0.2s ease",
-                          }}>
-                            {type === "trip" ? <><Plane size={14} /> Short Trip</> : <><Building size={14} /> Relocation</>}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="input-group">
-                      <label className="input-label">Destination city</label>
-                      <input className="input-field" type="text" placeholder="e.g. Tokyo, Japan"
-                        value={store.destination} onChange={e => store.setDestination(e.target.value)} />
-                    </div>
-                    <div className="input-group">
-                      <label className="input-label">
-                        Target date <span style={{ color: "var(--text-tertiary)", textTransform: "none", fontFamily: "var(--font-body)" }}>(optional)</span>
-                      </label>
-                      <input className="input-field" type="date" value={store.travelDate}
-                        onChange={e => store.setTravelDate(e.target.value)} />
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.5rem", color: "var(--text-tertiary)", marginTop: "0.2rem" }}>
-                        Flexible — we&apos;ll find the best windows around this period
-                      </span>
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", gap: "0.6rem", marginTop: "1.5rem" }}>
-                    <button className="btn btn-secondary" onClick={back} style={{ padding: "0.75rem 1.25rem" }}><ArrowLeft size={14} /> Back</button>
-                    <button className="btn btn-primary" style={{ flex: 1, justifyContent: "center", padding: "0.75rem", opacity: store.destination ? 1 : 0.3 }}
-                      disabled={!store.destination || loadingResults}
-                      onClick={async () => {
-                        await handleAnalyze();
-                        window.location.href = "/dashboard?reading_unlocked=true"; // Forward to home when finished
-                      }}>
-                      {loadingResults ? <><Loader2 className="animate-spin" size={15}/> Computing...</> : <>See My Reading <ArrowRight size={15} /></>}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
+          {/* Goals and destination are now collected per-reading inside ReadingFlow. */}
         </AnimatePresence>
       </div>
     </div>

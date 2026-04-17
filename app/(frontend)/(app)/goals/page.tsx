@@ -33,7 +33,7 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
   }
 
   return (
-    <DashboardLayout title="What are you seeking?" kicker="PERSONALIZATION" backLabel="Home">
+    <DashboardLayout title="What are you seeking?" kicker="PERSONALIZATION" backLabel="Home" backHref="/dashboard">
       <div style={{ maxWidth: '800px', margin: '0 auto' }}>
         <p style={{ fontFamily: 'var(--font-body)', color: 'var(--text-secondary)', marginBottom: 'var(--space-md)' }}>
           Your goals shape every reading. Select up to 3.
