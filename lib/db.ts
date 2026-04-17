@@ -116,6 +116,36 @@ export async function getSubscriptionStatus(userId: string) {
   } : null
 }
 
+// Get partner's computed natal chart (cache-aside for couples readings)
+export async function getPartnerNatalChart(partnerId: string) {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('natal_charts')
+    .select('*')
+    .eq('partner_id', partnerId)
+    .eq('chart_type', 'natal')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  return data
+}
+
+// Save partner natal chart computation
+export async function savePartnerNatalChart(partnerId: string, ephemerisData: any, housePlacements: any) {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('natal_charts')
+    .insert({
+      partner_id: partnerId,
+      chart_type: 'natal',
+      ephemeris_data: ephemerisData,
+      house_placements: housePlacements,
+    })
+    .select()
+    .single()
+  return data
+}
+
 // Get user's computed natal chart
 export async function getNatalChart(userId: string) {
   const supabase = await createClient()

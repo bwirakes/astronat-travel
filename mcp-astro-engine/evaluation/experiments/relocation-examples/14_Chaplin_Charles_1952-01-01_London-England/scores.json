@@ -1,0 +1,74 @@
+{
+  "row_id": "pos:5db9eafb-32f1-462d-b8c3-6d9236ef6ab9",
+  "subject": {
+    "name": "Chaplin, Charles",
+    "rodden_rating": "B",
+    "birth_date": "1889-04-16",
+    "birth_lat": 51.5,
+    "birth_lon": -0.16666666666666666
+  },
+  "event": {
+    "sample_date": "1952-01-01",
+    "location_name": "London, England",
+    "location_lat": 51.5,
+    "location_lon": -0.16666666666666666,
+    "goal_label": {
+      "relocation": 1
+    }
+  },
+  "macro_score": {
+    "score": 64,
+    "verdict": "Mixed"
+  },
+  "house_scores": {
+    "H1": 61.0,
+    "H2": 49.0,
+    "H3": 35.0,
+    "H4": 48.0,
+    "H5": 43.0,
+    "H6": 41.0,
+    "H7": 77.0,
+    "H8": 48.0,
+    "H9": 35.0,
+    "H10": 52.0,
+    "H11": 52.0,
+    "H12": 45.0
+  },
+  "scenarios": {
+    "default": {
+      "love": 61.0,
+      "career": 49.35,
+      "community": 52.75,
+      "growth": 38.5,
+      "relocation": 48.4
+    },
+    "hellenistic_strict": {
+      "love": 77.0,
+      "career": 52.0,
+      "community": 52.0,
+      "growth": 35.0,
+      "relocation": 48.0
+    },
+    "material_heavy": {
+      "love": 58.7,
+      "career": 48.35,
+      "community": 49.8,
+      "growth": 40.1,
+      "relocation": 48.55
+    },
+    "network_weighted": {
+      "love": 60.6,
+      "career": 49.9,
+      "community": 53.2,
+      "growth": 41.75,
+      "relocation": 47.9
+    },
+    "angular_only": {
+      "love": 71.2,
+      "career": 54.7,
+      "community": 69.0,
+      "growth": 54.5,
+      "relocation": 52.55
+    }
+  }
+}

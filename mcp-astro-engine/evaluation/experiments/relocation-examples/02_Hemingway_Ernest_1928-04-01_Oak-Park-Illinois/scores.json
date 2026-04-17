@@ -1,0 +1,74 @@
+{
+  "row_id": "pos:ab37b7e6-d819-4faf-b21f-b8dd44135381",
+  "subject": {
+    "name": "Hemingway, Ernest",
+    "rodden_rating": "AA",
+    "birth_date": "1899-07-21",
+    "birth_lat": 41.88333333333333,
+    "birth_lon": -87.78333333333333
+  },
+  "event": {
+    "sample_date": "1928-04-01",
+    "location_name": "Oak Park, Illinois",
+    "location_lat": 41.88333333333333,
+    "location_lon": -87.78333333333333,
+    "goal_label": {
+      "relocation": 1
+    }
+  },
+  "macro_score": {
+    "score": 24,
+    "verdict": "Hostile"
+  },
+  "house_scores": {
+    "H1": 26.0,
+    "H2": 52.0,
+    "H3": 41.0,
+    "H4": 24.0,
+    "H5": 37.0,
+    "H6": 32.0,
+    "H7": 35.0,
+    "H8": 35.0,
+    "H9": 35.0,
+    "H10": 48.0,
+    "H11": 46.0,
+    "H12": 38.0
+  },
+  "scenarios": {
+    "default": {
+      "love": 35.05,
+      "career": 45.2,
+      "community": 42.55,
+      "growth": 37.25,
+      "relocation": 29.6
+    },
+    "hellenistic_strict": {
+      "love": 35.0,
+      "career": 48.0,
+      "community": 46.0,
+      "growth": 35.0,
+      "relocation": 24.0
+    },
+    "material_heavy": {
+      "love": 37.1,
+      "career": 44.9,
+      "community": 44.55,
+      "growth": 39.35,
+      "relocation": 33.8
+    },
+    "network_weighted": {
+      "love": 37.7,
+      "career": 45.6,
+      "community": 43.6,
+      "growth": 39.4,
+      "relocation": 33.8
+    },
+    "angular_only": {
+      "love": 32.8,
+      "career": 41.4,
+      "community": 30.5,
+      "growth": 25.0,
+      "relocation": 24.7
+    }
+  }
+}

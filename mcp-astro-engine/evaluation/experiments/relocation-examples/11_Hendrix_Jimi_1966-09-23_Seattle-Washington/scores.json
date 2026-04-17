@@ -1,0 +1,74 @@
+{
+  "row_id": "pos:6429209a-49e5-4187-8ad0-faf305856fa3",
+  "subject": {
+    "name": "Hendrix, Jimi",
+    "rodden_rating": "AA",
+    "birth_date": "1942-11-27",
+    "birth_lat": 47.6,
+    "birth_lon": -122.33333333333333
+  },
+  "event": {
+    "sample_date": "1966-09-23",
+    "location_name": "Seattle, Washington",
+    "location_lat": 47.6,
+    "location_lon": -122.33333333333333,
+    "goal_label": {
+      "relocation": 1
+    }
+  },
+  "macro_score": {
+    "score": 65,
+    "verdict": "Productive"
+  },
+  "house_scores": {
+    "H1": 62.0,
+    "H2": 47.0,
+    "H3": 50.0,
+    "H4": 63.0,
+    "H5": 35.0,
+    "H6": 37.0,
+    "H7": 45.0,
+    "H8": 63.0,
+    "H9": 35.0,
+    "H10": 57.0,
+    "H11": 49.0,
+    "H12": 59.0
+  },
+  "scenarios": {
+    "default": {
+      "love": 45.6,
+      "career": 50.7,
+      "community": 48.45,
+      "growth": 46.4,
+      "relocation": 56.6
+    },
+    "hellenistic_strict": {
+      "love": 45.0,
+      "career": 57.0,
+      "community": 49.0,
+      "growth": 35.0,
+      "relocation": 63.0
+    },
+    "material_heavy": {
+      "love": 48.6,
+      "career": 50.1,
+      "community": 48.55,
+      "growth": 46.25,
+      "relocation": 54.2
+    },
+    "network_weighted": {
+      "love": 45.1,
+      "career": 50.1,
+      "community": 48.55,
+      "growth": 46.75,
+      "relocation": 53.9
+    },
+    "angular_only": {
+      "love": 48.6,
+      "career": 58.5,
+      "community": 53.5,
+      "growth": 62.5,
+      "relocation": 62.65
+    }
+  }
+}

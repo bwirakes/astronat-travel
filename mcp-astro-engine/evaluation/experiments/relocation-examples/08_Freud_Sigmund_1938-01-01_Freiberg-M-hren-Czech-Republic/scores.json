@@ -1,0 +1,74 @@
+{
+  "row_id": "pos:eed61423-4251-455c-a1bc-95c6fe2cae53",
+  "subject": {
+    "name": "Freud, Sigmund",
+    "rodden_rating": "AA",
+    "birth_date": "1856-05-06",
+    "birth_lat": 49.65,
+    "birth_lon": 18.166666666666668
+  },
+  "event": {
+    "sample_date": "1938-01-01",
+    "location_name": "Freiberg/M\u00e4hren, Czech Republic",
+    "location_lat": 49.65,
+    "location_lon": 18.166666666666668,
+    "goal_label": {
+      "relocation": 1
+    }
+  },
+  "macro_score": {
+    "score": 27,
+    "verdict": "Hostile"
+  },
+  "house_scores": {
+    "H1": 32.0,
+    "H2": 45.0,
+    "H3": 41.0,
+    "H4": 55.0,
+    "H5": 60.0,
+    "H6": 34.0,
+    "H7": 48.0,
+    "H8": 45.0,
+    "H9": 35.0,
+    "H10": 35.0,
+    "H11": 26.0,
+    "H12": 35.0
+  },
+  "scenarios": {
+    "default": {
+      "love": 51.5,
+      "career": 35.4,
+      "community": 34.15,
+      "growth": 36.2,
+      "relocation": 48.05
+    },
+    "hellenistic_strict": {
+      "love": 48.0,
+      "career": 35.0,
+      "community": 26.0,
+      "growth": 35.0,
+      "relocation": 55.0
+    },
+    "material_heavy": {
+      "love": 49.2,
+      "career": 39.3,
+      "community": 34.8,
+      "growth": 37.4,
+      "relocation": 46.55
+    },
+    "network_weighted": {
+      "love": 46.3,
+      "career": 33.65,
+      "community": 31.55,
+      "growth": 33.65,
+      "relocation": 44.55
+    },
+    "angular_only": {
+      "love": 49.4,
+      "career": 34.1,
+      "community": 40.0,
+      "growth": 43.5,
+      "relocation": 46.95
+    }
+  }
+}

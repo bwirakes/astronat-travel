@@ -13,17 +13,21 @@ type DeepDiveTab = "acg" | "timing" | "natal" | "relocation" | "geodetic";
 
 function ReadingContent() {
   const params = useParams();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
 
   const [reading, setReading] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [isDark, setIsDark] = useState(true);
   
   const [mounted, setMounted] = useState(false);
   const [activeTransit, setActiveTransit] = useState(0);
   const [tab, setTab] = useState<DeepDiveTab>("acg");
   const [activeVerdict, setActiveVerdict] = useState<string>("primary");
+  const [narrative, setNarrative] = useState<any>(null);
+  const [narrativeLoading, setNarrativeLoading] = useState(false);
 
   const isDemo = searchParams.get('demo') === 'true';
 
@@ -73,15 +77,33 @@ function ReadingContent() {
         return;
       }
 
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
       let data: any;
       let error: any;
 
       if (typeof params.id === 'string' && params.id.length > 30) {
-        const res = await supabase.from('readings').select('*').eq('id', params.id).single();
+        const res = await supabase
+          .from('readings')
+          .select('*')
+          .eq('id', params.id)
+          .eq('user_id', user.id)
+          .single();
         data = res.data;
         error = res.error;
       } else {
-        const res = await supabase.from('readings').select('*').order('created_at', { ascending: false }).limit(1).single();
+        // Short/invalid ID — fetch the user's most recent reading instead of any user's.
+        const res = await supabase
+          .from('readings')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
         data = res.data;
         error = res.error;
       }
@@ -104,6 +126,7 @@ function ReadingContent() {
          });
       } else {
          console.warn("Failed to fetch reading:", error);
+         setNotFound(true);
       }
       setLoading(false);
     }
@@ -111,7 +134,25 @@ function ReadingContent() {
     fetchReading();
   }, [params.id, supabase, isDemo]);
 
-  if (!mounted || loading || !reading) {
+  // Fetch narrative separately
+  useEffect(() => {
+    if (!reading || isDemo || typeof params.id !== 'string' || params.id.length < 30) return;
+
+    // Use stored narrative if it exists
+    if (reading.narrative) {
+      setNarrative(reading.narrative);
+      return;
+    }
+
+    setNarrativeLoading(true);
+    fetch(`/api/readings/${params.id}/narrative`, { method: 'POST' })
+      .then(r => r.json())
+      .then(d => { if (d.narrative) setNarrative(d.narrative); })
+      .catch(err => console.error('Narrative fetch failed:', err))
+      .finally(() => setNarrativeLoading(false));
+  }, [reading, params.id, isDemo]);
+
+  if (!mounted || loading) {
      return (
        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[var(--color-charcoal)]">
          <style>{`
@@ -120,16 +161,16 @@ function ReadingContent() {
              to { transform: rotate(360deg); }
            }
          `}</style>
-         <img 
-           src="/avatar/saturn-monogram.svg" 
-           alt="Loading..." 
+         <img
+           src="/avatar/saturn-monogram.svg"
+           alt="Loading..."
            style={{ width: '80px', animation: 'spin 3s linear infinite' }}
          />
-         <span style={{ 
-           fontFamily: 'var(--font-mono)', 
-           fontSize: '0.6rem', 
-           letterSpacing: '0.2em', 
-           textTransform: 'uppercase', 
+         <span style={{
+           fontFamily: 'var(--font-mono)',
+           fontSize: '0.6rem',
+           letterSpacing: '0.2em',
+           textTransform: 'uppercase',
            marginTop: '1.5rem',
            color: 'var(--color-eggshell)'
          }}>
@@ -137,6 +178,11 @@ function ReadingContent() {
          </span>
        </div>
      );
+  }
+
+  if (notFound || !reading) {
+    router.replace("/readings");
+    return null;
   }
 
   const tabs: { id: DeepDiveTab, label: string }[] = [
@@ -451,6 +497,159 @@ function ReadingContent() {
             </AnimatePresence>
           </div>
         </section>
+
+        {narrativeLoading && (
+          <section className="border-t border-[var(--surface-border)] pt-12">
+            <div className="font-mono text-xs uppercase tracking-widest text-[var(--text-tertiary)] animate-pulse">
+              Synthesising planetary narrative...
+            </div>
+          </section>
+        )}
+
+        {narrative && !narrativeLoading && (
+          <section id="narrative" className="border-t border-[var(--surface-border)] pt-12 pb-20 scroll-mt-6">
+            <h2 className="font-secondary text-3xl md:text-4xl mb-12">Editorial Narrative</h2>
+
+            <div className="space-y-12">
+              {/* Permanent Map */}
+              {narrative.permanentMap && (
+                <div className="space-y-4">
+                  <h3 className="font-mono text-xs uppercase tracking-widest text-[var(--text-tertiary)] font-bold">
+                    01. Permanent Map
+                  </h3>
+                  <h4 className="font-secondary text-2xl text-[var(--text-primary)]">
+                    {narrative.permanentMap.title}
+                  </h4>
+                  <p className="text-lg text-[var(--text-secondary)] leading-relaxed font-body">
+                    {narrative.permanentMap.content}
+                  </p>
+                </div>
+              )}
+
+              {/* Personal Timing */}
+              {narrative.personalTiming && (
+                <div className="space-y-4">
+                  <h3 className="font-mono text-xs uppercase tracking-widest text-[var(--text-tertiary)] font-bold">
+                    02. Personal Timing
+                  </h3>
+                  <h4 className="font-secondary text-2xl text-[var(--text-primary)]">
+                    {narrative.personalTiming.title}
+                  </h4>
+                  <p className="text-lg text-[var(--text-secondary)] leading-relaxed font-body">
+                    {narrative.personalTiming.content}
+                  </p>
+                </div>
+              )}
+
+              {/* Collective Climate */}
+              {narrative.collectiveClimate && (
+                <div className="space-y-4">
+                  <h3 className="font-mono text-xs uppercase tracking-widest text-[var(--text-tertiary)] font-bold">
+                    03. Collective Climate
+                  </h3>
+                  <h4 className="font-secondary text-2xl text-[var(--text-primary)]">
+                    {narrative.collectiveClimate.title}
+                  </h4>
+                  <p className="text-lg text-[var(--text-secondary)] leading-relaxed font-body">
+                    {narrative.collectiveClimate.content}
+                  </p>
+                </div>
+              )}
+
+              {/* Relocated Chart */}
+              {narrative.relocatedChart && (
+                <div className="space-y-4">
+                  <h3 className="font-mono text-xs uppercase tracking-widest text-[var(--text-tertiary)] font-bold">
+                    04. Relocated Chart
+                  </h3>
+                  <h4 className="font-secondary text-2xl text-[var(--text-primary)]">
+                    {narrative.relocatedChart.title}
+                  </h4>
+                  <p className="text-lg text-[var(--text-secondary)] leading-relaxed font-body">
+                    {narrative.relocatedChart.content}
+                  </p>
+                </div>
+              )}
+
+              {/* Country Chart */}
+              {narrative.countryChart && (
+                <div className="space-y-4">
+                  <h3 className="font-mono text-xs uppercase tracking-widest text-[var(--text-tertiary)] font-bold">
+                    05. Country Chart
+                  </h3>
+                  <h4 className="font-secondary text-2xl text-[var(--text-primary)]">
+                    {narrative.countryChart.title}
+                  </h4>
+                  <p className="text-lg text-[var(--text-secondary)] leading-relaxed font-body">
+                    {narrative.countryChart.content}
+                  </p>
+                </div>
+              )}
+
+              {/* Verdict */}
+              {narrative.verdict && (
+                <div className="bg-[var(--surface)] border border-[var(--surface-border)] p-6 md:p-10 space-y-6" style={{ borderRadius: 'var(--radius-lg)' }}>
+                  <div>
+                    <h3 className="font-mono text-xs uppercase tracking-widest text-[var(--color-y2k-blue)] font-bold mb-2">
+                      06. Verdict
+                    </h3>
+                    <h4 className="font-secondary text-2xl text-[var(--text-primary)]">
+                      {narrative.verdict.title}
+                    </h4>
+                  </div>
+
+                  <div>
+                    <p className="text-lg text-[var(--text-secondary)] leading-relaxed font-body mb-6">
+                      {narrative.verdict.content}
+                    </p>
+                  </div>
+
+                  {narrative.verdict.bestWindows && narrative.verdict.bestWindows.length > 0 && (
+                    <div>
+                      <h5 className="font-mono text-xs uppercase tracking-widest text-[var(--text-tertiary)] mb-3 font-bold">Best Windows</h5>
+                      <ul className="font-mono text-sm space-y-2">
+                        {narrative.verdict.bestWindows.map((w: string, i: number) => (
+                          <li key={i} className="flex items-start gap-3 text-[var(--text-secondary)]">
+                            <span className="text-[var(--color-planet-jupiter)] font-bold flex-shrink-0 mt-1">●</span>
+                            <span>{w}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {narrative.verdict.datesAvoid && narrative.verdict.datesAvoid.length > 0 && (
+                    <div>
+                      <h5 className="font-mono text-xs uppercase tracking-widest text-[var(--text-tertiary)] mb-3 font-bold">Dates to Avoid</h5>
+                      <ul className="font-mono text-sm space-y-2">
+                        {narrative.verdict.datesAvoid.map((d: string, i: number) => (
+                          <li key={i} className="flex items-start gap-3 text-[var(--text-secondary)]">
+                            <span className="text-[var(--color-planet-saturn)] font-bold flex-shrink-0 mt-1">●</span>
+                            <span>{d}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {narrative.verdict.bestHouses && narrative.verdict.bestHouses.length > 0 && (
+                    <div>
+                      <h5 className="font-mono text-xs uppercase tracking-widest text-[var(--text-tertiary)] mb-3 font-bold">Best Houses Activated</h5>
+                      <ul className="font-mono text-sm space-y-2">
+                        {narrative.verdict.bestHouses.map((h: string, i: number) => (
+                          <li key={i} className="flex items-start gap-3 text-[var(--text-secondary)]">
+                            <span className="text-[var(--color-y2k-blue)] font-bold flex-shrink-0 mt-1">●</span>
+                            <span>{h}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
       </div>
     </div>

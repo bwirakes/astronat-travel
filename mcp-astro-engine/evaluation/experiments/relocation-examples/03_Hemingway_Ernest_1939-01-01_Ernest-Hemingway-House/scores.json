@@ -1,0 +1,74 @@
+{
+  "row_id": "pos:1c6edf16-9581-45be-96cb-83221bfcfc11",
+  "subject": {
+    "name": "Hemingway, Ernest",
+    "rodden_rating": "AA",
+    "birth_date": "1899-07-21",
+    "birth_lat": 41.88333333333333,
+    "birth_lon": -87.78333333333333
+  },
+  "event": {
+    "sample_date": "1939-01-01",
+    "location_name": "Ernest Hemingway House",
+    "location_lat": 24.551111,
+    "location_lon": -81.800833,
+    "goal_label": {
+      "relocation": 1
+    }
+  },
+  "macro_score": {
+    "score": 26,
+    "verdict": "Hostile"
+  },
+  "house_scores": {
+    "H1": 26.0,
+    "H2": 52.0,
+    "H3": 40.0,
+    "H4": 30.0,
+    "H5": 37.0,
+    "H6": 32.0,
+    "H7": 35.0,
+    "H8": 35.0,
+    "H9": 39.0,
+    "H10": 50.0,
+    "H11": 46.0,
+    "H12": 38.0
+  },
+  "scenarios": {
+    "default": {
+      "love": 35.35,
+      "career": 46.3,
+      "community": 42.3,
+      "growth": 38.85,
+      "relocation": 33.2
+    },
+    "hellenistic_strict": {
+      "love": 35.0,
+      "career": 50.0,
+      "community": 46.0,
+      "growth": 39.0,
+      "relocation": 30.0
+    },
+    "material_heavy": {
+      "love": 37.1,
+      "career": 45.6,
+      "community": 44.3,
+      "growth": 40.8,
+      "relocation": 36.5
+    },
+    "network_weighted": {
+      "love": 37.7,
+      "career": 46.4,
+      "community": 43.45,
+      "growth": 40.65,
+      "relocation": 36.8
+    },
+    "angular_only": {
+      "love": 34.0,
+      "career": 42.8,
+      "community": 30.5,
+      "growth": 28.0,
+      "relocation": 28.6
+    }
+  }
+}

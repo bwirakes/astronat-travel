@@ -1,0 +1,74 @@
+{
+  "row_id": "pos:08cb08b6-066c-4d16-8002-ead36183d651",
+  "subject": {
+    "name": "Einstein, Albert",
+    "rodden_rating": "AA",
+    "birth_date": "1879-03-14",
+    "birth_lat": 0.0,
+    "birth_lon": 0.0
+  },
+  "event": {
+    "sample_date": "1933-01-01",
+    "location_name": "Sm\u00edchov",
+    "location_lat": 50.075278,
+    "location_lon": 14.405556,
+    "goal_label": {
+      "relocation": 1
+    }
+  },
+  "macro_score": {
+    "score": 62,
+    "verdict": "Mixed"
+  },
+  "house_scores": {
+    "H1": 55.0,
+    "H2": 40.0,
+    "H3": 35.0,
+    "H4": 40.0,
+    "H5": 60.0,
+    "H6": 35.0,
+    "H7": 28.0,
+    "H8": 48.0,
+    "H9": 52.0,
+    "H10": 69.0,
+    "H11": 45.0,
+    "H12": 35.0
+  },
+  "scenarios": {
+    "default": {
+      "love": 41.2,
+      "career": 55.45,
+      "community": 39.1,
+      "growth": 42.65,
+      "relocation": 40.75
+    },
+    "hellenistic_strict": {
+      "love": 28.0,
+      "career": 69.0,
+      "community": 45.0,
+      "growth": 52.0,
+      "relocation": 40.0
+    },
+    "material_heavy": {
+      "love": 41.6,
+      "career": 49.95,
+      "community": 40.05,
+      "growth": 42.55,
+      "relocation": 40.75
+    },
+    "network_weighted": {
+      "love": 41.4,
+      "career": 52.35,
+      "community": 40.95,
+      "growth": 43.45,
+      "relocation": 40.25
+    },
+    "angular_only": {
+      "love": 30.4,
+      "career": 64.8,
+      "community": 41.5,
+      "growth": 47.5,
+      "relocation": 45.25
+    }
+  }
+}

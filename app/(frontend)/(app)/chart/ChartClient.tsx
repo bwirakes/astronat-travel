@@ -26,44 +26,48 @@ import { PLANET_DOMAINS, HOUSE_DOMAINS, getOrdinal } from "@/app/lib/astro-wordi
 // ── Mock data for ?demo=true ───────────────────────────────────
 
 const DEMO_NATAL: NatalData = {
-  sun:     { longitude: 143 },
-  moon:    { longitude: 228 },
-  mercury: { longitude: 156 },
-  venus:   { longitude: 108 },
-  mars:    { longitude: 280 },
-  jupiter: { longitude: 252 },
-  saturn:  { longitude: 335 },
-  uranus:  { longitude: 295 },
-  neptune: { longitude: 282 },
-  pluto:   { longitude: 219 },
-  chiron:  { longitude: 190 },
-  houses: [296, 350, 30, 56, 75, 94, 116, 170, 210, 236, 255, 274],
+  sun:     { longitude: 144.92 },
+  moon:    { longitude: 200.47 },
+  mercury: { longitude: 158.89 },
+  venus:   { longitude: 99.26 },
+  mars:    { longitude: 10.91 },
+  jupiter: { longitude: 63.85 },
+  saturn:  { longitude: 266.06 },
+  uranus:  { longitude: 267.19 },
+  neptune: { longitude: 277.69 },
+  pluto:   { longitude: 219.99 },
+  chiron:  { longitude: 101.45 },
+  houses: [32.64, 62.33, 90.84, 119.64, 150.15, 181.91, 212.64, 242.33, 270.84, 299.64, 330.15, 1.91],
 };
 
 const MOCK_PLANETS = [
-  { planet: "Ascendant",  sign: "Aries",       house: 1,  degree: "12° 30′", dignity: null, isAngle: true },
-  { planet: "Sun",        sign: "Leo",         house: 5,  degree: "23° 00′", dignity: "DOMICILE", isAngle: false },
-  { planet: "Moon",       sign: "Scorpio",     house: 8,  degree: "18° 00′", dignity: null, isAngle: false },
-  { planet: "Mercury",    sign: "Virgo",       house: 6,  degree: "6° 00′",  dignity: "DOMICILE", isAngle: false },
-  { planet: "Venus",      sign: "Cancer",      house: 4,  degree: "18° 00′", dignity: null, isAngle: false },
-  { planet: "Mars",       sign: "Capricorn",   house: 10, degree: "10° 00′", dignity: "EXALTED", isAngle: false },
-  { planet: "Jupiter",    sign: "Sagittarius", house: 9,  degree: "12° 00′", dignity: "DOMICILE", isAngle: false },
-  { planet: "Saturn",     sign: "Pisces",      house: 12, degree: "5° 00′",  dignity: "DETRIMENT", isAngle: false },
-  { planet: "Uranus",     sign: "Aquarius",    house: 11, degree: "5° 00′",  dignity: "DOMICILE", isAngle: false },
-  { planet: "Neptune",    sign: "Capricorn",   house: 10, degree: "22° 00′", dignity: null, isAngle: false },
-  { planet: "Pluto",      sign: "Scorpio",     house: 8,  degree: "9° 00′",  dignity: "DOMICILE", isAngle: false },
-  { planet: "Chiron",     sign: "Libra",       house: 7,  degree: "10° 00′", dignity: null, isAngle: false },
-  { planet: "North Node", sign: "Libra",       house: 7,  degree: "12° 55′", dignity: null, isAngle: false },
-  { planet: "MC",         sign: "Capricorn",   house: 10, degree: "28° 10′", dignity: null, isAngle: true },
+  { planet: "Ascendant",  sign: "Taurus",      house: 1,  degree: "2° 38′",  dignity: null, isAngle: true },
+  { planet: "Sun",        sign: "Leo",         house: 4,  degree: "24° 55′", dignity: "DOMICILE", isAngle: false },
+  { planet: "Moon",       sign: "Libra",       house: 6,  degree: "20° 28′", dignity: null, isAngle: false },
+  { planet: "Mercury",    sign: "Virgo",       house: 5,  degree: "8° 53′",  dignity: "DOMICILE", isAngle: false },
+  { planet: "Venus",      sign: "Cancer",      house: 3,  degree: "9° 15′",  dignity: null, isAngle: false },
+  { planet: "Mars",       sign: "Aries",       house: 12, degree: "10° 54′", dignity: "DOMICILE", isAngle: false },
+  { planet: "Jupiter",    sign: "Gemini",      house: 2,  degree: "3° 51′",  dignity: "DETRIMENT", isAngle: false },
+  { planet: "Saturn",     sign: "Sagittarius", house: 8,  degree: "26° 03′", dignity: null, isAngle: false },
+  { planet: "Uranus",     sign: "Sagittarius", house: 8,  degree: "27° 11′", dignity: null, isAngle: false },
+  { planet: "Neptune",    sign: "Capricorn",   house: 9,  degree: "7° 41′",  dignity: null, isAngle: false },
+  { planet: "Pluto",      sign: "Scorpio",     house: 7,  degree: "9° 59′",  dignity: "DOMICILE", isAngle: false },
+  { planet: "MC",         sign: "Capricorn",   house: 10, degree: "29° 38′", dignity: null, isAngle: true },
 ];
 
 const MOCK_ASPECTS = [
-  { aspect: "Sun trine Jupiter",       orb: "6° 44′", type: "Trine",       verdict: 84 },
-  { aspect: "Moon conjunct Pluto",     orb: "1° 08′", type: "Conjunction", verdict: 62 },
-  { aspect: "Venus square Saturn",     orb: "4° 56′", type: "Square",      verdict: 38 },
-  { aspect: "Mercury sextile Uranus",  orb: "2° 01′", type: "Sextile",     verdict: 79 },
-  { aspect: "Mars trine Sun",          orb: "3° 00′", type: "Trine",       verdict: 88 },
-  { aspect: "Moon trine Neptune",      orb: "1° 19′", type: "Trine",       verdict: 77 },
+  { aspect: "Sun sextile Moon",       orb: "4° 27′", type: "Sextile",     verdict: 82 },
+  { aspect: "Sun trine Saturn",       orb: "1° 08′", type: "Trine",       verdict: 95 },
+  { aspect: "Sun trine Uranus",       orb: "2° 16′", type: "Trine",       verdict: 91 },
+  { aspect: "Mercury sextile Venus",   orb: "0° 23′", type: "Sextile",     verdict: 98 },
+  { aspect: "Mercury trine Neptune",   orb: "1° 12′", type: "Trine",       verdict: 95 },
+  { aspect: "Mercury sextile Pluto",   orb: "1° 06′", type: "Sextile",     verdict: 96 },
+  { aspect: "Venus square Mars",       orb: "1° 39′", type: "Square",      verdict: 43 },
+  { aspect: "Venus opposition Neptune",orb: "1° 34′", type: "Opposition",  verdict: 44 },
+  { aspect: "Venus trine Pluto",       orb: "0° 44′", type: "Trine",       verdict: 97 },
+  { aspect: "Mars square Neptune",     orb: "3° 13′", type: "Square",      verdict: 37 },
+  { aspect: "Saturn conjunction Uranus",orb: "1° 08′", type: "Conjunction",verdict: 85 },
+  { aspect: "Neptune sextile Pluto",   orb: "2° 18′", type: "Sextile",     verdict: 91 },
 ];
 
 const ASPECT_COLORS: Record<string, string> = {
@@ -85,18 +89,20 @@ type Tab = "overview" | "map" | "aspects";
 export default function ChartPage({ 
   isMundane = false, 
   countrySlug, 
-  countryName = "Country" 
+  countryName = "Country",
+  initialNatalData = null
 }: { 
   isMundane?: boolean, 
   countrySlug?: string, 
-  countryName?: string 
+  countryName?: string,
+  initialNatalData?: any
 } = {}) {
   const searchParams = useSearchParams();
   const isDemo = searchParams.get("demo") === "true";
   const [tab, setTab] = useState<Tab>("overview");
   const [computedLines, setComputedLines] = useState<{planet: string, angle: string, distance_km: number}[]>([]);
   const [isDark, setIsDark] = useState(true);
-  const [loading, setLoading] = useState(!isDemo && (!isMundane || !!countrySlug));
+  const [loading, setLoading] = useState(!isDemo && !initialNatalData && (!isMundane || !!countrySlug));
   const [error, setError] = useState<string | null>(null);
   
   // Right pane toggle switch
@@ -118,12 +124,40 @@ export default function ChartPage({
   }, []);
 
   // Real data state
-  const [realNatal, setRealNatal] = useState<any>(null);
-  const [realPlanets, setRealPlanets] = useState<any[]>([]);
-  const [realAspects, setRealAspects] = useState<any[]>([]);
+  const [realPlanets, setRealPlanets] = useState<any[]>(() => {
+     if (initialNatalData && initialNatalData.planets) {
+         return [...initialNatalData.planets, ...(initialNatalData.angles || [])];
+     }
+     return [];
+  });
+  
+  const [realNatal, setRealNatal] = useState<any>(() => {
+    if (initialNatalData && initialNatalData.planets) {
+        const combined = [...initialNatalData.planets, ...(initialNatalData.angles || [])];
+        const formatNatal: any = { 
+          houses: initialNatalData.cusps,
+          birth_city: initialNatalData.birth_city,
+          birth_date: initialNatalData.birth_date,
+          birth_time: initialNatalData.birth_time,
+          birth_lon: initialNatalData.birth_lon,
+          birth_lat: initialNatalData.birth_lat,
+          profile_time: initialNatalData.profile_time
+        };
+        combined.forEach((p: any) => { 
+            formatNatal[p.name.toLowerCase()] = { 
+                longitude: p.longitude,
+                latitude: p.latitude
+            }; 
+        });
+        return formatNatal;
+    }
+    return null;
+  });
+
+  const [realAspects, setRealAspects] = useState<any[]>(initialNatalData ? (initialNatalData.aspects || []) : []);
 
   useEffect(() => {
-    if (!isDemo) {
+    if (!isDemo && !initialNatalData) {
       if (isMundane && !countrySlug) {
         setLoading(false);
         return;
@@ -417,7 +451,7 @@ export default function ChartPage({
                     natal={natal!}
                     birthDateTimeUTC={natal.profile_time || "1994-08-15T12:00:00Z"}
                     birthLon={natal.birth_lon ?? -74.0060} 
-                    highlightCity={DEMO_CITY}
+                    highlightCity={isMundane ? { lat: natal.birth_lat || 0, lon: natal.birth_lon || 0, name: natal.birth_city || "" } : DEMO_CITY}
                     interactive 
                     onLocationClick={(lat, lon) => console.log("Map click:", lat, lon)}
                     onLinesCalculated={setComputedLines}
@@ -434,7 +468,7 @@ export default function ChartPage({
                             planetLines={computedLines} 
                             natalPlanets={rawPlanets as any}
                             birthCity={isDemo ? "NYC" : (natal.birth_city || "Unknown")}
-                            destination={isDemo ? "Jakarta" : DEMO_CITY.name}
+                            destination={isMundane ? (natal.birth_city || "Country") : (isDemo ? "Jakarta" : DEMO_CITY.name)}
                         />
                       </div>
                    </div>
@@ -504,16 +538,12 @@ export default function ChartPage({
     </>
   );
 
-  if (isMundane) {
-     return (
-        <div className="w-full mx-auto max-w-[980px]">
-           {content}
-        </div>
-     );
-  }
-
   return (
-    <DashboardLayout maxWidth="980px" backLabel="Home">
+    <DashboardLayout 
+      maxWidth="980px" 
+      backLabel={isMundane ? "Explore Mundane" : "Home"}
+      backHref={isMundane ? "/mundane" : undefined}
+    >
        {content}
     </DashboardLayout>
   );

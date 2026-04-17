@@ -382,7 +382,7 @@ export async function POST(req: Request) {
       : (process.env.RESEND_TEST_EMAIL ?? NOTIFICATION_EMAIL);
 
     const { error: emailError } = await resend.emails.send({
-      from: "AstroNat <onboarding@resend.dev>",
+      from: "AstroNat <intake@astronat.io>",
       to: [toAddress],
       subject: `New Corporate Intake — ${contactName} · ${companyName}`,
       html: buildNotificationEmail(data as Record<string, unknown>),

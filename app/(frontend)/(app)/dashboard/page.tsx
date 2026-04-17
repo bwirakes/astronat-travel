@@ -8,7 +8,7 @@ export default async function HomePage() {
 
     // Base fallback
     let profile = {
-        first_name: "Brandon",
+        first_name: "Natalia",
         birth_date: "1995-08-15"
     };
     let recentSearches = [

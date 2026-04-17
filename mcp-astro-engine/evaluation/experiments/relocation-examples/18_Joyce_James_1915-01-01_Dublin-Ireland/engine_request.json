@@ -1,0 +1,380 @@
+{
+  "subject": "Joyce, James",
+  "rodden_rating": "A",
+  "birth_date": "1882-02-02",
+  "birth_time": "12:00:00",
+  "birth_lat": 53.333333333333336,
+  "birth_lon": -6.25,
+  "dest_lat": 53.333333333333336,
+  "dest_lon": -6.25,
+  "sample_date": "1915-01-01",
+  "location_name": "Dublin, Ireland",
+  "natalPlanets": [
+    {
+      "planet": "Sun",
+      "name": "Sun",
+      "longitude": 313.618592,
+      "latitude": -4e-05,
+      "sign": "Aquarius",
+      "is_retrograde": false,
+      "retrograde": false,
+      "speed": 1.013613,
+      "house": 10
+    },
+    {
+      "planet": "Moon",
+      "name": "Moon",
+      "longitude": 125.649112,
+      "latitude": -4.310492,
+      "sign": "Leo",
+      "is_retrograde": false,
+      "retrograde": false,
+      "speed": 11.927104,
+      "house": 3
+    },
+    {
+      "planet": "Mercury",
+      "name": "Mercury",
+      "longitude": 330.850787,
+      "latitude": -0.363722,
+      "sign": "Pisces",
+      "is_retrograde": false,
+      "retrograde": false,
+      "speed": 1.420439,
+      "house": 10
+    },
+    {
+      "planet": "Venus",
+      "name": "Venus",
+      "longitude": 309.128518,
+      "latitude": -1.066714,
+      "sign": "Aquarius",
+      "is_retrograde": false,
+      "retrograde": false,
+      "speed": 1.254555,
+      "house": 9
+    },
+    {
+      "planet": "Mars",
+      "name": "Mars",
+      "longitude": 86.960503,
+      "latitude": 3.469805,
+      "sign": "Gemini",
+      "is_retrograde": true,
+      "retrograde": true,
+      "speed": -0.002716,
+      "house": 1
+    },
+    {
+      "planet": "Jupiter",
+      "name": "Jupiter",
+      "longitude": 47.115104,
+      "latitude": -0.885182,
+      "sign": "Taurus",
+      "is_retrograde": false,
+      "retrograde": false,
+      "speed": 0.076546,
+      "house": 12
+    },
+    {
+      "planet": "Saturn",
+      "name": "Saturn",
+      "longitude": 36.20325,
+      "latitude": -2.326384,
+      "sign": "Taurus",
+      "is_retrograde": false,
+      "retrograde": false,
+      "speed": 0.048318,
+      "house": 12
+    },
+    {
+      "planet": "Uranus",
+      "name": "Uranus",
+      "longitude": 167.842433,
+      "latitude": 0.807906,
+      "sign": "Virgo",
+      "is_retrograde": true,
+      "retrograde": true,
+      "speed": -0.033448,
+      "house": 5
+    },
+    {
+      "planet": "Neptune",
+      "name": "Neptune",
+      "longitude": 43.801363,
+      "latitude": -1.774805,
+      "sign": "Taurus",
+      "is_retrograde": false,
+      "retrograde": false,
+      "speed": 0.00564,
+      "house": 12
+    },
+    {
+      "planet": "Pluto",
+      "name": "Pluto",
+      "longitude": 57.357961,
+      "latitude": -13.402421,
+      "sign": "Taurus",
+      "is_retrograde": true,
+      "retrograde": true,
+      "speed": -0.002699,
+      "house": 12
+    }
+  ],
+  "relocatedCusps": [
+    78.34868640440753,
+    95.76502122852364,
+    111.7029203738383,
+    130.23040765105821,
+    156.85373528881962,
+    202.22751567953915,
+    258.34868640440754,
+    275.76502122852366,
+    291.7029203738383,
+    310.2304076510582,
+    336.8537352888196,
+    22.227515679539163
+  ],
+  "acgLines": [
+    {
+      "planet": "Sun",
+      "angle": "MC",
+      "distance_km": 226.21
+    },
+    {
+      "planet": "Moon",
+      "angle": "IC",
+      "distance_km": 381.94
+    },
+    {
+      "planet": "Venus",
+      "angle": "MC",
+      "distance_km": 54.29
+    },
+    {
+      "planet": "Mars",
+      "angle": "ASC",
+      "distance_km": 77.48
+    },
+    {
+      "planet": "Pluto",
+      "angle": "ASC",
+      "distance_km": 428.28
+    }
+  ],
+  "transits": [
+    {
+      "transitingPlanet": "Sun",
+      "natalPlanet": "Jupiter",
+      "aspect": "trine",
+      "orb": 7.1115,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Sun",
+      "natalPlanet": "Saturn",
+      "aspect": "trine",
+      "orb": 3.8004,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Sun",
+      "natalPlanet": "Uranus",
+      "aspect": "trine",
+      "orb": 7.8388,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Sun",
+      "natalPlanet": "Neptune",
+      "aspect": "trine",
+      "orb": 3.7977,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Moon",
+      "natalPlanet": "Saturn",
+      "aspect": "sextile",
+      "orb": 3.6391,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Moon",
+      "natalPlanet": "Neptune",
+      "aspect": "sextile",
+      "orb": 3.959,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Mercury",
+      "natalPlanet": "Saturn",
+      "aspect": "trine",
+      "orb": 1.3426,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Mercury",
+      "natalPlanet": "Neptune",
+      "aspect": "trine",
+      "orb": 6.2556,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Venus",
+      "natalPlanet": "Moon",
+      "aspect": "trine",
+      "orb": 4.931,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Venus",
+      "natalPlanet": "Mercury",
+      "aspect": "square",
+      "orb": 0.1327,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Venus",
+      "natalPlanet": "Pluto",
+      "aspect": "opposition",
+      "orb": 3.3602,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Mars",
+      "natalPlanet": "Saturn",
+      "aspect": "trine",
+      "orb": 1.6347,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Mars",
+      "natalPlanet": "Neptune",
+      "aspect": "trine",
+      "orb": 5.9634,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Jupiter",
+      "natalPlanet": "Mars",
+      "aspect": "trine",
+      "orb": 4.4839,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Jupiter",
+      "natalPlanet": "Jupiter",
+      "aspect": "square",
+      "orb": 5.3615,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Jupiter",
+      "natalPlanet": "Pluto",
+      "aspect": "square",
+      "orb": 4.8813,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Saturn",
+      "natalPlanet": "Mercury",
+      "aspect": "trine",
+      "orb": 2.9038,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Saturn",
+      "natalPlanet": "Mars",
+      "aspect": "conjunction",
+      "orb": 0.9865,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Uranus",
+      "natalPlanet": "Sun",
+      "aspect": "conjunction",
+      "orb": 3.7331,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Uranus",
+      "natalPlanet": "Moon",
+      "aspect": "opposition",
+      "orb": 4.2363,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Uranus",
+      "natalPlanet": "Venus",
+      "aspect": "conjunction",
+      "orb": 0.7569,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Uranus",
+      "natalPlanet": "Jupiter",
+      "aspect": "square",
+      "orb": 7.2296,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Uranus",
+      "natalPlanet": "Saturn",
+      "aspect": "square",
+      "orb": 3.6822,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Uranus",
+      "natalPlanet": "Neptune",
+      "aspect": "square",
+      "orb": 3.9159,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Neptune",
+      "natalPlanet": "Moon",
+      "aspect": "conjunction",
+      "orb": 6.0687,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Neptune",
+      "natalPlanet": "Saturn",
+      "aspect": "square",
+      "orb": 6.6228,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Neptune",
+      "natalPlanet": "Pluto",
+      "aspect": "sextile",
+      "orb": 2.2225,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Pluto",
+      "natalPlanet": "Mercury",
+      "aspect": "trine",
+      "orb": 0.1681,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Pluto",
+      "natalPlanet": "Mars",
+      "aspect": "conjunction",
+      "orb": 4.0584,
+      "applying": true
+    },
+    {
+      "transitingPlanet": "Pluto",
+      "natalPlanet": "Saturn",
+      "aspect": "sextile",
+      "orb": 5.1844,
+      "applying": true
+    }
+  ],
+  "parans": [],
+  "destLat": 53.333333333333336,
+  "destLon": -6.25
+}

@@ -1,0 +1,74 @@
+{
+  "row_id": "pos:4d202fe6-e90d-4622-b630-90dfc138391c",
+  "subject": {
+    "name": "Stravinsky, Igor",
+    "rodden_rating": "AA",
+    "birth_date": "1882-06-17",
+    "birth_lat": 59.916666666666664,
+    "birth_lon": 29.766666666666666
+  },
+  "event": {
+    "sample_date": "1940-01-01",
+    "location_name": "Oranienbaum, Russian Federation",
+    "location_lat": 59.916666666666664,
+    "location_lon": 29.766666666666666,
+    "goal_label": {
+      "relocation": 1
+    }
+  },
+  "macro_score": {
+    "score": 57,
+    "verdict": "Mixed"
+  },
+  "house_scores": {
+    "H1": 49.0,
+    "H2": 44.0,
+    "H3": 36.0,
+    "H4": 37.0,
+    "H5": 42.0,
+    "H6": 35.0,
+    "H7": 36.0,
+    "H8": 29.0,
+    "H9": 55.0,
+    "H10": 68.0,
+    "H11": 51.0,
+    "H12": 34.0
+  },
+  "scenarios": {
+    "default": {
+      "love": 36.8,
+      "career": 56.1,
+      "community": 44.25,
+      "growth": 43.85,
+      "relocation": 38.95
+    },
+    "hellenistic_strict": {
+      "love": 36.0,
+      "career": 68.0,
+      "community": 51.0,
+      "growth": 55.0,
+      "relocation": 37.0
+    },
+    "material_heavy": {
+      "love": 35.9,
+      "career": 49.1,
+      "community": 44.7,
+      "growth": 44.2,
+      "relocation": 40.0
+    },
+    "network_weighted": {
+      "love": 39.8,
+      "career": 54.35,
+      "community": 46.5,
+      "growth": 45.9,
+      "relocation": 40.55
+    },
+    "angular_only": {
+      "love": 36.2,
+      "career": 62.3,
+      "community": 42.5,
+      "growth": 43.0,
+      "relocation": 41.2
+    }
+  }
+}

@@ -89,7 +89,7 @@ export default function HomeClient({ profile, sunSignData, recentSearches }: any
     }, { scope: container });
 
     return (
-        <DashboardLayout showBack={false} maxWidth="100%">
+        <DashboardLayout showBack={false} maxWidth="100%" paddingTop="var(--space-lg)">
             <div className={styles.page} ref={container}>
 
 

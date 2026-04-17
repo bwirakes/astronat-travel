@@ -1,56 +1,21 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import { Search, ChevronLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import ThemeToggle from "@/app/components/ThemeToggle";
 import { COUNTRY_CHARTS, type CountryChart } from "@/lib/astro/mundane-charts";
 import { MundaneCard } from "@/app/components/MundaneCard";
-import ChartClient from "../chart/ChartClient";
-
-// ── Mock Synastry Data ───────────────────────────────────────
-
-const MOCK_SYNASTRY = [
-  { description: "Sun conjunct Country Sun", harmonyScore: 88 },
-  { description: "Moon trine Country Saturn", harmonyScore: 72 },
-  { description: "Venus square Country Mars", harmonyScore: 45 },
-  { description: "Jupiter sextile Country MC", harmonyScore: 92 },
-];
-
-
-
-// ── Verdict Label (Simple version for Mundane) ────────────────
-
-function VerdictLabel({ score }: { score: number }) {
-  const color = score > 80 ? 'var(--sage)' : score > 60 ? 'var(--color-y2k-blue)' : 'var(--color-spiced-life)';
-  return (
-    <span style={{
-      fontFamily: 'var(--font-mono)', fontSize: '0.65rem',
-      color, border: `1px solid ${color}`,
-      padding: '0.2rem 0.6rem', borderRadius: '20px',
-      textTransform: 'uppercase'
-    }}>
-      {score}% Harmony
-    </span>
-  );
-}
-
-// ── Mundane Client Component ─────────────────────────────────
 
 function MundaneClient() {
-  const searchParams = useSearchParams();
-  const initialCountry = searchParams.get("country");
-  
+  const router = useRouter();
   const [search, setSearch] = useState("");
-  const [selectedSlug, setSelectedSlug] = useState<string | null>(initialCountry);
 
   const filteredCountries = COUNTRY_CHARTS.filter((c: CountryChart) => 
     c.name.toLowerCase().includes(search.toLowerCase())
   );
-
-  const selectedCountry = COUNTRY_CHARTS.find((c: CountryChart) => c.slug === selectedSlug);
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text-primary)" }}>
@@ -69,21 +34,6 @@ function MundaneClient() {
 
       <main style={{ maxWidth: "860px", margin: "0 auto", padding: "var(--space-lg) clamp(1.25rem, 3vw, 3rem) var(--space-3xl)" }}>
         
-        {/* Back Button (if selected) */}
-        {selectedSlug && (
-          <button 
-            onClick={() => setSelectedSlug(null)}
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: '4px',
-              fontFamily: 'var(--font-mono)', fontSize: '0.65rem',
-              color: 'var(--text-secondary)', background: 'none', border: 'none',
-              cursor: 'pointer', marginBottom: 'var(--space-md)', padding: 0
-            }}
-          >
-            <ChevronLeft size={14} /> BACK TO EXPLORE
-          </button>
-        )}
-
         {/* Page Titles */}
         <div style={{ marginBottom: 'var(--space-xl)' }}>
           <span style={{
@@ -96,26 +46,14 @@ function MundaneClient() {
             fontFamily: "var(--font-primary)", fontSize: "clamp(2.5rem, 6vw, 4rem)",
             textTransform: "uppercase", lineHeight: 0.85, marginBottom: "var(--space-xs)",
           }}>
-            {selectedCountry ? selectedCountry.name : "Country Charts"}
+            Country Charts
           </h1>
-          {!selectedCountry && (
-            <p style={{ fontFamily: "var(--font-body)", color: "var(--text-secondary)", fontSize: "0.95rem", maxWidth: '500px' }}>
-              Explore the birth charts of nations and see how your personal energy resonates with the countries you visit.
-            </p>
-          )}
+          <p style={{ fontFamily: "var(--font-body)", color: "var(--text-secondary)", fontSize: "0.95rem", maxWidth: '500px' }}>
+            Explore the birth charts of nations and see how your personal energy resonates with the countries you visit.
+          </p>
         </div>
 
         <AnimatePresence mode="wait">
-          {selectedCountry ? (
-            <motion.div
-              key="details"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-            >
-              <ChartClient isMundane={true} countrySlug={selectedCountry.slug} countryName={selectedCountry.name} />
-            </motion.div>
-          ) : (
             <motion.div
               key="list"
               initial={{ opacity: 0 }}
@@ -149,12 +87,11 @@ function MundaneClient() {
                   <MundaneCard 
                     key={c.slug} 
                     country={c} 
-                    onClick={() => setSelectedSlug(c.slug)} 
+                    onClick={() => router.push(`/mundane/${c.slug}`)} 
                   />
                 ))}
               </div>
             </motion.div>
-          )}
         </AnimatePresence>
       </main>
 

@@ -8,6 +8,7 @@ import sharp from "sharp";
 
 import { Media } from "./collections/Media";
 import { Pages } from "./collections/Pages";
+import { Posts } from "./collections/Posts";
 import { Users } from "./collections/Users";
 
 const filename = fileURLToPath(import.meta.url);
@@ -48,7 +49,7 @@ export default buildConfig({
       ],
     },
   },
-  collections: [Users, Media, Pages],
+  collections: [Users, Media, Pages, Posts],
   db: postgresAdapter({
     pool: dbPool,
     schemaName: "payload",
