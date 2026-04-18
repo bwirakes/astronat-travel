@@ -105,10 +105,37 @@ export interface GWInterpretation {
     hook: string;
     /** Single sentence summarising the top planetary drivers. */
     dropLine: string;
+    /** Strict-chain sentence naming the chart-ruler relocation. */
+    rulerJourneyChain?: string;
     /** 3 actionable date-range recommendations. */
     travelWindows: GWTravelWindow[];
     keyMoments: GWKeyMoment[];
     advice: { bestWindow: string; watchWindow: string };
+}
+
+export interface GWPersonalLens {
+    relocatedAscSign: string;
+    relocatedAscLon: number;
+    chartRulerPlanet: string;
+    chartRulerNatalHouse: number;
+    chartRulerRelocatedHouse: number;
+    chartRulerNatalDomain: string;
+    chartRulerRelocatedDomain: string;
+    activeAngleLines: Array<{
+        planet: string;
+        angle: "ASC" | "DSC" | "MC" | "IC";
+        angleLon: number;
+        planetLon: number;
+        orbDeg: number;
+        isChartRuler: boolean;
+    }>;
+    worldPointContacts: Array<{
+        planet: string;
+        planetLon: number;
+        pointDeg: number;
+        pointType: string;
+        orbDeg: number;
+    }>;
 }
 
 export interface GeodeticWeatherReading {

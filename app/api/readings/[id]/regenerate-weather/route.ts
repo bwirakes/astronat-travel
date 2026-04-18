@@ -99,6 +99,29 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
                 angle: e.angle,
             };
         }),
+        // Reuse the persisted personal lens if available — regeneration
+        // should not recompute the natal chart.
+        personalLens: wf.personalLens
+            ? {
+                  relocatedAscSign: wf.personalLens.relocatedAscSign,
+                  chartRulerPlanet: wf.personalLens.chartRulerPlanet,
+                  chartRulerNatalHouse: wf.personalLens.chartRulerNatalHouse,
+                  chartRulerRelocatedHouse: wf.personalLens.chartRulerRelocatedHouse,
+                  chartRulerNatalDomain: wf.personalLens.chartRulerNatalDomain,
+                  chartRulerRelocatedDomain: wf.personalLens.chartRulerRelocatedDomain,
+                  activeAngleLines: (wf.personalLens.activeAngleLines ?? []).map((l: any) => ({
+                      planet: l.planet,
+                      angle: l.angle,
+                      orbDeg: l.orbDeg,
+                      isChartRuler: l.isChartRuler,
+                  })),
+                  worldPointContacts: (wf.personalLens.worldPointContacts ?? []).map((w: any) => ({
+                      planet: w.planet,
+                      pointType: w.pointType,
+                      orbDeg: w.orbDeg,
+                  })),
+              }
+            : null,
     };
 
     try {
