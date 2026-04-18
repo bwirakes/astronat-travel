@@ -5,10 +5,11 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import styles from "./home.module.css";
 import { ScoreRing, getVerdict } from "@/app/components/ScoreRing";
+import { BUCKET_COPY, tierToBucket, type Tier } from "@/app/lib/geodetic-weather-types";
 import { useRouter } from "next/navigation";
 import ThemeToggle from "@/app/components/ThemeToggle";
 import DashboardLayout from "@/app/components/DashboardLayout";
-import { LifeGoalsButton, CouplesButton, MyChartButton, WorldChartsButton, TransitsButton, LearnButton } from "@/app/components/ExploreButtons";
+import { LifeGoalsButton, CouplesButton, MyChartButton, WorldChartsButton, TransitsButton, LearnButton, SkyWeatherButton } from "@/app/components/ExploreButtons";
 import ReadingCreditPill from "@/app/components/ReadingCreditPill";
 import type { ReadingAccess } from "@/lib/access";
 
@@ -146,6 +147,7 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
                             <MyChartButton onClick={() => router.push("/chart?demo=true")} />
                             <WorldChartsButton onClick={() => router.push("/mundane?demo=true")} />
                             <TransitsButton onClick={() => router.push("/reading/new?type=transits")} />
+                            <SkyWeatherButton onClick={() => router.push("/reading/new?type=weather")} />
                             <LearnButton onClick={() => router.push("/learn")} />
                         </div>
                     </section>
@@ -157,23 +159,69 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
                         >
                             {recentSearches.length > 0 ? (
                                 <>
-                                {recentSearches.slice(0, 3).map((s: any) => (
-                                    <div key={s.id} className={styles.readingRow}>
+                                {recentSearches.slice(0, 3).map((s: any) => {
+                                    const isWeather = s.category === 'geodetic-weather';
+                                    const w = s.weatherSummary as { worstTier: Tier; severeCount: number; datesToWatch: string[]; windowDays: number } | undefined;
+                                    const bucket = isWeather && w ? tierToBucket(w.worstTier) : null;
+                                    const palette = bucket ? BUCKET_COPY[bucket] : null;
+                                    return (
+                                    <div
+                                        key={s.id}
+                                        className={styles.readingRow}
+                                        style={palette ? {
+                                            borderLeft: `3px solid ${palette.accent}`,
+                                            paddingLeft: 'calc(var(--space-sm) - 3px)',
+                                        } : undefined}
+                                    >
                                         <div className={styles.readingLeft}>
-                                            <div className={styles.miniRing}>
-                                                <ScoreRing score={s.score} verdict={getVerdict(s.score)} />
-                                            </div>
+                                            {isWeather && palette ? (
+                                                <div className={styles.miniRing} style={{
+                                                    width: 56, height: 56, borderRadius: '50%',
+                                                    background: palette.bg,
+                                                    border: `2px solid ${palette.accent}`,
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    flexShrink: 0,
+                                                }}>
+                                                    <span style={{
+                                                        fontFamily: 'var(--font-mono)',
+                                                        fontSize: '0.55rem',
+                                                        letterSpacing: '0.12em',
+                                                        color: palette.accent,
+                                                        textTransform: 'uppercase',
+                                                        fontWeight: 800,
+                                                    }}>
+                                                        {palette.short}
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <div className={styles.miniRing}>
+                                                    <ScoreRing score={s.score} verdict={getVerdict(s.score)} />
+                                                </div>
+                                            )}
                                             <div>
                                                 <span className={styles.readingDest}>{s.destination}</span>
                                                 <span className={styles.readingDate}>
-                                                    {new Date(s.travel_date).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
-                                                    {s.score > 80 ? " • High Energy" : s.score > 60 ? " • Balanced" : " • Challenging"}
+                                                    {isWeather && w ? (
+                                                        <>Next {w.windowDays} days · {w.severeCount} rough{w.severeCount === 1 ? ' day' : ' days'}
+                                                            {w.datesToWatch.length > 0 && ` · ${w.datesToWatch.slice(0, 2).join(', ')}`}
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            {new Date(s.travel_date).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                                                            {s.score > 80 ? " • High Energy" : s.score > 60 ? " • Balanced" : " • Challenging"}
+                                                        </>
+                                                    )}
                                                 </span>
                                             </div>
                                         </div>
-                                        <button className={styles.viewBtn} onClick={(e) => { e.stopPropagation(); router.push(`/reading/${s.id}?demo=true`); }}>View &rsaquo;</button>
+                                        <button className={styles.viewBtn} onClick={(e) => {
+                                            e.stopPropagation();
+                                            const suffix = isWeather ? '?type=weather' : '?demo=true';
+                                            router.push(`/reading/${s.id}${suffix}`);
+                                        }}>View &rsaquo;</button>
                                     </div>
-                                ))}
+                                    );
+                                })}
                                 <button className={styles.viewAllBtn} onClick={() => router.push("/readings")}>View all readings &rarr;</button>
                                 </>
                             ) : (

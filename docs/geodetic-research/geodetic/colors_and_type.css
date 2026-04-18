@@ -1,0 +1,276 @@
+/* ═══ Astronat — Colors & Type ═══════════════════════════════════════════
+   "Elevated Editorial / 90s Aquarian" — astrocartography for travelers.
+   Extracted from app/globals.css of bwirakes/astronat-travel.
+   ═════════════════════════════════════════════════════════════════════ */
+
+/* Font faces — local brand typefaces shipped in fonts/
+   Plus Google Fonts for Cormorant Garamond, Pinyon Script, IBM Plex Mono,
+   Libre Baskerville, DM Sans, Manrope (used as supporting/fallback stacks). */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Manrope:wght@300;400;500;600;700&family=Pinyon+Script&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+
+@font-face {
+  font-family: 'Perfectly Nineties';
+  src: url('fonts/perfectly-nineties-regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Monigue';
+  src: url('fonts/MoniguedemoRegular-gwlL1.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Garet';
+  src: url('fonts/Garet_Book_300.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Garet';
+  src: url('fonts/Garet_Heavy_850.ttf') format('truetype');
+  font-weight: 850;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* ── FONT FAMILIES ─────────────────────────────────────────────── */
+  /* Primary display — "Perfectly Nineties" (local .otf) */
+  --font-perfectly-nineties: 'Perfectly Nineties', 'Cormorant Garamond', Georgia, serif;
+  --font-garamond: 'Cormorant Garamond', Georgia, serif;
+  --font-primary:   var(--font-perfectly-nineties);
+  --font-secondary: var(--font-perfectly-nineties);
+  --font-display:   var(--font-secondary);
+
+  /* Body — "Garet" (local .ttf, weights 300 + 850) */
+  --font-garet:    'Garet', 'Manrope', 'DM Sans', system-ui, sans-serif;
+  --font-dm-sans:  'DM Sans', system-ui, sans-serif;
+  --font-body:     var(--font-garet);
+
+  /* Display alt 1 — "Monigue" (local .otf display serif) */
+  --font-monigue:        'Monigue', 'Libre Baskerville', Georgia, serif;
+  --font-display-alt-1:  var(--font-monigue);
+
+  /* Display alt 2 — Pinyon Script (the scribble "are you") */
+  --font-pinyon:         'Pinyon Script', 'Snell Roundhand', cursive;
+  --font-display-alt-2:  var(--font-pinyon);
+
+  /* Mono — IBM Plex Mono (kickers, tickers, meta) */
+  --font-ibm:   'IBM Plex Mono', ui-monospace, monospace;
+  --font-mono:  var(--font-ibm);
+
+  /* ── BRAND COLORS (the canonical 7) ────────────────────────────── */
+  --color-charcoal:    #1B1B1B;
+  --color-y2k-blue:    #0456FB;
+  --color-acqua:       #CAF1F0;
+  --color-black:       #000000;
+  --color-eggshell:    #F8F5EC;
+  --color-cream:       #F1EFE7;
+  --color-spiced-life: #E67A7A;
+
+  /* ── EDITORIAL ACCENTS ─────────────────────────────────────────── */
+  --sage:   #00FD00;   /* neon green — used sparingly in identity */
+  --amber:  #C17B3F;
+  --gold:   #C9A96E;   /* editorial gold — kickers, eyebrows, focus ring */
+  --sage-soft:  rgba(0, 253, 0, 0.12);
+  --amber-soft: rgba(193, 123, 63, 0.12);
+  --gold-soft:  rgba(201, 169, 110, 0.12);
+  --accent:     var(--color-spiced-life);
+  --accent-soft: rgba(230, 122, 122, 0.12);
+  --cyan:       var(--color-acqua);
+  --cyan-soft:  rgba(202, 241, 240, 0.10);
+  --y2k-blue:   var(--color-y2k-blue);
+
+  /* ── PLANET PALETTE (chart wheel, ACG lines) ───────────────────── */
+  --color-planet-sun:     var(--gold);
+  --color-planet-moon:    #FFFFFF;
+  --color-planet-mercury: #BDBDBD;
+  --color-planet-venus:   var(--color-spiced-life);
+  --color-planet-mars:    #D32F2F;
+  --color-planet-jupiter: var(--amber);
+  --color-planet-saturn:  #757575;
+  --color-planet-uranus:  var(--color-acqua);
+  --color-planet-neptune: var(--color-y2k-blue);
+  --color-planet-pluto:   #8E24AA;
+
+  /* ── DARK THEME (default) ──────────────────────────────────────── */
+  --bg:             var(--color-charcoal);
+  --bg-raised:      #212121;
+  --surface:        #121212;
+  --surface-border: rgba(255, 255, 255, 0.12);
+
+  --text-primary:   var(--color-eggshell);
+  --text-secondary: #CCCCCC;
+  --text-tertiary:  #999999;
+
+  --text-on-charcoal: #F8F5EC;
+  --text-on-y2k-blue: #F8F5EC;
+  --text-on-acqua:    #111B2E;
+
+  /* ── SPACING SCALE ─────────────────────────────────────────────── */
+  --space-xs:  0.5rem;  /*  8px */
+  --space-sm:  1rem;    /* 16px */
+  --space-md:  1.5rem;  /* 24px */
+  --space-lg:  2rem;    /* 32px */
+  --space-xl:  3rem;    /* 48px */
+  --space-2xl: 4rem;    /* 64px */
+  --space-3xl: 6rem;    /* 96px */
+
+  /* ── RADII (rounded) ───────────────────────────────────────────── */
+  --radius-none: 0px;
+  --radius-xs:   4px;
+  --radius-sm:   8px;
+  --radius-md:  12px;
+  --radius-lg:  16px;
+  --radius-xl:  28px;
+  --radius-full: 9999px;
+
+  /* ── CUT CORNERS (M3 shape scale, clip-path polygons) ──────────── */
+  --cut-sm: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  --cut-md: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  --cut-lg: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+  --cut-xl: polygon(28px 0, 100% 0, 100% calc(100% - 28px), calc(100% - 28px) 100%, 0 100%, 0 28px);
+
+  /* ── ORGANIC / ASYMMETRIC SHAPES ───────────────────────────────── */
+  --shape-organic-1:     40% 60% 70% 30% / 40% 50% 60% 50%;
+  --shape-asymmetric-md: var(--radius-xl) var(--radius-xs) var(--radius-xl) var(--radius-sm);
+  --shape-asymmetric-lg: var(--radius-full) var(--radius-md) var(--radius-full) var(--radius-sm);
+
+  /* ── MOTION ────────────────────────────────────────────────────── */
+  --ease:     cubic-bezier(0.4, 0, 0.2, 1);
+  --duration: 0.3s;
+
+  /* ── SEMANTIC TYPE (apply to h1–h6, p, etc.) ───────────────────── */
+  --type-display-size:   clamp(3.5rem, 8vw, 6.5rem); /* hero headline */
+  --type-display-lh:     0.85;
+  --type-display-tracking: -0.01em;
+
+  --type-h1-size: 4rem;
+  --type-h2-size: 2.5rem;
+  --type-h3-size: 1.75rem;
+
+  --type-kicker-size: 0.68rem;   /* eyebrow/kicker */
+  --type-kicker-tracking: 0.16em;
+
+  --type-mono-xs: 0.65rem;       /* h6 / stat tickers */
+}
+
+/* ── LIGHT THEME ─────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg:             var(--color-eggshell);
+  --bg-raised:      var(--color-cream);
+  --surface:        var(--color-cream);
+  --surface-border: rgba(0, 0, 0, 0.08);
+
+  --cyan:         #007676;
+  --color-acqua:  #007676;
+  --sage:         #007A00;
+  --gold:         #A67C00;
+
+  --color-planet-sun:     #A58B5A;
+  --color-planet-moon:    #8794A6;
+  --color-planet-mercury: var(--color-charcoal);
+  --color-planet-venus:   #C34949;
+  --color-planet-mars:    #A52020;
+  --color-planet-jupiter: #985925;
+  --color-planet-saturn:  #555555;
+  --color-planet-uranus:  #0340B5;
+  --color-planet-neptune: var(--color-y2k-blue);
+  --color-planet-pluto:   #6C1582;
+
+  --text-primary:   var(--color-charcoal);
+  --text-secondary: var(--color-charcoal);
+  --text-tertiary:  #555555;
+}
+
+/* ── GLOBAL RESET + BASE TYPOGRAPHY ──────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--duration) var(--ease), color var(--duration) var(--ease);
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: var(--type-h1-size);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--text-primary);
+}
+h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: var(--type-h2-size);
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+h3 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: var(--type-h3-size);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+h4 {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+h5 {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+h6 {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: var(--type-mono-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+p {
+  line-height: 1.6;
+  color: var(--text-secondary);
+  font-weight: 300;
+}
+a { color: inherit; text-decoration: none; }
+
+/* Italic script flourish — the "are you" / "behind" treatment */
+.script {
+  font-family: var(--font-display-alt-2);
+  font-style: italic;
+  text-transform: lowercase;
+  color: var(--color-y2k-blue);
+}
+.script--coral { color: var(--color-spiced-life); }
+.script--gold  { color: var(--gold); }
+
+/* Kicker / eyebrow */
+.kicker {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: var(--type-kicker-size);
+  font-weight: 500;
+  letter-spacing: var(--type-kicker-tracking);
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.kicker--mono { font-family: var(--font-mono); font-weight: 400; }
