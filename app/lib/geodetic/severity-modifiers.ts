@@ -117,6 +117,40 @@ export function scoreSeverityModifiers(params: {
         });
     }
 
+    // ── Condition 3: Nodal axis imbalance ─────────────────────────────────
+    // If 6+ visible planets sit on the same side of the Node/South Node axis,
+    // the usual check-and-balance is absent — events run harder, longer.
+    // Research-cited compound-crisis amplifier.
+    const nodePos = positions.find(p => lower(p.name).includes("node"));
+    if (nodePos) {
+        const nodeLon = nodePos.longitude;
+        let leading = 0;     // 0 ≤ arc < 180 from north node
+        let trailing = 0;    // 180 ≤ arc < 360
+        const VISIBLE_PLANETS = [
+            "sun", "moon", "mercury", "venus", "mars",
+            "jupiter", "saturn", "uranus", "neptune", "pluto",
+        ];
+        const counted: string[] = [];
+        for (const p of positions) {
+            if (!VISIBLE_PLANETS.includes(lower(p.name))) continue;
+            const arc = ((p.longitude - nodeLon) % 360 + 360) % 360;
+            if (arc < 180) leading++;
+            else            trailing++;
+            counted.push(p.name);
+        }
+        const sameSide = Math.max(leading, trailing);
+        if (sameSide >= 6) {
+            tierShift += 1;
+            modifiers.push({
+                label: `${sameSide} planets on one side of nodal axis`,
+                planets: counted,
+                tierShift: 1,
+                direction: "malefic",
+                note: `Moderating balance absent — compound-crisis amplifier (node at ${nodeLon.toFixed(1)}°)`,
+            });
+        }
+    }
+
     return {
         tierShift: Math.min(tierShift, MAX_TIER_SHIFT),
         modifiers,

@@ -50,6 +50,10 @@ import {
     scoreLateDegrees,
     type LateDegreeContribution,
 } from "@/app/lib/geodetic/late-degrees";
+import {
+    scoreConfigurations,
+    type ConfigurationContribution,
+} from "@/app/lib/geodetic/configurations";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -207,6 +211,10 @@ function labelLateDegree(c: LateDegreeContribution): string {
     const starTag = c.fixedStar ? ` + ${c.fixedStar} (${c.fixedStarOrb?.toFixed(2)}°)` : "";
     return `${c.planet} at ${c.degreeInSign.toFixed(1)}° ${c.sign} [${c.element}]${starTag}`;
 }
+function labelConfiguration(c: ConfigurationContribution): string {
+    const reg = c.regional ? " [REGIONAL]" : "";
+    return `${c.type} — ${c.planets.join(", ")}${reg}`;
+}
 
 // ── Core engine ───────────────────────────────────────────────────────────
 
@@ -246,10 +254,11 @@ export function computeGeodeticWeather(
     const l7 = scoreLateDegrees({ positions });
     const rawLate = clamp(l7.raw, RAW_CLAMPS.late.min, RAW_CLAMPS.late.max);
 
-    // Layer 8: configurations — Phase 5 stub
-    const rawConfig = 0;
+    // Layer 8: configurations (stelliums, T-sq, grand cross, grand trine, yod)
+    const l8 = scoreConfigurations({ positions, destLon });
+    const rawConfig = clamp(l8.raw, RAW_CLAMPS.config.min, RAW_CLAMPS.config.max);
 
-    // Layer 9: Severity modifiers (OOB tier shift)
+    // Layer 9: Severity modifiers (OOB tier shift + nodal imbalance)
     const l9 = scoreSeverityModifiers({ positions, geoMC, geoASC });
 
     // ── Normalize ─────────────────────────────────────────────────────────
@@ -333,6 +342,14 @@ export function computeGeodeticWeather(
             direction: c.direction,
             note: c.note,
         })),
+        ...l8.contributions.map(c => ({
+            layer: "configuration" as const,
+            label: labelConfiguration(c),
+            planets: c.planets,
+            severity: c.severity,
+            direction: c.direction,
+            note: c.note,
+        })),
         ...l9.modifiers.map(m => ({
             layer: "severity-modifier" as const,
             label: m.label,
@@ -344,7 +361,9 @@ export function computeGeodeticWeather(
     ];
     events.sort((a, b) => Math.abs(b.severity) - Math.abs(a.severity));
 
-    const phasesActive = parans ? [1, 2, 3, 4, 6, 7, 9] : [1, 3, 4, 6, 7, 9];
+    const phasesActive = parans
+        ? [1, 2, 3, 4, 6, 7, 8, 9]
+        : [1, 3, 4, 6, 7, 8, 9];
 
     return {
         dateUtc: dateUtc.toISOString(),
@@ -362,7 +381,7 @@ export function computeGeodeticWeather(
             ingresses: rawIngress,
             eclipses: rawEclipse,
             lateDegrees: rawLate,
-            configurations: rawConfig,
+            configurations: l8.raw,
             bucketAngle:   Math.round(bucketAngle),
             bucketParan:   Math.round(bucketParan),
             bucketStation: Math.round(bucketStation),
