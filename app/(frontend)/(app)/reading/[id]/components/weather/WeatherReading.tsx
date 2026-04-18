@@ -5,6 +5,7 @@ import AppNavbar from "@/app/components/AppNavbar";
 import {
     type GWCityForecast,
     type GWInterpretation,
+    type GWPersonalLens,
 } from "@/app/lib/geodetic-weather-types";
 import { Brief } from "./Brief";
 import { BestWindows } from "./BestWindows";
@@ -12,9 +13,11 @@ import { WhyThisPlace } from "./WhyThisPlace";
 import { GanttTimelineSection } from "./GanttTimelineSection";
 import { MovementsSection } from "./MovementsSection";
 import { LinesEditorial } from "./LinesEditorial";
+import { RulerJourney } from "./RulerJourney";
 import { GeodeticLinesSection } from "./GeodeticLinesSection";
 import { TimingDecisions } from "./TimingDecisions";
 import { Colophon } from "./Colophon";
+import MundaneReading from "./mundane/MundaneReading";
 
 interface WeatherForecastPayload {
     windowDays: number;
@@ -24,9 +27,14 @@ interface WeatherForecastPayload {
     cities: GWCityForecast[];
     macroScore?: number;
     interpretation?: GWInterpretation;
+    mundaneLead?: string | null;
+    intent?: "mundane" | "personal";
     natalPlanets?: Array<{ name?: string; planet?: string; longitude: number }>;
     birthDateTimeUTC?: string | null;
+    birthLat?: number | null;
     birthLon?: number | null;
+    natalAscLon?: number | null;
+    personalLens?: GWPersonalLens | null;
     generated?: string;
 }
 
@@ -70,7 +78,29 @@ function fmtCoords(lat: number, lon: number): string {
     return `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? "N" : "S"} · ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? "E" : "W"}`;
 }
 
+/** Deterministic chart-ruler line (no AI). Derived from the lens. */
+function renderChartRulerLine(lens: GWPersonalLens, city: string): string {
+    const { chartRulerPlanet: ruler, relocatedAscSign: asc, chartRulerNatalHouse: nH, chartRulerRelocatedHouse: rH, chartRulerRelocatedDomain: rDomain } = lens;
+    const sameHouse = nH === rH;
+    const o = (n: number) => `${n}${ordinalSuffix(n)}`;
+    if (sameHouse) {
+        return `In ${city} you are still ${asc} rising; your chart ruler, ${ruler}, stays in your ${o(rH)} — ${rDomain}.`;
+    }
+    return `In ${city} you become ${asc} rising. Your chart ruler, ${ruler}, moves from your natal ${o(nH)} to your relocated ${o(rH)} — ${rDomain}.`;
+}
+
+function ordinalSuffix(n: number): string {
+    const s = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    return s[(v - 20) % 10] || s[v] || s[0];
+}
+
 export default function WeatherReading({ forecast, readingId }: Props) {
+    // ── Dispatcher: mundane vs personal ──────────────────────────────────
+    if (forecast.intent === "mundane") {
+        return <MundaneReading forecast={forecast} />;
+    }
+
     const city = forecast.cities[0];
     const days = city.days;
 
@@ -95,6 +125,10 @@ export default function WeatherReading({ forecast, readingId }: Props) {
         ? fmtMonthDayYear(forecast.generated)
         : fmtMonthDayYear(new Date().toISOString());
 
+    const chartRulerLine = forecast.personalLens
+        ? renderChartRulerLine(forecast.personalLens, cityPrimary)
+        : null;
+
     return (
         <div className="min-h-screen w-full bg-[var(--bg)] text-[var(--text-primary)]">
             <AppNavbar />
@@ -108,7 +142,7 @@ export default function WeatherReading({ forecast, readingId }: Props) {
                         flexDirection: "column",
                     }}
                 >
-                    {/* ─── 01 · BRIEF ─────────────────────────────── */}
+                    {/* 01 — Brief */}
                     <Brief
                         cityPrimary={cityPrimary.toUpperCase()}
                         cityFull={cityFull}
@@ -120,21 +154,22 @@ export default function WeatherReading({ forecast, readingId }: Props) {
                         generatedLabel={generatedLabel}
                         score={macroScore}
                         scoreBand={scoreBand(macroScore).toUpperCase()}
+                        chartRulerLine={chartRulerLine}
                         readingId={readingId}
                     />
 
-                    {/* ─── 02 · BEST TRAVEL WINDOWS ──────────────── */}
+                    {/* 02 — Best travel windows */}
                     <div style={{ padding: "clamp(1.5rem, 3vw, 2.5rem) 0" }}>
                         <BestWindows windows={travelWindows} />
                     </div>
 
-                    {/* ─── 03 · WHY THIS PLACE, THIS SEASON ──────── */}
+                    {/* 03 — Why this place, this season */}
                     <WhyThisPlace
                         hook={interpretation.hook || DEFAULT_INTERPRETATION.hook}
                         dropLine={interpretation.dropLine}
                     />
 
-                    {/* ─── 04 · WHEN THE SKY OPENS (Gantt) ───────── */}
+                    {/* 04 — Timeline (Gantt) */}
                     <div
                         style={{
                             padding: "clamp(2.5rem, 5vw, 4rem) 0",
@@ -144,10 +179,10 @@ export default function WeatherReading({ forecast, readingId }: Props) {
                         <GanttTimelineSection days={days} startDate={forecast.startDate} />
                     </div>
 
-                    {/* ─── 05 · MOVEMENTS ────────────────────────── */}
+                    {/* 05 — Movements */}
                     <MovementsSection movements={interpretation.keyMoments ?? []} />
 
-                    {/* ─── 06 · § 1 — THE GEODETIC READING ───────── */}
+                    {/* 06 — § 1 The geodetic reading (ACG lines) */}
                     <LinesEditorial
                         natalPlanets={forecast.natalPlanets ?? []}
                         birthDateTimeUTC={forecast.birthDateTimeUTC ?? null}
@@ -157,7 +192,16 @@ export default function WeatherReading({ forecast, readingId }: Props) {
                         cityPrimary={cityPrimary}
                     />
 
-                    {/* ─── 07 · § 2 — THE GEODETIC LENS (permanent) */}
+                    {/* 07 — § 2 The ruler travels (chart-ruler relocation) */}
+                    {forecast.personalLens && (
+                        <RulerJourney
+                            lens={forecast.personalLens}
+                            cityPrimary={cityPrimary}
+                            rulerJourneyChain={interpretation.rulerJourneyChain}
+                        />
+                    )}
+
+                    {/* 08 — § 3 Geodetic lens (permanent zones) */}
                     <div
                         style={{
                             padding: "clamp(2.5rem, 5vw, 4rem) 0",
@@ -171,10 +215,10 @@ export default function WeatherReading({ forecast, readingId }: Props) {
                         />
                     </div>
 
-                    {/* ─── 08 · § 3 + § 4 — TIMING + FRAMEWORK ───── */}
+                    {/* 09 — § 4 Timing + framework reference */}
                     <TimingDecisions />
 
-                    {/* ─── COLOPHON ──────────────────────────────── */}
+                    {/* Colophon */}
                     <Colophon
                         cityLabel={city.label}
                         lat={city.lat}

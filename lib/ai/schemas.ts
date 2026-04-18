@@ -62,6 +62,13 @@ export const WeatherReadingSchema = z.object({
   verdict: z.string(),
   hook: z.string(),
   dropLine: z.string(),
+  /**
+   * One sentence that ties the trip to the chart-ruler relocation.
+   * Required to reference the chart ruler by name and name at least one
+   * house number. Validation in personal-lens-validator.ts rejects fillers
+   * that don't mention a planet + house.
+   */
+  rulerJourneyChain: z.string(),
   travelWindows: z
     .array(
       z.object({
@@ -92,3 +99,15 @@ export const WeatherReadingSchema = z.object({
   }),
 });
 export type WeatherReading = z.infer<typeof WeatherReadingSchema>;
+
+/**
+ * Mundane / weather-forecasting output. Much smaller than the personal
+ * reading — the majority of the mundane page is deterministic, so the AI
+ * only writes the single "situation lead" sentence.
+ */
+export const MundaneReadingSchema = z.object({
+  situationLead: z
+    .string()
+    .max(280),
+});
+export type MundaneReading = z.infer<typeof MundaneReadingSchema>;

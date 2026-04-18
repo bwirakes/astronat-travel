@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, Loader2, X, Droplets, Flame, Mountain, Wind, Users2, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader2, X, Droplets, Flame, Mountain, Wind, Users2, Sparkles, Heart, Rocket, Leaf, Coffee, Handshake } from "lucide-react";
 import CityAutocomplete from "./CityAutocomplete";
 import { WEATHER_GOALS, formatAngle } from "@/app/lib/geodetic-weather-types";
 import { mockFixedAngles } from "@/app/lib/geodetic-weather-mock";
@@ -21,22 +21,49 @@ const WINDOW_OPTIONS: Array<{ days: 7 | 30 | 90; label: string; sub: string }> =
 ];
 
 const GOAL_ICONS: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
+    // mundane
     floods: Droplets,
     fires: Flame,
     quakes: Mountain,
     atmospheric: Wind,
     civil: Users2,
     all: Sparkles,
+    // personal
+    rest: Leaf,
+    connect: Heart,
+    launch: Rocket,
+    retreat: Coffee,
+    reconcile: Handshake,
 };
 
 const GOAL_COLORS: Record<string, string> = {
+    // mundane
     floods: "var(--color-y2k-blue)",
     fires: "var(--color-spiced-life)",
     quakes: "var(--gold)",
     atmospheric: "var(--color-acqua)",
     civil: "var(--color-spiced-life)",
     all: "var(--sage)",
+    // personal
+    rest: "var(--sage)",
+    connect: "var(--color-spiced-life)",
+    launch: "var(--color-y2k-blue)",
+    retreat: "var(--color-acqua)",
+    reconcile: "var(--gold)",
 };
+
+/**
+ * Personal-intent goals — life-domain questions driving travel timing.
+ * Distinct from WEATHER_GOALS which are mundane/physical categories.
+ */
+const PERSONAL_GOALS: Array<{ id: string; label: string; sub: string }> = [
+    { id: "rest", label: "Rest & recover", sub: "Downweight Mars/Uranus on angles, favour Moon/Venus on IC" },
+    { id: "connect", label: "Meet people", sub: "Venus/Jupiter on Descendant, soft aspects to partnership angle" },
+    { id: "launch", label: "Launch or announce", sub: "Sun/Mercury on Midheaven, avoid Mercury retrograde" },
+    { id: "retreat", label: "Quiet retreat", sub: "12th house activations, Neptune on angles" },
+    { id: "reconcile", label: "Reconcile / repair", sub: "Venus returns, soft aspects to personal planets" },
+    { id: "all", label: "Just show everything", sub: "No filter — surface every layer that fires" },
+];
 
 const slideVariants = {
     enter: (d: number) => ({ x: d > 0 ? 40 : -40, opacity: 0 }),
@@ -51,17 +78,23 @@ export default function WeatherReadingFlow() {
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
 
+    /**
+     * Intent gate added step-0. Two separate products share the same engine:
+     *   "personal" — relocation + travel timing, needs the user's natal chart
+     *   "mundane"  — impersonal earth-weather report (floods, fires, etc.)
+     */
+    const [intent, setIntent] = useState<"personal" | "mundane" | null>(null);
     const [cities, setCities] = useState<PickedCity[]>([]);
     const [currentCityInput, setCurrentCityInput] = useState("");
     const [windowDays, setWindowDays] = useState<7 | 30 | 90>(30);
     const [goal, setGoal] = useState<string | null>(null);
 
-    const total = 3;
+    const total = 4;
     const go = (n: number) => {
         setDir(n > screen ? 1 : -1);
         setScreen(n);
     };
-    const next = () => go(Math.min(screen + 1, 2));
+    const next = () => go(Math.min(screen + 1, 3));
     const back = () => go(Math.max(screen - 1, 0));
 
     const startDate = useMemo(() => new Date(), []);
@@ -107,6 +140,7 @@ export default function WeatherReadingFlow() {
                         startDate: fmt(startDate),
                         endDate: fmt(endDate),
                         goalFilter: goal,
+                        intent: intent ?? "personal",
                     },
                 }),
             });
@@ -147,7 +181,7 @@ export default function WeatherReadingFlow() {
             <AnimatePresence mode="wait" custom={dir}>
                 {screen === 0 && (
                     <motion.div
-                        key="where"
+                        key="intent"
                         custom={dir}
                         variants={slideVariants}
                         initial="enter"
@@ -159,6 +193,86 @@ export default function WeatherReadingFlow() {
                         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
                             <div style={{ maxWidth: "540px", width: "100%" }}>
                                 <h5 style={{ marginBottom: "0.35rem" }}>Step 1 of {total}</h5>
+                                <h2 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(2rem, 4vw, 3rem)", color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase" }}>
+                                    What do you want <span style={{ color: "var(--color-y2k-blue)" }}>to know?</span>
+                                </h2>
+                                <p style={{ color: "var(--text-secondary)", marginBottom: "1.25rem", fontSize: "0.85rem" }}>
+                                    Two separate readings share one engine.
+                                </p>
+
+                                <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginBottom: "1.5rem" }}>
+                                    {[
+                                        {
+                                            id: "personal" as const,
+                                            title: "What this place does to me",
+                                            sub: "Travel timing. Chart-ruler relocation, best dates, personal lines. Needs your birth chart.",
+                                        },
+                                        {
+                                            id: "mundane" as const,
+                                            title: "What the sky is doing here",
+                                            sub: "Earth-weather forecast. Floods, fires, seismic, atmospheric pressure. No personal chart required.",
+                                        },
+                                    ].map((opt) => {
+                                        const active = intent === opt.id;
+                                        return (
+                                            <motion.button
+                                                key={opt.id}
+                                                whileTap={{ scale: 0.98 }}
+                                                onClick={() => setIntent(opt.id)}
+                                                style={{
+                                                    display: "flex",
+                                                    flexDirection: "column",
+                                                    alignItems: "flex-start",
+                                                    gap: "0.4rem",
+                                                    padding: "1rem 1.25rem",
+                                                    textAlign: "left",
+                                                    background: active ? "var(--color-acqua)" : "var(--surface)",
+                                                    color: active ? "var(--color-charcoal)" : "var(--text-primary)",
+                                                    border: `1px solid ${active ? "var(--color-y2k-blue)" : "var(--surface-border)"}`,
+                                                    clipPath: "var(--cut-md)",
+                                                    cursor: "pointer",
+                                                }}
+                                            >
+                                                <div style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(1.05rem, 2vw, 1.25rem)", lineHeight: 1.1, textTransform: "uppercase" }}>
+                                                    {opt.title}
+                                                </div>
+                                                <div style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", opacity: active ? 1 : 0.85, lineHeight: 1.4, fontWeight: 300 }}>
+                                                    {opt.sub}
+                                                </div>
+                                            </motion.button>
+                                        );
+                                    })}
+                                </div>
+
+                                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                                    <button
+                                        className="btn btn-primary"
+                                        disabled={!intent}
+                                        style={{ padding: "0.75rem 1.5rem", borderRadius: "var(--shape-asymmetric-md)", opacity: intent ? 1 : 0.35 }}
+                                        onClick={next}
+                                    >
+                                        Continue <ArrowRight size={15} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
+                {screen === 1 && (
+                    <motion.div
+                        key="where"
+                        custom={dir}
+                        variants={slideVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        transition={{ duration: 0.3 }}
+                        style={{ flex: 1, display: "flex", flexDirection: "column", zIndex: 1 }}
+                    >
+                        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
+                            <div style={{ maxWidth: "540px", width: "100%" }}>
+                                <h5 style={{ marginBottom: "0.35rem" }}>Step 2 of {total}</h5>
                                 <h2 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(2rem, 4vw, 3rem)", color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase" }}>
                                     Where should <span style={{ color: "var(--color-spiced-life)" }}>the sky watch?</span>
                                 </h2>
@@ -236,7 +350,7 @@ export default function WeatherReadingFlow() {
                     </motion.div>
                 )}
 
-                {screen === 1 && (
+                {screen === 2 && (
                     <motion.div
                         key="window"
                         custom={dir}
@@ -249,7 +363,7 @@ export default function WeatherReadingFlow() {
                     >
                         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
                             <div style={{ maxWidth: "540px", width: "100%" }}>
-                                <h5 style={{ marginBottom: "0.35rem" }}>Step 2 of {total}</h5>
+                                <h5 style={{ marginBottom: "0.35rem" }}>Step 3 of {total}</h5>
                                 <h2 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(2rem, 4vw, 3rem)", color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase" }}>
                                     For how many <span style={{ color: "var(--color-y2k-blue)" }}>days ahead?</span>
                                 </h2>
@@ -310,7 +424,7 @@ export default function WeatherReadingFlow() {
                     </motion.div>
                 )}
 
-                {screen === 2 && (
+                {screen === 3 && (
                     <motion.div
                         key="goal"
                         custom={dir}
@@ -323,7 +437,7 @@ export default function WeatherReadingFlow() {
                     >
                         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
                             <div style={{ maxWidth: "560px", width: "100%" }}>
-                                <h5 style={{ marginBottom: "0.35rem" }}>Step 3 of {total}</h5>
+                                <h5 style={{ marginBottom: "0.35rem" }}>Step 4 of {total}</h5>
                                 <h2 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(1.8rem, 4vw, 3rem)", color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase" }}>
                                     Anything <span style={{ color: "var(--gold)" }}>specific</span> to watch for?
                                 </h2>
@@ -332,7 +446,7 @@ export default function WeatherReadingFlow() {
                                 </p>
 
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "1.5rem" }}>
-                                    {WEATHER_GOALS.map(({ id, label, sub }) => {
+                                    {(intent === "mundane" ? WEATHER_GOALS : PERSONAL_GOALS).map(({ id, label, sub }) => {
                                         const Icon = GOAL_ICONS[id] ?? Sparkles;
                                         const color = GOAL_COLORS[id];
                                         const active = goal === id;

@@ -15,6 +15,13 @@ interface Props {
     generatedLabel: string;       // "APR 18, 2026 · 09:12"
     score: number;
     scoreBand: string;            // "MIXED" | "HIGHLY PRODUCTIVE" | ...
+    /**
+     * Chart-ruler relocation line. Per Geodetic_101.pdf: "chart ruler
+     * determines everything." The single most important sentence on
+     * the personal reading. Deterministic — no AI. Null = unknown (no
+     * natal chart on file); renders a subtle prompt instead.
+     */
+    chartRulerLine?: string | null;
     readingId?: string;
 }
 
@@ -29,6 +36,7 @@ export function Brief({
     generatedLabel,
     score,
     scoreBand,
+    chartRulerLine,
     readingId,
 }: Props) {
     const [regenerating, setRegenerating] = useState(false);
@@ -244,6 +252,39 @@ export function Brief({
                     </span>
                 </div>
             </div>
+
+            {/* Chart-ruler line — the single most important sentence on this page. */}
+            {chartRulerLine ? (
+                <p
+                    style={{
+                        fontFamily: "var(--font-secondary)",
+                        fontSize: "clamp(1.1rem, 2vw, 1.35rem)",
+                        lineHeight: 1.45,
+                        color: "var(--text-primary)",
+                        margin: 0,
+                        maxWidth: "52ch",
+                        textWrap: "pretty",
+                        fontStyle: "italic",
+                        fontWeight: 400,
+                    }}
+                >
+                    {chartRulerLine}
+                </p>
+            ) : (
+                <p
+                    style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "0.7rem",
+                        letterSpacing: "0.18em",
+                        color: "var(--text-tertiary)",
+                        textTransform: "uppercase",
+                        fontWeight: 600,
+                        margin: 0,
+                    }}
+                >
+                    Add your birth chart to see how {cityPrimary.toLowerCase()} moves your chart ruler.
+                </p>
+            )}
 
             {/* Meta row */}
             <div
