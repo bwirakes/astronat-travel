@@ -139,7 +139,9 @@ export function scoreSeverityModifiers(params: {
             counted.push(p.name);
         }
         const sameSide = Math.max(leading, trailing);
-        if (sameSide >= 6) {
+        // 8+ out of 10 visible planets on one side = truly imbalanced.
+        // 6/4 split is common by chance and not diagnostic of compound crisis.
+        if (sameSide >= 8) {
             tierShift += 1;
             modifiers.push({
                 label: `${sameSide} planets on one side of nodal axis`,
