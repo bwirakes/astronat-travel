@@ -5,7 +5,9 @@ import type { PatternEvent } from "@/lib/astro/geodetic-patterns";
 const COLUMNS = [
   "utc", "jd", "type", "body", "fromSign", "toSign", "sign", "degree", "lon",
   "geodeticZone", "aspect", "body1", "body2", "direction", "eclipseType",
-  "durationDays", "endUtc", "endSign", "anaretic", "retrograde",
+  "durationDays", "endUtc", "endSign", "members", "count",
+  "peakDeclination", "hemisphere", "axis", "side", "peakCount",
+  "speed", "seasonal", "anaretic", "retrograde",
 ] as const;
 
 function escapeCsv(v: unknown): string {
@@ -36,6 +38,15 @@ function rowFor(e: PatternEvent): Record<(typeof COLUMNS)[number], unknown> {
     durationDays: m.durationDays ?? "",
     endUtc: m.endUtc ?? "",
     endSign: m.endSign ?? "",
+    members: m.members ?? "",
+    count: m.count ?? "",
+    peakDeclination: m.peakDeclination ?? "",
+    hemisphere: m.hemisphere ?? "",
+    axis: m.axis ?? "",
+    side: m.side ?? "",
+    peakCount: m.peakCount ?? "",
+    speed: m.speed ?? "",
+    seasonal: m.seasonal === true ? "true" : "",
     anaretic: m.anaretic === true ? "true" : "",
     retrograde: m.retrograde === true ? "true" : "",
   };

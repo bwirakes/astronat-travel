@@ -57,15 +57,60 @@ export type EventType =
   | "lunation-full"
   | "retrograde-span"
   | "aspect"
-  | "midpoint-ingress";
+  | "midpoint-ingress"
+  | "stellium"
+  | "oob-span"
+  | "nodal-activation"
+  | "one-sided-nodal";
 
-/** Outer-planet aspect catalog: pairs × hard aspects (conj/sqr/opp). */
+/** Threshold for the "all planets one side of Nodal axis" configuration. */
+export const ONE_SIDED_NODAL_THRESHOLD = 6;
+export const ONE_SIDED_NODAL_BODIES = [
+  "Sun", "Moon", "Mercury", "Venus", "Mars",
+  "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto",
+] as const;
+
+/** Four cardinal sign starts — define the "seasonal ingress charts". */
+export const CARDINAL_SIGNS = new Set(["Aries", "Cancer", "Libra", "Capricorn"]);
+
+/** Sign names as they appear in `sign`, `fromSign`, `toSign` fields. */
+export const SIGNS = [
+  "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
+  "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces",
+] as const;
+
+/** Stellium config — matches the research-framework artifact ("3+ planets within 5°"). */
+export const STELLIUM_BODIES = [
+  "Sun", "Mercury", "Venus", "Mars", "Jupiter",
+  "Saturn", "Uranus", "Neptune", "Pluto",
+] as const;
+export const STELLIUM_MIN = 3;
+export const STELLIUM_ORB_DEG = 5;
+
+/** Outer-planet aspect catalog. Mars included for the "transiting Mars square outer" technique. */
 export const OUTER_BODIES = ["Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Chiron"] as const;
+export const ASPECT_BODIES = ["Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Chiron"] as const;
 export const HARD_ASPECTS = [
   { name: "conjunction", angle: 0 },
   { name: "square", angle: 90 },
   { name: "opposition", angle: 180 },
 ] as const;
+
+/** Named research midpoints per the geodetic research framework. */
+export const MIDPOINT_PAIRS: ReadonlyArray<[string, string]> = [
+  ["Mars", "Uranus"],
+  ["Mars", "Pluto"],
+  ["Mars", "True Node"],
+  ["Saturn", "Neptune"],
+  ["Jupiter", "Neptune"],
+];
+
+/** Bodies whose conjunctions with True Node count as "nodal axis activations". */
+export const NODAL_TRANSIT_BODIES = ["Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"] as const;
+export const NODAL_ORB_DEG = 1.5;
+
+/** OOB: declination magnitude above the Sun's max. */
+export const OOB_DECLINATION_DEG = 23.4393;
 
 /** 29°+ of any sign — "anaretic" / late-degree flag. */
 export const isAnaretic = (lon: number): boolean => ((lon % 30) + 30) % 30 >= 29;

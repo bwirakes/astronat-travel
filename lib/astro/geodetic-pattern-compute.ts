@@ -6,11 +6,22 @@
  */
 
 import SwissEph from "swisseph-wasm";
+import { computeDeclination } from "./declination";
 import {
+  ASPECT_BODIES,
   BODIES,
+  CARDINAL_SIGNS,
   HARD_ASPECTS,
-  OUTER_BODIES,
+  MIDPOINT_PAIRS,
+  NODAL_ORB_DEG,
+  NODAL_TRANSIT_BODIES,
+  OOB_DECLINATION_DEG,
+  ONE_SIDED_NODAL_BODIES,
+  ONE_SIDED_NODAL_THRESHOLD,
   STATIONING_BODIES,
+  STELLIUM_BODIES,
+  STELLIUM_MIN,
+  STELLIUM_ORB_DEG,
   geodeticZoneFor,
   getSign,
   isAnaretic,
@@ -150,7 +161,12 @@ function detectIngressesAndStations(swe: Swe, jdStart: number, jdEnd: number): P
             toSign: sign,
             lon: Number(exactRes.longitude.toFixed(6)),
             geodeticZone: geodeticZoneFor(exactRes.longitude),
-            meta: { retrograde: exactRes.longitudeSpeed < 0, anaretic: isAnaretic(exactRes.longitude) },
+            meta: {
+              retrograde: exactRes.longitudeSpeed < 0,
+              anaretic: isAnaretic(exactRes.longitude),
+              seasonal: name === "Sun" && CARDINAL_SIGNS.has(sign),
+              speed: Number(exactRes.longitudeSpeed.toFixed(6)),
+            },
           });
         }
 
@@ -165,7 +181,11 @@ function detectIngressesAndStations(swe: Swe, jdStart: number, jdEnd: number): P
             sign: getSign(exactRes.longitude),
             lon: Number(exactRes.longitude.toFixed(6)),
             geodeticZone: geodeticZoneFor(exactRes.longitude),
-            meta: { direction: speed >= 0 ? "direct" : "retrograde", anaretic: isAnaretic(exactRes.longitude) },
+            meta: {
+              direction: speed >= 0 ? "direct" : "retrograde",
+              anaretic: isAnaretic(exactRes.longitude),
+              speed: Number(speed.toFixed(6)),
+            },
           });
         }
       }
@@ -339,10 +359,10 @@ function detectAspects(swe: Swe, jdStart: number, jdEnd: number): PatternEvent[]
     return h;
   };
 
-  for (let i = 0; i < OUTER_BODIES.length; i++) {
-    for (let j = i + 1; j < OUTER_BODIES.length; j++) {
-      const a = OUTER_BODIES[i];
-      const b = OUTER_BODIES[j];
+  for (let i = 0; i < ASPECT_BODIES.length; i++) {
+    for (let j = i + 1; j < ASPECT_BODIES.length; j++) {
+      const a = ASPECT_BODIES[i];
+      const b = ASPECT_BODIES[j];
       let prev: number | null = null;
       let prevJd = jdStart;
       for (let jd = jdStart; jd <= jdEnd; jd += STEP) {
@@ -414,35 +434,353 @@ function detectMidpointIngresses(swe: Swe, jdStart: number, jdEnd: number): Patt
     return h;
   };
 
-  for (let i = 0; i < OUTER_BODIES.length; i++) {
-    for (let j = i + 1; j < OUTER_BODIES.length; j++) {
-      const a = OUTER_BODIES[i];
-      const b = OUTER_BODIES[j];
-      let prevSign: string | null = null;
-      let prevJd = jdStart;
-      for (let jd = jdStart; jd <= jdEnd; jd += STEP) {
-        const sign = getSign(midpoint(jd, a, b));
-        if (prevSign && prevSign !== sign) {
-          const exactJd = bisectMid(a, b, prevJd, jd, prevSign);
-          const lon = midpoint(exactJd, a, b);
-          events.push({
-            utc: jdToIso(swe, exactJd),
-            jd: Number(exactJd.toFixed(6)),
-            type: "midpoint-ingress",
-            body: `${a}/${b}`,
-            fromSign: prevSign,
-            toSign: sign,
-            lon: Number(lon.toFixed(6)),
-            geodeticZone: geodeticZoneFor(lon),
-            meta: { body1: a, body2: b, anaretic: isAnaretic(lon) },
-          });
-        }
-        prevSign = sign;
-        prevJd = jd;
+  for (const [a, b] of MIDPOINT_PAIRS) {
+    let prevSign: string | null = null;
+    let prevJd = jdStart;
+    for (let jd = jdStart; jd <= jdEnd; jd += STEP) {
+      let signNow: string;
+      try { signNow = getSign(midpoint(jd, a, b)); } catch { prevSign = null; continue; }
+      if (prevSign && prevSign !== signNow) {
+        const exactJd = bisectMid(a, b, prevJd, jd, prevSign);
+        const lon = midpoint(exactJd, a, b);
+        events.push({
+          utc: jdToIso(swe, exactJd),
+          jd: Number(exactJd.toFixed(6)),
+          type: "midpoint-ingress",
+          body: `${a}/${b}`,
+          fromSign: prevSign,
+          toSign: signNow,
+          lon: Number(lon.toFixed(6)),
+          geodeticZone: geodeticZoneFor(lon),
+          meta: { body1: a, body2: b, anaretic: isAnaretic(lon) },
+        });
       }
+      prevSign = signNow;
+      prevJd = jd;
     }
   }
   return events;
+}
+
+/**
+ * Stelliums: 3+ planets within STELLIUM_ORB_DEG (5°) of each other. A "span"
+ * is a contiguous period where the same exact member set persists.
+ */
+function detectStelliums(swe: Swe, jdStart: number, jdEnd: number): PatternEvent[] {
+  const STEP = 1.0;
+  type Open = { start: number; last: number; members: string[]; centerLon: number };
+  const open = new Map<string, Open>();
+  const out: PatternEvent[] = [];
+
+  const findCluster = (jd: number): { members: string[]; centerLon: number } | null => {
+    const positions: Array<{ name: string; lon: number }> = [];
+    for (const name of STELLIUM_BODIES) {
+      try {
+        const r = swe.calc(jd, BODIES[name], flagsFor(name));
+        positions.push({ name, lon: ((r.longitude % 360) + 360) % 360 });
+      } catch { /* skip unavailable bodies */ }
+    }
+    // Wrap: duplicate each + 360 so a cluster straddling 0° still matches.
+    const extended = [
+      ...positions,
+      ...positions.map((p) => ({ name: p.name, lon: p.lon + 360 })),
+    ].sort((a, b) => a.lon - b.lon);
+
+    let bestMembers: string[] = [];
+    let bestCenter = 0;
+    for (let i = 0; i < extended.length; i++) {
+      let j = i;
+      while (j + 1 < extended.length && extended[j + 1].lon - extended[i].lon <= STELLIUM_ORB_DEG) j++;
+      const names = new Set(extended.slice(i, j + 1).map((p) => p.name));
+      if (names.size > bestMembers.length && names.size >= STELLIUM_MIN) {
+        bestMembers = [...names].sort();
+        bestCenter = ((extended[i].lon + extended[j].lon) / 2) % 360;
+      }
+    }
+    return bestMembers.length >= STELLIUM_MIN ? { members: bestMembers, centerLon: bestCenter } : null;
+  };
+
+  const closeSpan = (key: string, o: Open) => {
+    out.push({
+      utc: jdToIso(swe, o.start),
+      jd: Number(o.start.toFixed(6)),
+      type: "stellium",
+      body: o.members.join("+"),
+      sign: getSign(o.centerLon),
+      lon: Number(o.centerLon.toFixed(6)),
+      geodeticZone: geodeticZoneFor(o.centerLon),
+      meta: {
+        startUtc: jdToIso(swe, o.start),
+        endUtc: jdToIso(swe, o.last),
+        durationDays: Number((o.last - o.start).toFixed(2)),
+        members: o.members.join(","),
+        count: o.members.length,
+      },
+    });
+    open.delete(key);
+  };
+
+  for (let jd = jdStart; jd <= jdEnd; jd += STEP) {
+    const cluster = findCluster(jd);
+    const key = cluster ? cluster.members.join(",") : "";
+
+    // Close any span whose key is not today's
+    for (const [k, o] of open) if (k !== key) closeSpan(k, o);
+
+    if (cluster) {
+      const existing = open.get(key);
+      if (existing) {
+        existing.last = jd;
+        existing.centerLon = cluster.centerLon;
+      } else {
+        open.set(key, { start: jd, last: jd, members: cluster.members, centerLon: cluster.centerLon });
+      }
+    }
+  }
+  for (const [k, o] of open) closeSpan(k, o);
+  return out;
+}
+
+/** OOB spans: body crosses |declination| threshold; emit a span per crossing pair. */
+function detectOOBSpans(swe: Swe, jdStart: number, jdEnd: number): PatternEvent[] {
+  const STEP = 1.0;
+  const out: PatternEvent[] = [];
+  // Bodies worth tracking OOB for: Moon + all classical/modern planets.
+  const BODIES_TO_CHECK = ["Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"];
+
+  for (const name of BODIES_TO_CHECK) {
+    const pid = BODIES[name];
+    const flags = flagsFor(name);
+    type Open = { start: number; peakDec: number; peakLon: number };
+    let open: Open | null = null;
+    let prevDec: number | null = null;
+    let prevJd = jdStart;
+
+    const getDec = (jd: number) => {
+      try {
+        const r = swe.calc(jd, pid, flags);
+        // r.latitude may not be exposed; default to 0 (Moon has real latitude but SE returns it).
+        const lat = (r as unknown as { latitude?: number }).latitude ?? 0;
+        return { dec: computeDeclination(r.longitude, lat), lon: r.longitude };
+      } catch { return null; }
+    };
+
+    for (let jd = jdStart; jd <= jdEnd; jd += STEP) {
+      const cur = getDec(jd);
+      if (!cur) continue;
+      const absDec = Math.abs(cur.dec);
+      const wasOob = prevDec !== null && Math.abs(prevDec) > OOB_DECLINATION_DEG;
+      const isOob = absDec > OOB_DECLINATION_DEG;
+
+      if (!wasOob && isOob) {
+        open = { start: jd, peakDec: cur.dec, peakLon: cur.lon };
+      } else if (open) {
+        if (absDec > Math.abs(open.peakDec)) { open.peakDec = cur.dec; open.peakLon = cur.lon; }
+        if (wasOob && !isOob) {
+          const end = jd;
+          out.push({
+            utc: jdToIso(swe, open.start),
+            jd: Number(open.start.toFixed(6)),
+            type: "oob-span",
+            body: name,
+            sign: getSign(open.peakLon),
+            lon: Number(open.peakLon.toFixed(6)),
+            geodeticZone: geodeticZoneFor(open.peakLon),
+            meta: {
+              startUtc: jdToIso(swe, open.start),
+              endUtc: jdToIso(swe, end),
+              durationDays: Number((end - open.start).toFixed(2)),
+              peakDeclination: Number(open.peakDec.toFixed(4)),
+              hemisphere: open.peakDec >= 0 ? "north" : "south",
+            },
+          });
+          open = null;
+        }
+      }
+
+      prevDec = cur.dec;
+      prevJd = jd;
+    }
+    // Close any open span at year end
+    if (open) {
+      out.push({
+        utc: jdToIso(swe, open.start),
+        jd: Number(open.start.toFixed(6)),
+        type: "oob-span",
+        body: name,
+        sign: getSign(open.peakLon),
+        lon: Number(open.peakLon.toFixed(6)),
+        geodeticZone: geodeticZoneFor(open.peakLon),
+        meta: {
+          startUtc: jdToIso(swe, open.start),
+          endUtc: jdToIso(swe, jdEnd),
+          durationDays: Number((jdEnd - open.start).toFixed(2)),
+          peakDeclination: Number(open.peakDec.toFixed(4)),
+          hemisphere: open.peakDec >= 0 ? "north" : "south",
+          ongoingAtYearEnd: true,
+        },
+      });
+    }
+    void prevJd; // keep linter quiet
+  }
+  return out;
+}
+
+/** Nodal axis activations: transiting body within NODAL_ORB_DEG of True Node (or anti-Node). */
+function detectNodalActivations(swe: Swe, jdStart: number, jdEnd: number): PatternEvent[] {
+  const STEP = 1.0;
+  const out: PatternEvent[] = [];
+  const NODE_PID = BODIES["True Node"];
+  const NODE_FLAGS = flagsFor("True Node");
+
+  for (const name of NODAL_TRANSIT_BODIES) {
+    const pid = BODIES[name];
+    const flags = flagsFor(name);
+    let active: "node" | "anti" | null = null;
+    let activeStart = 0;
+    let activeLon = 0;
+
+    const sepTo = (lon: number, target: number) => {
+      const d = ((lon - target + 540) % 360) - 180;
+      return Math.abs(d);
+    };
+
+    for (let jd = jdStart; jd <= jdEnd; jd += STEP) {
+      let bodyLon: number, nodeLon: number;
+      try {
+        bodyLon = swe.calc(jd, pid, flags).longitude;
+        nodeLon = swe.calc(jd, NODE_PID, NODE_FLAGS).longitude;
+      } catch { continue; }
+      const antiLon = (nodeLon + 180) % 360;
+      const toNode = sepTo(bodyLon, nodeLon);
+      const toAnti = sepTo(bodyLon, antiLon);
+
+      const which: "node" | "anti" | null =
+        toNode <= NODAL_ORB_DEG ? "node" :
+        toAnti <= NODAL_ORB_DEG ? "anti" : null;
+
+      if (active && which !== active) {
+        // close previous
+        out.push({
+          utc: jdToIso(swe, activeStart),
+          jd: Number(activeStart.toFixed(6)),
+          type: "nodal-activation",
+          body: name,
+          sign: getSign(activeLon),
+          lon: Number(activeLon.toFixed(6)),
+          geodeticZone: geodeticZoneFor(activeLon),
+          meta: {
+            axis: active === "node" ? "North Node" : "Anti-Node (South Node)",
+            startUtc: jdToIso(swe, activeStart),
+            endUtc: jdToIso(swe, jd),
+            durationDays: Number((jd - activeStart).toFixed(2)),
+          },
+        });
+        active = null;
+      }
+      if (which && !active) {
+        active = which;
+        activeStart = jd;
+        activeLon = bodyLon;
+      }
+    }
+    if (active) {
+      out.push({
+        utc: jdToIso(swe, activeStart),
+        jd: Number(activeStart.toFixed(6)),
+        type: "nodal-activation",
+        body: name,
+        sign: getSign(activeLon),
+        lon: Number(activeLon.toFixed(6)),
+        geodeticZone: geodeticZoneFor(activeLon),
+        meta: {
+          axis: active === "node" ? "North Node" : "Anti-Node (South Node)",
+          startUtc: jdToIso(swe, activeStart),
+          endUtc: jdToIso(swe, jdEnd),
+          durationDays: Number((jdEnd - activeStart).toFixed(2)),
+          ongoingAtYearEnd: true,
+        },
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * All planets one side of Nodal axis: if ≥ ONE_SIDED_NODAL_THRESHOLD planets
+ * are on the same 180° half relative to the True Node, open a span.
+ */
+function detectOneSidedNodal(swe: Swe, jdStart: number, jdEnd: number): PatternEvent[] {
+  const STEP = 1.0;
+  const out: PatternEvent[] = [];
+  type Open = { start: number; last: number; side: "north" | "south"; peakCount: number };
+  let open: Open | null = null;
+
+  for (let jd = jdStart; jd <= jdEnd; jd += STEP) {
+    let nodeLon: number;
+    try { nodeLon = swe.calc(jd, BODIES["True Node"], flagsFor("True Node")).longitude; }
+    catch { continue; }
+
+    let north = 0, south = 0;
+    for (const name of ONE_SIDED_NODAL_BODIES) {
+      let lon: number;
+      try { lon = swe.calc(jd, BODIES[name], flagsFor(name)).longitude; }
+      catch { continue; }
+      const rel = (((lon - nodeLon) % 360) + 360) % 360;
+      if (rel < 180) north++; else south++;
+    }
+    const dominant: "north" | "south" | null =
+      north >= ONE_SIDED_NODAL_THRESHOLD ? "north" :
+      south >= ONE_SIDED_NODAL_THRESHOLD ? "south" : null;
+
+    const closeOpen = (endJd: number) => {
+      if (!open) return;
+      out.push({
+        utc: jdToIso(swe, open.start),
+        jd: Number(open.start.toFixed(6)),
+        type: "one-sided-nodal",
+        body: "All planets",
+        meta: {
+          startUtc: jdToIso(swe, open.start),
+          endUtc: jdToIso(swe, endJd),
+          durationDays: Number((endJd - open.start).toFixed(2)),
+          side: open.side,
+          peakCount: open.peakCount,
+          threshold: ONE_SIDED_NODAL_THRESHOLD,
+        },
+      });
+      open = null;
+    };
+
+    if (open && dominant !== open.side) closeOpen(jd);
+    if (dominant) {
+      if (!open) {
+        open = { start: jd, last: jd, side: dominant, peakCount: dominant === "north" ? north : south };
+      } else {
+        const cur = open.side === "north" ? north : south;
+        if (cur > open.peakCount) open.peakCount = cur;
+        open.last = jd;
+      }
+    }
+  }
+  if (open) {
+    out.push({
+      utc: jdToIso(swe, open.start),
+      jd: Number(open.start.toFixed(6)),
+      type: "one-sided-nodal",
+      body: "All planets",
+      meta: {
+        startUtc: jdToIso(swe, open.start),
+        endUtc: jdToIso(swe, jdEnd),
+        durationDays: Number((jdEnd - open.start).toFixed(2)),
+        side: open.side,
+        peakCount: open.peakCount,
+        threshold: ONE_SIDED_NODAL_THRESHOLD,
+        ongoingAtYearEnd: true,
+      },
+    });
+  }
+  return out;
 }
 
 export async function computeYearEvents(year: number): Promise<PatternEvent[]> {
@@ -457,6 +795,10 @@ export async function computeYearEvents(year: number): Promise<PatternEvent[]> {
     ...detectAspects(swe, jdStart, jdEnd),
     ...detectMidpointIngresses(swe, jdStart, jdEnd),
     ...deriveRetrogradeSpans(ingressStation),
+    ...detectStelliums(swe, jdStart, jdEnd),
+    ...detectOOBSpans(swe, jdStart, jdEnd),
+    ...detectNodalActivations(swe, jdStart, jdEnd),
+    ...detectOneSidedNodal(swe, jdStart, jdEnd),
   ];
   events.sort((a, b) => a.jd - b.jd);
   return events;
