@@ -168,9 +168,12 @@ function segmentHasAnchor(segment: string): boolean {
 /**
  * Verify every `→` segment in `rulerJourneyChain` and every Chain line
  * inside `keyMoments[].body` contains at least one proper noun (planet,
- * sign, angle, or house ordinal). If a chain fails, replace it with a
- * deterministic marker that surfaces the miss instead of silently shipping
- * filler. Better to show a lint error than pretend.
+ * sign, angle, or house ordinal).
+ *
+ * On failure: blank `rulerJourneyChain` (the runner backfills with a
+ * deterministic chain built from the personal lens) and drop the bad
+ * Chain sentence from a keyMoment's body so the surrounding sentences
+ * still read cleanly. Never surface a lint string to the reader.
  */
 function validateRulerChain<T extends WeatherReading>(out: T): T {
     const checkChain = (s: string): boolean => {
@@ -182,15 +185,17 @@ function validateRulerChain<T extends WeatherReading>(out: T): T {
     };
 
     if (!checkChain(out.rulerJourneyChain)) {
-        out.rulerJourneyChain =
-            "Chain validation flagged this response. Regenerate to produce a chain with named planets, houses, and angles.";
+        // Empty signal — the runner substitutes a deterministic chain
+        // built from the personal lens (cityPrimary + ruler + houses).
+        out.rulerJourneyChain = "";
     }
     for (const m of out.keyMoments) {
-        const lines = m.body.split(/\. +/);
+        const lines = m.body.split(/\.\s+/);
         const chainIdx = lines.findIndex((l) => l.toLowerCase().includes("chain:"));
         if (chainIdx >= 0 && !checkChain(lines[chainIdx])) {
-            lines[chainIdx] = "Chain: (regeneration needed — links lacked named planets or houses)";
-            m.body = lines.join(". ");
+            lines.splice(chainIdx, 1);
+            const joined = lines.join(". ").trim().replace(/\.+$/, "");
+            m.body = joined ? `${joined}.` : "";
         }
     }
     return out;

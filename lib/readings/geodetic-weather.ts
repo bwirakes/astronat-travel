@@ -374,6 +374,17 @@ export async function runGeodeticWeather(input: RunWeatherInput): Promise<{
             ? `Average ${c.score}/100 — top drivers: ${c.topDrivers.join(", ")}.`
             : `Average ${c.score}/100 across ${c.nightsLabel}.`),
       }));
+      // Backfill the chain when validation blanked it. Drop keyMoments
+      // whose entire body got emptied because their only sentence was the
+      // failed Chain — better no movement than an unmoored title.
+      if (!interpretation.rulerJourneyChain) {
+        interpretation.rulerJourneyChain = personalLens
+          ? `Chain: ${cityPrimary} → you become ${personalLens.relocatedAscSign} rising → ${personalLens.chartRulerPlanet} rules → relocated ${personalLens.chartRulerRelocatedHouse}${ordinalSuffix(personalLens.chartRulerRelocatedHouse)} (${personalLens.chartRulerRelocatedDomain}) → the trip's dominant topic shifts to that house.`
+          : `Chain: ${cityPrimary} → city's geodetic lens active → no birth chart on file → add one for the personal lens.`;
+      }
+      interpretation.keyMoments = (interpretation.keyMoments ?? []).filter(
+        (m: any) => m && typeof m.body === "string" && m.body.trim().length > 0,
+      );
     }
   } catch (err: any) {
     console.warn("Weather AI failed, using fallback interpretation:", err?.message);
