@@ -12,7 +12,8 @@
     "lint": "eslint",
     "test": "bunx playwright test",
     "test:ui": "bunx playwright test --reporter=html",
-    "test:astro": "bun run scripts/test-precision.ts"
+    "test:astro": "bun run scripts/test-precision.ts",
+    "generate:geodetic-patterns": "bun run scripts/generate-geodetic-patterns.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.60",

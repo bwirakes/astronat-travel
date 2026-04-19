@@ -14,6 +14,10 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 
+  // swisseph-wasm uses createRequire("module") which webpack can't bundle.
+  // Keep it external so Node resolves it at runtime on the server.
+  serverExternalPackages: ["swisseph-wasm"],
+
   async redirects() {
     return [
       {
