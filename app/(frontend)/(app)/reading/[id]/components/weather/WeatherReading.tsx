@@ -15,7 +15,6 @@ import { MovementsSection } from "./MovementsSection";
 import { LinesEditorial } from "./LinesEditorial";
 import { RulerJourney } from "./RulerJourney";
 import { GeodeticLinesSection } from "./GeodeticLinesSection";
-import { TimingDecisions } from "./TimingDecisions";
 import { Colophon } from "./Colophon";
 import MundaneReading from "./mundane/MundaneReading";
 import { chartRulerImplication } from "@/lib/readings/personal-lens";
@@ -219,9 +218,6 @@ export default function WeatherReading({ forecast, readingId }: Props) {
                             cityPrimary={cityPrimary}
                         />
                     </div>
-
-                    {/* 09 — § 4 Timing + framework reference */}
-                    <TimingDecisions />
 
                     {/* Colophon */}
                     <Colophon
