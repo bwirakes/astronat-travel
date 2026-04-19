@@ -16,7 +16,14 @@ export default async function HomePage() {
         first_name: "Friend",
         birth_date: "1995-08-15"
     };
-    let recentSearches: Array<{ id: string | number; destination: string; score: number; travel_date: string }> = [];
+    let recentSearches: Array<{
+        id: string | number;
+        destination: string;
+        score: number;
+        travel_date: string;
+        category?: string;
+        weatherSummary?: { worstTier: string; severeCount: number; datesToWatch: string[]; windowDays: number };
+    }> = [];
 
     if (user) {
         const { data: pData } = await supabase.from('profiles').select('first_name, birth_date').eq('id', user.id).single();
@@ -24,12 +31,19 @@ export default async function HomePage() {
 
         const { data: readings } = await supabase.from('readings').select('id, category, details, reading_date, reading_score').eq('user_id', user.id).order('created_at', { ascending: false }).limit(3);
         if (readings) {
-            recentSearches = readings.map(r => ({
-                id: r.id,
-                destination: (r.details as any)?.destination || "Unknown",
-                score: r.reading_score,
-                travel_date: new Date(r.reading_date).toISOString().split('T')[0]
-            })) as any;
+            recentSearches = readings.map(r => {
+                const d = (r.details as any) || {};
+                const isWeather = !!d.weatherForecast;
+                const row: any = {
+                    id: r.id,
+                    destination: d.destination || d.weatherForecast?.cities?.[0]?.label || "Unknown",
+                    score: r.reading_score,
+                    travel_date: new Date(r.reading_date).toISOString().split('T')[0],
+                    category: isWeather ? 'geodetic-weather' : r.category,
+                };
+                if (isWeather) row.weatherSummary = d.weatherForecast.summary;
+                return row;
+            }) as any;
         }
     }
 

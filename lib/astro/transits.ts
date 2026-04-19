@@ -1,5 +1,6 @@
 import SwissEph from 'swisseph-wasm';
 import { AspectHit, findAllAspects } from './aspects';
+import { computeDeclination, isOutOfBounds } from './declination';
 
 export const ZODIAC_SIGNS = [
   "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
@@ -18,6 +19,7 @@ const SE = {
   URANUS: 7,
   NEPTUNE: 8,
   PLUTO: 9,
+  TRUE_NODE: 11,
   GREG_CAL: 1,
   FLG_SPEED: 256,
   FLG_SWIEPH: 2,
@@ -34,6 +36,7 @@ export const PLANETS: Record<string, number> = {
   "Uranus": SE.URANUS,
   "Neptune": SE.NEPTUNE,
   "Pluto": SE.PLUTO,
+  "True Node": SE.TRUE_NODE,
 };
 
 export class SwissEphSingleton {
@@ -77,6 +80,10 @@ export interface ComputedPosition {
   name: string;
   longitude: number;
   latitude?: number;
+  /** Equatorial declination in degrees, derived from ecliptic lon/lat.
+   *  Out-of-bounds when |declination| > 23.4393°. */
+  declination?: number;
+  isOOB?: boolean;
   sign: string;
   degree_in_sign: number;
   degree_minutes: number;
@@ -114,10 +121,14 @@ export async function computeRealtimePositions(dtUtc: Date, houseCusps?: number[
     const signIdx = Math.floor(lon / 30);
     const degInSign = lon % 30;
     
+    const ecliptic_lat = Number(res.latitude.toFixed(6));
+    const decl = computeDeclination(lon, ecliptic_lat);
     const pos: ComputedPosition = {
       name,
       longitude: Number(lon.toFixed(6)),
-      latitude: Number(res.latitude.toFixed(6)),
+      latitude: ecliptic_lat,
+      declination: Number(decl.toFixed(4)),
+      isOOB: isOutOfBounds(decl),
       sign: ZODIAC_SIGNS[signIdx],
       degree_in_sign: Number(degInSign.toFixed(4)),
       degree_minutes: Math.floor((degInSign - Math.floor(degInSign)) * 60),

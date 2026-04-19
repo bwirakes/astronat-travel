@@ -78,6 +78,21 @@ export function TransitsButton({ onClick }: ExploreButtonProps) {
   );
 }
 
+export function SkyWeatherButton({ onClick }: ExploreButtonProps) {
+  return (
+    <button className={`${styles.card} ${styles.skyWeather} editorial-btn`} onClick={onClick}>
+      <div className={styles.skyWeatherKicker}>DATES TO WATCH · ANY PLACE</div>
+      <div className={styles.skyWeatherStack}>
+        <div className={styles.skyWeatherLead}>SKY</div>
+        <div className={styles.skyWeatherScript}>weather</div>
+      </div>
+      <svg className={styles.skyWeatherSigils} viewBox="0 0 200 40" fill="none" aria-hidden>
+        <text x="0" y="28" fontFamily="serif" fontSize="22" fill="currentColor">☉ ☽ ☿ ♀ ♂ ♃ ♄ ♅ ♆ ♇</text>
+      </svg>
+    </button>
+  );
+}
+
 export function LearnButton({ onClick }: ExploreButtonProps) {
   return (
     <button className={`${styles.card} ${styles.learn} editorial-btn`} onClick={onClick}>
