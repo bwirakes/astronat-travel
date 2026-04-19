@@ -4,17 +4,21 @@
  * Per Geodetic_101.pdf p.3: "chart ruler determines everything." When a
  * user relocates, their rising sign can change — which moves their chart
  * ruler into a different house, which changes the dominant topic of their
- * trip. This module makes that delta first-class data the UI can render
- * without any AI help.
+ * trip.
  *
- * Pure computation — no I/O, no AI. Safe to call anywhere.
+ * IMPORTANT: the Ascendant used here is the **relocated natal ASC** —
+ * Swiss Ephemeris at the user's natal instant, with the destination's
+ * lat/lon. This is NOT the geodetic ASC of the city (which is
+ * time-invariant). The two are often confused; the PDF's Brandon example
+ * ("Taurus rising in Jakarta, Libra rising in NYC") is strictly about
+ * the relocated natal chart.
  */
 
 import {
-    computeRelocatedAscLon,
     signFromLongitude,
     houseFromLongitude,
 } from "@/app/lib/geodetic";
+import { relocatedAngles } from "@/lib/astro/relocate";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -29,9 +33,11 @@ export interface PersonalLens {
     relocatedAscSign: string;
     /** Raw relocated Ascendant longitude (degrees). */
     relocatedAscLon: number;
+    /** Relocated Midheaven longitude (degrees). */
+    relocatedMcLon: number;
     /** Traditional ruling planet of the relocated Ascendant. */
     chartRulerPlanet: string;
-    /** Natal house of the chart ruler (1–12, whole-sign). */
+    /** Natal house of the chart ruler (1–12, whole-sign from natal ASC). */
     chartRulerNatalHouse: number;
     /** Relocated house of the chart ruler at destination (1–12, whole-sign). */
     chartRulerRelocatedHouse: number;
@@ -40,9 +46,8 @@ export interface PersonalLens {
     /** Plain-language life-domain for the natal house (for delta comparison). */
     chartRulerNatalDomain: string;
     /**
-     * Natal planets that fall within 5° of ANY of the four relocated angles
-     * (MC/IC/ASC/DSC). These are the PDF's "most important lines." Sorted
-     * by orb ascending (tightest first).
+     * Natal planets within 5° of a relocated angle (MC/IC/ASC/DSC).
+     * Sorted tightest-first. These are the PDF's "most important lines."
      */
     activeAngleLines: Array<{
         planet: string;
@@ -53,20 +58,18 @@ export interface PersonalLens {
         isChartRuler: boolean;
     }>;
     /**
-     * 8th-harmonic world point contacts — natal planets within 2° of a
-     * hot zodiac degree (0° cardinal, 15° fixed, 7.5° mutable,
-     * 22.5° cardinal). Per PDF p.2: public-visibility signatures.
+     * 8th-harmonic world point contacts. Public-visibility signatures.
      */
     worldPointContacts: Array<{
         planet: string;
         planetLon: number;
-        pointDeg: number;          // exact world-point degree, 0–360
+        pointDeg: number;
         pointType: "0° cardinal" | "15° fixed" | "7.5° mutable" | "22.5° cardinal";
         orbDeg: number;
     }>;
 }
 
-// ── Traditional rulership table (PDF default) ────────────────────────────
+// ── Traditional rulership (PDF default) ───────────────────────────────────
 
 const TRADITIONAL_RULERS: Record<string, string> = {
     Aries: "Mars",
@@ -83,8 +86,6 @@ const TRADITIONAL_RULERS: Record<string, string> = {
     Pisces: "Jupiter",
 };
 
-// ── House → domain (plain English, for chart-ruler line) ──────────────────
-
 const HOUSE_DOMAIN: Record<number, string> = {
     1: "identity, body, self-presentation",
     2: "resources, values, what you earn",
@@ -100,30 +101,21 @@ const HOUSE_DOMAIN: Record<number, string> = {
     12: "retreat, the unseen, ancestors",
 };
 
-// ── World-point degrees (8th harmonic) ───────────────────────────────────
-
 interface WorldPoint {
     deg: number;
     type: PersonalLens["worldPointContacts"][number]["pointType"];
 }
 
-/** Absolute zodiac degrees (0–360) of the 8th-harmonic world points. */
 function buildWorldPoints(): WorldPoint[] {
     const points: WorldPoint[] = [];
-    // 0° cardinals: Aries, Cancer, Libra, Capricorn
     for (const sign of [0, 3, 6, 9]) points.push({ deg: sign * 30, type: "0° cardinal" });
-    // 15° fixeds: Taurus, Leo, Scorpio, Aquarius
     for (const sign of [1, 4, 7, 10]) points.push({ deg: sign * 30 + 15, type: "15° fixed" });
-    // 7.5° mutables: Gemini, Virgo, Sagittarius, Pisces
     for (const sign of [2, 5, 8, 11]) points.push({ deg: sign * 30 + 7.5, type: "7.5° mutable" });
-    // 22.5° cardinals: mid-degree cardinal points
     for (const sign of [0, 3, 6, 9]) points.push({ deg: sign * 30 + 22.5, type: "22.5° cardinal" });
     return points;
 }
 
 const WORLD_POINTS = buildWorldPoints();
-
-// ── Orb helper ────────────────────────────────────────────────────────────
 
 function circularOrb(a: number, b: number): number {
     const diff = Math.abs(((a - b) % 360) + 360) % 360;
@@ -145,21 +137,32 @@ function planetByName(planets: NatalPlanet[], name: string): NatalPlanet | undef
 
 export interface ComputePersonalLensInput {
     natalPlanets: NatalPlanet[];
-    /** Natal Ascendant longitude (required for natal-house math). */
+    /** Natal Ascendant longitude (for the user's natal-house placement). */
     natalAscLon: number;
+    /** User's birth instant in UTC. Required for the relocated ASC compute. */
+    natalDtUtc: Date;
     /** Destination city coordinates. */
     destLat: number;
     destLon: number;
 }
 
-export function computePersonalLens(
+/**
+ * Async because the relocated Ascendant requires a Swiss Ephemeris call.
+ * Returns null if inputs are incomplete.
+ */
+export async function computePersonalLens(
     input: ComputePersonalLensInput,
-): PersonalLens | null {
-    const { natalPlanets, natalAscLon, destLat, destLon } = input;
+): Promise<PersonalLens | null> {
+    const { natalPlanets, natalAscLon, natalDtUtc, destLat, destLon } = input;
     if (!natalPlanets || natalPlanets.length === 0) return null;
+    if (!natalDtUtc || Number.isNaN(natalDtUtc.getTime())) return null;
 
-    // 1. Relocated ASC
-    const relocAscLon = computeRelocatedAscLon(destLat, destLon);
+    // 1. Relocated ASC/MC via Swiss Ephemeris at natal instant + destination lat/lon
+    const angles = await relocatedAngles(natalDtUtc, destLat, destLon);
+    const relocAscLon = angles.ascLon;
+    const relocMcLon = angles.mcLon;
+    const relocIcLon = angles.icLon;
+    const relocDscLon = angles.dscLon;
     const relocAscSign = signFromLongitude(relocAscLon);
 
     // 2. Chart ruler
@@ -172,12 +175,8 @@ export function computePersonalLens(
     const natalHouse = houseFromLongitude(rulerLon, natalAscLon);
     const relocatedHouse = houseFromLongitude(rulerLon, relocAscLon);
 
-    // 3. Active angle lines — natal planets within 5° of relocated MC/IC/ASC/DSC
-    const relocMcLon = ((destLon % 360) + 360) % 360;
-    const relocIcLon = (relocMcLon + 180) % 360;
-    const relocDscLon = (relocAscLon + 180) % 360;
-
-    const angles: Array<{ code: "MC" | "IC" | "ASC" | "DSC"; lon: number }> = [
+    // 3. Active angle lines — natal planets within 5° of relocated angles.
+    const angleList: Array<{ code: "MC" | "IC" | "ASC" | "DSC"; lon: number }> = [
         { code: "MC", lon: relocMcLon },
         { code: "IC", lon: relocIcLon },
         { code: "ASC", lon: relocAscLon },
@@ -188,7 +187,7 @@ export function computePersonalLens(
     for (const planet of natalPlanets) {
         const pName = normalizePlanetName(planet.name ?? planet.planet ?? "");
         if (!pName) continue;
-        for (const a of angles) {
+        for (const a of angleList) {
             const orb = circularOrb(planet.longitude, a.lon);
             if (orb <= 5) {
                 activeAngleLines.push({
@@ -204,7 +203,7 @@ export function computePersonalLens(
     }
     activeAngleLines.sort((a, b) => a.orbDeg - b.orbDeg);
 
-    // 4. World-point contacts — natal planets within 2° of an 8th-harmonic point
+    // 4. World-point contacts — natal planets within 2° of an 8th-harmonic point.
     const worldPointContacts: PersonalLens["worldPointContacts"] = [];
     for (const planet of natalPlanets) {
         const pName = normalizePlanetName(planet.name ?? planet.planet ?? "");
@@ -227,6 +226,7 @@ export function computePersonalLens(
     return {
         relocatedAscSign: relocAscSign,
         relocatedAscLon: relocAscLon,
+        relocatedMcLon: relocMcLon,
         chartRulerPlanet: rulerName,
         chartRulerNatalHouse: natalHouse,
         chartRulerRelocatedHouse: relocatedHouse,
@@ -235,34 +235,6 @@ export function computePersonalLens(
         activeAngleLines,
         worldPointContacts,
     };
-}
-
-/**
- * Compose the one-sentence "chart-ruler line" the Brief renders.
- * Per PDF p.3: "chart ruler determines everything." This is the single
- * most important line on the reading page.
- *
- * Pure function. No AI. No filler. Deterministic from input.
- */
-export function chartRulerLine(lens: PersonalLens, city: string): string {
-    const {
-        chartRulerPlanet: ruler,
-        relocatedAscSign: asc,
-        chartRulerNatalHouse: nH,
-        chartRulerRelocatedHouse: rH,
-        chartRulerRelocatedDomain: rDomain,
-    } = lens;
-
-    if (nH === rH) {
-        return `In ${city} you are still ${asc} rising; your chart ruler, ${ruler}, stays in your ${ordinal(rH)} — ${rDomain}.`;
-    }
-    return `In ${city} you become ${asc} rising. Your chart ruler, ${ruler}, moves from your natal ${ordinal(nH)} to your relocated ${ordinal(rH)} — ${rDomain}.`;
-}
-
-function ordinal(n: number): string {
-    const s = ["th", "st", "nd", "rd"];
-    const v = n % 100;
-    return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
 export { HOUSE_DOMAIN };

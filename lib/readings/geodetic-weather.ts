@@ -14,6 +14,7 @@ import { getNatalChart, getProfile, saveNatalChart } from "@/lib/db";
 import { SwissEphSingleton, computeRealtimePositions } from "@/lib/astro/transits";
 import { birthToUtc } from "@/lib/astro/birth-utc";
 import { computePersonalLens, type NatalPlanet } from "./personal-lens";
+import { findTravelWindows, defaultRankLabels, type CandidateWindow } from "./travel-windows";
 
 interface CityForecast {
   label: string;
@@ -187,13 +188,34 @@ export async function runGeodeticWeather(input: RunWeatherInput): Promise<{
   const primaryCity = cityForecasts[0];
   const personalLens =
     natal && natal.planets.length > 0
-      ? computePersonalLens({
+      ? await computePersonalLens({
             natalPlanets: natal.planets as NatalPlanet[],
             natalAscLon: natal.ascLon,
+            natalDtUtc: natal.dtUtc,
             destLat: primaryCity.lat,
             destLon: primaryCity.lon,
         })
       : null;
+
+  // Paran dedup — the engine emits the same (planets pair × body pair) paran
+  // at 10+ adjacent latitudes in a fractional grid. Collapse to the latitude
+  // closest to the destination per (day × unique signature).
+  for (const city of cityForecasts) {
+    for (const day of city.days) {
+      if (!day.events || day.events.length === 0) continue;
+      const parans = day.events.filter((e: any) => e.layer === "paran");
+      const others = day.events.filter((e: any) => e.layer !== "paran");
+      const byKey: Record<string, any> = {};
+      for (const p of parans) {
+        const key = `${(p.planets ?? []).slice().sort().join("-")}::${p.label?.split(" at ")[0] ?? ""}`;
+        const prev = byKey[key];
+        if (!prev || Math.abs(p.severity ?? 0) > Math.abs(prev.severity ?? 0)) {
+          byKey[key] = p;
+        }
+      }
+      day.events = [...others, ...Object.values(byKey)];
+    }
+  }
 
   // Aggregate
   const allDays = cityForecasts.flatMap((c) => c.days);
@@ -208,6 +230,14 @@ export async function runGeodeticWeather(input: RunWeatherInput): Promise<{
   const macroScore = Math.round(
     allDays.reduce((sum: number, d: any) => sum + (d.score ?? 60), 0) / Math.max(1, allDays.length),
   );
+
+  // ─ Deterministic travel-window proposals ─────────────────────────────
+  // Use the primary city's daily score series (not all-days flatten) so the
+  // window proposals line up with one reading on the map. AI labels them;
+  // AI cannot change the dates, nights, or score.
+  const candidateWindows: CandidateWindow[] = findTravelWindows(primaryCity.days, {
+    startDate,
+  });
 
   // Build AI input — no severity numbers, no scores in body
   const flatEvents = cityForecasts.flatMap((c) =>
@@ -247,6 +277,14 @@ export async function runGeodeticWeather(input: RunWeatherInput): Promise<{
         angle: e.angle ? spellAngle(e.angle) : undefined,
       };
     }),
+    candidateWindows: candidateWindows.map((w) => ({
+      dates: w.dates,
+      startDate: w.startDate,
+      endDate: w.endDate,
+      nights: w.nights,
+      score: w.score,
+      topDrivers: w.topDrivers,
+    })),
     personalLens: personalLens
       ? {
             relocatedAscSign: personalLens.relocatedAscSign,
@@ -278,6 +316,17 @@ export async function runGeodeticWeather(input: RunWeatherInput): Promise<{
   const goodCount = allDays.filter((d: any) => d.severity === "Calm" || d.severity === "Unsettled").length;
   const mixedCount = allDays.filter((d: any) => d.severity === "Turbulent").length;
 
+  const fallbackWindowsLabeled = candidateWindows.map((w, i) => ({
+    rank: defaultRankLabels(candidateWindows, isMundane ? "mundane" : "personal")[i] ?? "Strong window",
+    dates: w.dates,
+    nights: w.nights,
+    score: w.score,
+    note:
+      w.topDrivers.length > 0
+        ? `Average score ${w.score}/100 across these ${w.nightsLabel}; top drivers: ${w.topDrivers.join(", ")}.`
+        : `Average score ${w.score}/100 across ${w.nightsLabel} — steady stretch, few active events.`,
+  }));
+
   let interpretation: any = {
     titleFlourish: "window",
     verdict: `${cityPrimary}: ${goodCount} calmer days, ${mixedCount} mixed, ${severeCount} rough across the next ${windowDays}.`,
@@ -288,10 +337,15 @@ export async function runGeodeticWeather(input: RunWeatherInput): Promise<{
     rulerJourneyChain: personalLens
       ? `Chain: ${cityPrimary} → you become ${personalLens.relocatedAscSign} rising → ${personalLens.chartRulerPlanet} rules → relocated ${personalLens.chartRulerRelocatedHouse}${ordinalSuffix(personalLens.chartRulerRelocatedHouse)} (${personalLens.chartRulerRelocatedDomain}) → the trip's dominant topic shifts to that house.`
       : `Chain: ${cityPrimary} → (natal chart not on file) → city's geodetic lens still active → regenerate with birth data for the personal lens.`,
-    travelWindows: [],
+    travelWindows: fallbackWindowsLabeled,
     keyMoments: [],
     advice: {
-      bestWindow: severeDates.length === 0 ? "The whole window runs steady." : "Pick days outside the rough cluster.",
+      bestWindow:
+        candidateWindows.length > 0
+          ? `${candidateWindows[0].dates} — average ${candidateWindows[0].score}/100, the calmest stretch in this window.`
+          : severeDates.length === 0
+          ? "The whole window runs steady."
+          : "Pick days outside the rough cluster.",
       watchWindow: severeDates.length === 0 ? "No major pressure points flagged." : `Watch: ${severeDates.join(", ")}.`,
     },
   };
@@ -304,6 +358,22 @@ export async function runGeodeticWeather(input: RunWeatherInput): Promise<{
       mundaneLead = lead.situationLead;
     } else {
       interpretation = await writeWeatherReading(aiInput);
+      // Guard: the model can only label. Dates/nights/score come from the
+      // deterministic window-proposer so we trust numbers end-to-end. If the
+      // AI returned fewer labels than candidates, pad with defaults.
+      const ranks = (interpretation.travelWindows ?? []).map((w: any) => w.rank);
+      const notes = (interpretation.travelWindows ?? []).map((w: any) => w.note);
+      interpretation.travelWindows = candidateWindows.map((c, i) => ({
+        rank: ranks[i] || defaultRankLabels(candidateWindows, "personal")[i] || "Strong window",
+        dates: c.dates,
+        nights: c.nights,
+        score: c.score,
+        note:
+          notes[i] ||
+          (c.topDrivers.length > 0
+            ? `Average ${c.score}/100 — top drivers: ${c.topDrivers.join(", ")}.`
+            : `Average ${c.score}/100 across ${c.nightsLabel}.`),
+      }));
     }
   } catch (err: any) {
     console.warn("Weather AI failed, using fallback interpretation:", err?.message);
