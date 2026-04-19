@@ -18,6 +18,7 @@ import { GeodeticLinesSection } from "./GeodeticLinesSection";
 import { TimingDecisions } from "./TimingDecisions";
 import { Colophon } from "./Colophon";
 import MundaneReading from "./mundane/MundaneReading";
+import { chartRulerImplication } from "@/lib/readings/personal-lens";
 
 interface WeatherForecastPayload {
     windowDays: number;
@@ -128,6 +129,9 @@ export default function WeatherReading({ forecast, readingId }: Props) {
     const chartRulerLine = forecast.personalLens
         ? renderChartRulerLine(forecast.personalLens, cityPrimary)
         : null;
+    const chartRulerImplicationLine = forecast.personalLens
+        ? chartRulerImplication(forecast.personalLens, cityPrimary)
+        : null;
 
     return (
         <div className="min-h-screen w-full bg-[var(--bg)] text-[var(--text-primary)]">
@@ -155,6 +159,7 @@ export default function WeatherReading({ forecast, readingId }: Props) {
                         score={macroScore}
                         scoreBand={scoreBand(macroScore).toUpperCase()}
                         chartRulerLine={chartRulerLine}
+                        chartRulerImplicationLine={chartRulerImplicationLine}
                         readingId={readingId}
                     />
 

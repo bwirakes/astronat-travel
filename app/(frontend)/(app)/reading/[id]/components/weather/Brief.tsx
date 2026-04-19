@@ -22,6 +22,11 @@ interface Props {
      * natal chart on file); renders a subtle prompt instead.
      */
     chartRulerLine?: string | null;
+    /**
+     * One-sentence answer to "so what?" — names what the trip does to the
+     * chart ruler's topic. Pure function of the natal/relocated house pair.
+     */
+    chartRulerImplicationLine?: string | null;
     readingId?: string;
 }
 
@@ -37,6 +42,7 @@ export function Brief({
     score,
     scoreBand,
     chartRulerLine,
+    chartRulerImplicationLine,
     readingId,
 }: Props) {
     const [regenerating, setRegenerating] = useState(false);
@@ -255,21 +261,40 @@ export function Brief({
 
             {/* Chart-ruler line — the single most important sentence on this page. */}
             {chartRulerLine ? (
-                <p
-                    style={{
-                        fontFamily: "var(--font-secondary)",
-                        fontSize: "clamp(1.1rem, 2vw, 1.35rem)",
-                        lineHeight: 1.45,
-                        color: "var(--text-primary)",
-                        margin: 0,
-                        maxWidth: "52ch",
-                        textWrap: "pretty",
-                        fontStyle: "italic",
-                        fontWeight: 400,
-                    }}
-                >
-                    {chartRulerLine}
-                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+                    <p
+                        style={{
+                            fontFamily: "var(--font-secondary)",
+                            fontSize: "clamp(1.1rem, 2vw, 1.35rem)",
+                            lineHeight: 1.45,
+                            color: "var(--text-primary)",
+                            margin: 0,
+                            maxWidth: "52ch",
+                            textWrap: "pretty",
+                            fontStyle: "italic",
+                            fontWeight: 400,
+                        }}
+                    >
+                        {chartRulerLine}
+                    </p>
+                    {chartRulerImplicationLine && (
+                        <p
+                            style={{
+                                fontFamily: "var(--font-secondary)",
+                                fontSize: "clamp(1.1rem, 2vw, 1.35rem)",
+                                lineHeight: 1.45,
+                                color: "var(--text-primary)",
+                                margin: 0,
+                                maxWidth: "52ch",
+                                textWrap: "pretty",
+                                fontStyle: "italic",
+                                fontWeight: 400,
+                            }}
+                        >
+                            {chartRulerImplicationLine}
+                        </p>
+                    )}
+                </div>
             ) : (
                 <p
                     style={{
