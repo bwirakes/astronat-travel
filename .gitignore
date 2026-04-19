@@ -69,6 +69,13 @@ test-houses.ts
 proxy.ts
 update-notion.mjs
 
+# Research binaries — keep source .md alongside code, not the rendered artifacts
+docs/**/*.ttf
+docs/**/*.otf
+docs/**/*.woff
+docs/**/*.woff2
+docs/**/uploads/
+
 # Unused public assets
 public/test.gif
 public/file.svg
