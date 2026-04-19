@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { AcgMap, type NatalData } from "@/app/components/AcgMap";
 
 interface LineRow {
@@ -128,7 +128,35 @@ export function LinesEditorial({
     cityPrimary,
 }: Props) {
     const [lines, setLines] = useState<LineRow[]>([]);
-    const natal = natalPlanets && natalPlanets.length > 0 ? natalToAcgData(natalPlanets) : null;
+
+    // Memo prop refs the AcgMap subtree consumes — without this, every parent
+    // render emits new {natal, highlightCity} object identities, the AcgMap's
+    // distances useMemo re-runs, its bubble-up useEffect fires, our setLines
+    // re-renders us, and the loop maxes out React's update depth.
+    const natal = useMemo(
+        () => (natalPlanets && natalPlanets.length > 0 ? natalToAcgData(natalPlanets) : null),
+        [natalPlanets],
+    );
+    const highlightCity = useMemo(
+        () => ({ lat: destinationLat, lon: destinationLon, name: cityPrimary }),
+        [destinationLat, destinationLon, cityPrimary],
+    );
+    // Dedup the bubbled-up output so identical results don't re-trigger a
+    // setState — defends against the same-object-different-ref churn even
+    // when the inner map keeps emitting.
+    const handleLinesCalculated = useCallback((out: LineRow[]) => {
+        setLines((prev) => {
+            if (prev.length !== out.length) return out;
+            for (let i = 0; i < out.length; i++) {
+                const a = prev[i];
+                const b = out[i];
+                if (a.planet !== b.planet || a.angle !== b.angle || a.distance_km !== b.distance_km) {
+                    return out;
+                }
+            }
+            return prev;
+        });
+    }, []);
 
     const nearLines = [...lines]
         .filter((l) => l.distance_km >= 0 && l.distance_km < 1500)
@@ -216,10 +244,10 @@ export function LinesEditorial({
                             natal={natal}
                             birthDateTimeUTC={birthDateTimeUTC || undefined}
                             birthLon={birthLon ?? undefined}
-                            highlightCity={{ lat: destinationLat, lon: destinationLon, name: cityPrimary }}
+                            highlightCity={highlightCity}
                             compact
                             interactive={false}
-                            onLinesCalculated={(out) => setLines(out)}
+                            onLinesCalculated={handleLinesCalculated}
                         />
                     </div>
                 ) : (
