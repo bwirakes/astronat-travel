@@ -5,6 +5,7 @@ import { Download, Search } from "lucide-react";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import type { EventType, PatternEvent } from "@/lib/astro/geodetic-patterns";
 import { BODIES, GEN_END_YEAR, GEN_START_YEAR, SIGNS } from "@/lib/astro/geodetic-patterns";
+import { COUNTRY_CHARTS } from "@/lib/astro/mundane-charts";
 import { loadEventsRange } from "./actions";
 import { UnifiedTable } from "./UnifiedTable";
 import { FilterDropdown } from "./FilterDropdown";
@@ -20,8 +21,10 @@ export default function GeodeticPatternsPage() {
   const [to, setTo] = useState(today);
 
   const allBodies = useMemo(() => Object.keys(BODIES), []);
+  const allCities = useMemo(() => COUNTRY_CHARTS.map((c) => c.capital.city), []);
   const [bodyFilter, setBodyFilter] = useState<Set<string>>(new Set(allBodies));
   const [signFilter, setSignFilter] = useState<Set<string>>(new Set(SIGNS));
+  const [cityFilter, setCityFilter] = useState<Set<string>>(new Set(allCities));
   const [catFilter, setCatFilter] = useState<Set<Category>>(new Set(ALL_CATEGORIES));
   const [anareticOnly, setAnareticOnly] = useState(false);
   const [query, setQuery] = useState("");
@@ -64,14 +67,17 @@ export default function GeodeticPatternsPage() {
     ].filter(Boolean).join(" ").toLowerCase();
     return hay.includes(q);
   };
+  // City filter only narrows sun-over-mc events; other types ignore it.
+  const cityMatches = (e: PatternEvent) =>
+    e.type !== "sun-over-mc" || cityFilter.has(String(e.meta?.city ?? ""));
   const passes = (e: PatternEvent) =>
     catFilter.has(CATEGORY_OF[e.type]) &&
-    bodyMatches(e) && signMatches(e) && queryMatches(e) &&
+    bodyMatches(e) && signMatches(e) && cityMatches(e) && queryMatches(e) &&
     (!anareticOnly || e.meta?.anaretic === true);
 
   const visible = useMemo(
     () => events.filter(passes),
-    [events, catFilter, bodyFilter, signFilter, anareticOnly, query]
+    [events, catFilter, bodyFilter, signFilter, cityFilter, anareticOnly, query]
   );
 
   return (
@@ -138,6 +144,7 @@ export default function GeodeticPatternsPage() {
           </div>
           <FilterDropdown label="Bodies" options={allBodies} selected={bodyFilter} onChange={setBodyFilter} />
           <FilterDropdown label="Signs" options={SIGNS} selected={signFilter} onChange={setSignFilter} />
+          <FilterDropdown label="Cities (Sun/MC)" options={allCities} selected={cityFilter} onChange={setCityFilter} />
           <label style={toggleChip(anareticOnly)}>
             <input
               type="checkbox"

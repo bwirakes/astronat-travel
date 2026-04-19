@@ -7,6 +7,7 @@
 
 import SwissEph from "swisseph-wasm";
 import { computeDeclination } from "./declination";
+import { COUNTRY_CHARTS } from "./mundane-charts";
 import {
   ASPECT_BODIES,
   BODIES,
@@ -783,6 +784,68 @@ function detectOneSidedNodal(swe: Swe, jdStart: number, jdEnd: number): PatternE
   return out;
 }
 
+/**
+ * Sun crossing a city's geodetic MC: once per year per city, the transiting
+ * Sun's ecliptic longitude equals the city's geographic longitude
+ * (geodetic projection maps ecliptic lon 1:1 to geographic lon, with 0°E = 0° Aries).
+ */
+function detectSunOverMC(swe: Swe, jdStart: number, jdEnd: number): PatternEvent[] {
+  const events: PatternEvent[] = [];
+  const STEP = 1.0;
+  const sunPid = BODIES.Sun;
+  const sunFlags = flagsFor("Sun");
+
+  // Shift longitude so target = 0; value wraps (-180, 180], sign change = crossing.
+  const shift = (lon: number, target: number) => {
+    let d = ((lon - target + 540) % 360) - 180;
+    return d;
+  };
+
+  for (const chart of COUNTRY_CHARTS) {
+    const target = ((chart.capital.lon % 360) + 360) % 360;
+
+    let prevShifted = shift(swe.calc(jdStart, sunPid, sunFlags).longitude, target);
+    let prevJd = jdStart;
+
+    for (let jd = jdStart + STEP; jd <= jdEnd; jd += STEP) {
+      const sunLon = swe.calc(jd, sunPid, sunFlags).longitude;
+      const cur = shift(sunLon, target);
+
+      // Ascending zero crossing: prev negative, cur non-negative, small step.
+      if (prevShifted < 0 && cur >= 0 && Math.abs(cur - prevShifted) < 30) {
+        let lo = prevJd, hi = jd;
+        for (let i = 0; i < 24; i++) {
+          const mid = (lo + hi) / 2;
+          const m = shift(swe.calc(mid, sunPid, sunFlags).longitude, target);
+          if (m < 0) lo = mid; else hi = mid;
+        }
+        const exactJd = hi;
+        const exactLon = swe.calc(exactJd, sunPid, sunFlags).longitude;
+        events.push({
+          utc: jdToIso(swe, exactJd),
+          jd: Number(exactJd.toFixed(6)),
+          type: "sun-over-mc",
+          body: "Sun",
+          sign: getSign(exactLon),
+          lon: Number(exactLon.toFixed(6)),
+          geodeticZone: geodeticZoneFor(exactLon),
+          meta: {
+            city: chart.capital.city,
+            country: chart.name,
+            flag: chart.flag,
+            cityLon: chart.capital.lon,
+            cityLat: chart.capital.lat,
+            axis: "MC",
+          },
+        });
+      }
+      prevShifted = cur;
+      prevJd = jd;
+    }
+  }
+  return events;
+}
+
 export async function computeYearEvents(year: number): Promise<PatternEvent[]> {
   const swe = await getSwe();
   const jdStart = swe.julday(year, 1, 1, 0);
@@ -799,6 +862,7 @@ export async function computeYearEvents(year: number): Promise<PatternEvent[]> {
     ...detectOOBSpans(swe, jdStart, jdEnd),
     ...detectNodalActivations(swe, jdStart, jdEnd),
     ...detectOneSidedNodal(swe, jdStart, jdEnd),
+    ...detectSunOverMC(swe, jdStart, jdEnd),
   ];
   events.sort((a, b) => a.jd - b.jd);
   return events;

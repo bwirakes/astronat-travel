@@ -7,7 +7,8 @@ const COLUMNS = [
   "geodeticZone", "aspect", "body1", "body2", "direction", "eclipseType",
   "durationDays", "endUtc", "endSign", "members", "count",
   "peakDeclination", "hemisphere", "axis", "side", "peakCount",
-  "speed", "seasonal", "anaretic", "retrograde",
+  "speed", "seasonal", "city", "country", "cityLon", "cityLat",
+  "anaretic", "retrograde",
 ] as const;
 
 function escapeCsv(v: unknown): string {
@@ -47,6 +48,10 @@ function rowFor(e: PatternEvent): Record<(typeof COLUMNS)[number], unknown> {
     peakCount: m.peakCount ?? "",
     speed: m.speed ?? "",
     seasonal: m.seasonal === true ? "true" : "",
+    city: m.city ?? "",
+    country: m.country ?? "",
+    cityLon: m.cityLon ?? "",
+    cityLat: m.cityLat ?? "",
     anaretic: m.anaretic === true ? "true" : "",
     retrograde: m.retrograde === true ? "true" : "",
   };
