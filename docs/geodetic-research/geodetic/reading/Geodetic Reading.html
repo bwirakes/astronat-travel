@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Geodetic Reading — Ubud</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<link rel="stylesheet" href="v1.css">
+<link rel="stylesheet" href="v2.css">
+<link rel="stylesheet" href="v3.css">
+<style>
+  html, body { margin: 0; padding: 0; background: var(--color-charcoal); }
+  /* Variant switcher (Tweaks style) */
+  .geo-switcher {
+    position: fixed; bottom: 20px; right: 20px; z-index: 100;
+    background: rgba(18,18,18,0.92); backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: var(--radius-full); padding: 5px; display: flex; gap: 2px;
+    box-shadow: 0 10px 32px rgba(0,0,0,0.35);
+  }
+  .geo-switcher button {
+    background: transparent; border: none; padding: 9px 18px;
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: rgba(248,245,236,0.55); cursor: pointer;
+    border-radius: var(--radius-full); white-space: nowrap;
+    transition: all 0.2s var(--ease);
+  }
+  .geo-switcher button.on {
+    background: var(--color-y2k-blue); color: var(--color-eggshell);
+  }
+  .geo-switcher button:hover:not(.on) { color: var(--color-eggshell); }
+  .geo-switcher-label {
+    padding: 9px 14px 9px 18px; font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold);
+    border-right: 1px solid rgba(255,255,255,0.1);
+  }
+  @media (max-width: 640px) {
+    .geo-switcher { bottom: 12px; right: 12px; left: 12px; justify-content: center; }
+    .geo-switcher-label { display: none; }
+    .geo-switcher button { padding: 9px 12px; font-size: 9px; letter-spacing: 0.1em; flex: 1; }
+  }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="data.jsx"></script>
+  <script type="text/babel" src="components.jsx"></script>
+  <script type="text/babel" src="V1_Editorial.jsx"></script>
+  <script type="text/babel" src="V2_Almanac.jsx"></script>
+  <script type="text/babel" src="V3_Almanac.jsx"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+      "variant": "v1"
+    }/*EDITMODE-END*/;
+
+    function App() {
+      const [variant, setVariant] = useState(() => {
+        try { return localStorage.getItem('geo_variant') || TWEAK_DEFAULTS.variant; }
+        catch(e) { return TWEAK_DEFAULTS.variant; }
+      });
+
+      useEffect(() => {
+        try { localStorage.setItem('geo_variant', variant); } catch(e) {}
+      }, [variant]);
+
+      const variants = [
+        { k: 'v1', l: 'Editorial', c: V1Reading },
+        { k: 'v2', l: 'Almanac',   c: V2Reading },
+        { k: 'v3', l: 'Cinematic', c: V3Reading },
+      ];
+      const Active = variants.find(v => v.k === variant)?.c || V1Reading;
+
+      return (
+        <div data-screen-label={variants.find(v => v.k === variant)?.l + ' Reading'}>
+          <Active />
+          <div className="geo-switcher">
+            <span className="geo-switcher-label">Variation</span>
+            {variants.map(v => (
+              <button key={v.k} className={variant === v.k ? 'on' : ''} onClick={() => setVariant(v.k)}>
+                {v.l}
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

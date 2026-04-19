@@ -21,89 +21,93 @@ export interface GeodeticZone {
   desc: string;
 }
 
+// Zone descriptions are deliberately archetypal — no hard-coded city
+// references. The same text must read sensibly for any city that happens
+// to fall in this 30° band on the world map, since any destination's MC
+// or ASC can resolve to any of the twelve zones.
 export const GEODETIC_ZONES: GeodeticZone[] = [
   {
     id: "aries",
     sign: "Aries", glyph: "♈", startLon: 0, elem: "fire",
     cities: ["London", "Lagos", "Accra", "Dublin"],
     keyword: "The Pioneer Meridian",
-    desc: "Greenwich, 0°, locks to 0° Aries in the geodetic system. Cities here carry an Aries Ascendant: pioneering, independent, competitive, and often culturally first-mover. London's historical position as the world's time-keeper is no coincidence — Aries governs beginnings and the self.",
+    desc: "Greenwich, 0°, locks to 0° Aries in the geodetic system. This band carries an Aries signature: pioneering, independent, competitive, first-mover. Transits through Aries land on this column with unusual force — initiations, contests, and anything that calls for going first.",
   },
   {
     id: "taurus",
     sign: "Taurus", glyph: "♉", startLon: 30, elem: "earth",
     cities: ["Cairo", "Istanbul", "Riyadh", "Kyiv"],
     keyword: "The Builder Meridian",
-    desc: "30°E gives these cities a Taurus Ascendant — a deep connection to material wealth, physical beauty, and cultural endurance. Cairo's millennia-spanning civilization and Istanbul's role as a crossroads of trade both express the Taurean themes of accumulation, beauty, and permanence.",
+    desc: "30°E gives this band a Taurus signature — accumulation, physical beauty, and cultural endurance. The themes that hold here are material: what you own, what you build, what lasts. Transits through Taurus surface slowly and settle into the body and the balance sheet.",
   },
   {
     id: "gemini",
     sign: "Gemini", glyph: "♊", startLon: 60, elem: "air",
     cities: ["Dubai", "Karachi", "Tehran", "Nairobi"],
     keyword: "The Messenger Meridian",
-    desc: "60°E brings a Gemini Ascendant. Gemini governs communication, trade routes, and the exchange of ideas. Dubai's position as the world's busiest airline hub and most connected city is a direct expression of the Gemini mandate: adaptability and the movement of information and people.",
+    desc: "60°E brings a Gemini signature. Gemini governs communication, trade routes, and the exchange of ideas — anywhere people, signals, and goods are moved between other places. Transits through Gemini quicken the tempo here: more conversations, more shipments, more connections.",
   },
   {
     id: "cancer",
     sign: "Cancer", glyph: "♋", startLon: 90, elem: "water",
     cities: ["Dhaka", "Kolkata", "Yangon", "Kunming"],
     keyword: "The Nurturer Meridian",
-    desc: "90°E aligns with a Cancer Ascendant — water, family, and emotional depth. This meridian runs through South and Southeast Asia's most densely populated regions: areas with profound cultural emphasis on familial bonds, ancestral lineage, and home as a sacred institution.",
+    desc: "90°E aligns with a Cancer signature — water, family, and emotional depth. The public themes of this column are ancestral: home, belonging, tribe, and what gets passed down. Transits through Cancer move the private register into view: mood, memory, and the terms of care.",
   },
   {
     id: "leo",
     sign: "Leo", glyph: "♌", startLon: 120, elem: "fire",
     cities: ["Bangkok", "Manila", "Beijing", "Taipei"],
     keyword: "The Sovereign Meridian",
-    desc: "120°E gives cities a Leo Ascendant — visibility, drama, and performance. Southeast Asian capitals here are renowned for their theatrical culture, grand royal ceremonies, and outward displays of power. The Leo meridian amplifies everything it touches to center stage.",
+    desc: "120°E gives this band a Leo signature — visibility, drama, and performance. Whatever happens here tends to happen with an audience, and the local register rewards confidence over modesty. Transits through Leo raise the stage: recognition, identity, and the uses of authority.",
   },
   {
     id: "virgo",
     sign: "Virgo", glyph: "♍", startLon: 150, elem: "earth",
     cities: ["Tokyo", "Seoul", "Sydney", "Vladivostok"],
     keyword: "The Analyst Meridian",
-    desc: "150°E brings a Virgo Ascendant. Japan's legendary precision culture — from sushi craftsmanship to automotive engineering — expresses Virgo's mastery of refinement, ritual, and systematic improvement. Sydney's civic precision and structural order echo the same archetype.",
+    desc: "150°E brings a Virgo signature — refinement, ritual, and systematic improvement. Work here tends to reward precision over size; the culture prizes the craftsman. Transits through Virgo surface the details: maintenance, editing, and the slow compounding of small corrections.",
   },
   {
     id: "libra",
     sign: "Libra", glyph: "♎", startLon: 180, elem: "air",
     cities: ["Fiji", "Marshall Islands", "Pacific Ocean"],
     keyword: "The Balance Meridian",
-    desc: "The 180° meridian is the International Date Line — the point where East meets West, yesterday meets today, and the calendar flips. It is the Libra meridian: the sign of balance, negotiation, and the meeting of opposites. Where one day ends, another begins in perfect equilibrium.",
+    desc: "The 180° meridian is the International Date Line — the point where East meets West, yesterday meets today. It carries a Libra signature: balance, negotiation, and the meeting of opposites. Transits through Libra fall on this column as contracts, partnerships, and acts of weighing.",
   },
   {
     id: "scorpio",
     sign: "Scorpio", glyph: "♏", startLon: -150, elem: "water",
     cities: ["Anchorage", "Honolulu", "Tahiti"],
     keyword: "The Alchemist Meridian",
-    desc: "150°W carries a Scorpio Ascendant. Alaska's raw wilderness and psychological intensity, Honolulu's complex colonial history, and Hawaii's volcanic landscape express Scorpio's core themes: power, depth, transformation, and what lies beneath the surface.",
+    desc: "150°W carries a Scorpio signature — power, depth, transformation, and what lies beneath the surface. Themes here tend to be intense rather than light; the register is one of exposure and consequence. Transits through Scorpio sharpen what was hidden and force the reveal.",
   },
   {
     id: "sagittarius",
     sign: "Sagittarius", glyph: "♐", startLon: -120, elem: "fire",
     cities: ["Los Angeles", "Vancouver", "Mexico City", "Denver"],
     keyword: "The Explorer Meridian",
-    desc: "120°W aligns with a Sagittarius Ascendant. The American West — with its mythology of the frontier, freedom, and perpetual reinvention — is one of the purest expressions of Sagittarian energy on Earth. Hollywood broadcasts its visions globally; LA insists that anything is possible.",
+    desc: "120°W aligns with a Sagittarius signature — frontier, freedom, and perpetual reinvention. This band rewards scale, travel, and the belief that the next thing is bigger than the last. Transits through Sagittarius open the aperture: long-distance moves, publishing, teaching, belief.",
   },
   {
     id: "capricorn",
     sign: "Capricorn", glyph: "♑", startLon: -90, elem: "earth",
     cities: ["New York", "Chicago", "Bogotá", "New Orleans"],
     keyword: "The Architect Meridian",
-    desc: "90°W carries a Capricorn Ascendant. New York City — the world's most famous skyline, financial capital, and engine of institutional ambition — is almost a perfect embodiment of Capricorn: relentless upward drive, structural ambition, and the belief that hard work is the universal currency.",
+    desc: "90°W carries a Capricorn signature — relentless upward drive, structural ambition, and the belief that hard work is the universal currency. The themes here are institutional: status, credential, and the long climb. Transits through Capricorn surface as deadlines, rankings, and legacy questions.",
   },
   {
     id: "aquarius",
     sign: "Aquarius", glyph: "♒", startLon: -60, elem: "air",
     cities: ["Reykjavik", "Greenland", "São Paulo", "Buenos Aires"],
     keyword: "The Visionary Meridian",
-    desc: "60°W brings an Aquarius Ascendant. Iceland leads globally in gender equality, renewable energy, and progressive governance — pure Aquarian idealism made law. Brazil's creativity, social innovation, and cultural pluralism equally express the Aquarian drive toward a radically inclusive future.",
+    desc: "60°W brings an Aquarius signature — idealism, social innovation, and a pull toward the radically new. Themes here run ahead of consensus and reward groups, networks, and long-range experiments. Transits through Aquarius arrive as breaks from pattern, unlikely alliances, and public ideas.",
   },
   {
     id: "pisces",
     sign: "Pisces", glyph: "♓", startLon: -30, elem: "water",
     cities: ["Lisbon", "Dakar", "Reykjavik fringe", "Mid-Atlantic"],
     keyword: "The Dreamer Meridian",
-    desc: "30°W carries a Pisces Ascendant. Lisbon's fado music — the most mournful and nostalgic musical tradition in Europe — is a direct expression of this Piscean longitude: longing, the sea, spiritual yearning, and the dissolution of boundaries between self and the divine.",
+    desc: "30°W carries a Pisces signature — longing, the sea, spiritual yearning, and the dissolution of boundaries between self and world. This band softens hard edges and rewards listening over deciding. Transits through Pisces wash the definitions and ask for faith instead of proof.",
   },
 ];
