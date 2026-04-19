@@ -39,7 +39,10 @@ function buildBars(days: GeodeticWeatherResult[]): Bar[] {
         const span = days.slice(i, j);
         const len = span.length;
 
-        if (b === "rough" || (b === "good" && len >= 3)) {
+        // Surface green windows at ≥2 days so short good stretches at the
+        // tail of a 7-day forecast don't get hidden — otherwise the Gantt
+        // looks rough-peak + silence while the strip clearly shows green.
+        if (b === "rough" || (b === "good" && len >= 2)) {
             // Peak = the day with the highest |deviation from 50|
             let peakOffset = 0;
             let bestDev = -1;

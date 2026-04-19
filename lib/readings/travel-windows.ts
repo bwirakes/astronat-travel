@@ -12,6 +12,7 @@
  */
 
 import type { GeodeticWeatherResult } from "@/app/lib/geodetic-weather-types";
+import { tierToBucket } from "@/app/lib/geodetic-weather-types";
 
 export interface CandidateWindow {
     /** 0-based day index into the forecast window. */
@@ -49,19 +50,36 @@ export function findTravelWindows(
     const minLen = opts.minLen ?? (n <= 10 ? 3 : n <= 35 ? 5 : 7);
     const maxLen = opts.maxLen ?? (n <= 10 ? 7 : n <= 35 ? 12 : 18);
 
-    // Precompute prefix sums for fast range-average.
+    // Precompute prefix sums for fast range-average over (raw score +
+    // bucket-weighted bonus). The Gantt's daily strip colours days by
+    // bucket (good / mixed / rough) rather than raw score, so a "Calm"
+    // day at score 65 can visually read greener than a "Turbulent" day
+    // at score 70. Weight good days up and rough days down so the window
+    // proposer's ranking matches what the reader sees in the strip.
+    const BUCKET_BIAS: Record<string, number> = { good: 12, mixed: 0, rough: -12 };
+    const effective = (d: GeodeticWeatherResult) =>
+        (d.score ?? 60) + (BUCKET_BIAS[tierToBucket(d.severity)] ?? 0);
     const prefix: number[] = [0];
+    const prefixRaw: number[] = [0];
     for (let i = 0; i < n; i++) {
-        prefix.push(prefix[i] + (days[i].score ?? 60));
+        prefix.push(prefix[i] + effective(days[i]));
+        prefixRaw.push(prefixRaw[i] + (days[i].score ?? 60));
     }
-    const avg = (a: number, b: number) => (prefix[b + 1] - prefix[a]) / (b - a + 1);
+    const rankAvg = (a: number, b: number) => (prefix[b + 1] - prefix[a]) / (b - a + 1);
+    const rawAvg = (a: number, b: number) =>
+        (prefixRaw[b + 1] - prefixRaw[a]) / (b - a + 1);
 
     // Generate every valid window, then greedy-pick top-scoring non-overlapping.
-    const candidates: Array<{ start: number; end: number; score: number }> = [];
+    const candidates: Array<{ start: number; end: number; score: number; raw: number }> = [];
     for (let len = minLen; len <= Math.min(maxLen, n); len++) {
         for (let start = 0; start + len - 1 < n; start++) {
             const end = start + len - 1;
-            candidates.push({ start, end, score: avg(start, end) });
+            candidates.push({
+                start,
+                end,
+                score: rankAvg(start, end),
+                raw: rawAvg(start, end),
+            });
         }
     }
     candidates.sort((a, b) => b.score - a.score);
@@ -98,7 +116,10 @@ export function findTravelWindows(
         const startLabel = fmtShort(startDate);
         const endLabel = fmtShort(endDate);
         const nights = c.end - c.start;     // nights between first & last day
-        const score = Math.round(c.score);
+        // UI shows the raw average (matches the per-day score reader sees).
+        // Bucket bias only drives the internal ranking order, not the displayed
+        // number — that would be misleading.
+        const score = Math.round(c.raw);
 
         // Pull top drivers from events across the window for the AI to cite.
         const driverCounts: Record<string, number> = {};
@@ -116,7 +137,7 @@ export function findTravelWindows(
             startIdx: c.start,
             endIdx: c.end,
             nights,
-            avgScore: c.score,
+            avgScore: c.raw,
             startDate: startDay.dateUtc.slice(0, 10),
             endDate: endDay.dateUtc.slice(0, 10),
             startLabel,
