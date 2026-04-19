@@ -24,6 +24,19 @@ export interface WeatherReadingInput {
         angle?: string;                    // "Midheaven", "Descendant", etc.
     }>;
     /**
+     * Deterministically-computed candidate travel windows. The AI MUST
+     * use these verbatim (same dates, nights, score). Its only job is
+     * to choose a rank label and write a one-sentence note for each.
+     */
+    candidateWindows: Array<{
+        dates: string;          // "May 12 – May 22, 2026"
+        startDate: string;       // "2026-05-12"
+        endDate: string;         // "2026-05-22"
+        nights: number;
+        score: number;           // 0-100
+        topDrivers: string[];    // up to 2 planet names active in the window
+    }>;
+    /**
      * Personal lens — surfaces chart-ruler relocation and close natal-angle
      * contacts so the model has real, user-specific facts to write from.
      * Null if the user has no birth chart on file — in which case the model
@@ -69,13 +82,10 @@ rulerJourneyChain — ONE sentence in strict Chain syntax. If personalLens is pr
   "Chain: {City} → you become {relocatedAscSign} rising → {chartRulerPlanet} rules → your natal {N}th ({natalDomain}) → relocated {M}th ({relocatedDomain}) → {what that does to this trip}."
 Every arrow-separated segment MUST name a proper noun (planet, sign, house ordinal). No adjective-only links. If personalLens is null, fall back to: "Chain: {City} → under the {geodeticSign} column → {transiting planet from topEvents} crosses → {implication for the window}."
 
-travelWindows — 3 real date ranges from the input. Each:
-  rank — a clear label, preferring life-domain words over generic: "Best for rest", "Best for connection", "Best for a launch", "Watch window"
-  dates — "MMM D – MMM D, YYYY"
-  nights — integer matching the range
-  score — 0–100
-  note — one short sentence citing a specific transit from topEvents
-Non-overlapping. Highest score first.
+travelWindows — Use the exact entries in candidateWindows[]. Do NOT change dates, nights, or score — the window-proposer has already computed those from real daily engine output. Your job is only:
+  rank — a clear label, preferring life-domain words: "Best for rest", "Best for connection", "Best for a launch", "Quiet recovery", "Strong second". If there's only one window, label it "Best overall".
+  note — one short sentence citing a specific transit from topEvents OR the candidate's topDrivers. Make it concrete.
+Return exactly the same number of windows as candidateWindows has, in the same chronological order.
 
 keyMoments — 3–5 short stories. Each:
   title — short, human

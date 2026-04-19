@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { writeWeatherReading, type WeatherReadingInput } from "@/lib/ai/prompts/geodetic-weather";
 import type { Tone } from "@/lib/ai/schemas";
+import { findTravelWindows, defaultRankLabels } from "@/lib/readings/travel-windows";
+import { computePersonalLens } from "@/lib/readings/personal-lens";
 
 /**
  * POST /api/readings/[id]/regenerate-weather
@@ -74,6 +76,51 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     const bestDay = [...allDays].sort((a: any, b: any) => (b.score ?? 0) - (a.score ?? 0))[0];
     const worstDay = [...allDays].sort((a: any, b: any) => (a.score ?? 0) - (b.score ?? 0))[0];
 
+    const candidateWindows = findTravelWindows(cityForecasts[0].days, {
+        startDate: new Date(wf.startDate),
+    });
+
+    // Paran dedup on persisted days (old readings still have fractional-lat duplicates).
+    for (const city of cityForecasts) {
+        for (const day of city.days ?? []) {
+            if (!day.events || day.events.length === 0) continue;
+            const parans = day.events.filter((e: any) => e.layer === "paran");
+            const others = day.events.filter((e: any) => e.layer !== "paran");
+            const byKey: Record<string, any> = {};
+            for (const p of parans) {
+                const key = `${(p.planets ?? []).slice().sort().join("-")}::${p.label?.split(" at ")[0] ?? ""}`;
+                const prev = byKey[key];
+                if (!prev || Math.abs(p.severity ?? 0) > Math.abs(prev.severity ?? 0)) {
+                    byKey[key] = p;
+                }
+            }
+            day.events = [...others, ...Object.values(byKey)];
+        }
+    }
+
+    // Recompute personal lens with the correct relocated-ASC math if the
+    // reading has natal data on file. Older readings persisted the WRONG
+    // geodetic-ASC as the relocated ASC; regenerate picks up the fix.
+    let personalLens = wf.personalLens ?? null;
+    if (
+        Array.isArray(wf.natalPlanets) &&
+        wf.natalPlanets.length > 0 &&
+        typeof wf.natalAscLon === "number" &&
+        wf.birthDateTimeUTC
+    ) {
+        const birthDt = new Date(wf.birthDateTimeUTC);
+        if (!Number.isNaN(birthDt.getTime())) {
+            const fresh = await computePersonalLens({
+                natalPlanets: wf.natalPlanets,
+                natalAscLon: wf.natalAscLon,
+                natalDtUtc: birthDt,
+                destLat: cityForecasts[0].lat,
+                destLon: cityForecasts[0].lon,
+            });
+            if (fresh) personalLens = fresh;
+        }
+    }
+
     const aiInput: WeatherReadingInput = {
         destination: details.destination ?? cityForecasts[0].label,
         dateRange: {
@@ -88,6 +135,14 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
         worstDay: worstDay
             ? { date: worstDay.dateUtc.slice(0, 10), label: fmtDate(worstDay.dateUtc) }
             : null,
+        candidateWindows: candidateWindows.map((w) => ({
+            dates: w.dates,
+            startDate: w.startDate,
+            endDate: w.endDate,
+            nights: w.nights,
+            score: w.score,
+            topDrivers: w.topDrivers,
+        })),
         topEvents: topEvents.map((e: any) => {
             const a = e.planets?.[0] ?? "";
             const b = e.planets?.[1] ?? "";
@@ -99,23 +154,21 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
                 angle: e.angle,
             };
         }),
-        // Reuse the persisted personal lens if available — regeneration
-        // should not recompute the natal chart.
-        personalLens: wf.personalLens
+        personalLens: personalLens
             ? {
-                  relocatedAscSign: wf.personalLens.relocatedAscSign,
-                  chartRulerPlanet: wf.personalLens.chartRulerPlanet,
-                  chartRulerNatalHouse: wf.personalLens.chartRulerNatalHouse,
-                  chartRulerRelocatedHouse: wf.personalLens.chartRulerRelocatedHouse,
-                  chartRulerNatalDomain: wf.personalLens.chartRulerNatalDomain,
-                  chartRulerRelocatedDomain: wf.personalLens.chartRulerRelocatedDomain,
-                  activeAngleLines: (wf.personalLens.activeAngleLines ?? []).map((l: any) => ({
+                  relocatedAscSign: personalLens.relocatedAscSign,
+                  chartRulerPlanet: personalLens.chartRulerPlanet,
+                  chartRulerNatalHouse: personalLens.chartRulerNatalHouse,
+                  chartRulerRelocatedHouse: personalLens.chartRulerRelocatedHouse,
+                  chartRulerNatalDomain: personalLens.chartRulerNatalDomain,
+                  chartRulerRelocatedDomain: personalLens.chartRulerRelocatedDomain,
+                  activeAngleLines: personalLens.activeAngleLines.map((l: any) => ({
                       planet: l.planet,
                       angle: l.angle,
                       orbDeg: l.orbDeg,
                       isChartRuler: l.isChartRuler,
                   })),
-                  worldPointContacts: (wf.personalLens.worldPointContacts ?? []).map((w: any) => ({
+                  worldPointContacts: personalLens.worldPointContacts.map((w: any) => ({
                       planet: w.planet,
                       pointType: w.pointType,
                       orbDeg: w.orbDeg,
@@ -126,11 +179,27 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
 
     try {
         const interpretation = await writeWeatherReading(aiInput);
+        // Same guard as the generate path: AI labels, deterministic dates.
+        const ranks = (interpretation.travelWindows ?? []).map((w: any) => w.rank);
+        const notes = (interpretation.travelWindows ?? []).map((w: any) => w.note);
+        interpretation.travelWindows = candidateWindows.map((c, i) => ({
+            rank: ranks[i] || defaultRankLabels(candidateWindows, "personal")[i] || "Strong window",
+            dates: c.dates,
+            nights: c.nights,
+            score: c.score,
+            note:
+                notes[i] ||
+                (c.topDrivers.length > 0
+                    ? `Average ${c.score}/100 — top drivers: ${c.topDrivers.join(", ")}.`
+                    : `Average ${c.score}/100 across ${c.nightsLabel}.`),
+        }));
 
         const newDetails = {
             ...details,
             weatherForecast: {
                 ...wf,
+                cities: cityForecasts,      // persist dedup'd events
+                personalLens,                // persist re-computed lens
                 macroScore,
                 interpretation,
                 generated: new Date().toISOString(),
