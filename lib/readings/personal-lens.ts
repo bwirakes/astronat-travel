@@ -17,6 +17,8 @@
 import {
     signFromLongitude,
     houseFromLongitude,
+    geodeticMCLongitude,
+    geodeticASCLongitude,
 } from "@/app/lib/geodetic";
 import { relocatedAngles } from "@/lib/astro/relocate";
 
@@ -67,6 +69,32 @@ export interface PersonalLens {
         pointType: "0° cardinal" | "15° fixed" | "7.5° mutable" | "22.5° cardinal";
         orbDeg: number;
     }>;
+    /**
+     * Geodetic MC longitude for the destination city (time-invariant).
+     * 0° Aries pinned to Greenwich; this is just the geographic longitude
+     * normalised to [0, 360). A pure city fact, not a user fact.
+     */
+    cityGeodeticMcLon: number;
+    /**
+     * Geodetic ASC longitude for the destination city — depends only on
+     * lat/lon, not on the user's birth time.
+     */
+    cityGeodeticAscLon: number;
+    /**
+     * Per-planet geographic longitude landings (PDF principle 3).
+     * Each natal planet's ecliptic longitude maps 1:1 to a geographic
+     * longitude (0° Aries = Greenwich). `angularMatch` fires when a
+     * natal planet's earth longitude is within 5° of the destination
+     * (or its 180° opposite) — the rule-of-three signal that the city
+     * happens to sit on one of the user's natal-planet meridians.
+     */
+    natalPlanetGeography: Array<{
+        planet: string;
+        planetLon: number;
+        geographicLon: number;
+        geographicLabel: string;
+        angularMatch: boolean;
+    }>;
 }
 
 // ── Traditional rulership (PDF default) ───────────────────────────────────
@@ -101,60 +129,10 @@ const HOUSE_DOMAIN: Record<number, string> = {
     12: "retreat, the unseen, ancestors",
 };
 
-// Compact noun for the ruler's natal house — the topic the user already carries.
-const HOUSE_NATAL_NOUN: Record<number, string> = {
-    1: "self-presentation",
-    2: "resources and what you value",
-    3: "conversations and short trips",
-    4: "home and inner ground",
-    5: "play, romance, and creative risk",
-    6: "daily work and health rhythm",
-    7: "partnerships and the public mirror",
-    8: "intimacy and shared resources",
-    9: "teaching and foreign ties",
-    10: "career and public standing",
-    11: "groups and long-term hopes",
-    12: "the unseen and retreat",
-};
-
-// Verb phrase for the relocated house — what the trip tends to do to the topic.
-const HOUSE_RELOCATED_VERB: Record<number, string> = {
-    1: "concentrate into how you show up",
-    2: "settle into resources and what you value",
-    3: "scatter into conversations and short trips",
-    4: "quiet into domestic ground",
-    5: "spill into play, romance, and creative risk",
-    6: "route into daily work and health rhythm",
-    7: "pull toward partnerships and contracts",
-    8: "deepen into intimacy and what's shared",
-    9: "expand toward teaching, publishing, and foreign ground",
-    10: "push into public visibility",
-    11: "broaden into community and long-term hopes",
-    12: "withdraw into the unseen",
-};
-
-/**
- * One-sentence implication that names what the trip *does* to the chart
- * ruler's topic, not which house it lands in. Pure function; the per-house
- * tables above are deliberately small so the line stays under 20 words.
- *
- * The PDF (p.3 Brandon/Jakarta example) implies — but doesn't compute —
- * that the natal-house → relocated-house delta is the story. This is that
- * second sentence the reader needs to nod.
- */
-export function chartRulerImplication(
-    lens: Pick<PersonalLens, "chartRulerPlanet" | "chartRulerNatalHouse" | "chartRulerRelocatedHouse">,
-    city: string,
-): string {
-    const { chartRulerPlanet: ruler, chartRulerNatalHouse: nH, chartRulerRelocatedHouse: rH } = lens;
-    if (nH === rH) {
-        const noun = HOUSE_NATAL_NOUN[nH] ?? "the same themes";
-        return `${city} doesn't shift the topic — it sharpens the ${noun} pressure you already carry.`;
-    }
-    const natal = HOUSE_NATAL_NOUN[nH] ?? "your usual themes";
-    const verb = HOUSE_RELOCATED_VERB[rH] ?? "shift into new ground";
-    return `Expect ${natal} to ${verb} here — same ${ruler}, new stage.`;
-}
+// chartRulerImplication() lives in app/lib/personal-lens-text.ts so the
+// client bundle can import it without pulling in Swiss Ephemeris. Re-export
+// it here for any server-side caller that already imports from this file.
+export { chartRulerImplication } from "@/app/lib/personal-lens-text";
 
 interface WorldPoint {
     deg: number;
@@ -175,6 +153,30 @@ const WORLD_POINTS = buildWorldPoints();
 function circularOrb(a: number, b: number): number {
     const diff = Math.abs(((a - b) % 360) + 360) % 360;
     return Math.min(diff, 360 - diff);
+}
+
+// Geographic longitude bands → human label. 30° per band; planet-longitude
+// → earth-longitude is identity (0° Aries pinned to Greenwich) so the same
+// table doubles as a planet-landing label.
+const GEOGRAPHIC_BANDS: Array<{ start: number; end: number; label: string }> = [
+    { start: 0,   end: 30,  label: "Europe / West Africa" },
+    { start: 30,  end: 60,  label: "East Africa / Levant / Arabia" },
+    { start: 60,  end: 90,  label: "Iran / Central Asia / India (west)" },
+    { start: 90,  end: 120, label: "India (east) / Tibet / SE Asia" },
+    { start: 120, end: 150, label: "China / Mongolia / Korea / eastern Russia" },
+    { start: 150, end: 180, label: "Russian Far East / NZ / Pacific" },
+    { start: 180, end: 210, label: "Central Pacific / Alaska" },
+    { start: 210, end: 240, label: "Pacific Northwest" },
+    { start: 240, end: 270, label: "Western North America" },
+    { start: 270, end: 300, label: "Central / Eastern North America" },
+    { start: 300, end: 330, label: "South America / Atlantic" },
+    { start: 330, end: 360, label: "Atlantic / West Africa" },
+];
+
+function geographicLabelFor(lonEast: number): string {
+    const east = ((lonEast % 360) + 360) % 360;
+    const hit = GEOGRAPHIC_BANDS.find((b) => east >= b.start && east < b.end);
+    return hit?.label ?? "Atlantic / West Africa";
 }
 
 function normalizePlanetName(raw: string): string {
@@ -278,6 +280,35 @@ export async function computePersonalLens(
     }
     worldPointContacts.sort((a, b) => a.orbDeg - b.orbDeg);
 
+    // 5. City facts (PDF principle 2) — geodetic MC + ASC for the
+    // destination. Time-invariant; depend only on lat/lon.
+    const cityGeodeticMcLon = geodeticMCLongitude(destLon);
+    const cityGeodeticAscLon = geodeticASCLongitude(destLon, destLat);
+
+    // 6. Natal-planet geography (PDF principle 3). Identity mapping:
+    // each planet's ecliptic longitude IS its geographic longitude
+    // (0° Aries = Greenwich). Tag with "active here" if within 5° of
+    // the destination longitude or its 180° opposite.
+    const destEast = ((destLon % 360) + 360) % 360;
+    const destOpp = (destEast + 180) % 360;
+    const natalPlanetGeography: PersonalLens["natalPlanetGeography"] = [];
+    const seenPlanets = new Set<string>();
+    for (const planet of natalPlanets) {
+        const pName = normalizePlanetName(planet.name ?? planet.planet ?? "");
+        if (!pName || seenPlanets.has(pName)) continue;
+        seenPlanets.add(pName);
+        const east = ((planet.longitude % 360) + 360) % 360;
+        const orbDest = circularOrb(east, destEast);
+        const orbOpp = circularOrb(east, destOpp);
+        natalPlanetGeography.push({
+            planet: pName,
+            planetLon: +planet.longitude.toFixed(2),
+            geographicLon: +east.toFixed(2),
+            geographicLabel: geographicLabelFor(east),
+            angularMatch: orbDest <= 5 || orbOpp <= 5,
+        });
+    }
+
     return {
         relocatedAscSign: relocAscSign,
         relocatedAscLon: relocAscLon,
@@ -289,6 +320,9 @@ export async function computePersonalLens(
         chartRulerRelocatedDomain: HOUSE_DOMAIN[relocatedHouse] ?? "",
         activeAngleLines,
         worldPointContacts,
+        cityGeodeticMcLon,
+        cityGeodeticAscLon,
+        natalPlanetGeography,
     };
 }
 

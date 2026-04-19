@@ -77,6 +77,20 @@ export function Colophon({ cityLabel, lat, lon, generated, windowDays, endDate }
                     Calculated for {cityLabel}
                     {coordsLabel && <> · {coordsLabel}</>}. Ephemeris DE440. {windowDays}-day window generated {fmtGenerated(generated)}. Set again when you come home.
                 </p>
+                <p
+                    style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "0.62rem",
+                        letterSpacing: "0.08em",
+                        lineHeight: 1.55,
+                        color: "var(--text-tertiary)",
+                        margin: "0.85rem 0 0",
+                        textTransform: "none",
+                        fontWeight: 400,
+                    }}
+                >
+                    Layers active: transits, parans, stations, eclipses, world points, configurations, late degrees. Progressions and solar-arc directions are not yet integrated.
+                </p>
             </div>
 
             <div>

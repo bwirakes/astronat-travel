@@ -27,6 +27,12 @@ interface Props {
      * chart ruler's topic. Pure function of the natal/relocated house pair.
      */
     chartRulerImplicationLine?: string | null;
+    /**
+     * The city's geodetic frame (PDF principle 2). MC + ASC formatted as
+     * sign + degree. Pure city facts, not user facts — copy must say
+     * "the city's" not "your".
+     */
+    geodeticFrame?: { mcLabel: string; ascLabel: string } | null;
     readingId?: string;
 }
 
@@ -43,6 +49,7 @@ export function Brief({
     scoreBand,
     chartRulerLine,
     chartRulerImplicationLine,
+    geodeticFrame,
     readingId,
 }: Props) {
     const [regenerating, setRegenerating] = useState(false);
@@ -293,6 +300,62 @@ export function Brief({
                         >
                             {chartRulerImplicationLine}
                         </p>
+                    )}
+                    {geodeticFrame && (
+                        <div
+                            style={{
+                                marginTop: "0.4rem",
+                                paddingTop: "0.85rem",
+                                borderTop: "1px dashed var(--surface-border)",
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "0.35rem",
+                                maxWidth: "52ch",
+                            }}
+                        >
+                            <div
+                                style={{
+                                    fontFamily: "var(--font-mono)",
+                                    fontSize: "0.58rem",
+                                    letterSpacing: "0.22em",
+                                    color: "var(--gold)",
+                                    textTransform: "uppercase",
+                                    fontWeight: 700,
+                                }}
+                            >
+                                The geodetic frame for {cityPrimary}
+                            </div>
+                            <div
+                                style={{
+                                    fontFamily: "var(--font-body)",
+                                    fontSize: "0.92rem",
+                                    lineHeight: 1.5,
+                                    color: "var(--text-secondary)",
+                                    fontWeight: 300,
+                                }}
+                            >
+                                <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--text-primary)" }}>MC</span>
+                                {" · "}
+                                {geodeticFrame.mcLabel}
+                                {" · "}
+                                the city's fixed career / public-standing column
+                            </div>
+                            <div
+                                style={{
+                                    fontFamily: "var(--font-body)",
+                                    fontSize: "0.92rem",
+                                    lineHeight: 1.5,
+                                    color: "var(--text-secondary)",
+                                    fontWeight: 300,
+                                }}
+                            >
+                                <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--text-primary)" }}>ASC</span>
+                                {" · "}
+                                {geodeticFrame.ascLabel}
+                                {" · "}
+                                the sign permanently rising over this longitude-and-latitude
+                            </div>
+                        </div>
                     )}
                 </div>
             ) : (

@@ -15,9 +15,12 @@ import { MovementsSection } from "./MovementsSection";
 import { LinesEditorial } from "./LinesEditorial";
 import { RulerJourney } from "./RulerJourney";
 import { GeodeticLinesSection } from "./GeodeticLinesSection";
+import { ConfidenceStrip } from "./ConfidenceStrip";
+import { NatalGeography } from "./NatalGeography";
 import { Colophon } from "./Colophon";
 import MundaneReading from "./mundane/MundaneReading";
-import { chartRulerImplication } from "@/lib/readings/personal-lens";
+import { chartRulerImplication } from "@/app/lib/personal-lens-text";
+import { degreeToSign } from "@/app/lib/geodetic-weather-types";
 
 interface WeatherForecastPayload {
     windowDays: number;
@@ -95,6 +98,13 @@ function ordinalSuffix(n: number): string {
     return s[(v - 20) % 10] || s[v] || s[0];
 }
 
+/** Format an ecliptic longitude as "Sign 25°" — the city-frame copy. */
+function fmtSignDegree(lon: number | null | undefined): string | null {
+    if (lon == null || Number.isNaN(lon)) return null;
+    const { sign, deg } = degreeToSign(lon);
+    return `${sign} ${Math.round(deg)}°`;
+}
+
 export default function WeatherReading({ forecast, readingId }: Props) {
     // ── Dispatcher: mundane vs personal ──────────────────────────────────
     if (forecast.intent === "mundane") {
@@ -131,6 +141,12 @@ export default function WeatherReading({ forecast, readingId }: Props) {
     const chartRulerImplicationLine = forecast.personalLens
         ? chartRulerImplication(forecast.personalLens, cityPrimary)
         : null;
+    const geodeticFrame = (() => {
+        const mc = fmtSignDegree(forecast.personalLens?.cityGeodeticMcLon);
+        const asc = fmtSignDegree(forecast.personalLens?.cityGeodeticAscLon);
+        if (!mc || !asc) return null;
+        return { mcLabel: mc, ascLabel: asc };
+    })();
 
     return (
         <div className="min-h-screen w-full bg-[var(--bg)] text-[var(--text-primary)]">
@@ -159,8 +175,12 @@ export default function WeatherReading({ forecast, readingId }: Props) {
                         scoreBand={scoreBand(macroScore).toUpperCase()}
                         chartRulerLine={chartRulerLine}
                         chartRulerImplicationLine={chartRulerImplicationLine}
+                        geodeticFrame={geodeticFrame}
                         readingId={readingId}
                     />
+
+                    {/* 01b — Confidence strip (rule of three) */}
+                    <ConfidenceStrip days={days} lens={forecast.personalLens} />
 
                     {/* 02 — Best travel windows */}
                     <div style={{ padding: "clamp(1.5rem, 3vw, 2.5rem) 0" }}>
@@ -205,7 +225,15 @@ export default function WeatherReading({ forecast, readingId }: Props) {
                         />
                     )}
 
-                    {/* 08 — § 3 Geodetic lens (permanent zones) */}
+                    {/* 08 — § 3 Where your planets land (PDF principle 3) */}
+                    {forecast.personalLens?.natalPlanetGeography && (
+                        <NatalGeography
+                            lens={forecast.personalLens}
+                            cityPrimary={cityPrimary}
+                        />
+                    )}
+
+                    {/* 09 — § 4 Geodetic lens (permanent zones) */}
                     <div
                         style={{
                             padding: "clamp(2.5rem, 5vw, 4rem) 0",

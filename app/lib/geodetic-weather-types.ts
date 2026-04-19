@@ -136,6 +136,18 @@ export interface GWPersonalLens {
         pointType: string;
         orbDeg: number;
     }>;
+    /** Geodetic MC longitude of the destination — pure city fact. */
+    cityGeodeticMcLon?: number;
+    /** Geodetic ASC longitude of the destination — pure city fact. */
+    cityGeodeticAscLon?: number;
+    /** Per-planet earth-longitude landings (PDF principle 3). */
+    natalPlanetGeography?: Array<{
+        planet: string;
+        planetLon: number;
+        geographicLon: number;
+        geographicLabel: string;
+        angularMatch: boolean;
+    }>;
 }
 
 export interface GeodeticWeatherReading {
