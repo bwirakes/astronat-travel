@@ -1,0 +1,326 @@
+{
+  "cusps": [
+    32.63115560208727,
+    62.31671366355275,
+    90.82308427569309,
+    119.62691131671585,
+    150.12677690805003,
+    181.89541378054872,
+    212.63115560208726,
+    242.31671366355275,
+    270.8230842756931,
+    299.62691131671585,
+    330.12677690805003,
+    1.895413780548731
+  ],
+  "angles": [
+    {
+      "name": "Ascendant",
+      "sign": "Taurus",
+      "house": 1,
+      "speed": 0,
+      "planet": "Ascendant",
+      "isAngle": true,
+      "longitude": 32.631156,
+      "is_retrograde": false,
+      "degree_in_sign": 2.6312,
+      "degree_minutes": 37,
+      "computed_at_utc": "1988-08-17T15:15:00.000Z"
+    },
+    {
+      "name": "MC",
+      "sign": "Capricorn",
+      "house": 10,
+      "speed": 0,
+      "planet": "MC",
+      "isAngle": true,
+      "longitude": 299.626911,
+      "is_retrograde": false,
+      "degree_in_sign": 29.6269,
+      "degree_minutes": 37,
+      "computed_at_utc": "1988-08-17T15:15:00.000Z"
+    },
+    {
+      "name": "IC",
+      "sign": "Cancer",
+      "house": 4,
+      "speed": 0,
+      "planet": "IC",
+      "isAngle": true,
+      "longitude": 119.626911,
+      "is_retrograde": false,
+      "degree_in_sign": 29.6269,
+      "degree_minutes": 37,
+      "computed_at_utc": "1988-08-17T15:15:00.000Z"
+    },
+    {
+      "name": "DC",
+      "sign": "Scorpio",
+      "house": 7,
+      "speed": 0,
+      "planet": "DC",
+      "isAngle": true,
+      "longitude": 212.631156,
+      "is_retrograde": false,
+      "degree_in_sign": 2.6312,
+      "degree_minutes": 37,
+      "computed_at_utc": "1988-08-17T15:15:00.000Z"
+    }
+  ],
+  "aspects": [
+    {
+      "orb": "4° 27′",
+      "type": "Sextile",
+      "aspect": "Sun sextile Moon",
+      "planet1": "Sun",
+      "planet2": "Moon",
+      "verdict": 82
+    },
+    {
+      "orb": "1° 08′",
+      "type": "Trine",
+      "aspect": "Sun trine Saturn",
+      "planet1": "Sun",
+      "planet2": "Saturn",
+      "verdict": 95
+    },
+    {
+      "orb": "2° 16′",
+      "type": "Trine",
+      "aspect": "Sun trine Uranus",
+      "planet1": "Sun",
+      "planet2": "Uranus",
+      "verdict": 91
+    },
+    {
+      "orb": "0° 23′",
+      "type": "Sextile",
+      "aspect": "Mercury sextile Venus",
+      "planet1": "Mercury",
+      "planet2": "Venus",
+      "verdict": 98
+    },
+    {
+      "orb": "1° 12′",
+      "type": "Trine",
+      "aspect": "Mercury trine Neptune",
+      "planet1": "Mercury",
+      "planet2": "Neptune",
+      "verdict": 95
+    },
+    {
+      "orb": "1° 06′",
+      "type": "Sextile",
+      "aspect": "Mercury sextile Pluto",
+      "planet1": "Mercury",
+      "planet2": "Pluto",
+      "verdict": 96
+    },
+    {
+      "orb": "1° 39′",
+      "type": "Square",
+      "aspect": "Venus square Mars",
+      "planet1": "Venus",
+      "planet2": "Mars",
+      "verdict": 43
+    },
+    {
+      "orb": "1° 34′",
+      "type": "Opposition",
+      "aspect": "Venus opposition Neptune",
+      "planet1": "Venus",
+      "planet2": "Neptune",
+      "verdict": 44
+    },
+    {
+      "orb": "0° 44′",
+      "type": "Trine",
+      "aspect": "Venus trine Pluto",
+      "planet1": "Venus",
+      "planet2": "Pluto",
+      "verdict": 97
+    },
+    {
+      "orb": "3° 13′",
+      "type": "Square",
+      "aspect": "Mars square Neptune",
+      "planet1": "Mars",
+      "planet2": "Neptune",
+      "verdict": 37
+    },
+    {
+      "orb": "1° 08′",
+      "type": "Conjunction",
+      "aspect": "Saturn conjunction Uranus",
+      "planet1": "Saturn",
+      "planet2": "Uranus",
+      "verdict": 85
+    },
+    {
+      "orb": "2° 18′",
+      "type": "Sextile",
+      "aspect": "Neptune sextile Pluto",
+      "planet1": "Neptune",
+      "planet2": "Pluto",
+      "verdict": 91
+    }
+  ],
+  "planets": [
+    {
+      "name": "Sun",
+      "sign": "Leo",
+      "house": 4,
+      "speed": 0.961919,
+      "dignity": "DOMICILE",
+      "latitude": -0.000168,
+      "longitude": 144.918766,
+      "is_retrograde": false,
+      "degree_in_sign": 24.9188,
+      "degree_minutes": 55,
+      "computed_at_utc": "1988-08-17T15:15:00.000Z"
+    },
+    {
+      "name": "Moon",
+      "sign": "Libra",
+      "house": 6,
+      "speed": 11.985902,
+      "dignity": "PEREGRINE",
+      "latitude": -3.130816,
+      "longitude": 200.47343,
+      "is_retrograde": false,
+      "degree_in_sign": 20.4734,
+      "degree_minutes": 28,
+      "computed_at_utc": "1988-08-17T15:15:00.000Z"
+    },
+    {
+      "name": "Mercury",
+      "sign": "Virgo",
+      "house": 5,
+      "speed": 1.751256,
+      "dignity": "DOMICILE",
+      "latitude": 1.187025,
+      "longitude": 158.885052,
+      "is_retrograde": false,
+      "degree_in_sign": 8.8851,
+      "degree_minutes": 53,
+      "computed_at_utc": "1988-08-17T15:15:00.000Z"
+    },
+    {
+      "name": "Venus",
+      "sign": "Cancer",
+      "house": 3,
+      "speed": 0.920598,
+      "dignity": "PEREGRINE",
+      "latitude": -3.468373,
+      "longitude": 99.262414,
+      "is_retrograde": false,
+      "degree_in_sign": 9.2624,
+      "degree_minutes": 15,
+      "computed_at_utc": "1988-08-17T15:15:00.000Z"
+    },
+    {
+      "name": "Mars",
+      "sign": "Aries",
+      "house": 12,
+      "speed": 0.122902,
+      "dignity": "DOMICILE",
+      "latitude": -5.106043,
+      "longitude": 10.907012,
+      "is_retrograde": false,
+      "degree_in_sign": 10.907,
+      "degree_minutes": 54,
+      "computed_at_utc": "1988-08-17T15:15:00.000Z"
+    },
+    {
+      "name": "Jupiter",
+      "sign": "Gemini",
+      "house": 2,
+      "speed": 0.114428,
+      "dignity": "DETRIMENT",
+      "latitude": -0.960075,
+      "longitude": 63.853614,
+      "is_retrograde": false,
+      "degree_in_sign": 3.8536,
+      "degree_minutes": 51,
+      "computed_at_utc": "1988-08-17T15:15:00.000Z"
+    },
+    {
+      "name": "Saturn",
+      "sign": "Sagittarius",
+      "house": 8,
+      "speed": -0.020389,
+      "dignity": "PEREGRINE",
+      "latitude": 1.010776,
+      "longitude": 266.05977,
+      "is_retrograde": true,
+      "degree_in_sign": 26.0598,
+      "degree_minutes": 3,
+      "computed_at_utc": "1988-08-17T15:15:00.000Z"
+    },
+    {
+      "name": "Uranus",
+      "sign": "Sagittarius",
+      "house": 8,
+      "speed": -0.015366,
+      "dignity": "PEREGRINE",
+      "latitude": -0.216024,
+      "longitude": 267.190291,
+      "is_retrograde": true,
+      "degree_in_sign": 27.1903,
+      "degree_minutes": 11,
+      "computed_at_utc": "1988-08-17T15:15:00.000Z"
+    },
+    {
+      "name": "Neptune",
+      "sign": "Capricorn",
+      "house": 9,
+      "speed": -0.016121,
+      "dignity": "PEREGRINE",
+      "latitude": 0.976131,
+      "longitude": 277.68969,
+      "is_retrograde": true,
+      "degree_in_sign": 7.6897,
+      "degree_minutes": 41,
+      "computed_at_utc": "1988-08-17T15:15:00.000Z"
+    },
+    {
+      "name": "Pluto",
+      "sign": "Scorpio",
+      "house": 7,
+      "speed": 0.016005,
+      "dignity": "DOMICILE",
+      "latitude": 15.85327,
+      "longitude": 219.989449,
+      "is_retrograde": false,
+      "degree_in_sign": 9.9894,
+      "degree_minutes": 59,
+      "computed_at_utc": "1988-08-17T15:15:00.000Z"
+    }
+  ],
+  "birth_lat": -6.1754049,
+  "birth_lon": 106.827168,
+  "birth_city": "Jakarta, Java, Indonesia",
+  "birth_date": "1988-08-17",
+  "birth_time": "22:15:00",
+  "profile_time": "1988-08-17T15:15:00.000Z",
+  "interpretation": {
+    "aspectWeaver": {
+      "title": "Structural Pressure and Strategic Alignment",
+      "content": "Mercury sextile Venus at a 0° 23′ orb synchronizes intellectual output with your chart ruler, creating high-efficiency communication. Venus trine Pluto at a 0° 44′ orb integrates your chart ruler into Scorpio, securing absolute leverage within your contractual and personal partnerships."
+    },
+    "chartEssence": {
+      "title": "Taurus Ascendant Structural Power Architecture",
+      "content": "Your Taurus ascendant demands material stability, while Venus in the third house drives calculated communication. Core tension arises from the Leo Sun’s desire for central authority clashing with the Libra Moon’s need for sixth-house operational precision."
+    },
+    "naturalAngles": {
+      "title": "Structural Integrity Over Geographic Drift",
+      "content": "No intense geographic lines exist within your parameters. Your character derives stability from the natal configuration rather than environmental activation. Leverage your domiciled Mercury in the 5th house for maximum cognitive precision."
+    },
+    "houseArchitecture": {
+      "title": "Structural Stress: House 7 and 12",
+      "content": "Pluto sits in House 7, while Mars rules it from House 12. Mars also occupies House 12, governing it directly from its own domicile position."
+    }
+  },
+  "first_name": "Brandon",
+  "last_name": null
+}
