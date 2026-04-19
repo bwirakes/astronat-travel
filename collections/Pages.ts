@@ -15,21 +15,6 @@ export const Pages: CollectionConfig = {
         return slug === "home" ? base : `${base}/${slug}`;
       },
     },
-    components: {
-      views: {
-        edit: {
-          blockPreview: {
-            Component:
-              "@/app/(payload)/admin/components/PagesBlockPreviewView",
-            path: "/preview",
-            tab: {
-              label: "Block Preview",
-              href: "/preview",
-            },
-          },
-        },
-      },
-    },
   },
   hooks: {
     afterChange: [

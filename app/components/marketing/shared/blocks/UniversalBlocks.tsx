@@ -1777,11 +1777,10 @@ export const FeatureCarousel: React.FC<any> = ({ block }) => {
                            className="transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
                            style={{ 
                              position: isCurrent ? 'relative' : 'absolute',
-                             top: 0, left: 0, 
-                             opacity: isCurrent ? 1 : 0, 
+                             top: 0, left: 0,
+                             opacity: isCurrent ? 1 : 0,
                              transform: isCurrent ? 'translateY(0)' : 'translateY(16px)',
                              pointerEvents: isCurrent ? 'auto' : 'none',
-                             position: isCurrent ? 'static' : 'absolute',
                              visibility: isCurrent ? "visible" : "hidden"
                            }}
                         >
