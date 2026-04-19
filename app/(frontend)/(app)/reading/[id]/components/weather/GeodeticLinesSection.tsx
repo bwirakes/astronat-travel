@@ -15,20 +15,16 @@ interface Props {
 }
 
 /**
- * Derive the city's geodetic zone by longitude. Zones are 30° wide
- * starting at 0° Aries = Greenwich. Return the zone whose [start, start+30)
- * range contains the normalised longitude.
+ * Derive the city's geodetic zone by longitude. Zones are 30° wide,
+ * 0° Aries pinned to Greenwich, indexed Aries → Pisces eastward.
+ * Index = floor(normalisedLonEast / 30). The previous [-180, 180]
+ * scan failed silently for longitudes near ±180° because no `[start,
+ * start+30)` band covered them.
  */
 function zoneForLongitude(lon: number) {
-    // Normalize longitude to [-180, 180]
-    const norm = ((lon + 540) % 360) - 180;
-    return (
-        GEODETIC_ZONES.find((z) => {
-            const start = z.startLon;
-            const end = start + 30;
-            return norm >= start && norm < end;
-        }) ?? GEODETIC_ZONES[0]
-    );
+    const east = ((lon % 360) + 360) % 360;
+    const idx = Math.floor(east / 30) % 12;
+    return GEODETIC_ZONES[idx] ?? GEODETIC_ZONES[0];
 }
 
 /**
@@ -37,14 +33,9 @@ function zoneForLongitude(lon: number) {
  * of each location and does NOT vary with time (only with latitude).
  */
 function approxAscZone(mcStartLon: number) {
-    const ascStart = ((mcStartLon + 90 + 180) % 360) - 180;
-    return (
-        GEODETIC_ZONES.find((z) => {
-            const start = z.startLon;
-            const end = start + 30;
-            return ascStart >= start && ascStart < end;
-        }) ?? GEODETIC_ZONES[0]
-    );
+    const ascEast = ((mcStartLon + 90) % 360 + 360) % 360;
+    const idx = Math.floor(ascEast / 30) % 12;
+    return GEODETIC_ZONES[idx] ?? GEODETIC_ZONES[0];
 }
 
 export function GeodeticLinesSection({
