@@ -61,6 +61,9 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                                     <span>{vm.travelType === "relocation" ? "how well this place matches you" : "how well it matches you"}</span>
                                     <span className="v4-bar-num">{vm.hero.bestWindow?.score ?? 0}/100</span>
                                 </div>
+                                {vm.hero.baselineContext && (
+                                    <div className="v4-bar-context">{vm.hero.baselineContext}</div>
+                                )}
                             </div>
                         </div>
                         <div className="v4-scroll-hint">
@@ -83,6 +86,34 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                                     ? "Here's how nearby weeks score for you in this city — same chart, same destination, different transits. If your calendar is flexible, this shows you whether shifting helps."
                                     : "We found one strong window. As more transits develop, additional windows will appear here."}
                             </p>
+
+                            {vm.dailySeries.length > 0 && (
+                                <div className="v4-daily">
+                                    <div className="v4-daily-strip" role="img" aria-label="Day-by-day score around your travel dates">
+                                        {(() => {
+                                            const max = Math.max(...vm.dailySeries.map(d => d.score), 1);
+                                            return vm.dailySeries.map((d, i) => {
+                                                const h = Math.max(8, (d.score / max) * 100);
+                                                const tone = d.score >= 75 ? "good" : d.score >= 55 ? "ok" : "low";
+                                                return (
+                                                    <div
+                                                        key={d.iso}
+                                                        className={`v4-daily-bar v4-daily-${tone}${d.isAnchor ? " v4-daily-anchor" : ""}`}
+                                                        style={{ height: `${h}%` }}
+                                                        title={`${d.iso} · ${d.score}/100`}
+                                                    />
+                                                );
+                                            });
+                                        })()}
+                                    </div>
+                                    <div className="v4-daily-axis">
+                                        <span>21 days earlier</span>
+                                        <span>your dates</span>
+                                        <span>35 days later</span>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="v4-windows">
                                 {(() => {
                                     // The pill goes on the genuinely highest-scoring alternate, not on

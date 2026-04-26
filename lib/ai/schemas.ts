@@ -85,6 +85,20 @@ const ChromeSchema = z.object({
   step7AspectsSub: z.string(),
 });
 
+// V4 Step 6 — per-line note. `lineKey` matches `${planet}-${angle}` (lowercase
+// planet, uppercase angle) so the prompt can target a specific line.
+const LineNoteSchema = z.object({
+  lineKey: z.string(),
+  note: z.string(),
+});
+
+// V4 Step 7 — glossary entries the prompt writes in a way that references
+// this specific reading (e.g. mentioning the user's actual ASC sign change).
+const GlossaryEntrySchema = z.object({
+  term: z.enum(["relocated-chart", "angles", "houses", "aspects"]),
+  def: z.string(),
+});
+
 // V4 Step 1+2 — hero + alternate windows.
 const HeroSchema = z.object({
   explainer: z.string(),
@@ -132,6 +146,8 @@ export const TeacherReadingSchema = z.object({
   aspectPlains: z.array(AspectPlainSchema).max(8).optional(),
   weeks: z.array(WeekSchema).max(13).optional(),
   todos: z.array(TodoSchema).min(2).max(4).optional(),
+  lineNotes: z.array(LineNoteSchema).max(8).optional(),
+  glossaryEntries: z.array(GlossaryEntrySchema).max(4).optional(),
 });
 export type TeacherReading = z.infer<typeof TeacherReadingSchema>;
 

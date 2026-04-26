@@ -78,6 +78,11 @@
   color: var(--v4-ink-faint); text-transform: uppercase;
 }
 .v4-root .v4-bar-num { color: var(--v4-ink); font-weight: 500; }
+.v4-root .v4-bar-context {
+  margin-top: 10px; font-family: var(--font-body, system-ui);
+  font-size: 13px; line-height: 1.5; color: var(--v4-ink-soft); font-weight: 300;
+  text-align: center; max-width: 360px; margin-left: auto; margin-right: auto;
+}
 .v4-root .v4-scroll-hint {
   margin-top: 72px; display: inline-flex; align-items: center; gap: 8px;
   font-family: var(--font-mono, monospace); font-size: 10px; letter-spacing: 0.22em;
@@ -136,6 +141,38 @@
   color: var(--v4-ink-faint); text-transform: uppercase; margin-top: 4px;
 }
 .v4-root .v4-win-score strong { color: var(--v4-ink); font-weight: 600; }
+
+/* ─── STEP 2 daily strip ─────────────────────────────────────── */
+.v4-root .v4-daily {
+  margin: 8px 0 24px;
+  padding: 16px 18px 12px;
+  background: var(--v4-bg);
+  border: 1px solid var(--v4-border);
+  border-radius: var(--radius-md, 8px);
+}
+.v4-root .v4-daily-strip {
+  display: flex; gap: 2px; align-items: flex-end;
+  height: 56px; width: 100%;
+}
+.v4-root .v4-daily-bar {
+  flex: 1; min-width: 2px; border-radius: 1px;
+  transition: opacity 0.15s ease;
+}
+.v4-root .v4-daily-bar:hover { opacity: 0.75; }
+.v4-root .v4-daily-good { background: var(--v4-accent); }
+.v4-root .v4-daily-ok   { background: var(--gold, #C9A96E); opacity: 0.7; }
+.v4-root .v4-daily-low  { background: var(--v4-ink-faint); opacity: 0.5; }
+.v4-root .v4-daily-anchor {
+  outline: 2px solid var(--v4-accent-blue);
+  outline-offset: 1px;
+  z-index: 1;
+}
+.v4-root .v4-daily-axis {
+  display: flex; justify-content: space-between; margin-top: 8px;
+  font-family: var(--font-mono, monospace); font-size: 9px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--v4-ink-faint);
+}
 
 /* ─── STEP 3: Vibes ──────────────────────────────────────────── */
 .v4-root .v4-vibes { display: flex; flex-direction: column; gap: 28px; }

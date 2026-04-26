@@ -50,7 +50,8 @@ const SLOTS: Slot[] = [
     { step: "1 hero", name: "Kicker 'A reading for {city}'",        before: "TEMPLATED",          after: "TEMPLATED" },
     { step: "1 hero", name: "Headline copy ('Your dates: X')",       before: "TEMPLATED",          after: "TEMPLATED" },
     { step: "1 hero", name: "Hero dates",                            before: "COMPUTED",           after: "COMPUTED",  notes: "Now anchored on user's travelDate (Fix 1)" },
-    { step: "1 hero", name: "Hero score",                            before: "HARDCODED",          after: "COMPUTED",  notes: "Now scoreDate(travelDate, transits, baselineMacro)" },
+    { step: "1 hero", name: "Hero score",                            before: "HARDCODED",          after: "COMPUTED",  notes: "Goal-weighted scoreDate (love→Venus/Moon, etc.)" },
+    { step: "1 hero", name: "Score context line",                    before: "HARDCODED",          after: "COMPUTED",  notes: "New: 'N points above your average for this place'" },
     { step: "1 hero", name: "Explainer paragraph",                   before: "PROMPT_OR_FALLBACK", after: "PROMPT_OR_FALLBACK" },
     { step: "1 hero", name: "Bar label 'how well it matches you'",   before: "HARDCODED",          after: "HARDCODED" },
     { step: "1 hero", name: "Scroll hint ('keep reading')",          before: "HARDCODED",          after: "HARDCODED" },
@@ -61,8 +62,10 @@ const SLOTS: Slot[] = [
     { step: "2 win",  name: "Window flavor labels (now offset labels)", before: "HARDCODED",       after: "TEMPLATED",         notes: "'Two weeks earlier' / 'A month later' — derived from offset" },
     { step: "2 win",  name: "Window flavor titles",                  before: "PROMPT_OR_FALLBACK", after: "TEMPLATED",         notes: "Pulled from buildScoredWindows labels" },
     { step: "2 win",  name: "Window dates",                          before: "COMPUTED",           after: "COMPUTED" },
-    { step: "2 win",  name: "Window scores",                         before: "HARDCODED",          after: "COMPUTED",          notes: "Real per-date scores from window-scoring.ts" },
+    { step: "2 win",  name: "Window scores",                         before: "HARDCODED",          after: "COMPUTED",          notes: "Goal-weighted per-date scores" },
     { step: "2 win",  name: "Window notes (drivers)",                before: "TEMPLATED",          after: "COMPUTED",          notes: "Top transits driving each window's score" },
+    { step: "2 win",  name: "'Recommended' pill placement",          before: "HARDCODED",          after: "COMPUTED",          notes: "Now wins by score margin, not card 0" },
+    { step: "2 win",  name: "Daily intensity strip",                 before: "HARDCODED",          after: "COMPUTED",          notes: "New: 57-day per-day score series" },
 
     // STEP 3 — vibes
     { step: "3 vibes",name: "Section heading 'Why {city}, for you.'",before: "TEMPLATED",          after: "TEMPLATED" },
@@ -81,6 +84,7 @@ const SLOTS: Slot[] = [
     { step: "4 chart",name: "Transit planet positions (post fix)",   before: "COMPUTED",           after: "COMPUTED" },
     { step: "4 chart",name: "Aspect tooltip 'why' prose",            before: "PROMPT_OR_FALLBACK", after: "PROMPT_OR_FALLBACK" },
     { step: "4 chart",name: "Aspect tooltip 'timing' prose",         before: "PROMPT_OR_FALLBACK", after: "PROMPT_OR_FALLBACK" },
+    { step: "4 chart",name: "Month score",                           before: "HARDCODED",          after: "COMPUTED",          notes: "Goal-weighted: love → Venus/Moon hits boost more" },
     { step: "4 chart",name: "How-to-read hint",                      before: "HARDCODED",          after: "HARDCODED" },
     { step: "4 chart",name: "Six legend rows",                       before: "HARDCODED",          after: "HARDCODED" },
     { step: "4 chart",name: "Callout under chart",                   before: "HARDCODED",          after: "HARDCODED" },
@@ -93,7 +97,7 @@ const SLOTS: Slot[] = [
     // STEP 6 — disclosure
     { step: "6 astro",name: "Disclosure label + sub",                before: "HARDCODED",          after: "HARDCODED" },
     { step: "6 astro",name: "Lines list (data)",                     before: "COMPUTED",           after: "COMPUTED" },
-    { step: "6 astro",name: "Line notes",                            before: "TEMPLATED",          after: "TEMPLATED" },
+    { step: "6 astro",name: "Line notes",                            before: "TEMPLATED",          after: "PROMPT_OR_FALLBACK", notes: "Now teacherReading.lineNotes[lineKey]" },
     { step: "6 astro",name: "Weekly narrative",                      before: "PROMPT_OR_FALLBACK", after: "PROMPT_OR_FALLBACK" },
 
     // STEP 7 — relocated chart
@@ -101,7 +105,8 @@ const SLOTS: Slot[] = [
     { step: "7 reloc",name: "Section intro paragraph",               before: "HARDCODED",          after: "PROMPT_OR_FALLBACK", notes: "Now chrome.step7Intro" },
     { step: "7 reloc",name: "Natal pole place",                      before: "BROKEN",             after: "COMPUTED",           notes: "Now reads reading.birth.city (persisted in Fix 3)" },
     { step: "7 reloc",name: "Natal pole coords",                     before: "BROKEN",             after: "COMPUTED",           notes: "Now reads reading.birth.lat/lon" },
-    { step: "7 reloc",name: "Natal pole date",                       before: "BROKEN",             after: "COMPUTED",           notes: "Now reads reading.birth.date" },
+    { step: "7 reloc",name: "Natal pole date + time",                before: "BROKEN",             after: "COMPUTED",           notes: "Now formats reading.birth.date + birth.time" },
+    { step: "7 reloc",name: "Natal/relocated bi-wheel SVG",          before: "HARDCODED",          after: "COMPUTED",           notes: "New: RelocationBiWheel renders both wheels" },
     { step: "7 reloc",name: "Travel pole place/coords/window",       before: "COMPUTED",           after: "COMPUTED" },
     { step: "7 reloc",name: "Angles natal sign/deg",                 before: "COMPUTED",           after: "COMPUTED" },
     { step: "7 reloc",name: "Angles relocated sign/deg",             before: "COMPUTED",           after: "COMPUTED" },
@@ -117,7 +122,7 @@ const SLOTS: Slot[] = [
     { step: "7 reloc",name: "Aspect orbs",                           before: "COMPUTED",           after: "COMPUTED" },
     { step: "7 reloc",name: "Aspect plain prose",                    before: "PROMPT_OR_FALLBACK", after: "PROMPT_OR_FALLBACK" },
     { step: "7 reloc",name: "Aspect 'wasNatal' prose",               before: "PROMPT_OR_FALLBACK", after: "PROMPT_OR_FALLBACK" },
-    { step: "7 reloc",name: "Glossary entries (4) — definitions",    before: "HARDCODED",          after: "HARDCODED" },
+    { step: "7 reloc",name: "Glossary entries (4) — definitions",    before: "HARDCODED",          after: "PROMPT_OR_FALLBACK", notes: "Now teacherReading.glossaryEntries[term]" },
     { step: "7 reloc",name: "Glossary entries — links to /learn",    before: "BROKEN",             after: "TEMPLATED",          notes: "Now <Link href='/learn/<slug>'>" },
     { step: "7 reloc",name: "Learn-more links (3)",                  before: "BROKEN",             after: "TEMPLATED",          notes: "Real /learn URLs (geodetic-astrology, astrocartography, /learn)" },
 

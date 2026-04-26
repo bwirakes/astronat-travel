@@ -127,20 +127,20 @@ export default function RelocationBiWheel({
   } | null>(null);
 
   const c = {
-    circlePrimary:   "var(--text-primary)",
-    circleSecondary: "var(--text-secondary)",
-    circleInner:     "var(--text-tertiary)",
-    glyphFill:       "var(--text-primary)",
-    houseAxisNatal:  "var(--text-secondary)",
-    houseLineNatal:  "var(--surface-border)",
-    houseAxisRelo:   "var(--text-primary)",
-    houseLineRelo:   "var(--text-secondary)",
-    axisLabelNatal:  "var(--text-secondary)",
-    axisLabelRelo:   "var(--text-primary)",
-    tick:            "var(--text-tertiary)",
-    tickMajor:       "var(--text-secondary)",
-    planetBgInner:   "var(--surface)",
-    planetBgOuter:   "var(--bg)",
+    circlePrimary:   "var(--v4-ink)",
+    circleSecondary: "var(--v4-ink-soft)",
+    circleInner:     "var(--v4-border)",
+    glyphFill:       "var(--v4-ink)",
+    houseAxisNatal:  "var(--v4-ink-faint)",
+    houseLineNatal:  "var(--v4-border)",
+    houseAxisRelo:   "var(--v4-ink)",
+    houseLineRelo:   "var(--v4-ink-faint)",
+    axisLabelNatal:  "var(--v4-ink-faint)",
+    axisLabelRelo:   "var(--v4-ink)",
+    tick:            "var(--v4-border)",
+    tickMajor:       "var(--v4-ink-faint)",
+    planetBgInner:   "var(--v4-bg)",
+    planetBgOuter:   "var(--v4-bg)",
   };
 
   const stdPlanets = natalPlanets;
@@ -185,12 +185,12 @@ export default function RelocationBiWheel({
          <button 
            onClick={() => setHouseMode("natal")}
            style={{
-             background: houseMode === "natal" ? "var(--text-primary)" : "transparent",
-             color: houseMode === "natal" ? "var(--bg)" : "var(--text-secondary)",
-             border: "1px solid var(--surface-border)",
+             background: houseMode === "natal" ? "var(--v4-ink)" : "transparent",
+             color: houseMode === "natal" ? "var(--v4-bg)" : "var(--v4-ink-soft)",
+             border: `1px solid ${houseMode === "natal" ? "var(--v4-ink)" : "var(--v4-border)"}`,
              padding: "0.5rem 1rem",
-             borderRadius: "var(--radius-full)",
-             fontFamily: "var(--font-mono)",
+             borderRadius: "var(--radius-full, 9999px)",
+             fontFamily: "var(--font-mono, monospace)",
              fontSize: "0.75rem",
              textTransform: "uppercase",
              letterSpacing: "0.05em",
@@ -203,12 +203,12 @@ export default function RelocationBiWheel({
          <button 
            onClick={() => setHouseMode("relocated")}
            style={{
-             background: houseMode === "relocated" ? "var(--text-primary)" : "transparent",
-             color: houseMode === "relocated" ? "var(--bg)" : "var(--text-secondary)",
-             border: "1px solid var(--surface-border)",
+             background: houseMode === "relocated" ? "var(--v4-ink)" : "transparent",
+             color: houseMode === "relocated" ? "var(--v4-bg)" : "var(--v4-ink-soft)",
+             border: `1px solid ${houseMode === "relocated" ? "var(--v4-ink)" : "var(--v4-border)"}`,
              padding: "0.5rem 1rem",
-             borderRadius: "var(--radius-full)",
-             fontFamily: "var(--font-mono)",
+             borderRadius: "var(--radius-full, 9999px)",
+             fontFamily: "var(--font-mono, monospace)",
              fontSize: "0.75rem",
              textTransform: "uppercase",
              letterSpacing: "0.05em",
@@ -258,11 +258,11 @@ export default function RelocationBiWheel({
               );
             })}
 
-            <circle cx={CX} cy={CY} r={R.outer} fill="none" stroke={c.circlePrimary} strokeWidth="1.8" filter="url(#glow-lines)" />
-            <circle cx={CX} cy={CY} r={R.zodiacInner} fill="none" stroke={c.circleSecondary} strokeWidth="1.2" filter="url(#glow-lines)" />
+            <circle cx={CX} cy={CY} r={R.outer} fill="none" stroke={c.circlePrimary} strokeWidth="1.8" />
+            <circle cx={CX} cy={CY} r={R.zodiacInner} fill="none" stroke={c.circleSecondary} strokeWidth="1.2" />
             {/* Split ring lines */}
             <circle cx={CX} cy={CY} r={R.houseOuterInner} fill="none" stroke={c.circleInner} strokeWidth="0.8" opacity="0.6" />
-            <circle cx={CX} cy={CY} r={R.inner} fill="none" stroke={c.circleInner} strokeWidth="1" filter="url(#glow-lines)" />
+            <circle cx={CX} cy={CY} r={R.inner} fill="none" stroke={c.circleInner} strokeWidth="1" />
 
             {SIGNS.map((s) => {
               const mid = svgXY(s.lon + 15, R.glyphs, activeAsc);
@@ -279,7 +279,6 @@ export default function RelocationBiWheel({
                   <g
                     transform={`translate(${mid.x - 10}, ${mid.y - 10})`}
                     style={{ color: c.glyphFill }}
-                    filter="url(#glow-lines)"
                     dangerouslySetInnerHTML={{ __html: SIGN_PATHS[s.name] }}
                   />
                   <line
@@ -313,7 +312,6 @@ export default function RelocationBiWheel({
                   stroke={isAxis ? isAxisColor : isLineColor}
                   strokeWidth={isAxis ? 2.5 : 1.2}
                   strokeDasharray={isAxis ? undefined : "6 4"}
-                  filter={isAxis ? "url(#glow-lines)" : undefined}
                 />
               );
             })}
@@ -330,8 +328,7 @@ export default function RelocationBiWheel({
                 <text key={label} x={pt.x} y={pt.y}
                   textAnchor="middle" dominantBaseline="central"
                   fontSize="10" fill={houseMode === "natal" ? c.axisLabelNatal : c.axisLabelRelo}
-                  fontFamily="var(--font-mono)" letterSpacing="1"
-                  filter={houseMode !== "natal" ? "url(#glow-lines)" : undefined}
+                  fontFamily="var(--font-mono, monospace)" letterSpacing="1"
                   fontWeight="600"
                 >
                   {label}
@@ -357,16 +354,16 @@ export default function RelocationBiWheel({
                 >
                   <circle cx={pt.x} cy={pt.y} r={isHovered ? "28" : "22"} fill={p.color} opacity={isHovered ? "0.15" : "0.05"} />
                   <circle cx={pt.x} cy={pt.y} r={isHovered ? "21" : "16"} fill={p.color} opacity={isHovered ? "0.1" : "0.0"} />
-                  <circle cx={pt.x} cy={pt.y} r="14" fill={c.planetBgInner} stroke={p.color} strokeWidth={isHovered ? "2" : "1"} opacity="0.6" />
+                  <circle cx={pt.x} cy={pt.y} r="14" fill={c.planetBgInner} stroke={p.color} strokeWidth={isHovered ? "2" : "1"} opacity="1" />
                   <text
                     x={pt.x} y={pt.y} textAnchor="middle" dominantBaseline="central"
-                    fontSize="14" fill={p.color} fontFamily="var(--font-secondary)" filter={`url(#glow-${p.p})`}
+                    fontSize="14" fill={p.color} fontFamily="var(--font-secondary, serif)"
                   >
                     {p.glyph}
                   </text>
                   <text
                     x={pt.x} y={pt.y + 22} textAnchor="middle" dominantBaseline="central"
-                    fontSize="7" fill={p.color} fontFamily="var(--font-mono)" fontWeight="600" opacity="0.7"
+                    fontSize="7" fill={p.color} fontFamily="var(--font-mono, monospace)" fontWeight="600" opacity="0.8"
                   >
                     {deg}°
                   </text>
@@ -401,13 +398,13 @@ export default function RelocationBiWheel({
                   <circle cx={pt.x} cy={pt.y} r="20" fill={c.planetBgOuter} stroke={p.color} strokeWidth={isHovered ? "3" : "2"} />
                   <text
                     x={pt.x} y={pt.y} textAnchor="middle" dominantBaseline="central"
-                    fontSize="20" fill={p.color} fontFamily="var(--font-secondary)" filter={`url(#glow-${p.p})`}
+                    fontSize="20" fill={p.color} fontFamily="var(--font-secondary, serif)"
                   >
                     {p.glyph}
                   </text>
                   <text
                     x={pt.x} y={pt.y + 34} textAnchor="middle" dominantBaseline="central"
-                    fontSize="9" fill={p.color} fontFamily="var(--font-mono)" fontWeight="600" opacity="0.9"
+                    fontSize="9" fill={p.color} fontFamily="var(--font-mono, monospace)" fontWeight="600" opacity="0.9"
                   >
                     {deg}°
                   </text>

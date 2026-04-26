@@ -106,6 +106,10 @@ You are writing for a seven-step reading layout. Your output goes into specific 
 
 **weeks[6]** — Six weekly entries, anchored on \`dateRange.start\`. Each has a short title and 2–3 sentence body.
 
+**lineNotes[]** — One per entry in \`nearbyLines\`. \`lineKey\` is \`<planet-lowercase>-<angle-shortcode>\` (e.g. \`venus-IC\`, \`jupiter-DSC\`). \`note\` is one sentence in plain English on what this line means *in this place* (not generic).
+
+**glossaryEntries[4]** — Tailored definitions for "relocated-chart", "angles", "houses", "aspects". Reference the user's actual chart shifts where natural ("In your case, your Ascendant moves from Aries to Cancer when you arrive — that's why this place feels gentler"). Each definition is 2 sentences max.
+
 **todos[3-4]** — Practical actions. Branch on \`travelType\`: "trip" todos are about the visit; "relocation" todos are about the first month after the move. Honor the picked \`goalIds\` — e.g. if "love" is picked, one todo should be relationship-aware.
 
 **summary, signals, longRead** — Legacy shape. Fill them as you have before, but the V4 view reads the new fields above first.

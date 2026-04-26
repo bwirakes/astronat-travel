@@ -8,7 +8,7 @@
  * shape the V4 components can render without further branching.
  */
 import { houseFromLongitude, signFromLongitude } from "./geodetic";
-import { buildScoredWindows, scoreDate } from "./window-scoring";
+import { buildScoredWindows, scoreDate, buildDailySeries, type DailyScore } from "./window-scoring";
 
 // ─── Output shape ─────────────────────────────────────────────────────
 
@@ -124,8 +124,18 @@ export interface V4ReadingVM {
     hero: {
         bestWindow: V4TravelWindow;
         explainer: string;     // "That's a 10-night window where the skies..."
+        /** Macro score for the destination — the chart's overall fit for this
+         *  city, before any per-day transit modulation. The hero shows this
+         *  next to the window score so users can see whether their dates are
+         *  above or below the destination's average match. */
+        baselineScore: number;
+        /** Plain-English context line: "1 point above your average for this place." */
+        baselineContext: string;
     };
     travelWindows: V4TravelWindow[];   // length 1–3, hero is index 0
+    /** Per-day score series across travelDate − 21d to travelDate + 35d.
+     *  Drives Step 2's DayDots strip — visual context for the windows. */
+    dailySeries: DailyScore[];
 
     vibes: V4Vibe[];                    // exactly 3
 
@@ -163,6 +173,10 @@ export interface V4ReadingVM {
         aspectsToAngles: V4AspectToAngle[];
         glossary: Array<{ term: string; def: string; href: string }>;
         learnMore: Array<{ label: string; href: string }>;
+        natalAnglesDeg: Record<"ASC"|"IC"|"DSC"|"MC", number> | null;
+        relocatedAnglesDeg: Record<"ASC"|"IC"|"DSC"|"MC", number> | null;
+        natalCuspsDeg: number[];
+        relocatedCuspsDeg: number[];
     };
 }
 
@@ -268,6 +282,27 @@ const ANGLE_CHART_PLAIN: Record<"ASC"|"IC"|"DSC"|"MC", string> = {
     MC:  "Your public calling. What you want to be known for.",
 };
 
+// Term slugs used by the prompt's `glossaryEntries` to override the static
+// definitions below.
+const GLOSSARY_TERM_SLUGS: Record<string, "relocated-chart" | "angles" | "houses" | "aspects"> = {
+    "Relocated chart": "relocated-chart",
+    "Angles (ASC/IC/DSC/MC)": "angles",
+    "Houses": "houses",
+    "Aspects": "aspects",
+};
+
+function deriveGlossary(reading: any): Array<{ term: string; def: string; href: string }> {
+    const promptDefs: Record<string, string> = {};
+    for (const ge of (reading?.teacherReading?.glossaryEntries || [])) {
+        if (ge?.term && ge?.def) promptDefs[ge.term] = ge.def;
+    }
+    return STATIC_GLOSSARY.map(g => {
+        const slug = GLOSSARY_TERM_SLUGS[g.term];
+        const promptDef = slug ? promptDefs[slug] : undefined;
+        return { ...g, def: promptDef || g.def };
+    });
+}
+
 const STATIC_GLOSSARY: Array<{ term: string; def: string; href: string }> = [
     { term: "Relocated chart", def: "Your birth chart recalculated as if you had been born in the new location. The planets stay the same; the houses and angles rotate.",
       href: "/learn/natal-chart" },
@@ -367,7 +402,7 @@ const FLAVORS: Array<{ flavor: string; flavorTitle: string; emoji: string }> = [
     { flavor: "Quiet window",  flavorTitle: "Commit to something",  emoji: "✷" },
 ];
 
-function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateISO: string | null): V4TravelWindow[] {
+function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateISO: string | null, goalIdsArg: string[] = []): V4TravelWindow[] {
     // 0. Prompt-emitted V4 windows take precedence when present.
     const promptWindows = reading?.teacherReading?.windows;
     if (Array.isArray(promptWindows) && promptWindows.length) {
@@ -433,7 +468,7 @@ function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateI
             // a different one for them; we tell them how theirs scores and
             // how nearby weeks compare. See app/lib/window-scoring.ts.
             const baselineMacro = reading?.macroScore ?? 70;
-            const scored = buildScoredWindows(travelDateISO, tw, baselineMacro);
+            const scored = buildScoredWindows(travelDateISO, tw, baselineMacro, goalIdsArg);
             return scored.map((w, i) => ({
                 rank: i + 1,
                 flavor: i === 0 ? "Your dates" : "Alternate",
@@ -617,7 +652,7 @@ function deriveChartNatal(reading: any): V4ChartPlanet[] {
 const MONTH_LABELS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const MONTH_KEYS   = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-function deriveChartMonths(reading: any, anchorISO: string | null): V4ChartMonth[] {
+function deriveChartMonths(reading: any, anchorISO: string | null, goalIdsArg: string[] = []): V4ChartMonth[] {
     // Anchor: travelDate's month if available, else now. Build months [-1, 0, +1].
     const anchor = anchorISO ? new Date(anchorISO) : new Date();
     if (isNaN(anchor.getTime())) anchor.setTime(Date.now());
@@ -721,10 +756,39 @@ function deriveChartMonths(reading: any, anchorISO: string | null): V4ChartMonth
             if (transits.length >= 4) break;
         }
 
-        // Score: aspect count, weighted by benefic/malefic.
+        // Goal-weighted month score. Transits hitting a natal target the
+        // user actually cares about (love → Venus/Moon, career → Sun/Mars/MC,
+        // etc.) count for more than a generic supportive aspect somewhere
+        // else. Falls back to a flat count when goalIds is empty.
+        const goalTargets = (() => {
+            if (!goalIdsArg.length) return null;
+            const set = new Set<string>();
+            const map: Record<string, string[]> = {
+                love:       ["venus", "moon"],
+                career:     ["sun", "mars", "saturn", "mc"],
+                community:  ["mercury", "jupiter"],
+                growth:     ["jupiter", "neptune"],
+                relocation: ["moon", "ic"],
+                timing:     [],
+            };
+            let any = false;
+            for (const g of goalIdsArg) {
+                const ts = map[g];
+                if (ts && ts.length) { any = true; for (const t of ts) set.add(t); }
+            }
+            return any ? set : null;
+        })();
+        const benWeighted = inRange.reduce((s: number, h: any) => {
+            const targetMatch = goalTargets ? goalTargets.has((h.natal_planet || "").toLowerCase()) : false;
+            return s + (h.benefic ? (targetMatch ? 1.6 : 1) : 0);
+        }, 0);
+        const malWeighted = inRange.reduce((s: number, h: any) => {
+            const targetMatch = goalTargets ? goalTargets.has((h.natal_planet || "").toLowerCase()) : false;
+            return s + (!h.benefic ? (targetMatch ? 1.6 : 1) : 0);
+        }, 0);
         const benefics = inRange.filter((h: any) => h.benefic).length;
         const malefics = inRange.filter((h: any) => !h.benefic).length;
-        const score = Math.max(40, Math.min(98, 70 + benefics * 8 - malefics * 6));
+        const score = Math.max(40, Math.min(98, Math.round(70 + benWeighted * 8 - malWeighted * 6)));
 
         const summary = aspects[0]?.title
             ? `${aspects[0].title}. ${benefics} supportive, ${malefics} friction.`
@@ -745,6 +809,11 @@ function deriveChartMonths(reading: any, anchorISO: string | null): V4ChartMonth
 
 function deriveLines(reading: any): V4LineRow[] {
     const lines = reading?.planetaryLines || reading?.acgLines || [];
+    // Prompt-emitted notes, keyed by `<planet-lowercase>-<angle>`.
+    const promptNotes: Record<string, string> = {};
+    for (const ln of (reading?.teacherReading?.lineNotes || [])) {
+        if (ln?.lineKey && ln?.note) promptNotes[ln.lineKey.toLowerCase()] = ln.note;
+    }
     return lines.slice(0, 6).map((l: any) => {
         const planet = (l.planet || "").toString();
         const angle = (l.line || l.angle || "").toString().toUpperCase();
@@ -752,13 +821,14 @@ function deriveLines(reading: any): V4LineRow[] {
         const distKm = typeof distRaw === "string"
             ? Number((distRaw.match(/\d+/) || ["0"])[0])
             : Number(distRaw);
+        const key = `${planet.toLowerCase()}-${angle}`;
         return {
             planet,
             glyph: glyph(planet),
             angle,
             distKm: isFinite(distKm) ? distKm : 0,
             color: planetColor(planet),
-            note: l.note || l.tier || `${planet} ${angle} line near your destination.`,
+            note: promptNotes[key] || l.note || l.tier || `${planet} ${angle} line near your destination.`,
         };
     });
 }
@@ -943,7 +1013,17 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
         ? new Date(reading.travelDate).toISOString().slice(0, 10)
         : null;
 
-    const travelWindows = deriveTravelWindows(reading, travelType, travelDateISO);
+    const travelWindows = deriveTravelWindows(reading, travelType, travelDateISO, goalIds);
+
+    // Daily series only meaningful for trips and only when we have transit hits.
+    const dailySeries: DailyScore[] = (() => {
+        if (travelType === "relocation") return [];
+        const tw = reading?.transitWindows;
+        const isHitShape = Array.isArray(tw) && tw[0] && "transit_planet" in tw[0];
+        if (!isHitShape) return [];
+        const baseline = typeof reading?.macroScore === "number" ? reading.macroScore : 70;
+        return buildDailySeries(travelDateISO, tw, baseline, goalIds);
+    })();
     const heroWindow = travelWindows[0];
 
     const city = (reading?.destination || "—").toString().split(",")[0]?.trim() || "—";
@@ -970,15 +1050,22 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
         hero: {
             bestWindow: heroWindow,
             explainer: reading?.teacherReading?.hero?.explainer || heroExplainer(heroWindow, city, travelType),
+            baselineScore: typeof reading?.macroScore === "number" ? Math.round(reading.macroScore) : 0,
+            baselineContext: heroBaselineContext(
+                heroWindow?.score ?? 0,
+                typeof reading?.macroScore === "number" ? Math.round(reading.macroScore) : 0,
+                travelType,
+            ),
         },
         travelWindows,
+        dailySeries,
 
         vibes: deriveVibes(reading, goalIds),
 
         chart: {
             angles: deriveChartAngles(reading),
             natal: deriveChartNatal(reading),
-            months: deriveChartMonths(reading, travelDateISO),
+            months: deriveChartMonths(reading, travelDateISO, goalIds),
         },
 
         callout: "The scores above come from counting how many supportive aspects (the solid and dashed blue lines) hit your chart in a given month, minus the friction aspects (coral).",
@@ -1013,10 +1100,23 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
             angles: deriveRelocatedAngles(reading),
             planetsInHouses: derivePlanetsInHouses(reading),
             aspectsToAngles: deriveAspectsToAngles(reading),
-            glossary: STATIC_GLOSSARY,
+            glossary: deriveGlossary(reading),
             learnMore: LEARN_MORE_LINKS,
+            natalAnglesDeg: reading?.natalAngles || null,
+            relocatedAnglesDeg: getAngleLons(reading),
+            natalCuspsDeg: Array.isArray(reading?.natalCusps) && reading.natalCusps.length === 12 ? reading.natalCusps : [],
+            relocatedCuspsDeg: Array.isArray(reading?.relocatedCusps) && reading.relocatedCusps.length === 12 ? reading.relocatedCusps : [],
         },
     };
+}
+
+function heroBaselineContext(windowScore: number, baseline: number, travelType: V4TravelType): string {
+    if (travelType === "relocation") return "";
+    if (!baseline) return "";
+    const delta = windowScore - baseline;
+    if (Math.abs(delta) < 2) return `Right at your average for this place (${baseline}/100).`;
+    if (delta > 0) return `${delta} ${delta === 1 ? "point" : "points"} above your average for this place (${baseline}/100).`;
+    return `${Math.abs(delta)} ${Math.abs(delta) === 1 ? "point" : "points"} below your average for this place (${baseline}/100).`;
 }
 
 function heroExplainer(w: V4TravelWindow | undefined, city: string, travelType: V4TravelType): string {
@@ -1126,7 +1226,21 @@ function deriveBirth(reading: any): { place: string; coords: string; date: strin
     const city = b.city || b.birth_city || reading?.birthCity || "—";
     const lat  = typeof b.lat === "number" ? b.lat : b.birth_lat;
     const lon  = typeof b.lon === "number" ? b.lon : b.birth_lon;
-    const date = b.date || b.birth_date || reading?.birthDate || "—";
+    const rawDate = b.date || b.birth_date || reading?.birthDate;
+    const rawTime = b.time || b.birth_time || reading?.birthTime;
+    // Compose "Mar 14, 1991 · 6:42 AM" when both fields are present, else
+    // fall back to whatever we have. "—" only when we have nothing.
+    const date = (() => {
+        if (!rawDate) return "—";
+        try {
+            const d = new Date(`${rawDate}T${rawTime || "12:00"}`);
+            if (isNaN(d.getTime())) return rawTime ? `${rawDate} · ${rawTime}` : rawDate;
+            const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+            return rawTime ? `${dateStr} · ${rawTime}` : dateStr;
+        } catch {
+            return rawTime ? `${rawDate} · ${rawTime}` : rawDate;
+        }
+    })();
     return {
         place: city,
         coords: typeof lat === "number" && typeof lon === "number" ? fmtCoords(lat, lon) : "—",
