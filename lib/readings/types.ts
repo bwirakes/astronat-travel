@@ -25,6 +25,10 @@ export interface AstrocartoReadingResult {
    *  Consumed by the V4 reading view's Step 7 to render real natal-vs-relocated
    *  angle deltas. Optional because legacy cached readings predate this field. */
   natalAngles?: { ASC: number; IC: number; DSC: number; MC: number };
+  /** All 12 natal house cusps (Placidus / whole-sign per the same rule used
+   *  for relocatedCusps). Consumed by Step 7's RelocationBiWheel. Optional
+   *  for back-compat with cached readings. */
+  natalCusps?: number[];
   /** Birth-chart pole for the V4 view's Step 7 (natal vs relocated header).
    *  Mirrored from profiles.* — copied here so the reading is self-contained
    *  and we don't need a profile fetch on the page. */

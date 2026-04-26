@@ -590,6 +590,7 @@ export async function runAstrocarto(
     natalPlanets,
     relocatedCusps,
     natalAngles,
+    natalCusps,
     birth: {
       city: profile.birth_city,
       date: profile.birth_date,

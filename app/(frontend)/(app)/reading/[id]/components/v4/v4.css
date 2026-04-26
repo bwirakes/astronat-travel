@@ -106,6 +106,16 @@
   text-transform: uppercase; color: var(--color-eggshell, #F8F5EC);
   background: var(--v4-accent); padding: 4px 10px; border-radius: 99px;
 }
+.v4-root .v4-win-pill-your {
+  background: transparent; color: var(--v4-ink-faint);
+  border: 1px solid var(--v4-border);
+}
+.v4-root .v4-win-winner {
+  border-color: var(--v4-accent-blue);
+  background: color-mix(in oklab, var(--v4-accent-blue) 5%, var(--v4-bg));
+}
+.v4-root .v4-win-winner .v4-win-meter-fill { background: var(--v4-accent-blue); }
+.v4-root .v4-win-winner .v4-win-pill { background: var(--v4-accent-blue); }
 .v4-root .v4-win-dates {
   font-family: var(--font-primary, serif); font-size: clamp(28px, 3.5vw, 38px);
   line-height: 1.05; letter-spacing: -0.015em; color: var(--v4-ink); margin-top: 4px;

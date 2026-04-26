@@ -13,6 +13,7 @@ function ordinalSuffix(n: number): string {
     switch (n % 10) { case 1: return "st"; case 2: return "nd"; case 3: return "rd"; default: return "th"; }
 }
 import ChartInteractive from "./ChartInteractive";
+import RelocationBiWheel from "./RelocationBiWheel";
 import "./v4.css";
 
 interface Props {
@@ -83,26 +84,46 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                                     : "We found one strong window. As more transits develop, additional windows will appear here."}
                             </p>
                             <div className="v4-windows">
-                                {vm.travelWindows.map((w, i) => (
-                                    <article key={i} className={`v4-win${i === 0 ? " v4-win-primary" : ""}`}>
-                                        <div className="v4-win-head">
-                                            <div className="v4-win-flavor">
-                                                <span className="v4-win-emoji">{w.emoji}</span>
-                                                {w.flavorTitle}
-                                            </div>
-                                            {i === 0 && <span className="v4-win-pill">Recommended</span>}
-                                        </div>
-                                        <div className="v4-win-dates">{w.dates}</div>
-                                        <div className="v4-win-nights">{w.nights}</div>
-                                        <p className="v4-win-reason">{w.note}</p>
-                                        <div className="v4-win-meter">
-                                            <div className="v4-win-meter-fill" style={{ width: `${w.score}%` }} />
-                                        </div>
-                                        <div className="v4-win-score">
-                                            Matches your chart: <strong>{w.score}/100</strong>
-                                        </div>
-                                    </article>
-                                ))}
+                                {(() => {
+                                    // The pill goes on the genuinely highest-scoring alternate, not on
+                                    // card 0. We only flag a winner if it beats the user's chosen dates
+                                    // by at least RECOMMENDATION_MARGIN points — otherwise the variation
+                                    // is noise and we don't push the user away from their pick.
+                                    const RECOMMENDATION_MARGIN = 3;
+                                    const userScore = vm.travelWindows[0]?.score ?? 0;
+                                    let bestIdx = -1;
+                                    let bestScore = userScore + RECOMMENDATION_MARGIN - 1;
+                                    vm.travelWindows.forEach((w, i) => {
+                                        if (i === 0) return;
+                                        if (w.score >= bestScore + 1) { bestIdx = i; bestScore = w.score; }
+                                    });
+                                    return vm.travelWindows.map((w, i) => {
+                                        const isYour = i === 0;
+                                        const isWinner = i === bestIdx;
+                                        const delta = isWinner ? w.score - userScore : 0;
+                                        return (
+                                            <article key={i} className={`v4-win${isYour ? " v4-win-primary" : ""}${isWinner ? " v4-win-winner" : ""}`}>
+                                                <div className="v4-win-head">
+                                                    <div className="v4-win-flavor">
+                                                        <span className="v4-win-emoji">{w.emoji}</span>
+                                                        {w.flavorTitle}
+                                                    </div>
+                                                    {isYour && <span className="v4-win-pill v4-win-pill-your">Your dates</span>}
+                                                    {isWinner && <span className="v4-win-pill">Higher match · +{delta}</span>}
+                                                </div>
+                                                <div className="v4-win-dates">{w.dates}</div>
+                                                <div className="v4-win-nights">{w.nights}</div>
+                                                <p className="v4-win-reason">{w.note}</p>
+                                                <div className="v4-win-meter">
+                                                    <div className="v4-win-meter-fill" style={{ width: `${w.score}%` }} />
+                                                </div>
+                                                <div className="v4-win-score">
+                                                    Matches your chart: <strong>{w.score}/100</strong>
+                                                </div>
+                                            </article>
+                                        );
+                                    });
+                                })()}
                             </div>
                         </div>
                     </section>
@@ -261,6 +282,16 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                                 <div className="v4-reloc-pole-meta">{vm.relocated.travel.coords}</div>
                                 <div className="v4-reloc-pole-meta">{vm.relocated.travel.window}</div>
                             </div>
+                        </div>
+
+                        <div className="v4-reloc-block" style={{ marginTop: "3rem", marginBottom: "3rem" }}>
+                            <RelocationBiWheel 
+                                natalPlanets={vm.chart.natal}
+                                natalAnglesDeg={vm.relocated.natalAnglesDeg}
+                                relocatedAnglesDeg={vm.relocated.relocatedAnglesDeg}
+                                natalCuspsDeg={vm.relocated.natalCuspsDeg}
+                                relocatedCuspsDeg={vm.relocated.relocatedCuspsDeg}
+                            />
                         </div>
 
                         <div className="v4-reloc-block">
