@@ -518,11 +518,12 @@ function deriveChartMonths(reading: any, anchorISO: string | null): V4ChartMonth
                 ? angleLons[natalPlanet.toUpperCase() as "ASC"|"IC"|"DSC"|"MC"]
                 : (natalPlanetMap.get(natalPlanet.toLowerCase()) ?? 0);
 
-            // Planet's transiting longitude is unknown from a TransitHit, so we
-            // place the from-point on the same degree as the to-point — the
-            // line will read as a "hit" rather than a true geometric line.
-            // (When real per-month transit positions are wired in, replace.)
-            const fromDeg = targetDeg;
+            // Use the transiting planet's actual sky longitude on the hit date
+            // (persisted on TransitHit since the V4 follow-up). Cached hits
+            // written before that field landed fall back to the target degree
+            // so the line still renders, just as a "hit" rather than a true
+            // geometric position.
+            const fromDeg = typeof h.transit_planet_lon === "number" ? h.transit_planet_lon : targetDeg;
             const kind: V4ChartAspect["kind"] = h.benefic ? "supportive" : "friction";
             const aspectName = (h.aspect || "").toString();
             const isStrong = i === 0 && (h.orb ?? 99) < 2;
@@ -625,9 +626,9 @@ function deriveWeeks(reading: any, narrative: any): V4WeekRow[] {
 
 function deriveRelocatedAngles(reading: any): V4Angle[] {
     const lons = getAngleLons(reading);
-    // Natal angles need the natal ASC. We don't have it directly; some
-    // pipelines persist it. As a defensible fallback we leave natal as "—".
-    const natalAngles = reading?.natalAngles || reading?.natalAngleLons; // hopeful keys
+    // Persisted by runAstrocarto as `natalAngles: { ASC, IC, DSC, MC }`.
+    // Cached readings written before that field landed will fall back to "—".
+    const natalAngles = reading?.natalAngles;
     const getNatal = (k: "ASC"|"IC"|"DSC"|"MC"): string => {
         if (natalAngles && typeof natalAngles[k] === "number") return fmtSignDeg(natalAngles[k]);
         return "—";

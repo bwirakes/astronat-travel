@@ -17,6 +17,10 @@ export interface AstrocartoReadingResult {
   eventScores: any[];
   natalPlanets: any[];
   relocatedCusps: number[];
+  /** Natal house angles (cusps 0/3/6/9 computed at the birth lat/lon).
+   *  Consumed by the V4 reading view's Step 7 to render real natal-vs-relocated
+   *  angle deltas. Optional because legacy cached readings predate this field. */
+  natalAngles?: { ASC: number; IC: number; DSC: number; MC: number };
   lotOfFortune?: any;
   lotOfSpirit?: any;
 

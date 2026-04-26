@@ -333,6 +333,16 @@ export async function runAstrocarto(
 
   // 3. Relocated cusps + ACG lines + transits at destination
   const relocatedCusps = await relocatedCuspsAt(dtUtcBirth, targetLat, targetLon);
+  // Natal cusps — same calculation but anchored at the birth coordinates. Used
+  // to surface the real natal ASC/IC/DSC/MC alongside the relocated angles in
+  // the V4 reading view's Step 7 ("the four angles change").
+  const natalCusps = await relocatedCuspsAt(dtUtcBirth, profile.birth_lat, profile.birth_lon);
+  const natalAngles = {
+    ASC: natalCusps[0],
+    IC:  natalCusps[3],
+    DSC: natalCusps[6],
+    MC:  natalCusps[9],
+  };
   const { cityLines: acgLines, allLines: acgAllLines } = await resolveACGFull(dtUtcBirth, targetLat, targetLon);
   const refDate = travelDate ? new Date(travelDate) : new Date();
   const rawTransits = await solve12MonthTransits(natalPlanets, refDate);
@@ -478,6 +488,7 @@ export async function runAstrocarto(
     eventScores,
     natalPlanets,
     relocatedCusps,
+    natalAngles,
     ...(matrixResult.lotOfFortune ? { lotOfFortune: matrixResult.lotOfFortune } : {}),
     ...(matrixResult.lotOfSpirit ? { lotOfSpirit: matrixResult.lotOfSpirit } : {}),
     ...(teacherReading ? { teacherReading } : {}),
