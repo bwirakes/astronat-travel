@@ -8,6 +8,10 @@ export interface AstrocartoReadingResult {
   travelType?: string;
   travelDate: string | null;
   goals: number[];
+  /** Original goal IDs as picked on /reading/new ("love" | "career" | "community" |
+   *  "timing" | "growth" | "relocation"). Carried so the V4 view can order Step 3
+   *  vibes by the user's stated intent rather than by raw event score. */
+  goalIds?: string[];
   macroScore: number;
   macroVerdict: string;
   houses: any[];

@@ -192,8 +192,11 @@ function buildAIInput(args: {
   rawTransits: TransitHit[];
   natalPlanets: any[];
   relocatedCusps: number[];
+  natalAngles?: { ASC: number; IC: number; DSC: number; MC: number };
+  travelType: "trip" | "relocation";
+  goalIds: string[];
 }): TeacherReadingInput {
-  const { destination, travelDate, matrixResult, acgLines, rawTransits, natalPlanets, relocatedCusps } = args;
+  const { destination, travelDate, matrixResult, acgLines, rawTransits, natalPlanets, relocatedCusps, natalAngles, travelType, goalIds } = args;
 
   // Window: travel date ± 10 days, default to today + 10
   const start = travelDate ? new Date(travelDate) : new Date();
@@ -204,11 +207,16 @@ function buildAIInput(args: {
     end: end.toISOString().slice(0, 10),
   };
 
-  // Top transits — closest orbs, max 3
+  // Top transits — sorted by closeness to travelDate (relevance), then orb.
+  const refTime = travelDate ? new Date(travelDate).getTime() : Date.now();
   const topTransits = [...rawTransits]
-    .sort((a, b) => a.orb - b.orb)
-    .slice(0, 3)
-    .map((hit) => {
+    .sort((a, b) => {
+      const da = Math.abs(new Date(a.date).getTime() - refTime);
+      const db = Math.abs(new Date(b.date).getTime() - refTime);
+      return da !== db ? da - db : a.orb - b.orb;
+    })
+    .slice(0, 9)
+    .map((hit, i) => {
       const transitNatal = natalPlanets.find(
         (p) => String(p.name || p.planet).toLowerCase() === hit.transit_planet.toLowerCase(),
       );
@@ -218,12 +226,20 @@ function buildAIInput(args: {
       const transitSign = transitNatal?.sign ?? signFromLongitude(transitNatal?.longitude ?? 0);
       const natalSign = natalNatal?.sign ?? signFromLongitude(natalNatal?.longitude ?? 0);
 
-      // Find which house in the relocated chart this lands in
       const ascLon = relocatedCusps[0] ?? 0;
       const targetHouse = natalNatal
         ? houseFromLongitude(natalNatal.longitude, ascLon)
         : null;
       const houseTopics = targetHouse ? [houseTopic(targetHouse)].filter(Boolean) : [];
+
+      // Same shape the V4 view-model uses to key a chart aspect: month + index
+      // + transit planet + natal target. Lets the AI tooltip prose line up
+      // with the dot the user hovers on.
+      const monthKey = (() => {
+        const d = new Date(hit.date);
+        return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()];
+      })();
+      const aspectKey = `${monthKey}-${i}-${hit.transit_planet}-${hit.natal_planet}`;
 
       return {
         aspect: aspectSentence(hit, transitSign, natalSign),
@@ -234,6 +250,7 @@ function buildAIInput(args: {
         dateRange: formatTransitDates(hit.date),
         tone: transitTone(hit),
         houseTopics,
+        aspectKey,
       };
     });
 
@@ -276,14 +293,88 @@ function buildAIInput(args: {
       role: "Doing real work",
     }));
 
+  // V4 fields
+  const ascLon = relocatedCusps[0] ?? 0;
+  const angleShifts = natalAngles
+    ? (["ASC", "IC", "DSC", "MC"] as const).map((angle) => {
+        const natalLon = natalAngles[angle];
+        const reloLon = angle === "ASC" ? relocatedCusps[0]
+                       : angle === "IC"  ? relocatedCusps[3]
+                       : angle === "DSC" ? relocatedCusps[6]
+                       :                   relocatedCusps[9];
+        return {
+          angle,
+          natalSign: signFromLongitude(natalLon),
+          relocatedSign: signFromLongitude(reloLon),
+        };
+      })
+    : undefined;
+
+  // Per-planet house shifts. Need natal house — derived from natal ASC,
+  // which we recover from natalAngles.ASC if present (else skip).
+  const planetHouseShifts = natalAngles
+    ? natalPlanets.slice(0, 7).map((p: any) => {
+        const planet = p.name || p.planet;
+        const lon = p.longitude;
+        return {
+          planet,
+          natalHouse: houseFromLongitude(lon, natalAngles.ASC),
+          relocatedHouse: houseFromLongitude(lon, ascLon),
+        };
+      })
+    : undefined;
+
+  // Aspects from natal planets to the relocated angles, tight orb only.
+  const aspectsToAngles = natalPlanets
+    .map((p: any) => {
+      const planet = p.name || p.planet;
+      const lon = p.longitude;
+      if (typeof lon !== "number") return null;
+      const angles: Array<{ k: "ASC"|"IC"|"DSC"|"MC"; lon: number }> = [
+        { k: "ASC", lon: relocatedCusps[0] ?? 0 },
+        { k: "IC",  lon: relocatedCusps[3] ?? 0 },
+        { k: "DSC", lon: relocatedCusps[6] ?? 0 },
+        { k: "MC",  lon: relocatedCusps[9] ?? 0 },
+      ];
+      let best: { k: "ASC"|"IC"|"DSC"|"MC"; aspect: string; orb: number } | null = null;
+      for (const a of angles) {
+        const sep = (() => {
+          const d = ((lon - a.lon) % 360 + 360) % 360;
+          return d > 180 ? 360 - d : d;
+        })();
+        const candidates = [
+          { name: "conjunct",   angle:   0 },
+          { name: "sextile",    angle:  60 },
+          { name: "square",     angle:  90 },
+          { name: "trine",      angle: 120 },
+          { name: "opposition", angle: 180 },
+        ];
+        for (const c of candidates) {
+          const orb = Math.abs(sep - c.angle);
+          if (orb <= 8 && (!best || orb < best.orb)) {
+            best = { k: a.k, aspect: c.name, orb };
+          }
+        }
+      }
+      return best ? { planet, angle: best.k, aspect: best.aspect, orb: best.orb } : null;
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null)
+    .sort((a, b) => a.orb - b.orb)
+    .slice(0, 5);
+
   return {
     destination,
     dateRange,
     overallScore: matrixResult.macroScore,
+    travelType,
+    goalIds,
     topTransits,
     nearbyLines,
     activeHouses,
     natalSpotlight,
+    ...(angleShifts ? { angleShifts } : {}),
+    ...(planetHouseShifts ? { planetHouseShifts } : {}),
+    ...(aspectsToAngles.length ? { aspectsToAngles } : {}),
   };
 }
 
@@ -364,6 +455,12 @@ export async function runAstrocarto(
 
   // 5. House matrix + event scores
   const selectedGoals = parseGoals(goals);
+  // Preserve the user's original goal-ID picks (string IDs from /reading/new).
+  // parseGoals collapses these into matrix indices and drops "timing" — for the
+  // V4 view we want the original ordered list intact.
+  const goalIds: string[] | undefined = Array.isArray(goals)
+    ? (goals.filter((g): g is string => typeof g === "string"))
+    : undefined;
   const matrixResult = computeHouseMatrix({
     natalPlanets,
     relocatedCusps,
@@ -462,6 +559,9 @@ export async function runAstrocarto(
     rawTransits,
     natalPlanets,
     relocatedCusps,
+    natalAngles,
+    travelType: travelType === "relocation" ? "relocation" : "trip",
+    goalIds: goalIds ?? [],
   });
 
   let teacherReading: any = undefined;
@@ -479,6 +579,7 @@ export async function runAstrocarto(
     travelType,
     travelDate: travelDate ?? null,
     goals: selectedGoals ?? [],
+    ...(goalIds && goalIds.length ? { goalIds } : {}),
     macroScore: matrixResult.macroScore,
     macroVerdict: matrixResult.macroVerdict,
     houses: matrixResult.houses,

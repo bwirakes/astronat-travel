@@ -38,7 +38,10 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                     <div className="v4-step-inner v4-step-inner-narrow">
                         <div className="v4-kicker">A reading for {vm.location.city}</div>
                         <h1 className="v4-answer">
-                            The best time to go<br />is <span className="v4-answer-dates">{vm.hero.bestWindow?.dates ?? "—"}</span>.
+                            {vm.travelType === "relocation"
+                                ? <>Moving to <span className="v4-answer-dates">{vm.location.city}</span>{vm.travelDateISO ? <> on <span className="v4-answer-dates">{vm.hero.bestWindow?.dates ?? "—"}</span></> : null}.</>
+                                : <>The best time to go<br />is <span className="v4-answer-dates">{vm.hero.bestWindow?.dates ?? "—"}</span>.</>
+                            }
                         </h1>
                         <p className="v4-answer-why">{vm.hero.explainer}</p>
                         <div className="v4-answer-stat">
@@ -47,7 +50,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                                     <div className="v4-bar-fill" style={{ width: `${vm.hero.bestWindow?.score ?? 0}%` }} />
                                 </div>
                                 <div className="v4-bar-labels">
-                                    <span>how well it matches you</span>
+                                    <span>{vm.travelType === "relocation" ? "how well this place matches you" : "how well it matches you"}</span>
                                     <span className="v4-bar-num">{vm.hero.bestWindow?.score ?? 0}/100</span>
                                 </div>
                             </div>
@@ -61,40 +64,42 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                     </div>
                 </section>
 
-                {/* STEP 2 — Other windows */}
-                <section className="v4-step">
-                    <div className="v4-step-inner">
-                        <div className="v4-step-num">02</div>
-                        <h2 className="v4-h2">If those dates don't work.</h2>
-                        <p className="v4-step-intro">
-                            {vm.travelWindows.length > 1
-                                ? "Other windows open up over the next few months. Each has a different flavor — pick the one that matches what you're looking for."
-                                : "We found one strong window. As more transits develop, additional windows will appear here."}
-                        </p>
-                        <div className="v4-windows">
-                            {vm.travelWindows.map((w, i) => (
-                                <article key={i} className={`v4-win${i === 0 ? " v4-win-primary" : ""}`}>
-                                    <div className="v4-win-head">
-                                        <div className="v4-win-flavor">
-                                            <span className="v4-win-emoji">{w.emoji}</span>
-                                            {w.flavorTitle}
+                {/* STEP 2 — Other windows (skipped entirely for relocation) */}
+                {vm.travelType !== "relocation" && (
+                    <section className="v4-step">
+                        <div className="v4-step-inner">
+                            <div className="v4-step-num">02</div>
+                            <h2 className="v4-h2">If those dates don't work.</h2>
+                            <p className="v4-step-intro">
+                                {vm.travelWindows.length > 1
+                                    ? "Other windows open up over the next few months. Each has a different flavor — pick the one that matches what you're looking for."
+                                    : "We found one strong window. As more transits develop, additional windows will appear here."}
+                            </p>
+                            <div className="v4-windows">
+                                {vm.travelWindows.map((w, i) => (
+                                    <article key={i} className={`v4-win${i === 0 ? " v4-win-primary" : ""}`}>
+                                        <div className="v4-win-head">
+                                            <div className="v4-win-flavor">
+                                                <span className="v4-win-emoji">{w.emoji}</span>
+                                                {w.flavorTitle}
+                                            </div>
+                                            {i === 0 && <span className="v4-win-pill">Recommended</span>}
                                         </div>
-                                        {i === 0 && <span className="v4-win-pill">Recommended</span>}
-                                    </div>
-                                    <div className="v4-win-dates">{w.dates}</div>
-                                    <div className="v4-win-nights">{w.nights}</div>
-                                    <p className="v4-win-reason">{w.note}</p>
-                                    <div className="v4-win-meter">
-                                        <div className="v4-win-meter-fill" style={{ width: `${w.score}%` }} />
-                                    </div>
-                                    <div className="v4-win-score">
-                                        Matches your chart: <strong>{w.score}/100</strong>
-                                    </div>
-                                </article>
-                            ))}
+                                        <div className="v4-win-dates">{w.dates}</div>
+                                        <div className="v4-win-nights">{w.nights}</div>
+                                        <p className="v4-win-reason">{w.note}</p>
+                                        <div className="v4-win-meter">
+                                            <div className="v4-win-meter-fill" style={{ width: `${w.score}%` }} />
+                                        </div>
+                                        <div className="v4-win-score">
+                                            Matches your chart: <strong>{w.score}/100</strong>
+                                        </div>
+                                    </article>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                </section>
+                    </section>
+                )}
 
                 {/* STEP 3 — Why this place */}
                 <section className="v4-step v4-step-tint">

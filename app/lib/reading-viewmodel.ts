@@ -28,6 +28,7 @@ export interface V4Vibe {
     icon: string;
     title: string;
     body: string;        // accepts inline <strong> via dangerouslySetInnerHTML
+    score?: number;      // 0–100, populated when the vibe is goal-driven
 }
 
 export interface V4Angle {
@@ -107,10 +108,14 @@ export interface V4WeekRow {
     body: string;
 }
 
+export type V4TravelType = "trip" | "relocation";
+
 export interface V4ReadingVM {
     location: { city: string; region: string; lat: number; lon: number };
     generated: string;
     travelDateISO: string | null;
+    travelType: V4TravelType;
+    goalIds: string[];               // user's picks from /reading/new, in order
 
     hero: {
         bestWindow: V4TravelWindow;
@@ -205,6 +210,27 @@ const VIBE_PRESET: Record<string, { icon: string; title: string }> = {
     "Career & Public Recognition":   { icon: "▲", title: "Your direction sharpens." },
     "Friendship & Networking":       { icon: "◈", title: "New people enter." },
     "Spirituality & Inner Peace":    { icon: "✧", title: "Things get quieter inside." },
+};
+
+// /reading/new goal ID → LIFE_EVENT name(s). Mirrors GOAL_INDEX_MAP in
+// lib/readings/astrocarto.ts. "timing" has no event mapping — we surface it
+// as a generic "rhythm" vibe driven by macroVerdict instead of an eventScore.
+const GOAL_TO_EVENTS: Record<string, string[]> = {
+    love:       ["Romance & Love", "Partnerships & Marriage"],
+    career:     ["Career & Public Recognition", "Wealth & Financial Growth"],
+    community:  ["Friendship & Networking"],
+    growth:     ["Spirituality & Inner Peace", "Identity & Self-Discovery"],
+    relocation: ["Home, Family & Roots"],
+    timing:     [],
+};
+
+const GOAL_VIBE_PRESET: Record<string, { icon: string; title: string }> = {
+    love:       { icon: "♡", title: "Love and closeness soften here." },
+    career:     { icon: "▲", title: "Your direction sharpens." },
+    community:  { icon: "◈", title: "New people enter." },
+    timing:     { icon: "✧", title: "The rhythm of this place fits you." },
+    growth:     { icon: "✦", title: "Quieter inside, clearer ahead." },
+    relocation: { icon: "⌂", title: "It feels like home." },
 };
 
 const ANGLE_PLAIN: Record<"ASC"|"IC"|"DSC"|"MC", { name: string; plain: string }> = {
@@ -310,7 +336,42 @@ const FLAVORS: Array<{ flavor: string; flavorTitle: string; emoji: string }> = [
     { flavor: "Quiet window",  flavorTitle: "Commit to something",  emoji: "✷" },
 ];
 
-function deriveTravelWindows(reading: any): V4TravelWindow[] {
+function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateISO: string | null): V4TravelWindow[] {
+    // 0. Prompt-emitted V4 windows take precedence when present.
+    const promptWindows = reading?.teacherReading?.windows;
+    if (Array.isArray(promptWindows) && promptWindows.length) {
+        return promptWindows.slice(0, 3).map((w: any, i: number) => ({
+            rank: i + 1,
+            flavor: FLAVORS[i]?.flavor ?? "Window",
+            flavorTitle: w.flavorTitle ?? FLAVORS[i]?.flavorTitle ?? "",
+            emoji: FLAVORS[i]?.emoji ?? "✦",
+            dates: w.dates ?? "",
+            nights: w.nights ?? "",
+            score: typeof w.score === "number" ? Math.round(w.score) : 80,
+            note: w.note ?? "",
+            startISO: "",
+            endISO: "",
+        }));
+    }
+
+    // For relocation readings the "best window" is just the planned move date —
+    // there's no 7-night frame to optimize. We synthesize a single window that
+    // anchors the hero on the user's actual travelDate.
+    if (travelType === "relocation" && travelDateISO) {
+        const start = new Date(travelDateISO);
+        const end = new Date(start.getTime() + 30 * 86_400_000);
+        return [{
+            rank: 1,
+            flavor: "Move date", flavorTitle: "Your move starts here", emoji: "⌂",
+            dates: shortDate(start.toISOString()) + ", " + start.getFullYear(),
+            nights: "first month",
+            score: reading?.macroScore || 80,
+            note: reading?.teacherReading?.hero?.explainer || reading?.teacherReading?.summary?.theRead || "Your relocated chart settles in over the first 30 days. The score is for the place itself, not a window inside it.",
+            startISO: start.toISOString(),
+            endISO: end.toISOString(),
+        }];
+    }
+
     // 1. If a weather forecast is present and has interpretation.travelWindows, use it.
     const wfWindows = reading?.weatherForecast?.interpretation?.travelWindows;
     if (Array.isArray(wfWindows) && wfWindows.length) {
@@ -336,11 +397,22 @@ function deriveTravelWindows(reading: any): V4TravelWindow[] {
         const isHitShape = tw[0] && "transit_planet" in tw[0];
 
         if (isHitShape) {
-            // Group by ±5 days to make windows
-            const benefics = tw.filter((h: any) => h.benefic).slice(0, 3);
+            // Sort benefic hits by closeness to travelDate. The first becomes the
+            // hero window; the next two are alternates.
+            const refMs = travelDateISO ? new Date(travelDateISO).getTime() : Date.now();
+            const benefics = [...tw]
+                .filter((h: any) => h.benefic)
+                .sort((a: any, b: any) =>
+                    Math.abs(new Date(a.date).getTime() - refMs) -
+                    Math.abs(new Date(b.date).getTime() - refMs)
+                )
+                .slice(0, 3);
             return benefics.map((h: any, i: number) => {
-                const start = new Date(h.date);
-                const end = new Date(start.getTime() + 7 * 86_400_000);
+                // Centre the 10-day window on the hit so the user can see slack
+                // on either side of the exact aspect.
+                const exact = new Date(h.date);
+                const start = new Date(exact.getTime() - 4 * 86_400_000);
+                const end = new Date(exact.getTime() + 6 * 86_400_000);
                 return {
                     rank: i + 1,
                     flavor: FLAVORS[i]?.flavor ?? "Window",
@@ -389,25 +461,51 @@ function deriveTravelWindows(reading: any): V4TravelWindow[] {
 
 // ─── Vibes (Step 3) ───────────────────────────────────────────────────
 
-function deriveVibes(reading: any): V4Vibe[] {
+function deriveVibes(reading: any, goalIds: string[]): V4Vibe[] {
     const eventScores = reading?.eventScores
         || reading?.matrixResult?.eventScores
         || reading?.details?.eventScores
         || [];
 
     const teacherLeanInto: string[] = reading?.teacherReading?.summary?.leanInto || [];
+    const teacherVibes: any[] = reading?.teacherReading?.vibes || [];
 
+    const fallbackBodies = [
+        "<strong>The strongest signal</strong> for you here. Pay attention to it first — it'll set the tone for everything else.",
+        "<strong>A real, second thread</strong> at this place. Worth planning around.",
+        "<strong>A subtler theme</strong>, but real. It tends to show up later in a trip.",
+    ];
+
+    const eventScoreFor = (name: string): number | undefined =>
+        eventScores.find((e: any) => e.eventName === name)?.finalScore;
+
+    // Goal-driven path: order vibes by the user's picked goal IDs.
+    if (goalIds.length > 0) {
+        return goalIds.slice(0, 3).map((goalId, i) => {
+            const preset = GOAL_VIBE_PRESET[goalId] || { icon: "✦", title: goalId };
+            // If the prompt produced a goal-keyed vibe, prefer it.
+            const tv = teacherVibes.find(v => v?.goalId === goalId);
+            const body = tv?.body || teacherLeanInto[i] || fallbackBodies[i];
+            const title = tv?.title || preset.title;
+            const icon = tv?.icon || preset.icon;
+            // Surface the strongest related event score (if any) so the bar
+            // animation in the V4 view has a real number to anchor on.
+            const events = GOAL_TO_EVENTS[goalId] || [];
+            const score = events.reduce<number | undefined>((best, name) => {
+                const s = eventScoreFor(name);
+                if (s == null) return best;
+                return best == null || s > best ? s : best;
+            }, undefined);
+            return { icon, title, body, ...(score != null ? { score } : {}) } as V4Vibe;
+        });
+    }
+
+    // No goals on file (legacy reading or guest flow): fall back to top-3
+    // event scores by raw value.
     let topEvents: any[] = [];
     if (Array.isArray(eventScores) && eventScores.length) {
         topEvents = [...eventScores].sort((a, b) => (b.finalScore ?? 0) - (a.finalScore ?? 0)).slice(0, 3);
     }
-
-    const fallbackBodies = [
-        "<strong>This is the strongest signal</strong> for you here. Pay attention to it first — it'll set the tone for everything else.",
-        "<strong>A real, second source of life</strong> at this place. Worth planning around.",
-        "<strong>A subtler thread</strong>, but real. It tends to show up later in a trip.",
-    ];
-
     if (topEvents.length === 3) {
         return topEvents.map((ev, i) => {
             const preset = VIBE_PRESET[ev.eventName] || { icon: "✦", title: ev.eventName };
@@ -416,7 +514,6 @@ function deriveVibes(reading: any): V4Vibe[] {
         });
     }
 
-    // Fallback when no event scores: use teacherReading or a generic 3
     const titles = ["It feels like home.", "You'll meet teachers.", "Your direction softens."];
     const icons = ["⌂", "◎", "◈"];
     return titles.map((title, i) => ({
@@ -500,6 +597,12 @@ function deriveChartMonths(reading: any, anchorISO: string | null): V4ChartMonth
     }
 
     const teacherWeather: any[] = reading?.teacherReading?.signals?.weather || [];
+    // V4-shaped per-aspect prose, keyed by aspectKey produced in buildAIInput
+    // and the matching key derived below.
+    const monthAspectsByKey: Record<string, { why?: string; timing?: string }> = {};
+    for (const ma of (reading?.teacherReading?.monthAspects || [])) {
+        if (ma?.aspectKey) monthAspectsByKey[ma.aspectKey] = { why: ma.why, timing: ma.timing };
+    }
 
     return months.map((m, monthIdx) => {
         const inRange = isHitShape
@@ -528,13 +631,18 @@ function deriveChartMonths(reading: any, anchorISO: string | null): V4ChartMonth
             const aspectName = (h.aspect || "").toString();
             const isStrong = i === 0 && (h.orb ?? 99) < 2;
 
+            const aspectKey = `${m.key}-${i}-${transitPlanet}-${natalPlanet}`;
+            const fromPrompt = monthAspectsByKey[aspectKey];
             const tw = teacherWeather[monthIdx * 2 + i];
-            const why = tw?.body
+            const why = fromPrompt?.why
+                || tw?.body
                 || `${transitPlanet} ${aspectName} your ${natalPlanet}. ${h.benefic ? "Easeful." : "Useful pressure."}`;
-            const timing = tw?.datesRange || `${shortDate(h.date)}, orb ${(h.orb ?? 0).toFixed(1)}°`;
+            const timing = fromPrompt?.timing
+                || tw?.datesRange
+                || `${shortDate(h.date)}, orb ${(h.orb ?? 0).toFixed(1)}°`;
 
             return {
-                id: `${m.key}-${i}-${transitPlanet}-${natalPlanet}`,
+                id: aspectKey,
                 kind: isStrong ? "strongest" : kind,
                 from: { deg: fromDeg, p: `${transitPlanet} ${glyph(transitPlanet)}`, isTransit: true },
                 to: isAngleTarget
@@ -626,20 +734,24 @@ function deriveWeeks(reading: any, narrative: any): V4WeekRow[] {
 
 function deriveRelocatedAngles(reading: any): V4Angle[] {
     const lons = getAngleLons(reading);
-    // Persisted by runAstrocarto as `natalAngles: { ASC, IC, DSC, MC }`.
-    // Cached readings written before that field landed will fall back to "—".
     const natalAngles = reading?.natalAngles;
     const getNatal = (k: "ASC"|"IC"|"DSC"|"MC"): string => {
         if (natalAngles && typeof natalAngles[k] === "number") return fmtSignDeg(natalAngles[k]);
         return "—";
     };
 
+    // Prompt-emitted deltas, keyed by angle.
+    const promptDeltas: Record<string, string> = {};
+    for (const d of (reading?.teacherReading?.angleDeltas || [])) {
+        if (d?.angle) promptDeltas[d.angle] = d.delta;
+    }
+
     return (["ASC", "IC", "DSC", "MC"] as const).map(k => ({
         name: ANGLE_PLAIN[k].name,
         plain: ANGLE_PLAIN[k].plain,
         natal: getNatal(k),
         relocated: lons ? fmtSignDeg(lons[k]) : "—",
-        delta: deltaCopy(k),
+        delta: promptDeltas[k] || deltaCopy(k),
     }));
 }
 
@@ -655,8 +767,14 @@ function deltaCopy(k: "ASC"|"IC"|"DSC"|"MC"): string {
 function derivePlanetsInHouses(reading: any): V4PlanetHouseRow[] {
     const natalPlanets = reading?.natalPlanets || [];
     const lons = getAngleLons(reading);
+
+    // Prompt-emitted shift copy, keyed by planet name (case-insensitive).
+    const promptShifts: Record<string, string> = {};
+    for (const ps of (reading?.teacherReading?.planetShifts || [])) {
+        if (ps?.planet) promptShifts[ps.planet.toLowerCase()] = ps.shift;
+    }
+
     if (!natalPlanets.length || !lons) {
-        // Best-effort with what we have.
         return natalPlanets.slice(0, 7).map((p: any) => {
             const name = (p.name || p.planet || "").toString();
             return {
@@ -664,7 +782,7 @@ function derivePlanetsInHouses(reading: any): V4PlanetHouseRow[] {
                 glyph: glyph(name),
                 natalHouse: HOUSE_LABEL[p.house] ?? "—",
                 reloHouse: "—",
-                shift: "Re-housing data will appear here once the relocated chart finishes computing.",
+                shift: promptShifts[name.toLowerCase()] || "Re-housing data will appear here once the relocated chart finishes computing.",
             };
         });
     }
@@ -681,7 +799,7 @@ function derivePlanetsInHouses(reading: any): V4PlanetHouseRow[] {
             glyph: glyph(name),
             natalHouse: natalHouseNum ? HOUSE_LABEL[natalHouseNum] : "—",
             reloHouse: HOUSE_LABEL[reloHouseNum] ?? `${reloHouseNum}`,
-            shift: shiftCopy(name, natalHouseNum, reloHouseNum),
+            shift: promptShifts[name.toLowerCase()] || shiftCopy(name, natalHouseNum, reloHouseNum),
         };
     });
 }
@@ -711,6 +829,15 @@ function deriveAspectsToAngles(reading: any): V4AspectToAngle[] {
     const lons = getAngleLons(reading);
     if (!natalPlanets.length || !lons) return [];
 
+    // Prompt-emitted plain/wasNatal copy, keyed by `${planet.toLowerCase()}-${angle}`.
+    const promptAspectKey = (planet: string, angle: string) => `${planet.toLowerCase()}-${angle}`;
+    const promptAspects: Record<string, { plain?: string; wasNatal?: string }> = {};
+    for (const ap of (reading?.teacherReading?.aspectPlains || [])) {
+        if (ap?.planet && ap?.angle) {
+            promptAspects[promptAspectKey(ap.planet, ap.angle)] = { plain: ap.plain, wasNatal: ap.wasNatal };
+        }
+    }
+
     const out: V4AspectToAngle[] = [];
     for (const p of natalPlanets) {
         const name = (p.name || p.planet || "").toString();
@@ -721,18 +848,18 @@ function deriveAspectsToAngles(reading: any): V4AspectToAngle[] {
             const cls = classifyAspect(lon, lons[k], 8);
             if (!cls) continue;
             const strength = strengthFromOrb(cls.orb, cls.angle);
+            const fromPrompt = promptAspects[promptAspectKey(name, k)];
             out.push({
                 planet: name,
                 glyph: glyph(name),
                 toAngle: k,
                 aspect: `${cls.name} (${cls.angle}°, orb ${cls.orb.toFixed(1)}°)`,
                 strength,
-                plain: aspectPlain(name, k, cls.name),
-                wasNatal: "Natal comparison: orb shifts in this place.",
+                plain: fromPrompt?.plain || aspectPlain(name, k, cls.name),
+                wasNatal: fromPrompt?.wasNatal || "Natal comparison: orb shifts in this place.",
             });
         }
     }
-    // Sort by orb (best/exact first), keep top 5.
     return out
         .sort((a, b) => parseFloat(a.aspect.match(/orb ([\d.]+)/)?.[1] || "9") -
                          parseFloat(b.aspect.match(/orb ([\d.]+)/)?.[1] || "9"))
@@ -755,15 +882,18 @@ function aspectPlain(planet: string, angle: "ASC"|"IC"|"DSC"|"MC", aspectName: s
 // ─── Public entry point ──────────────────────────────────────────────
 
 export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
-    const travelWindows = deriveTravelWindows(reading);
-    const heroWindow = travelWindows[0];
-
-    const city = (reading?.destination || "—").toString().split(",")[0]?.trim() || "—";
-    const region = (reading?.destination || "").toString().split(",").slice(1).join(",").trim();
+    const travelType: V4TravelType = reading?.travelType === "relocation" ? "relocation" : "trip";
+    const goalIds: string[] = Array.isArray(reading?.goalIds) ? reading.goalIds.filter((g: any) => typeof g === "string") : [];
 
     const travelDateISO = reading?.travelDate
         ? new Date(reading.travelDate).toISOString().slice(0, 10)
         : null;
+
+    const travelWindows = deriveTravelWindows(reading, travelType, travelDateISO);
+    const heroWindow = travelWindows[0];
+
+    const city = (reading?.destination || "—").toString().split(",")[0]?.trim() || "—";
+    const region = (reading?.destination || "").toString().split(",").slice(1).join(",").trim();
 
     const generated = (() => {
         const ts = reading?.generated || reading?.created_at;
@@ -780,14 +910,16 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
         },
         generated,
         travelDateISO,
+        travelType,
+        goalIds,
 
         hero: {
             bestWindow: heroWindow,
-            explainer: heroExplainer(heroWindow, city),
+            explainer: reading?.teacherReading?.hero?.explainer || heroExplainer(heroWindow, city, travelType),
         },
         travelWindows,
 
-        vibes: deriveVibes(reading),
+        vibes: deriveVibes(reading, goalIds),
 
         chart: {
             angles: deriveChartAngles(reading),
@@ -797,7 +929,7 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
 
         callout: "The scores above come from counting how many supportive aspects (the solid and dashed blue lines) hit your chart in a given month, minus the friction aspects (coral).",
 
-        todo: deriveTodo(heroWindow, city, reading),
+        todo: deriveTodo(heroWindow, city, reading, travelType, goalIds),
 
         astrology: {
             lines: deriveLines(reading),
@@ -819,32 +951,104 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
     };
 }
 
-function heroExplainer(w: V4TravelWindow | undefined, city: string): string {
+function heroExplainer(w: V4TravelWindow | undefined, city: string, travelType: V4TravelType): string {
     if (!w) return "Your reading is being prepared.";
+    if (travelType === "relocation") {
+        return `Your relocated chart kicks in the day you arrive in ${city}. The score below is for the place itself — how well its rotated angles fit your chart, not a window inside it.`;
+    }
     return `That's a ${w.nights} window where the skies over ${city} are most aligned with your chart. If you can, book it. If you can't — there are two other good windows. Keep scrolling.`;
 }
 
-function deriveTodo(hero: V4TravelWindow | undefined, city: string, reading: any): Array<{ title: string; body: string }> {
+const RELOCATION_TODO_BY_GOAL: Record<string, { title: string; body: string }> = {
+    love: {
+        title: "Plan a slow first month before introducing the relationship.",
+        body: "Don't import the relationship dynamics from your old place; let them recalibrate to the new chart first.",
+    },
+    career: {
+        title: "Hold off on big career moves for the first 30 days.",
+        body: "Your relocated MC needs a beat to settle. Use the first month to listen, not pitch.",
+    },
+    community: {
+        title: "Say yes to one introduction a week.",
+        body: "Friendship signals here arrive through repeated low-stakes encounters, not big events.",
+    },
+    growth: {
+        title: "Set a small daily practice on day one.",
+        body: "The growth themes in this place compound. Skip the retreat; build the habit.",
+    },
+    relocation: {
+        title: "Treat the first month as fieldwork.",
+        body: "Walk the neighborhoods you'd consider settling in. The chart speaks through specific streets, not maps.",
+    },
+    timing: {
+        title: "Mark the next two transit windows on your calendar.",
+        body: "Big decisions land better inside them. Step 4 shows where they are.",
+    },
+};
+
+const TRIP_TODO_BY_GOAL: Record<string, { title: string; body: string }> = {
+    love: {
+        title: "Save one evening for an unplanned conversation.",
+        body: "Romantic / closeness signals here favor encounters you didn't schedule.",
+    },
+    career: {
+        title: "Pack one work artifact you can show.",
+        body: "Career signals tend to land mid-trip — be ready to share, not just absorb.",
+    },
+    community: {
+        title: "Take a class or workshop, even a one-off.",
+        body: "The friendship signal here works through small group settings, not solo wandering.",
+    },
+    growth: {
+        title: "Plan a few solo mornings.",
+        body: "The quieter signals in your chart need room. Don't fill every hour.",
+    },
+    relocation: {
+        title: "Visit at least two neighborhoods you'd actually live in.",
+        body: "If you're scouting, treat this trip as research, not a holiday.",
+    },
+    timing: {
+        title: "Anchor the trip on the dates above.",
+        body: "The window is the whole point — moving by even a few days dilutes the signal.",
+    },
+};
+
+function deriveTodo(
+    hero: V4TravelWindow | undefined,
+    city: string,
+    reading: any,
+    travelType: V4TravelType,
+    goalIds: string[],
+): Array<{ title: string; body: string }> {
+    // If the prompt produced V4-shaped todos, prefer them.
+    const promptTodos = reading?.teacherReading?.todos;
+    if (Array.isArray(promptTodos) && promptTodos.length >= 3) {
+        return promptTodos.slice(0, 4).map((t: any) => ({
+            title: t.title ?? "",
+            body: t.body ?? "",
+        }));
+    }
+
     const teacherTodo: string[] = reading?.teacherReading?.summary?.leanInto || [];
     const baseDates = hero?.dates || "your best window";
-    return [
-        {
-            title: `Check your calendar for ${baseDates}.`,
-            body: `That's your best window. ${hero?.nights ?? "Around a week"} is the sweet spot — long enough to settle, short enough to stay open.`,
-        },
-        {
-            title: "If those dates don't work, look at the other two windows.",
-            body: "Both secondary windows are real — just flavored differently (social vs reflective).",
-        },
-        {
-            title: `Book somewhere that matches the reading.`,
-            body: teacherTodo[0] || `Lean into the parts of ${city} that match the dominant vibe above.`,
-        },
-        {
-            title: "Plan a few solo mornings.",
-            body: teacherTodo[1] || "The quieter signals in your chart need room. Don't fill every hour.",
-        },
+    const dict = travelType === "relocation" ? RELOCATION_TODO_BY_GOAL : TRIP_TODO_BY_GOAL;
+
+    const headlineTodo = travelType === "relocation"
+        ? { title: `Lock the move date.`, body: `Your relocated chart starts the day you arrive in ${city}. Plan the logistics around that, not the other way around.` }
+        : { title: `Check your calendar for ${baseDates}.`, body: `That's your best window. ${hero?.nights ?? "Around a week"} is the sweet spot — long enough to settle, short enough to stay open.` };
+
+    const goalTodos = goalIds.slice(0, 3)
+        .map(g => dict[g])
+        .filter((x): x is { title: string; body: string } => !!x);
+
+    const fallback = [
+        { title: "If those dates don't work, look at the other two windows.", body: "Both secondary windows are real — just flavored differently." },
+        { title: "Book somewhere that matches the reading.", body: teacherTodo[0] || `Lean into the parts of ${city} that match the dominant vibe above.` },
+        { title: "Plan a few solo mornings.", body: teacherTodo[1] || "The quieter signals in your chart need room. Don't fill every hour." },
     ];
+
+    const items = [headlineTodo, ...goalTodos, ...fallback];
+    return items.slice(0, 4);
 }
 
 function deriveBirth(reading: any): { place: string; coords: string; date: string } {
