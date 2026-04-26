@@ -1,10 +1,17 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import AppNavbar from "@/app/components/AppNavbar";
 import { BackButton } from "@/components/app/back-button";
 import UpsellCelebrationCard from "@/app/components/UpsellCelebrationCard";
 import { toV4ViewModel } from "@/app/lib/reading-viewmodel";
+
+function ordinalSuffix(n: number): string {
+    const s = n % 100;
+    if (s >= 11 && s <= 13) return "th";
+    switch (n % 10) { case 1: return "st"; case 2: return "nd"; case 3: return "rd"; default: return "th"; }
+}
 import ChartInteractive from "./ChartInteractive";
 import "./v4.css";
 
@@ -40,7 +47,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                         <h1 className="v4-answer">
                             {vm.travelType === "relocation"
                                 ? <>Moving to <span className="v4-answer-dates">{vm.location.city}</span>{vm.travelDateISO ? <> on <span className="v4-answer-dates">{vm.hero.bestWindow?.dates ?? "—"}</span></> : null}.</>
-                                : <>The best time to go<br />is <span className="v4-answer-dates">{vm.hero.bestWindow?.dates ?? "—"}</span>.</>
+                                : <>Your dates: <span className="v4-answer-dates">{vm.hero.bestWindow?.dates ?? "—"}</span>.</>
                             }
                         </h1>
                         <p className="v4-answer-why">{vm.hero.explainer}</p>
@@ -69,10 +76,10 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                     <section className="v4-step">
                         <div className="v4-step-inner">
                             <div className="v4-step-num">02</div>
-                            <h2 className="v4-h2">If those dates don't work.</h2>
+                            <h2 className="v4-h2">If you can shift your dates.</h2>
                             <p className="v4-step-intro">
                                 {vm.travelWindows.length > 1
-                                    ? "Other windows open up over the next few months. Each has a different flavor — pick the one that matches what you're looking for."
+                                    ? "Here's how nearby weeks score for you in this city — same chart, same destination, different transits. If your calendar is flexible, this shows you whether shifting helps."
                                     : "We found one strong window. As more transits develop, additional windows will appear here."}
                             </p>
                             <div className="v4-windows">
@@ -106,15 +113,25 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                     <div className="v4-step-inner">
                         <div className="v4-step-num">03</div>
                         <h2 className="v4-h2">Why {vm.location.city}, for you.</h2>
-                        <p className="v4-step-intro">
-                            Astrologers read cities like they read people. Based on where planets sat when you were born, some places <em>fit</em> you more than others. {vm.location.city} is a match in three specific ways:
-                        </p>
+                        <p className="v4-step-intro">{vm.chrome.step3Intro}</p>
                         <div className="v4-vibes">
                             {vm.vibes.map((v, i) => (
                                 <div key={i} className="v4-vibe">
                                     <div className="v4-vibe-icon">{v.icon}</div>
                                     <h3 className="v4-vibe-title">{v.title}</h3>
                                     <p className="v4-vibe-body" dangerouslySetInnerHTML={{ __html: v.body }} />
+                                    {v.houseAttribution && v.houseAttribution.length > 0 && (
+                                        <div className="v4-vibe-attribution">
+                                            <span className="v4-vibe-attr-label">Driven by</span>
+                                            {v.houseAttribution.map((h, j) => (
+                                                <span key={j} className="v4-vibe-attr-house">
+                                                    <strong>{h.house}{ordinalSuffix(h.house)}</strong>
+                                                    <span className="v4-vibe-attr-topic">· {h.topic}</span>
+                                                    <span className="v4-vibe-attr-score">{h.score}</span>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -228,9 +245,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                     <div className="v4-step-inner">
                         <div className="v4-step-num">07</div>
                         <h2 className="v4-h2">Your chart, relocated to {vm.location.city}.</h2>
-                        <p className="v4-step-intro">
-                            When you move (or travel), astrologers recalculate your birth chart as if you had been born in the new place. The planets stay the same — but which <em>areas of life</em> they activate changes. Here's what shifts.
-                        </p>
+                        <p className="v4-step-intro">{vm.chrome.step7Intro}</p>
 
                         <div className="v4-reloc-head">
                             <div className="v4-reloc-pole">
@@ -249,7 +264,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                         </div>
 
                         <div className="v4-reloc-block">
-                            <h3 className="v4-reloc-h">The four angles change.</h3>
+                            <h3 className="v4-reloc-h">{vm.chrome.step7AnglesSub}</h3>
                             <p className="v4-reloc-sub">These are the "corners" of your chart. They're why places <em>feel</em> different — they set the stage for everything else.</p>
                             <div className="v4-angles">
                                 {vm.relocated.angles.map((a, i) => (
@@ -276,7 +291,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                         </div>
 
                         <div className="v4-reloc-block">
-                            <h3 className="v4-reloc-h">Planets move into new houses.</h3>
+                            <h3 className="v4-reloc-h">{vm.chrome.step7HousesSub}</h3>
                             <p className="v4-reloc-sub">
                                 "Houses" are twelve areas of life — self, home, work, relationships, etc. When you move, each planet activates a different house. That's why the same life can feel <em>differently organized</em> in a different place.
                             </p>
@@ -302,7 +317,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                         </div>
 
                         <div className="v4-reloc-block">
-                            <h3 className="v4-reloc-h">New aspects to the angles.</h3>
+                            <h3 className="v4-reloc-h">{vm.chrome.step7AspectsSub}</h3>
                             <p className="v4-reloc-sub">
                                 An "aspect" is a geometric tie between a planet and one of the four corners. The tighter the angle, the more you'll feel it. Here are the big ones in your relocated chart:
                             </p>
@@ -335,11 +350,18 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                             <dl className="v4-glossary">
                                 {vm.relocated.glossary.map((g, i) => (
                                     <div key={i} className="v4-glossary-row">
-                                        <dt>{g.term}</dt>
+                                        <dt>
+                                            <Link href={g.href} className="v4-glossary-link">{g.term} →</Link>
+                                        </dt>
                                         <dd>{g.def}</dd>
                                     </div>
                                 ))}
                             </dl>
+                            <div className="v4-learn-more">
+                                {vm.relocated.learnMore.map((l, i) => (
+                                    <Link key={i} href={l.href}>{l.label}</Link>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </section>

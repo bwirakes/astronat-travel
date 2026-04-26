@@ -83,6 +83,13 @@ You are writing for a seven-step reading layout. Your output goes into specific 
 
 # What goes where
 
+**chrome** — Short visible chrome strings that personalise the page rather than repeat across every reading:
+- \`step3Intro\` — 2–3 sentences introducing the "Why {city}, for you" section. Reference this specific place and the user's chart in plain English. No jargon.
+- \`step7Intro\` — 2–3 sentences introducing the relocated-chart section. Mention the specific city and what changes when the chart rotates here.
+- \`step7AnglesSub\` — One sentence. The hardcoded version is "The four angles change." Write a place-specific version (e.g. "Your four angles all shift sign in {city}.").
+- \`step7HousesSub\` — One sentence. The hardcoded version is "Planets move into new houses." Write a place-specific version.
+- \`step7AspectsSub\` — One sentence. The hardcoded version is "New aspects to the angles." Write a place-specific version (e.g. "The tightest new aspects in {city}.").
+
 **hero.explainer** — One short paragraph. For \`travelType: "trip"\`, frame around the date window. For \`travelType: "relocation"\`, frame around the place itself, not a window inside it.
 
 **windows[3]** — Only when \`travelType === "trip"\`. Three travel windows, ordered best → alternate → alternate. Each maps onto a transit in \`topTransits\`. \`flavorTitle\` is a short label (e.g. "Home-like, settling", "Meeting people"); \`note\` is a 1–2 sentence reason; \`score\` is 0–100.

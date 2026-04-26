@@ -8,6 +8,7 @@
  * shape the V4 components can render without further branching.
  */
 import { houseFromLongitude, signFromLongitude } from "./geodetic";
+import { buildScoredWindows, scoreDate } from "./window-scoring";
 
 // ─── Output shape ─────────────────────────────────────────────────────
 
@@ -29,6 +30,9 @@ export interface V4Vibe {
     title: string;
     body: string;        // accepts inline <strong> via dangerouslySetInnerHTML
     score?: number;      // 0–100, populated when the vibe is goal-driven
+    /** Houses that drove the score, with their per-house scores. Surfaced under
+     *  the vibe so the user can see "5th: 78 · 7th: 81" instead of a black box. */
+    houseAttribution?: Array<{ house: number; topic: string; score: number }>;
 }
 
 export interface V4Angle {
@@ -133,6 +137,17 @@ export interface V4ReadingVM {
 
     callout: string;                    // small explanation under chart
 
+    /** Visible chrome strings — prompt-emitted when present, fall back to
+     *  templated defaults. The page reads these instead of inlining the
+     *  hardcoded versions. */
+    chrome: {
+        step3Intro: string;
+        step7Intro: string;
+        step7AnglesSub: string;
+        step7HousesSub: string;
+        step7AspectsSub: string;
+    };
+
     todo: Array<{ title: string; body: string }>;  // 4 items
 
     astrology: {
@@ -146,7 +161,8 @@ export interface V4ReadingVM {
         angles: V4Angle[];
         planetsInHouses: V4PlanetHouseRow[];
         aspectsToAngles: V4AspectToAngle[];
-        glossary: Array<{ term: string; def: string }>;
+        glossary: Array<{ term: string; def: string; href: string }>;
+        learnMore: Array<{ label: string; href: string }>;
     };
 }
 
@@ -199,29 +215,34 @@ const HOUSE_LABEL: Record<number, string> = {
     12: "12 · behind the scenes",
 };
 
-// LIFE_EVENT (from app/lib/planet-library.ts) → vibe presentation
-const VIBE_PRESET: Record<string, { icon: string; title: string }> = {
-    "Identity & Self-Discovery":     { icon: "✦", title: "You'll come into focus." },
-    "Wealth & Financial Growth":     { icon: "✺", title: "Resources line up." },
-    "Home, Family & Roots":          { icon: "⌂", title: "It feels like home." },
-    "Romance & Love":                { icon: "♡", title: "Soft, romantic weather." },
-    "Health, Routine & Wellness":    { icon: "✚", title: "Your body settles." },
-    "Partnerships & Marriage":       { icon: "◎", title: "You'll meet teachers." },
-    "Career & Public Recognition":   { icon: "▲", title: "Your direction sharpens." },
-    "Friendship & Networking":       { icon: "◈", title: "New people enter." },
-    "Spirituality & Inner Peace":    { icon: "✧", title: "Things get quieter inside." },
+// /reading/new goal ID → relocated house numbers that drive that goal.
+// These are the houses computed in matrixResult.houses[]; the V4 vibe card
+// surfaces those scores directly so the user can see what's behind the bar.
+// "timing" is transit-driven, not house-driven — its score falls back to
+// macroScore.
+const GOAL_TO_HOUSES: Record<string, number[]> = {
+    love:       [5, 7],         // romance + partnerships
+    career:     [10, 6, 2],     // status + work + income
+    community:  [11, 3],        // networks + neighbours
+    growth:     [9, 12],        // expansion + interior
+    relocation: [4],            // home, roots
+    timing:     [],             // transit-driven
 };
 
-// /reading/new goal ID → LIFE_EVENT name(s). Mirrors GOAL_INDEX_MAP in
-// lib/readings/astrocarto.ts. "timing" has no event mapping — we surface it
-// as a generic "rhythm" vibe driven by macroVerdict instead of an eventScore.
-const GOAL_TO_EVENTS: Record<string, string[]> = {
-    love:       ["Romance & Love", "Partnerships & Marriage"],
-    career:     ["Career & Public Recognition", "Wealth & Financial Growth"],
-    community:  ["Friendship & Networking"],
-    growth:     ["Spirituality & Inner Peace", "Identity & Self-Discovery"],
-    relocation: ["Home, Family & Roots"],
-    timing:     [],
+// Plain-English label for the house-number badge under each vibe.
+const HOUSE_TOPIC: Record<number, string> = {
+    1: "self & first impression",
+    2: "money & resources",
+    3: "neighbours & learning",
+    4: "home & roots",
+    5: "creativity & romance",
+    6: "daily work",
+    7: "partnerships",
+    8: "shared depth",
+    9: "expansion",
+    10: "career & status",
+    11: "community",
+    12: "interior life",
 };
 
 const GOAL_VIBE_PRESET: Record<string, { icon: string; title: string }> = {
@@ -247,11 +268,21 @@ const ANGLE_CHART_PLAIN: Record<"ASC"|"IC"|"DSC"|"MC", string> = {
     MC:  "Your public calling. What you want to be known for.",
 };
 
-const STATIC_GLOSSARY = [
-    { term: "Relocated chart", def: "Your birth chart recalculated as if you had been born in the new location. The planets stay the same; the houses and angles rotate." },
-    { term: "Angles (ASC/IC/DSC/MC)", def: "The four \"corners\" of a chart. They change the fastest when you move — they are the main reason places feel different." },
-    { term: "Houses", def: "Twelve slices of life (self, home, work, relationships, etc). Planets move through different houses when you change location." },
-    { term: "Aspects", def: "Angular relationships between planets and the four corners. Conjunctions (0°) are strongest; sextiles (60°) and trines (120°) are supportive; squares (90°) are friction." },
+const STATIC_GLOSSARY: Array<{ term: string; def: string; href: string }> = [
+    { term: "Relocated chart", def: "Your birth chart recalculated as if you had been born in the new location. The planets stay the same; the houses and angles rotate.",
+      href: "/learn/natal-chart" },
+    { term: "Angles (ASC/IC/DSC/MC)", def: "The four \"corners\" of a chart. They change the fastest when you move — they are the main reason places feel different.",
+      href: "/learn/astrocartography" },
+    { term: "Houses", def: "Twelve slices of life (self, home, work, relationships, etc). Planets move through different houses when you change location.",
+      href: "/learn/houses" },
+    { term: "Aspects", def: "Angular relationships between planets and the four corners. Conjunctions (0°) are strongest; sextiles (60°) and trines (120°) are supportive; squares (90°) are friction.",
+      href: "/learn/aspects" },
+];
+
+const LEARN_MORE_LINKS: Array<{ label: string; href: string }> = [
+    { label: "How geodetic relocation works →",     href: "/learn/geodetic-astrology" },
+    { label: "Reading your full relocated chart →", href: "/learn/astrocartography" },
+    { label: "Browse all guides →",                  href: "/learn" },
 ];
 
 // ─── Small helpers ────────────────────────────────────────────────────
@@ -397,35 +428,26 @@ function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateI
         const isHitShape = tw[0] && "transit_planet" in tw[0];
 
         if (isHitShape) {
-            // Sort benefic hits by closeness to travelDate. The first becomes the
-            // hero window; the next two are alternates.
-            const refMs = travelDateISO ? new Date(travelDateISO).getTime() : Date.now();
-            const benefics = [...tw]
-                .filter((h: any) => h.benefic)
-                .sort((a: any, b: any) =>
-                    Math.abs(new Date(a.date).getTime() - refMs) -
-                    Math.abs(new Date(b.date).getTime() - refMs)
-                )
-                .slice(0, 3);
-            return benefics.map((h: any, i: number) => {
-                // Centre the 10-day window on the hit so the user can see slack
-                // on either side of the exact aspect.
-                const exact = new Date(h.date);
-                const start = new Date(exact.getTime() - 4 * 86_400_000);
-                const end = new Date(exact.getTime() + 6 * 86_400_000);
-                return {
-                    rank: i + 1,
-                    flavor: FLAVORS[i]?.flavor ?? "Window",
-                    flavorTitle: FLAVORS[i]?.flavorTitle ?? "",
-                    emoji: FLAVORS[i]?.emoji ?? "✦",
-                    dates: fmtRange(start.toISOString(), end.toISOString()),
-                    nights: nightsBetween(start.toISOString(), end.toISOString()),
-                    score: Math.max(60, 95 - i * 6),
-                    note: `${h.transit_planet} ${h.aspect} natal ${h.natal_planet}. Tight ${h.orb.toFixed(1)}° orb.`,
-                    startISO: start.toISOString(),
-                    endISO: end.toISOString(),
-                };
-            });
+            // Score the user's date and a few nearby alternates against the
+            // actual transit signal. The hero is "your dates" — we don't pick
+            // a different one for them; we tell them how theirs scores and
+            // how nearby weeks compare. See app/lib/window-scoring.ts.
+            const baselineMacro = reading?.macroScore ?? 70;
+            const scored = buildScoredWindows(travelDateISO, tw, baselineMacro);
+            return scored.map((w, i) => ({
+                rank: i + 1,
+                flavor: i === 0 ? "Your dates" : "Alternate",
+                flavorTitle: w.label,
+                emoji: i === 0 ? "✦" : (i === 1 ? "←" : i === 2 ? "→" : "»"),
+                dates: fmtRange(w.startISO, w.endISO),
+                nights: nightsBetween(w.startISO, w.endISO),
+                score: w.score,
+                note: w.drivers.length
+                    ? w.drivers.join(" · ")
+                    : "Quiet week — no major transits nearby. Score reflects the place itself.",
+                startISO: w.startISO,
+                endISO: w.endISO,
+            }));
         }
 
         // Mock-ish shape
@@ -462,13 +484,13 @@ function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateI
 // ─── Vibes (Step 3) ───────────────────────────────────────────────────
 
 function deriveVibes(reading: any, goalIds: string[]): V4Vibe[] {
-    const eventScores = reading?.eventScores
-        || reading?.matrixResult?.eventScores
-        || reading?.details?.eventScores
-        || [];
+    const houses: Array<{ house: number; score: number }> = reading?.houses || [];
+    const houseScoreFor = (n: number): number | undefined =>
+        houses.find(h => h.house === n)?.score;
 
     const teacherLeanInto: string[] = reading?.teacherReading?.summary?.leanInto || [];
     const teacherVibes: any[] = reading?.teacherReading?.vibes || [];
+    const macroScore: number | undefined = reading?.macroScore;
 
     const fallbackBodies = [
         "<strong>The strongest signal</strong> for you here. Pay attention to it first — it'll set the tone for everything else.",
@@ -476,44 +498,56 @@ function deriveVibes(reading: any, goalIds: string[]): V4Vibe[] {
         "<strong>A subtler theme</strong>, but real. It tends to show up later in a trip.",
     ];
 
-    const eventScoreFor = (name: string): number | undefined =>
-        eventScores.find((e: any) => e.eventName === name)?.finalScore;
+    function buildHouseAttr(houseNums: number[]): { score?: number; attribution?: V4Vibe["houseAttribution"] } {
+        if (!houseNums.length) {
+            return macroScore != null ? { score: macroScore } : {};
+        }
+        const rows = houseNums
+            .map(n => {
+                const s = houseScoreFor(n);
+                return s != null ? { house: n, topic: HOUSE_TOPIC[n] ?? `${n}th house`, score: Math.round(s) } : null;
+            })
+            .filter((r): r is { house: number; topic: string; score: number } => r !== null);
+        if (!rows.length) return macroScore != null ? { score: macroScore } : {};
+        // Vibe score = average of the contributing houses (transparent — the
+        // user can see the components on the card).
+        const score = Math.round(rows.reduce((a, r) => a + r.score, 0) / rows.length);
+        return { score, attribution: rows };
+    }
 
-    // Goal-driven path: order vibes by the user's picked goal IDs.
+    // Goal-driven path — vibes ordered by user's goal IDs, scored by houses.
     if (goalIds.length > 0) {
         return goalIds.slice(0, 3).map((goalId, i) => {
             const preset = GOAL_VIBE_PRESET[goalId] || { icon: "✦", title: goalId };
-            // If the prompt produced a goal-keyed vibe, prefer it.
             const tv = teacherVibes.find(v => v?.goalId === goalId);
             const body = tv?.body || teacherLeanInto[i] || fallbackBodies[i];
             const title = tv?.title || preset.title;
             const icon = tv?.icon || preset.icon;
-            // Surface the strongest related event score (if any) so the bar
-            // animation in the V4 view has a real number to anchor on.
-            const events = GOAL_TO_EVENTS[goalId] || [];
-            const score = events.reduce<number | undefined>((best, name) => {
-                const s = eventScoreFor(name);
-                if (s == null) return best;
-                return best == null || s > best ? s : best;
-            }, undefined);
-            return { icon, title, body, ...(score != null ? { score } : {}) } as V4Vibe;
+            const { score, attribution } = buildHouseAttr(GOAL_TO_HOUSES[goalId] || []);
+            const vibe: V4Vibe = { icon, title, body };
+            if (score != null) vibe.score = score;
+            if (attribution) vibe.houseAttribution = attribution;
+            return vibe;
         });
     }
 
-    // No goals on file (legacy reading or guest flow): fall back to top-3
-    // event scores by raw value.
-    let topEvents: any[] = [];
-    if (Array.isArray(eventScores) && eventScores.length) {
-        topEvents = [...eventScores].sort((a, b) => (b.finalScore ?? 0) - (a.finalScore ?? 0)).slice(0, 3);
-    }
-    if (topEvents.length === 3) {
-        return topEvents.map((ev, i) => {
-            const preset = VIBE_PRESET[ev.eventName] || { icon: "✦", title: ev.eventName };
-            const body = teacherLeanInto[i] || fallbackBodies[i];
-            return { icon: preset.icon, title: preset.title, body };
+    // No goals on file: fall back to the top-3 houses by score (real chart-
+    // driven ordering, no event-score black box).
+    const topHouses = [...houses].sort((a, b) => b.score - a.score).slice(0, 3);
+    if (topHouses.length === 3) {
+        return topHouses.map((h, i) => {
+            const preset = HOUSE_VIBE_PRESET[h.house] || { icon: "✦", title: HOUSE_TOPIC[h.house] ?? `${h.house}th house` };
+            return {
+                icon: preset.icon,
+                title: preset.title,
+                body: teacherLeanInto[i] || fallbackBodies[i],
+                score: Math.round(h.score),
+                houseAttribution: [{ house: h.house, topic: HOUSE_TOPIC[h.house] ?? "", score: Math.round(h.score) }],
+            };
         });
     }
 
+    // Last-resort default — three generic vibes with no scoring.
     const titles = ["It feels like home.", "You'll meet teachers.", "Your direction softens."];
     const icons = ["⌂", "◎", "◈"];
     return titles.map((title, i) => ({
@@ -522,6 +556,19 @@ function deriveVibes(reading: any, goalIds: string[]): V4Vibe[] {
         body: teacherLeanInto[i] || fallbackBodies[i],
     }));
 }
+
+const HOUSE_VIBE_PRESET: Record<number, { icon: string; title: string }> = {
+    1:  { icon: "✦", title: "You'll come into focus." },
+    2:  { icon: "✺", title: "Resources line up." },
+    4:  { icon: "⌂", title: "It feels like home." },
+    5:  { icon: "♡", title: "Soft, romantic weather." },
+    6:  { icon: "✚", title: "Your routine settles." },
+    7:  { icon: "◎", title: "Close encounters carry weight." },
+    9:  { icon: "▲", title: "Your view widens." },
+    10: { icon: "▲", title: "Your direction sharpens." },
+    11: { icon: "◈", title: "New people enter." },
+    12: { icon: "✧", title: "Things get quieter inside." },
+};
 
 // ─── Step 4: chart angles + natal + months ───────────────────────────
 
@@ -786,11 +833,18 @@ function derivePlanetsInHouses(reading: any): V4PlanetHouseRow[] {
             };
         });
     }
+    const natalAngles = reading?.natalAngles;
     return natalPlanets.slice(0, 7).map((p: any) => {
         const name = (p.name || p.planet || "").toString();
-        const natalHouseNum: number | undefined = typeof p.house === "number"
-            ? p.house
-            : undefined;
+        // Prefer a persisted natal house, else derive it from natalAngles.ASC
+        // (the natal Ascendant longitude). Cached readings may have neither —
+        // those fall through to undefined and render "—".
+        const natalHouseNum: number | undefined =
+            typeof p.house === "number"
+                ? p.house
+                : (natalAngles && typeof p.longitude === "number"
+                    ? houseFromLongitude(p.longitude, natalAngles.ASC)
+                    : undefined);
         const reloHouseNum = typeof p.longitude === "number"
             ? houseFromLongitude(p.longitude, lons.ASC)
             : 0;
@@ -929,6 +983,19 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
 
         callout: "The scores above come from counting how many supportive aspects (the solid and dashed blue lines) hit your chart in a given month, minus the friction aspects (coral).",
 
+        chrome: {
+            step3Intro: reading?.teacherReading?.chrome?.step3Intro
+                || `Astrologers read cities like they read people. Based on where planets sat when you were born, some places fit you more than others. ${city} is a match in three specific ways:`,
+            step7Intro: reading?.teacherReading?.chrome?.step7Intro
+                || `When you move (or travel), astrologers recalculate your birth chart as if you had been born in the new place. The planets stay the same — but which areas of life they activate changes. Here's what shifts.`,
+            step7AnglesSub: reading?.teacherReading?.chrome?.step7AnglesSub
+                || "The four angles change.",
+            step7HousesSub: reading?.teacherReading?.chrome?.step7HousesSub
+                || "Planets move into new houses.",
+            step7AspectsSub: reading?.teacherReading?.chrome?.step7AspectsSub
+                || "New aspects to the angles.",
+        },
+
         todo: deriveTodo(heroWindow, city, reading, travelType, goalIds),
 
         astrology: {
@@ -947,6 +1014,7 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
             planetsInHouses: derivePlanetsInHouses(reading),
             aspectsToAngles: deriveAspectsToAngles(reading),
             glossary: STATIC_GLOSSARY,
+            learnMore: LEARN_MORE_LINKS,
         },
     };
 }
@@ -956,7 +1024,7 @@ function heroExplainer(w: V4TravelWindow | undefined, city: string, travelType: 
     if (travelType === "relocation") {
         return `Your relocated chart kicks in the day you arrive in ${city}. The score below is for the place itself — how well its rotated angles fit your chart, not a window inside it.`;
     }
-    return `That's a ${w.nights} window where the skies over ${city} are most aligned with your chart. If you can, book it. If you can't — there are two other good windows. Keep scrolling.`;
+    return `That's the ${w.nights} window you picked. Below is how well it scores against your chart in ${city}. Keep scrolling to see how nearby weeks compare in case your calendar is flexible.`;
 }
 
 const RELOCATION_TODO_BY_GOAL: Record<string, { title: string; body: string }> = {
@@ -1052,13 +1120,17 @@ function deriveTodo(
 }
 
 function deriveBirth(reading: any): { place: string; coords: string; date: string } {
-    const profile = reading?.profile || {};
+    // Prefer the persisted `birth` field (post-Fix 3 readings). Fall back to
+    // legacy shapes for cached readings.
+    const b = reading?.birth || reading?.profile || {};
+    const city = b.city || b.birth_city || reading?.birthCity || "—";
+    const lat  = typeof b.lat === "number" ? b.lat : b.birth_lat;
+    const lon  = typeof b.lon === "number" ? b.lon : b.birth_lon;
+    const date = b.date || b.birth_date || reading?.birthDate || "—";
     return {
-        place: profile.birth_city || reading?.birthCity || "—",
-        coords: profile.birth_lat != null && profile.birth_lon != null
-            ? fmtCoords(profile.birth_lat, profile.birth_lon)
-            : "—",
-        date: profile.birth_date || reading?.birthDate || "—",
+        place: city,
+        coords: typeof lat === "number" && typeof lon === "number" ? fmtCoords(lat, lon) : "—",
+        date,
     };
 }
 

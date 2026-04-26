@@ -148,6 +148,26 @@
   text-wrap: pretty; margin: 0;
 }
 .v4-root .v4-vibe-body strong { color: var(--v4-ink); font-weight: 500; }
+.v4-root .v4-vibe-attribution {
+  display: flex; flex-wrap: wrap; gap: 14px; align-items: center;
+  margin-top: 14px; padding-top: 12px; border-top: 1px dotted var(--v4-border);
+  font-family: var(--font-mono, monospace); font-size: 11px;
+  letter-spacing: 0.06em; color: var(--v4-ink-faint);
+}
+.v4-root .v4-vibe-attr-label {
+  text-transform: uppercase; letter-spacing: 0.18em; font-size: 9px;
+  color: var(--v4-ink-faint);
+}
+.v4-root .v4-vibe-attr-house {
+  display: inline-flex; gap: 6px; align-items: baseline;
+  background: var(--v4-tint); padding: 4px 10px; border-radius: var(--radius-full, 99px);
+}
+.v4-root .v4-vibe-attr-house strong { color: var(--v4-ink); font-weight: 600; }
+.v4-root .v4-vibe-attr-topic { color: var(--v4-ink-soft); font-size: 11px; }
+.v4-root .v4-vibe-attr-score {
+  color: var(--v4-accent); font-weight: 600;
+  margin-left: 4px;
+}
 
 /* ─── STEP 4: Callout (chart-int lives in chart.css block below) */
 .v4-root .v4-callout {
@@ -398,6 +418,11 @@
   font-family: var(--font-primary, serif); font-size: 15px; color: var(--v4-ink);
   letter-spacing: -0.005em;
 }
+.v4-root .v4-glossary-link {
+  color: var(--v4-ink); text-decoration: none;
+  transition: color 0.15s ease;
+}
+.v4-root .v4-glossary-link:hover { color: var(--v4-accent-blue); }
 .v4-root .v4-glossary dd {
   margin: 0; font-family: var(--font-body, system-ui); font-size: 13px; line-height: 1.55;
   color: var(--v4-ink-soft); font-weight: 300; text-wrap: pretty;

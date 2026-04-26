@@ -590,6 +590,13 @@ export async function runAstrocarto(
     natalPlanets,
     relocatedCusps,
     natalAngles,
+    birth: {
+      city: profile.birth_city,
+      date: profile.birth_date,
+      time: profile.birth_time,
+      lat:  profile.birth_lat,
+      lon:  profile.birth_lon,
+    },
     ...(matrixResult.lotOfFortune ? { lotOfFortune: matrixResult.lotOfFortune } : {}),
     ...(matrixResult.lotOfSpirit ? { lotOfSpirit: matrixResult.lotOfSpirit } : {}),
     ...(teacherReading ? { teacherReading } : {}),

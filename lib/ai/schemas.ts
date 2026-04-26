@@ -65,6 +65,26 @@ const TodoSchema = z.object({
   body: z.string(),
 });
 
+// V4 visible chrome — intros and section sub-headings the AI writes so the
+// page is actually personalised instead of repeating the same shell on
+// every reading.
+const ChromeSchema = z.object({
+  // Step 3 intro: "Astrologers read cities like they read people. ..." today
+  // is hardcoded. We let the AI write a 2–3 sentence intro that names this
+  // specific place.
+  step3Intro: z.string(),
+  // Step 7 intro: today's hardcoded paragraph about relocated charts. AI
+  // writes a place-specific version.
+  step7Intro: z.string(),
+  // Step 7 angles sub: "The four angles change." → e.g. "Your four angles
+  // shift sign." Specific to the chart.
+  step7AnglesSub: z.string(),
+  // Step 7 houses sub: "Planets move into new houses."
+  step7HousesSub: z.string(),
+  // Step 7 aspects sub: "New aspects to the angles."
+  step7AspectsSub: z.string(),
+});
+
 // V4 Step 1+2 — hero + alternate windows.
 const HeroSchema = z.object({
   explainer: z.string(),
@@ -102,6 +122,7 @@ export const TeacherReadingSchema = z.object({
   // V4 fields — required for new readings, optional only because cached
   // readings predate them. Once cached readings have rotated out, these can
   // be tightened to z.array(...).min(...).
+  chrome: ChromeSchema.optional(),
   hero: HeroSchema.optional(),
   windows: z.array(WindowSchema).max(3).optional(),
   vibes: z.array(VibeSchema).min(1).max(3).optional(),
