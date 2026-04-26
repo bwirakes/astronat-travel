@@ -116,9 +116,9 @@ export const TeacherReadingSchema = z.object({
   summary: z.object({
     headline: z.string(),
     theRead: z.string(),
-    leanInto: z.array(z.string()).max(3),
-    goEasy: z.array(z.string()).max(2),
-    whereYoullFeelIt: z.array(z.string()).max(3),
+    leanInto: z.array(z.string()).max(5),
+    goEasy: z.array(z.string()).max(5),
+    whereYoullFeelIt: z.array(z.string()).max(5),
   }),
   signals: z.object({
     weather: z.array(z.object({ title: z.string(), body: z.string(), datesRange: z.string(), tone: ToneSchema })).max(3),

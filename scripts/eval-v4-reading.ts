@@ -7,13 +7,24 @@
  * its source. The script totals up a score so we can see whether a refactor
  * actually moved the needle.
  *
- * Usage:  bun scripts/eval-v4-reading.ts
+ * Modes:
+ *   bun scripts/eval-v4-reading.ts
+ *     → Architectural ceiling: what's *possible* given the code.
+ *
+ *   bun scripts/eval-v4-reading.ts --reading path/to/details.json
+ *     → Per-reading score: PROMPT_OR_FALLBACK slots are downgraded to
+ *       HARDCODED when the actual JSON didn't populate them.
+ *
+ *   bun scripts/eval-v4-reading.ts --dir path/to/dir/
+ *     → Run per-reading on every *.json in the dir, print summary.
  *
  * The slot catalogue is curated by hand because static analysis of JSX would
  * be brittle and would miss "this string is sometimes overridden by the
  * teacherReading prompt." When you change the view-model or the V4 view, just
  * edit the catalogue below.
  */
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 
 type Source =
     | "HARDCODED"          // Always the same string regardless of input
@@ -132,6 +143,59 @@ const SLOTS: Slot[] = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────
+// Per-reading probes
+//
+// For each slot whose `after` is PROMPT_OR_FALLBACK, this map says how to
+// check whether the prompt actually populated the field for a specific
+// reading. If true → score as PROMPT (3 points); else → HARDCODED (0).
+// Slots not in this map keep their architectural classification.
+// ─────────────────────────────────────────────────────────────────────
+
+type Probe = (reading: any) => boolean;
+
+const PROBES: Record<string, Probe> = {
+    "Explainer paragraph":              r => !!r?.teacherReading?.hero?.explainer,
+    "Window flavor titles":             r => Array.isArray(r?.teacherReading?.windows) && r.teacherReading.windows.length > 0,
+    "Section intro paragraph":          r => !!r?.teacherReading?.chrome?.step3Intro,
+    "Vibe icons":                       r => Array.isArray(r?.teacherReading?.vibes) && r.teacherReading.vibes.some((v: any) => v?.icon),
+    "Vibe titles":                      r => Array.isArray(r?.teacherReading?.vibes) && r.teacherReading.vibes.some((v: any) => v?.title),
+    "Vibe bodies":                      r => Array.isArray(r?.teacherReading?.vibes) && r.teacherReading.vibes.some((v: any) => v?.body),
+    "Aspect tooltip 'why' prose":       r => Array.isArray(r?.teacherReading?.monthAspects) && r.teacherReading.monthAspects.some((m: any) => m?.why),
+    "Aspect tooltip 'timing' prose":    r => Array.isArray(r?.teacherReading?.monthAspects) && r.teacherReading.monthAspects.some((m: any) => m?.timing),
+    "Goal/travelType todos (2-3)":      r => Array.isArray(r?.teacherReading?.todos) && r.teacherReading.todos.length >= 2,
+    "Line notes":                       r => Array.isArray(r?.teacherReading?.lineNotes) && r.teacherReading.lineNotes.length > 0,
+    "Weekly narrative":                 r => Array.isArray(r?.teacherReading?.weeks) && r.teacherReading.weeks.length > 0,
+    "Section intro paragraph ":         r => !!r?.teacherReading?.chrome?.step7Intro, // step 7 (note trailing space — matches if used; otherwise add a Step 7 specific probe below)
+    "Angle deltas prose":               r => Array.isArray(r?.teacherReading?.angleDeltas) && r.teacherReading.angleDeltas.length > 0,
+    "Angles sub-heading":               r => !!r?.teacherReading?.chrome?.step7AnglesSub,
+    "Houses sub-heading":               r => !!r?.teacherReading?.chrome?.step7HousesSub,
+    "Planet shifts prose":              r => Array.isArray(r?.teacherReading?.planetShifts) && r.teacherReading.planetShifts.length > 0,
+    "Aspects sub-heading + intro":      r => !!r?.teacherReading?.chrome?.step7AspectsSub,
+    "Aspect plain prose":               r => Array.isArray(r?.teacherReading?.aspectPlains) && r.teacherReading.aspectPlains.length > 0,
+    "Aspect 'wasNatal' prose":          r => Array.isArray(r?.teacherReading?.aspectPlains) && r.teacherReading.aspectPlains.some((a: any) => a?.wasNatal),
+    "Glossary entries (4) — definitions": r => Array.isArray(r?.teacherReading?.glossaryEntries) && r.teacherReading.glossaryEntries.length > 0,
+};
+
+// Step 7 Section intro paragraph — disambiguated from step 3 by step prefix.
+function applyProbes(reading: any): Slot[] {
+    return SLOTS.map(s => {
+        const cls = s.after ?? s.before;
+        if (cls !== "PROMPT_OR_FALLBACK") return s;
+        // Match step 7's "Section intro paragraph" by step prefix.
+        let probe: Probe | undefined;
+        if (s.step.startsWith("7") && s.name === "Section intro paragraph") {
+            probe = r => !!r?.teacherReading?.chrome?.step7Intro;
+        } else if (s.step.startsWith("3") && s.name === "Section intro paragraph") {
+            probe = r => !!r?.teacherReading?.chrome?.step3Intro;
+        } else {
+            probe = PROBES[s.name];
+        }
+        const fired = probe ? probe(reading) : false;
+        return { ...s, after: fired ? "PROMPT" : "HARDCODED" };
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────
 // Reporting
 // ─────────────────────────────────────────────────────────────────────
 
@@ -167,6 +231,71 @@ function bucketCounts(slots: Slot[], col: "before" | "after"): Record<Source, nu
         counts[src]++;
     }
     return counts;
+}
+
+function loadReading(path: string): any {
+    const raw = readFileSync(path, "utf8");
+    const obj = JSON.parse(raw);
+    // Allow loading either a `details` object directly, or a wrapping
+    // `{ details: {...} }` envelope (matches the DB row shape).
+    return obj?.details ?? obj;
+}
+
+function printPerReading(filePath: string, reading: any) {
+    const probedSlots = applyProbes(reading);
+    const probed = score(probedSlots, "after");
+    const ceiling = score(SLOTS, "after");
+    const probedBuckets = bucketCounts(probedSlots, "after");
+
+    const city = reading?.destination ?? reading?.location?.city ?? "?";
+    // Floor = score with NO prompt fields firing (PROMPT_OR_FALLBACK → HARDCODED).
+    // Ceiling = score with ALL prompt fields firing (PROMPT_OR_FALLBACK → PROMPT).
+    const floor = (() => {
+        const noneFired = SLOTS.map(s => {
+            const cls = s.after ?? s.before;
+            return cls === "PROMPT_OR_FALLBACK" ? { ...s, after: "HARDCODED" as Source } : s;
+        });
+        return score(noneFired, "after");
+    })();
+    const allFired = (() => {
+        const allFire = SLOTS.map(s => {
+            const cls = s.after ?? s.before;
+            return cls === "PROMPT_OR_FALLBACK" ? { ...s, after: "PROMPT" as Source } : s;
+        });
+        return score(allFire, "after");
+    })();
+    console.log(`\n${filePath}  →  ${city}`);
+    console.log(`  Score: ${probed.sum}/${probed.max} (${probed.pct}%)   Floor: ${floor.pct}%   Ceiling: ${allFired.pct}%`);
+    const fired = probedBuckets.PROMPT;
+    const stale = probedSlots.filter(s => {
+        const archAfter = SLOTS.find(x => x.name === s.name && x.step === s.step)?.after;
+        return archAfter === "PROMPT_OR_FALLBACK" && s.after === "HARDCODED";
+    });
+    console.log(`  Prompt fields fired: ${fired}   Falling back to hardcoded: ${stale.length}`);
+    if (stale.length) {
+        console.log(`  Stale slots: ${stale.slice(0, 6).map(s => s.name).join(", ")}${stale.length > 6 ? `, +${stale.length - 6} more` : ""}`);
+    }
+}
+
+function printSummary(rows: Array<{ file: string; reading: any; probedScore: { pct: number; sum: number; max: number } }>) {
+    if (rows.length === 0) return;
+    console.log("\n┌─ Per-reading summary ──────────────────────────────────────────────────");
+    for (const r of rows) {
+        const city = r.reading?.destination ?? r.reading?.location?.city ?? "?";
+        console.log(`│  ${pad(r.file.split("/").pop() ?? "", 32)}  ${pad(city, 28)}  ${pad(String(r.probedScore.pct) + "%", 5)}`);
+    }
+    const avg = Math.round(rows.reduce((s, r) => s + r.probedScore.pct, 0) / rows.length);
+    const floor = score(SLOTS.map(s => {
+        const cls = s.after ?? s.before;
+        return cls === "PROMPT_OR_FALLBACK" ? { ...s, after: "HARDCODED" as Source } : s;
+    }), "after").pct;
+    const ceiling = score(SLOTS.map(s => {
+        const cls = s.after ?? s.before;
+        return cls === "PROMPT_OR_FALLBACK" ? { ...s, after: "PROMPT" as Source } : s;
+    }), "after").pct;
+    console.log("│");
+    console.log(`│  Average: ${avg}%     Floor: ${floor}%     Ceiling: ${ceiling}%`);
+    console.log("└────────────────────────────────────────────────────────────────────────\n");
 }
 
 function printReport() {
@@ -216,4 +345,29 @@ function printReport() {
     console.log("└────────────────────────────────────────────────────────────────────────\n");
 }
 
-printReport();
+// ─── CLI entry ──────────────────────────────────────────────────────
+const argv = process.argv.slice(2);
+const readingFlag = argv.indexOf("--reading");
+const dirFlag = argv.indexOf("--dir");
+
+if (readingFlag !== -1 && argv[readingFlag + 1]) {
+    const path = argv[readingFlag + 1];
+    const reading = loadReading(path);
+    printPerReading(path, reading);
+} else if (dirFlag !== -1 && argv[dirFlag + 1]) {
+    const dir = argv[dirFlag + 1];
+    const files = readdirSync(dir)
+        .filter(f => f.endsWith(".json"))
+        .map(f => join(dir, f))
+        .filter(p => statSync(p).isFile());
+    const rows = files.map(file => {
+        const reading = loadReading(file);
+        const probedSlots = applyProbes(reading);
+        const probedScore = score(probedSlots, "after");
+        return { file, reading, probedScore };
+    });
+    for (const r of rows) printPerReading(r.file, r.reading);
+    printSummary(rows);
+} else {
+    printReport();
+}
