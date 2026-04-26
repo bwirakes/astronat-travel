@@ -16,7 +16,7 @@ const nextConfig = {
 
   // swisseph-wasm uses createRequire("module") which webpack can't bundle.
   // Keep it external so Node resolves it at runtime on the server.
-  serverExternalPackages: ["swisseph-wasm"],
+  serverExternalPackages: ["swisseph-wasm", "geo-tz"],
 
   async redirects() {
     return [
