@@ -95,6 +95,7 @@ function describe(e: PatternEvent): string {
     case "oob-span": return `OOB ${e.meta?.hemisphere} · ${e.meta?.durationDays}d`;
     case "nodal-activation": return `Conjunct ${e.meta?.axis} · ${e.meta?.durationDays}d`;
     case "one-sided-nodal": return `${e.meta?.peakCount} planets ${e.meta?.side} of Node · ${e.meta?.durationDays}d`;
+    case "sun-over-mc": return `Sun over ${e.meta?.flag ?? ""} ${e.meta?.city} MC`;
     case "eclipse-solar": return `Solar eclipse · ${e.meta?.eclipseType ?? ""}`;
     case "eclipse-lunar": return `Lunar eclipse · ${e.meta?.eclipseType ?? ""}`;
     case "lunation-new": return "New Moon";

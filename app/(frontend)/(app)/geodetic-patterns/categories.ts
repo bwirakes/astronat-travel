@@ -7,6 +7,7 @@ export const CATEGORY_OF: Record<EventType, Category> = {
   "station": "motion",
   "retrograde-span": "motion",
   "aspect": "transit",
+  "sun-over-mc": "transit",
   "midpoint-ingress": "mp",
   "stellium": "config",
   "oob-span": "config",

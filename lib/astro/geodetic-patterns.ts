@@ -61,7 +61,8 @@ export type EventType =
   | "stellium"
   | "oob-span"
   | "nodal-activation"
-  | "one-sided-nodal";
+  | "one-sided-nodal"
+  | "sun-over-mc";
 
 /** Threshold for the "all planets one side of Nodal axis" configuration. */
 export const ONE_SIDED_NODAL_THRESHOLD = 6;

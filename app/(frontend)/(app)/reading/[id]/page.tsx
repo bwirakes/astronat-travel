@@ -11,7 +11,7 @@ import UpsellCelebrationCard from "@/app/components/UpsellCelebrationCard";
 import AppNavbar from "@/app/components/AppNavbar";
 import { ScoreRing, getVerdict } from "@/app/components/ScoreRing";
 import WeatherReading from "./components/weather/WeatherReading";
-import TeacherReadingView from "./components/TeacherReadingView";
+import HundredOneReadingView from "./components/v4/HundredOneReadingView";
 
 const HOUSE_LABELS: Record<number, string> = {
   1: "Identity",
@@ -299,7 +299,7 @@ function ReadingContent() {
   }
 
   return (
-    <TeacherReadingView
+    <HundredOneReadingView
       reading={reading}
       narrative={narrative}
       narrativeLoading={narrativeLoading}

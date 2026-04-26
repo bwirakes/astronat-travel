@@ -44,6 +44,11 @@ function _natalKey(planets: Array<{ longitude: number }>): string {
 export interface TransitHit {
   date: string;           // ISO date string (YYYY-MM-DD)
   transit_planet: string;
+  /** Ecliptic longitude (degrees) of the transiting planet on `date`. Lets the
+   *  V4 reading view's Step 4 chart draw aspect lines from a real geometric
+   *  position rather than the natal target. Optional for back-compat with
+   *  cached hits produced before this field was added. */
+  transit_planet_lon?: number;
   natal_planet: string;
   aspect: string;
   orb: number;
@@ -102,6 +107,7 @@ export async function solve12MonthTransits(
         results.push({
           date: current.toISOString().split("T")[0],
           transit_planet: transit.name,
+          transit_planet_lon: transit.longitude,
           natal_planet: natalName,
           aspect: result.aspect,
           orb: result.orb,

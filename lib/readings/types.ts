@@ -8,6 +8,10 @@ export interface AstrocartoReadingResult {
   travelType?: string;
   travelDate: string | null;
   goals: number[];
+  /** Original goal IDs as picked on /reading/new ("love" | "career" | "community" |
+   *  "timing" | "growth" | "relocation"). Carried so the V4 view can order Step 3
+   *  vibes by the user's stated intent rather than by raw event score. */
+  goalIds?: string[];
   macroScore: number;
   macroVerdict: string;
   houses: any[];
@@ -17,10 +21,29 @@ export interface AstrocartoReadingResult {
   eventScores: any[];
   natalPlanets: any[];
   relocatedCusps: number[];
+  /** Natal house angles (cusps 0/3/6/9 computed at the birth lat/lon).
+   *  Consumed by the V4 reading view's Step 7 to render real natal-vs-relocated
+   *  angle deltas. Optional because legacy cached readings predate this field. */
+  natalAngles?: { ASC: number; IC: number; DSC: number; MC: number };
+  /** All 12 natal house cusps (Placidus / whole-sign per the same rule used
+   *  for relocatedCusps). Consumed by Step 7's RelocationBiWheel. Optional
+   *  for back-compat with cached readings. */
+  natalCusps?: number[];
+  /** Birth-chart pole for the V4 view's Step 7 (natal vs relocated header).
+   *  Mirrored from profiles.* — copied here so the reading is self-contained
+   *  and we don't need a profile fetch on the page. */
+  birth?: {
+    city?: string | null;
+    date?: string | null;
+    time?: string | null;
+    lat?: number | null;
+    lon?: number | null;
+  };
   lotOfFortune?: any;
   lotOfSpirit?: any;
 
-  /** New teacher-voice AI output. Read by TeacherReadingView when present. */
+  /** Teacher-voice AI output. Consumed by the V4 reading view as the source
+   *  for vibe blurbs (summary.leanInto) and aspect explanations (signals.weather). */
   teacherReading?: TeacherReading;
 
   // Synastry add-ons (only present when readingCategory === "synastry")
