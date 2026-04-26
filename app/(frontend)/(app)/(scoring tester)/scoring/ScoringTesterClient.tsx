@@ -8,7 +8,6 @@ import { AcgMap, type NatalData } from "@/app/components/AcgMap";
 import AcgLinesCard from "@/app/components/AcgLinesCard";
 import RelocationBiWheel from "@/app/(frontend)/(app)/reading/[id]/components/v4/RelocationBiWheel";
 import { PLANET_COLORS, PLANET_GLYPHS } from "@/app/lib/planet-data";
-import { acgLineRawScore } from "@/app/lib/house-matrix";
 import "@/app/(frontend)/(app)/reading/[id]/components/v4/v4.css";
 
 interface LocationState {
@@ -245,6 +244,24 @@ function getRecordValue(record: Record<string, unknown>, key: string): unknown {
   return record[key];
 }
 
+function acgLineContribution(line: { planet: string; angle: string; distance_km: number }): number {
+  const planet = line.planet.toLowerCase();
+  const angle = line.angle.toUpperCase();
+  const benefics = ["venus", "jupiter"];
+  const luminaries = ["sun", "moon"];
+  const malefics = ["mars", "saturn", "pluto"];
+  const angleStrength: Record<string, number> = { ASC: 1.2, MC: 1.1, DSC: 0.95, IC: 0.9 };
+  let baseInfluence = 10;
+
+  if (benefics.includes(planet)) baseInfluence = 30;
+  else if (luminaries.includes(planet)) baseInfluence = 18;
+  else if (malefics.includes(planet)) baseInfluence = -25;
+
+  return Math.round(
+    baseInfluence * (angleStrength[angle] ?? 1) * Math.exp(-(line.distance_km * line.distance_km) / (2 * 250 * 250)),
+  );
+}
+
 function planetKey(value: unknown): string {
   return String(value ?? "").toLowerCase().replace(/\s+/g, "");
 }
@@ -315,7 +332,7 @@ function buildAcgLines(lines: Record<string, unknown>[] | undefined) {
       planet,
       angle,
       distance_km: distance,
-      contribution: acgLineRawScore({ planet, angle: angle.toUpperCase(), distance_km: distance }),
+      contribution: acgLineContribution({ planet, angle, distance_km: distance }),
     };
   });
 }
