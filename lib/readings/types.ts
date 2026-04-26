@@ -20,7 +20,8 @@ export interface AstrocartoReadingResult {
   lotOfFortune?: any;
   lotOfSpirit?: any;
 
-  /** New teacher-voice AI output. Read by TeacherReadingView when present. */
+  /** Teacher-voice AI output. Consumed by the V4 reading view as the source
+   *  for vibe blurbs (summary.leanInto) and aspect explanations (signals.weather). */
   teacherReading?: TeacherReading;
 
   // Synastry add-ons (only present when readingCategory === "synastry")

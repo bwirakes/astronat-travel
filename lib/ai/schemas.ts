@@ -4,8 +4,9 @@ export const ToneSchema = z.enum(["supportive", "challenging", "neutral"]);
 export type Tone = z.infer<typeof ToneSchema>;
 
 /**
- * Output of the astrocartography teacher reading prompt. Shape matches the
- * 3-stage view in TeacherReadingView.tsx: summary → signals → longRead.
+ * Output of the astrocartography teacher reading prompt. Shape carries the
+ * summary / signals / longRead fields consumed by the V4 reading view's
+ * vibe + month panels (app/(frontend)/(app)/reading/[id]/components/v4).
  */
 export const TeacherReadingSchema = z.object({
   summary: z.object({
