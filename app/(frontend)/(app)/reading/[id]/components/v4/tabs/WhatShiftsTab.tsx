@@ -93,7 +93,7 @@ export default function WhatShiftsTab({ vm, isDark, relocatedWheel }: Props) {
                                 </div>
                             </div>
                             <div
-                                className="grid items-center gap-2 p-3 rounded-[4px] grid-cols-[1fr_24px_1fr]"
+                                className="grid items-center gap-2 p-3 rounded-[4px] grid-cols-[1fr_20px_1fr] min-w-0"
                                 style={{ background: "var(--surface)" }}
                             >
                                 <div>
@@ -147,7 +147,7 @@ export default function WhatShiftsTab({ vm, isDark, relocatedWheel }: Props) {
                     style={{ borderColor: "var(--surface-border)", background: "var(--bg)" }}
                 >
                     <div
-                        className="grid items-center gap-4 px-[18px] py-[14px] text-[10px] tracking-[0.16em] uppercase grid-cols-[140px_1fr_1fr_1.6fr] hidden sm:grid"
+                        className="hidden sm:grid items-center gap-4 px-[18px] py-[14px] text-[10px] tracking-[0.16em] uppercase grid-cols-[140px_1fr_1fr_1.6fr]"
                         style={{
                             background: "var(--surface)",
                             fontFamily: FONT_MONO,
