@@ -1,5 +1,6 @@
 import { geodeticASCLongitude, geodeticMCLongitude } from "./geodetic";
 import { LIFE_EVENTS, W_EVENTS } from "./planet-library";
+import { BENEFIC_PLANETS, LUMINARIES, STRONG_MALEFICS } from "./astro-constants";
 
 export const READING_TABS = [
     {
@@ -98,12 +99,30 @@ export interface OverallGeodeticEvidence {
     longitudeRange: string;
 }
 
+export type GeodeticPlanetFamily = "gentle" | "rough" | "bright" | "neutral";
+export type GeodeticHitCloseness = "very close" | "near";
+
+export interface PersonalGeodeticHit {
+    planet: string;
+    /** Exact orb in degrees, rounded to 1dp. ≤ 5 by construction. */
+    orbDeg: number;
+    /** ≤2° → very close; ≤5° → near. Mirrors `nearbyLines.closeness`. */
+    closeness: GeodeticHitCloseness;
+    /** Pre-classified family for tone shaping in the AI prompt. */
+    family: GeodeticPlanetFamily;
+}
+
 export interface PersonalGeodeticEvidence {
     house: 1 | 4 | 7 | 10;
     anchor: "ASC" | "IC" | "DSC" | "MC";
     score: number;
     bucketScore: number;
+    /** Names only — kept for back-compat with existing PlaceFieldTab render. */
     planets: string[];
+    /** Per-planet detail. Populated for the AI prompt and the hover receipt
+     *  in the redesigned PlaceFieldTab. Empty array when no planet sits
+     *  within 5° (the row exists for background score only). */
+    hits: PersonalGeodeticHit[];
 }
 
 export interface AcgEvidence {
@@ -301,18 +320,37 @@ export function derivePersonalGeodetic(args: {
             const rawScore = Math.round(row?.breakdown?.geodetic ?? 0);
             const bucketScore = Math.round(row?.breakdown?.bucketGeodetic ?? 50);
             const anchorLon = anchors[house];
-            const planets = (args.natalPlanets ?? [])
-                .filter((planet) => typeof planet.longitude === "number" && angularDiff(planet.longitude, anchorLon) <= 5)
-                .map((planet) => String(planet.planet || planet.name || "Planet"));
+            const hits: PersonalGeodeticHit[] = (args.natalPlanets ?? [])
+                .map((planet): PersonalGeodeticHit | null => {
+                    if (typeof planet.longitude !== "number") return null;
+                    const orb = angularDiff(planet.longitude, anchorLon);
+                    if (orb > 5) return null;
+                    return {
+                        planet: String(planet.planet || planet.name || "Planet"),
+                        orbDeg: Math.round(orb * 10) / 10,
+                        closeness: orb <= 2 ? "very close" : "near",
+                        family: planetFamily(planet.planet || planet.name),
+                    };
+                })
+                .filter((h): h is PersonalGeodeticHit => h !== null);
             return {
                 house,
                 anchor: ANGLE_BY_HOUSE[house],
                 score: rawScore,
                 bucketScore,
-                planets,
+                planets: hits.map((h) => h.planet),
+                hits,
             };
         })
-        .filter((entry) => entry.score !== 0 || entry.planets.length > 0);
+        .filter((entry) => entry.score !== 0 || entry.hits.length > 0);
+}
+
+function planetFamily(name: string | undefined): GeodeticPlanetFamily {
+    const n = String(name ?? "").toLowerCase();
+    if (BENEFIC_PLANETS.includes(n)) return "gentle";
+    if (LUMINARIES.includes(n)) return "bright";
+    if (STRONG_MALEFICS.includes(n)) return "rough";
+    return "neutral";
 }
 
 export function deriveScoreNarrative(args: {

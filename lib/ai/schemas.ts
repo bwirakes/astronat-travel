@@ -87,6 +87,16 @@ const ChromeSchema = z.object({
   // Distinct from astrocartography: same for every visitor to this
   // longitude. Names the sign and tilts language by its archetype. ≤ 30 words.
   step4GeodeticNote: z.string().optional(),
+  // §04 geodetic bridge — short ESL connector between the impersonal band
+  // above and the personal hits below. Names how one corner of the user's
+  // chart shifts at this longitude. Two short sentences, ≤ 25 words.
+  step4GeodeticBridge: z.string().optional(),
+  // §04 geodetic methodology — plain-English paragraph at the bottom of
+  // the personal hits list. Generic content (same idea on every reading,
+  // written fresh). Covers: only four points count; eight house points
+  // are skipped here; planets must sit within five degrees; closer feels
+  // stronger; gentle/rough/bright planet families. ≤ 70 words.
+  step4GeodeticMethod: z.string().optional(),
   // §06 callout — replaces the (incorrect) hardcoded callout under the
   // month-by-month chart. ≤ 28 words.
   monthChartCallout: z.string().optional(),
@@ -101,6 +111,15 @@ const ChromeSchema = z.object({
 // planet, uppercase angle) so the prompt can target a specific line.
 const LineNoteSchema = z.object({
   lineKey: z.string(),
+  note: z.string(),
+});
+
+// V4 §04 — per-hit note for personal geodetic. `hitKey` matches
+// `${planet-lowercase}-${angle-shortcode}` where the short code is one of
+// ASC | IC | DSC | MC. Voice mirrors LineNote: outcome first, plain English,
+// no degrees in the prose. Two or three short sentences, ≤ 32 words.
+const GeodeticHitNoteSchema = z.object({
+  hitKey: z.string(),
   note: z.string(),
 });
 
@@ -191,6 +210,7 @@ export const TeacherReadingSchema = z.object({
   weeks: z.array(WeekSchema).max(13).optional(),
   todos: z.array(TodoSchema).min(2).max(4).optional(),
   lineNotes: z.array(LineNoteSchema).max(8).optional(),
+  geodeticHits: z.array(GeodeticHitNoteSchema).max(8).optional(),
   glossaryEntries: z.array(GlossaryEntrySchema).max(4).optional(),
 });
 export type TeacherReading = z.infer<typeof TeacherReadingSchema>;

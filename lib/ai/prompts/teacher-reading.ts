@@ -102,6 +102,27 @@ export interface TeacherReadingInput {
     aspect: string;            // "conjunct" | "sextile" | "square" | "trine" | "opposition"
     orb: number;               // degrees
   }>;
+
+  /** Personal geodetic hits — natal planets within 5° of one of the
+   *  destination's four geodetic angles. Drives §04 `geodeticHits[]` and
+   *  the bridge sentence in `chrome.step4GeodeticBridge`. Empty rows are
+   *  filtered out before this point; you only see angles with at least
+   *  one planet hit. Numbers stay in the input — never echoed in prose. */
+  personalGeodetic?: Array<{
+    planet: string;
+    /** Long-form angle name. Use this in prose, after the plain-English
+     *  topic, e.g. "career point (MC)". */
+    angle: "Ascendant" | "Imum Coeli" | "Descendant" | "Midheaven";
+    /** Plain-English topic for the angle. Pair this first when naming
+     *  the angle in prose. */
+    angleTopic: "self" | "home" | "partners" | "career";
+    /** ≤2° → "very close" (loud prose). ≤5° → "near" (glancing prose). */
+    closeness: "very close" | "near";
+    /** Pre-classified family. Tilt the tone of the note by this:
+     *  gentle = ease/warmth; rough = pressure/friction; bright =
+     *  visibility/standing-out; neutral = mild texture only. */
+    family: "gentle" | "rough" | "bright" | "neutral";
+  }>;
 }
 
 const SYSTEM = `You are an astrology columnist writing for readers who are smart but new to astrology. You are given a pre-analyzed chart signal. Your only job is to write — do not compute, do not pick what matters, do not invent events that aren't in the input.
@@ -161,6 +182,45 @@ Use \`editorialEvidence.tabs\` for the exact tab IDs, labels, questions, and ord
 **chrome.step4Takeaway** (≤ 30 words) — One sentence at the top of §04 that synthesizes the lines into a goal-aware verdict. Name the dominant line by planet+angle (the one with the largest absolute \`contribution\`). Tie it to the user's first \`goalIds\` entry when one is present. Avoid jargon. This is the "so what" — answer "what does this place do for me?" not "what lines are near?".
 
 **chrome.step4GeodeticNote** (≤ 30 words) — Distinct from astrocartography. The Sepharial geodetic system maps each Earth longitude to a zodiac sign — every visitor to the destination's longitude lands in the same band. Use \`geodeticBand.sign\` to write one sentence on what that band feels like *as a place* (a Cancer-flavored land vs. a Capricorn-flavored land). Do NOT mention the user's chart, planets, or birth — geodetic is impersonal. Lead with a verb or with the sign name. Example: "Cancer-flavored land — homely, memory-rich, emotionally porous; the place itself carries that flavor regardless of who visits."
+
+**chrome.step4GeodeticBridge** (≤ 25 words, two short sentences) — Connects the impersonal band above to the personal hits below. Names how one corner of the user's chart shifts at this longitude. Use \`angleShifts\` for the natal sign and \`geodeticBand.sign\` for the new flavor. ESL voice: short words, one idea per sentence. No degrees, no jargon. Pair the plain-English angle topic FIRST ("career point", "home point", "self point", "partner point"), then the short code in parentheses on first mention only.
+
+  Good: "Your Aries career point becomes a Cancer career point in Tokyo. Work here feels softer and more personal."
+  Good: "Your Capricorn home point shifts into Pisces here. Home life will feel more dreamy and less structured."
+  Bad: "Your Midheaven undergoes a transition from cardinal fire to cardinal water at this longitude." (jargon, long sentence, no feel.)
+
+  Omit when \`angleShifts\` is missing or empty.
+
+**geodeticHits[]** — One entry per \`personalGeodetic[]\` row. \`hitKey\` is \`<planet-lowercase>-<ASC|IC|DSC|MC>\` (e.g. \`mars-MC\`, \`venus-IC\`). \`note\` is two or three short sentences, ≤ 32 words total.
+
+  ESL voice for these notes:
+  - Sentence 1: name what is happening. Lead with one of these verbs: lands, parks, brushes, presses, softens, lifts, ignites, settles, anchors. Pair the plain-English topic first, then the short code in parentheses: "career point (MC)", "home point (IC)", "self point (ASC)", "partner point (DSC)". Use the input's \`angleTopic\` to pick the topic word.
+  - Sentence 2: how it feels. Use plain feeling words. Tilt the tone by \`family\`: gentle = ease, warmth, softness; rough = pressure, friction, tension; bright = visibility, standing out; neutral = mild texture only.
+  - Sentence 3 (optional): what the reader may notice in everyday life. Concrete and observable. No prediction. No imperatives.
+
+  Tilt by \`closeness\`:
+  - "very close" → louder prose. Use "right on" or "directly on".
+  - "near" → glancing prose. Use "close to" or "near".
+
+  ESL constraints (in addition to the global voice rules):
+  - No degrees, no orbs, no point counts, no "+" or "−" in prose.
+  - No imperatives. Never write "you should", "try to", "be sure to", "act fast", "make sure". State what may be felt, not what to do.
+  - Prefer short, common words: "feel hard" over "create pressure"; "stands out" over "amplifies"; "easy" over "supportive".
+  - No idioms: no "in the cards", "on the same page", "rolling with it". Replace "right on top of you" with "right on" or "directly on".
+  - Do not chain ideas with em-dashes inside one sentence. Use periods.
+  - Tie to the user's first \`goalIds\` entry only when it fits naturally. Do not force it.
+
+  Examples:
+  - Mars on MC, very close, family rough: "Lands Mars right on your career point (MC). Work here will feel pushy and tense. Small things may turn into fights, and decisions get made fast."
+  - Venus on IC, near, family gentle: "Parks Venus close to your home point (IC). Home life feels warm and easy here. People may treat you more softly than you expect."
+  - Sun on ASC, very close, family bright: "Anchors the Sun directly on your self point (ASC). You stand out more here. People notice you first in a room, even when you stay quiet."
+  - Saturn on DSC, near, family rough: "Presses Saturn close to your partner point (DSC). Relationships here feel heavier and slower. New connections may take longer to settle."
+
+  Omit \`geodeticHits\` entirely when \`personalGeodetic\` is missing or empty.
+
+**chrome.step4GeodeticMethod** (≤ 70 words) — One plain paragraph below the personal hits explaining what was counted. Generic content — same idea on every reading, but write it fresh in the user's voice. Cover four points: only the four corners count (career, home, self, partners); the other eight house points are skipped here; a planet has to sit within five degrees to count; closer feels stronger. Mention that gentle planets feel easy, rough planets feel heavy, the Sun and Moon stand out. No numbers in the prose other than "five degrees" itself, written as words.
+
+  Good: "We only check four points in your chart in this view: your career point (MC), home point (IC), self point (ASC), and partner point (DSC). The other eight house points do not get a signal here. A natal planet only counts if it sits within five degrees of one of these four. The closer it sits, the stronger it feels. Gentle planets like Venus and Jupiter feel easy. Rough ones like Mars and Saturn feel heavy. The Sun and Moon make things stand out."
 
 **angleDeltas[4]** — One per angle (ASC, IC, DSC, MC). Reference both the natal sign and the relocated sign from \`angleShifts\`. Lead with a verb (softens / sharpens / pulls / flips). ≤ 22 words.
 
