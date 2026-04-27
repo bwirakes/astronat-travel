@@ -182,9 +182,7 @@ const layoutStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
   gap: "var(--space-md)",
-  maxWidth: "1320px",
   width: "100%",
-  margin: "0 auto",
   background: "var(--bg)",
 };
 
@@ -222,8 +220,17 @@ const resultsPanelStyle: CSSProperties = {
   borderRadius: "var(--shape-asymmetric-md)",
   padding: "var(--space-lg)",
   border: "1px solid var(--surface-border)",
-  overflow: "hidden",
   isolation: "isolate",
+  overflow: "hidden",
+};
+
+// Applied to every direct child of the results grid.
+// `minWidth: 0` overrides the CSS Grid default of `min-width: auto`,
+// which otherwise lets grid cells grow as wide as their content and
+// prevents inner scroll wrappers from ever activating.
+const sectionStyle: CSSProperties = {
+  minWidth: 0,
+  overflow: "hidden",
 };
 
 const resultsHeaderStyle: CSSProperties = {
@@ -246,24 +253,17 @@ const microLabelStyle: CSSProperties = {
 };
 
 const tableWrapStyle: CSSProperties = {
-  // Lets wide tables (e.g. 18-column House Breakdown) scroll horizontally
-  // instead of squishing the cells. `WebkitOverflowScrolling` keeps momentum
-  // scroll on iOS Safari.
   overflowX: "auto",
   WebkitOverflowScrolling: "touch",
-  maxWidth: "100%",
+  width: "100%",
   border: "1px solid var(--surface-border)",
   borderRadius: "var(--radius-sm)",
   background: "var(--surface)",
 };
 
 const tableStyle: CSSProperties = {
-  // `min-width: max-content` is the trick that activates the wrap's
-  // overflow: when total cell content exceeds the viewport, the table grows
-  // past 100% and the wrapper scrolls. With plain `width: 100%`, the table
-  // would compress and the scroll never triggers.
-  minWidth: "max-content",
-  width: "100%",
+  width: "auto",
+  maxWidth: "none",
   borderCollapse: "collapse",
   fontSize: "0.82rem",
   background: "var(--surface)",
@@ -277,19 +277,16 @@ const tableHeaderStyle: CSSProperties = {
   color: "var(--text-tertiary)",
   background: "var(--bg)",
   textAlign: "left",
-  padding: "0.65rem 0.75rem",
+  padding: "0.45rem 0.5rem",
   borderBottom: "1px solid var(--surface-border)",
   whiteSpace: "nowrap",
 };
 
 const tableCellStyle: CSSProperties = {
-  padding: "0.7rem 0.75rem",
+  padding: "0.45rem 0.5rem",
   borderBottom: "1px solid var(--surface-border)",
   verticalAlign: "middle",
   background: "var(--surface)",
-  // Keep numeric/short cells on one line so they don't wrap and break the
-  // horizontal scroll rhythm. Long string fields render fine — browsers
-  // honor explicit \n in formatCell output.
   whiteSpace: "nowrap",
 };
 
@@ -647,12 +644,12 @@ export default function ScoringTesterClient(): ReactElement {
           </div>
 
           <div style={{ display: "grid", gap: "var(--space-md)" }}>
-            <div>
+            <div style={sectionStyle}>
               <h3 style={{ fontFamily: "var(--font-secondary)", fontSize: "1.25rem", marginBottom: "0.75rem" }}>
                 Visual Scoring Context
               </h3>
               <div style={{ display: "grid", gap: "var(--space-md)" }}>
-                <div style={panelStyle}>
+                <div style={{ ...panelStyle, overflow: "hidden", minWidth: 0 }}>
                   <h4 style={{ margin: "0 0 0.75rem", fontFamily: "var(--font-mono)", fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>
                     Astrocartography Map
                   </h4>
@@ -679,7 +676,7 @@ export default function ScoringTesterClient(): ReactElement {
                   )}
                 </div>
 
-                <div style={panelStyle}>
+                <div style={{ ...panelStyle, overflow: "hidden", minWidth: 0 }}>
                   <h4 style={{ margin: "0 0 0.75rem", fontFamily: "var(--font-mono)", fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>
                     Planetary Lines Card
                   </h4>
@@ -705,12 +702,12 @@ export default function ScoringTesterClient(): ReactElement {
                   )}
                 </div>
 
-                <div style={panelStyle}>
+                <div style={{ ...panelStyle, overflow: "hidden", minWidth: 0 }}>
                   <h4 style={{ margin: "0 0 0.75rem", fontFamily: "var(--font-mono)", fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>
                     Relocation Bi-Wheel
                   </h4>
                   {hasBiWheelData ? (
-                    <div style={{ minHeight: "auto", background: "transparent" }}>
+                    <div style={{ width: "100%", background: "transparent" }}>
                       <RelocationBiWheel
                         natalPlanets={wheelPlanets}
                         natalAnglesDeg={rawOutput?.natalAngles ?? null}
@@ -729,7 +726,7 @@ export default function ScoringTesterClient(): ReactElement {
             </div>
 
             {rawOutput?.explanations && (
-              <div>
+              <div style={sectionStyle}>
                 <h3 style={{ fontFamily: "var(--font-secondary)", fontSize: "1.25rem", marginBottom: "0.75rem" }}>
                   Model Explanations
                 </h3>
@@ -767,7 +764,7 @@ export default function ScoringTesterClient(): ReactElement {
             )}
 
             {rawOutput && (
-              <div>
+              <div style={sectionStyle}>
                 <h3 style={{ fontFamily: "var(--font-secondary)", fontSize: "1.25rem", marginBottom: "0.75rem" }}>
                   Model Context
                 </h3>
@@ -802,7 +799,7 @@ export default function ScoringTesterClient(): ReactElement {
 
             <HouseBreakdownPanel debugHouses={debugHouses} />
 
-            <div>
+            <div style={sectionStyle}>
               <h3 style={{ fontFamily: "var(--font-secondary)", fontSize: "1.25rem", marginBottom: "0.75rem" }}>
                 House Scores
               </h3>
@@ -832,7 +829,7 @@ export default function ScoringTesterClient(): ReactElement {
               </div>
             </div>
 
-            <div>
+            <div style={sectionStyle}>
               <h3 style={{ fontFamily: "var(--font-secondary)", fontSize: "1.25rem", marginBottom: "0.75rem" }}>
                 Scoring Model Output
               </h3>
@@ -865,7 +862,7 @@ export default function ScoringTesterClient(): ReactElement {
             <GeodeticEnginePanel rawOutput={rawOutput} />
 
             {transitHits.length > 0 && (
-              <div>
+              <div style={sectionStyle}>
                 <h3 style={{ fontFamily: "var(--font-secondary)", fontSize: "1.25rem", marginBottom: "0.75rem" }}>
                   Transit Aspects
                 </h3>
@@ -893,7 +890,7 @@ export default function ScoringTesterClient(): ReactElement {
             )}
 
             {mappedTransits.length > 0 && (
-              <div>
+              <div style={sectionStyle}>
                 <h3 style={{ fontFamily: "var(--font-secondary)", fontSize: "1.25rem", marginBottom: "0.75rem" }}>
                   Mapped Scoring Transits
                 </h3>
@@ -921,7 +918,7 @@ export default function ScoringTesterClient(): ReactElement {
             )}
 
             {(rawOutput?.acgLines?.length ?? 0) > 0 && (
-              <div>
+              <div style={sectionStyle}>
                 <h3 style={{ fontFamily: "var(--font-secondary)", fontSize: "1.25rem", marginBottom: "0.75rem" }}>
                   ACG Lines
                 </h3>
@@ -949,7 +946,7 @@ export default function ScoringTesterClient(): ReactElement {
             )}
 
             {(rawOutput?.parans?.length ?? 0) > 0 && (
-              <div>
+              <div style={sectionStyle}>
                 <h3 style={{ fontFamily: "var(--font-secondary)", fontSize: "1.25rem", marginBottom: "0.75rem" }}>
                   Parans
                 </h3>
@@ -977,7 +974,7 @@ export default function ScoringTesterClient(): ReactElement {
             )}
 
             {(rawOutput?.relocatedPlanets?.length ?? 0) > 0 && (
-              <div>
+              <div style={sectionStyle}>
                 <h3 style={{ fontFamily: "var(--font-secondary)", fontSize: "1.25rem", marginBottom: "0.75rem" }}>
                   Relocated Planet Occupancy
                 </h3>
@@ -1180,7 +1177,7 @@ function HouseBreakdownPanel({ debugHouses }: { debugHouses: HouseDebug[] }) {
     if (rows.length === 0) return null;
 
     return (
-        <div>
+        <div style={sectionStyle}>
             <div
                 style={{
                     display: "flex",
@@ -1243,7 +1240,7 @@ function GeodeticEnginePanel({ rawOutput }: { rawOutput?: ScoringRawOutput }) {
     if (!anyData) return null;
 
     return (
-        <div>
+        <div style={sectionStyle}>
             <h3 style={{ fontFamily: "var(--font-secondary)", fontSize: "1.25rem", marginBottom: "0.75rem" }}>
                 Geodetic Engine (A1–A8)
             </h3>
