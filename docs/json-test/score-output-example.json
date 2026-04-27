@@ -1,0 +1,174 @@
+{
+  "resultId": "score_test_01JZ3K7WQ5B4J8M7PN2ZQ3RH9C",
+  "macroScore": 78,
+  "macroVerdict": "Productive",
+  "houseSystem": "placidus",
+  "scoreBreakdown": {
+    "place": 42,
+    "timing": 20,
+    "sky": 16
+  },
+  "houses": [
+    {
+      "house": 1,
+      "sphere": "Identity, body, personal presence",
+      "relocatedSign": "Taurus",
+      "rulerPlanet": "Venus",
+      "rulerCondition": "Peregrine",
+      "score": 72,
+      "status": "Favorable",
+      "breakdown": {
+        "base": 50,
+        "rulerDignity": 0,
+        "planetaryOccupancy": 8,
+        "acgLines": 6,
+        "transits": 5,
+        "parans": 3
+      }
+    },
+    {
+      "house": 7,
+      "sphere": "Partnerships, clients, close encounters",
+      "relocatedSign": "Scorpio",
+      "rulerPlanet": "Mars",
+      "rulerCondition": "Domicile",
+      "score": 86,
+      "status": "Highly Favorable",
+      "breakdown": {
+        "base": 50,
+        "rulerDignity": 12,
+        "planetaryOccupancy": 10,
+        "acgLines": 9,
+        "transits": 3,
+        "parans": 2
+      }
+    },
+    {
+      "house": 10,
+      "sphere": "Career, visibility, public direction",
+      "relocatedSign": "Aquarius",
+      "rulerPlanet": "Saturn",
+      "rulerCondition": "Peregrine",
+      "score": 79,
+      "status": "Favorable",
+      "breakdown": {
+        "base": 50,
+        "rulerDignity": 0,
+        "planetaryOccupancy": 6,
+        "acgLines": 12,
+        "transits": 8,
+        "parans": 3
+      }
+    }
+  ],
+  "eventScores": [
+    {
+      "eventName": "Love and partnership",
+      "baseVolume": 86,
+      "affinityModifier": 1.08,
+      "finalScore": 93,
+      "verdict": "Peak Flow",
+      "drivers": [
+        "7th house scores highly",
+        "Venus line is within moderate orb",
+        "Relocated Descendant receives supportive emphasis"
+      ]
+    },
+    {
+      "eventName": "Career and visibility",
+      "baseVolume": 79,
+      "affinityModifier": 1.02,
+      "finalScore": 81,
+      "verdict": "Highly Favorable",
+      "drivers": [
+        "10th house remains strong",
+        "Sun-MC line is close enough to lift visibility",
+        "Timing supports outward movement"
+      ]
+    },
+    {
+      "eventName": "Rest and emotional grounding",
+      "baseVolume": 54,
+      "affinityModifier": 0.92,
+      "finalScore": 50,
+      "verdict": "Neutral",
+      "drivers": [
+        "4th house is not the dominant relocation emphasis",
+        "Moon line is present but not exact",
+        "Useful for stability, not deep retreat"
+      ]
+    }
+  ],
+  "rawInput": {
+    "name": "Sample Native",
+    "birthDate": "1988-08-17",
+    "birthTime": "22:15",
+    "travelDate": "2026-07-27",
+    "travelTime": "12:00",
+    "birthPlace": {
+      "label": "Jakarta, Java, Indonesia",
+      "lat": -6.18,
+      "lon": 106.83
+    },
+    "travelLocation": {
+      "label": "Beijing, China",
+      "lat": 39.91,
+      "lon": 116.39
+    },
+    "birthDateUtc": "1988-08-17T15:15:00.000Z",
+    "travelDateUtc": "2026-07-27T04:00:00.000Z"
+  },
+  "rawOutput": {
+    "macroScore": 78,
+    "macroVerdict": "Productive",
+    "houseSystem": "placidus",
+    "explanations": {
+      "overall": "The macro score is 78 (Productive) using placidus houses.",
+      "houses": [
+        "House 7 is Highly Favorable because partnerships and close encounters receive strong relocated emphasis.",
+        "House 10 is Favorable because career and public direction are supported by line and timing factors.",
+        "House 1 is Favorable because the relocation strengthens visibility and embodied confidence."
+      ],
+      "events": [
+        "Love and partnership: base 86, affinity 1.08, final 93 (Peak Flow).",
+        "Career and visibility: base 79, affinity 1.02, final 81 (Highly Favorable).",
+        "Rest and emotional grounding: base 54, affinity 0.92, final 50 (Neutral)."
+      ]
+    },
+    "natalAngles": {
+      "ASC": 32.64,
+      "IC": 119.64,
+      "DSC": 212.64,
+      "MC": 299.64
+    },
+    "relocatedAngles": {
+      "ASC": 48.12,
+      "IC": 139.44,
+      "DSC": 228.12,
+      "MC": 319.44
+    },
+    "acgLines": [
+      {
+        "planet": "Sun",
+        "angle": "MC",
+        "distance_km": 184
+      },
+      {
+        "planet": "Venus",
+        "angle": "DSC",
+        "distance_km": 312
+      },
+      {
+        "planet": "Saturn",
+        "angle": "ASC",
+        "distance_km": 740
+      }
+    ],
+    "lots": {
+      "lotOfFortuneLon": 128.42,
+      "lotOfSpiritLon": 202.77
+    },
+    "sect": "night",
+    "globalPenalty": -4
+  }
+}

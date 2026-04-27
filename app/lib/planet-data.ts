@@ -329,6 +329,7 @@ export const PLANET_COLORS: Record<string, string> = {
     Ascendant: "var(--color-planet-sun)",
     MC: "var(--color-planet-sun)",
     IC: "var(--color-planet-moon)",
+    DSC: "var(--color-planet-moon)",
     DC: "var(--color-planet-moon)",
     "North Node": "var(--color-planet-mercury)",
     "South Node": "var(--color-planet-venus)",

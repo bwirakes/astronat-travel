@@ -7,6 +7,7 @@ import type {
     V4ChartMonth,
     V4ChartPlanet,
 } from "@/app/lib/reading-viewmodel";
+import "./ChartInteractive.css";
 
 interface Props {
     angles: V4ChartAngle[];
@@ -26,6 +27,35 @@ function degToXY(deg: number, r: number): { x: number; y: number } {
     return { x: Math.cos(rad) * r, y: -Math.sin(rad) * r };
 }
 
+// Month tilt — translate the 40–98 viewmodel score into the same dot grammar
+// used in §04. Color encodes direction (supportive / mixed / friction); fill
+// count encodes magnitude.
+type MonthTone = "supportive" | "mixed" | "friction";
+function getMonthTilt(score: number): { filled: 1 | 2 | 3; tone: MonthTone; label: string } {
+    if (score >= 80) return { filled: 3, tone: "supportive", label: "lifts strongly" };
+    if (score >= 70) return { filled: 2, tone: "supportive", label: "lifts" };
+    if (score >= 55) return { filled: 1, tone: "mixed", label: "mixed" };
+    if (score >= 45) return { filled: 2, tone: "friction", label: "presses" };
+    return { filled: 3, tone: "friction", label: "presses hard" };
+}
+
+function TiltDots({ filled, tone }: { filled: 1 | 2 | 3; tone: MonthTone }) {
+    return (
+        <span
+            className={`chart-int-tilt-dots tone-${tone}`}
+            role="img"
+            aria-label={`${filled} of 3, ${tone}`}
+        >
+            {[0, 1, 2].map((i) => (
+                <span
+                    key={i}
+                    className={`chart-int-tilt-dot${i < filled ? " on" : ""}`}
+                />
+            ))}
+        </span>
+    );
+}
+
 export default function ChartInteractive({ angles, natal, months }: Props) {
     const [activeIdx, setActiveIdx] = useState(1); // middle month is the anchor
     const [hover, setHover] = useState<Hover>(null);
@@ -42,9 +72,10 @@ export default function ChartInteractive({ angles, natal, months }: Props) {
             };
         }
         if (!hover) {
+            const tilt = getMonthTilt(monthData.score);
             return {
                 kind: "default" as const,
-                title: `${monthData.label} · score ${monthData.score}`,
+                title: `${monthData.label} · ${tilt.label}`,
                 body: monthData.summary,
                 hint: "Hover or tap any dot or line in the chart to learn what it means.",
             };
@@ -96,22 +127,23 @@ export default function ChartInteractive({ angles, natal, months }: Props) {
     return (
         <div className="chart-int">
             <div className="chart-int-tabs">
-                {months.map((m, i) => (
-                    <button
-                        key={m.key}
-                        className={`chart-int-tab${i === safeIdx ? " on" : ""}`}
-                        onClick={() => { setActiveIdx(i); setHover(null); }}
-                    >
-                        <span className="chart-int-tab-label">{m.label}</span>
-                        <span className="chart-int-tab-score">
-                            <span className="chart-int-tab-bar">
-                                <span className="chart-int-tab-bar-fill" style={{ width: `${m.score}%` }} />
+                {months.map((m, i) => {
+                    const tilt = getMonthTilt(m.score);
+                    return (
+                        <button
+                            key={m.key}
+                            className={`chart-int-tab${i === safeIdx ? " on" : ""}`}
+                            onClick={() => { setActiveIdx(i); setHover(null); }}
+                        >
+                            <span className="chart-int-tab-label">{m.label}</span>
+                            <span className={`chart-int-tab-tilt tone-${tilt.tone}`}>
+                                <TiltDots filled={tilt.filled} tone={tilt.tone} />
+                                <span className="chart-int-tab-tilt-l">{tilt.label}</span>
                             </span>
-                            <span className="chart-int-tab-num">{m.score}</span>
-                        </span>
-                        <span className="chart-int-tab-sum">{m.summary.split(".")[0]}.</span>
-                    </button>
-                ))}
+                            <span className="chart-int-tab-sum">{m.summary.split(".")[0]}.</span>
+                        </button>
+                    );
+                })}
             </div>
 
             <div className="chart-int-hint">

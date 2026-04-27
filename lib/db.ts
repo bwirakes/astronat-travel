@@ -154,20 +154,41 @@ export async function getNatalChart(userId: string) {
     .select('*')
     .eq('user_id', userId)
     .eq('chart_type', 'natal')
-    .single()
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
   return data
 }
 
-// Save natal chart computation
+// Save natal chart computation (update existing row first, insert if none exists)
+// Two-step so it works even if the unique constraint migration hasn't run yet.
 export async function saveNatalChart(userId: string, ephemerisData: any, housePlacements: any) {
   const supabase = await createClient()
+  const now = new Date().toISOString()
+
+  // Try updating first (covers the common case where a row already exists)
+  const { data: updated, error: updateError } = await supabase
+    .from('natal_charts')
+    .update({
+      ephemeris_data: ephemerisData,
+      house_placements: housePlacements,
+      updated_at: now,
+    })
+    .eq('user_id', userId)
+    .eq('chart_type', 'natal')
+    .select()
+    .maybeSingle()
+
+  if (!updateError && updated) return updated
+
+  // No existing row — insert fresh
   const { data } = await supabase
     .from('natal_charts')
     .insert({
       user_id: userId,
       chart_type: 'natal',
       ephemeris_data: ephemerisData,
-      house_placements: housePlacements
+      house_placements: housePlacements,
     })
     .select()
     .single()

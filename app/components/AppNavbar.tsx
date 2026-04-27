@@ -57,62 +57,93 @@ export default function AppNavbar() {
                     />
                 </Link>
 
-                {/* Desktop Right */}
-                <div className="hidden md:flex items-center gap-4 ml-auto">
-                    <ThemeToggle />
-                    
-                    {user && (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger className="rounded-full h-9 w-9 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-all border border-black/10 dark:border-white/10 inline-flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-[var(--surface-border)]">
-                                <User size={18} />
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48 font-body shadow-md border border-[var(--surface-border)] bg-[var(--surface)] rounded-[var(--radius-md)] p-1 text-[var(--text-primary)]">
-                                <DropdownMenuLabel className="px-2 py-1.5 text-xs font-medium text-[var(--text-tertiary)]">
-                                    My Account
-                                </DropdownMenuLabel>
-                                <DropdownMenuSeparator className="bg-[var(--surface-border)] h-px my-1 -mx-1" />
-                                <DropdownMenuItem className="cursor-pointer text-sm font-medium w-full rounded-sm focus:bg-[var(--bg-raised)] focus:text-[var(--text-primary)] px-2 py-1.5 outline-none transition-colors">
-                                    <Link href="/profile" className="w-full block outline-none">Profile</Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator className="bg-[var(--surface-border)] h-px my-1 -mx-1" />
-                                <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-sm text-red-500 font-medium w-full rounded-sm focus:bg-red-500/10 focus:text-red-600 px-2 py-1.5 outline-none transition-colors">
-                                    Sign out
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    )}
-                </div>
+                {/* Right Actions */}
+                <div className="flex items-center gap-2 md:gap-4 ml-auto">
+                    {/* Desktop Items */}
+                    <div className="hidden md:flex items-center gap-4">
+                        <ThemeToggle />
+                        
+                        {user && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger className="rounded-full h-9 w-9 bg-[var(--surface)] hover:bg-[var(--bg-raised)] transition-all border border-[var(--surface-border)] inline-flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-[var(--surface-border)] text-[var(--text-primary)]">
+                                    <User size={18} />
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48 font-body shadow-md border border-[var(--surface-border)] bg-[var(--surface)] text-[var(--text-primary)] rounded-[var(--radius-md)] p-1">
+                                    <DropdownMenuLabel className="px-2 py-1.5 text-xs font-medium text-[var(--text-tertiary)]">
+                                        My Account
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuSeparator className="bg-[var(--surface-border)] h-px my-1 -mx-1" />
+                                    <DropdownMenuItem className="cursor-pointer text-sm font-medium w-full rounded-sm hover:bg-[var(--bg-raised)] focus:bg-[var(--bg-raised)] px-2 py-1.5 outline-none transition-colors">
+                                        <Link href="/profile" className="w-full block outline-none">Profile</Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator className="bg-[var(--surface-border)] h-px my-1 -mx-1" />
+                                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-sm text-red-500 font-medium w-full rounded-sm hover:bg-red-500/10 focus:bg-red-500/10 px-2 py-1.5 outline-none transition-colors">
+                                        Sign out
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
+                    </div>
 
-                {/* Mobile Right */}
-                <div className="flex md:hidden items-center gap-2 ml-auto">
+                    {/* Universal Hamburger Menu */}
                     <Sheet open={open} onOpenChange={setOpen}>
-                        <SheetTrigger className="h-[44px] w-[44px] inline-flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5 rounded-md transition-colors">
+                        <SheetTrigger className="h-[44px] w-[44px] md:h-9 md:w-9 inline-flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5 rounded-md transition-colors focus:outline-none text-[var(--text-primary)]">
                             <Menu size={24} />
                         </SheetTrigger>
-                        <SheetContent side="right" className="font-body w-[280px] sm:w-[350px]">
+                        <SheetContent side="right" className="font-body border-l border-[var(--surface-border)] bg-[var(--surface)] text-[var(--text-primary)] w-[320px] sm:w-[400px] p-0">
                             <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-                            <div className="flex flex-col h-full mt-6 gap-6">
-                                <div className="flex items-center justify-between">
-                                    <span className="font-secondary text-xl">Menu</span>
-                                    <ThemeToggle />
+                            <div className="flex flex-col h-full px-8 py-10 overflow-y-auto">
+                                <div className="flex items-center justify-between mb-12">
+                                    <span className="font-display text-4xl tracking-tight uppercase">Menu</span>
+                                    <div className="md:hidden">
+                                        <ThemeToggle />
+                                    </div>
+                                </div>
+                                
+                                <div className="flex flex-col gap-5 mt-2">
+                                    <div className="text-xs font-mono uppercase tracking-[0.2em] text-[var(--text-tertiary)] mb-2">Explore</div>
+                                    <Link href="/chart" onClick={() => setOpen(false)} className="text-2xl font-secondary hover:text-[var(--gold)] hover:translate-x-2 transition-all duration-300 flex items-center justify-between group">
+                                        My Chart
+                                        <span className="text-[var(--gold)] opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 font-mono text-sm">&rarr;</span>
+                                    </Link>
+                                    <div className="h-px w-full bg-[var(--surface-border)] opacity-30" />
+                                    <Link href="/couples" onClick={() => setOpen(false)} className="text-2xl font-secondary hover:text-[var(--gold)] hover:translate-x-2 transition-all duration-300 flex items-center justify-between group">
+                                        Couples
+                                        <span className="text-[var(--gold)] opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 font-mono text-sm">&rarr;</span>
+                                    </Link>
+                                    <div className="h-px w-full bg-[var(--surface-border)] opacity-30" />
+                                    <Link href="/mundane" onClick={() => setOpen(false)} className="text-2xl font-secondary hover:text-[var(--gold)] hover:translate-x-2 transition-all duration-300 flex items-center justify-between group">
+                                        World Charts
+                                        <span className="text-[var(--gold)] opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 font-mono text-sm">&rarr;</span>
+                                    </Link>
+                                    <div className="h-px w-full bg-[var(--surface-border)] opacity-30" />
+                                    <Link href="/reading/new?type=weather" onClick={() => setOpen(false)} className="text-2xl font-secondary hover:text-[var(--gold)] hover:translate-x-2 transition-all duration-300 flex items-center justify-between group">
+                                        Sky Weather
+                                        <span className="text-[var(--gold)] opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 font-mono text-sm">&rarr;</span>
+                                    </Link>
+                                    <div className="h-px w-full bg-[var(--surface-border)] opacity-30" />
+                                    <Link href="/learn" onClick={() => setOpen(false)} className="text-2xl font-secondary hover:text-[var(--gold)] hover:translate-x-2 transition-all duration-300 flex items-center justify-between group">
+                                        Learn
+                                        <span className="text-[var(--gold)] opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 font-mono text-sm">&rarr;</span>
+                                    </Link>
                                 </div>
                                 
                                 {user && (
-                                    <div className="flex flex-col gap-4 mt-4">
+                                    <div className="flex flex-col gap-6 mt-auto pt-10">
+                                        <div className="h-px w-full bg-[var(--surface-border)]" />
                                         <Link 
                                             href="/profile" 
                                             onClick={() => setOpen(false)}
-                                            className="text-lg font-medium hover:text-black/70 dark:hover:text-white/70 transition-colors"
+                                            className="text-lg font-body font-medium hover:text-[var(--gold)] transition-colors mt-2"
                                         >
-                                            Profile
+                                            Account Profile
                                         </Link>
-                                        <div className="h-[1px] w-full bg-black/10 dark:bg-white/10 my-2" />
                                         <button 
                                             onClick={() => {
                                                 setOpen(false);
                                                 handleSignOut();
                                             }} 
-                                            className="text-left text-lg font-medium text-red-500 hover:text-red-600 transition-colors"
+                                            className="text-left text-lg font-body font-medium text-[var(--color-spiced-life)] hover:text-red-500 transition-colors"
                                         >
                                             Sign out
                                         </button>

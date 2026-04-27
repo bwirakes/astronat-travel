@@ -3,30 +3,31 @@
  * The route hands us the parsed input, we hand back the full `details` payload
  * ready to persist.
  */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { getNatalChart, getPartnerNatalChart, getProfile, saveNatalChart, savePartnerNatalChart } from "@/lib/db";
 import { SwissEphSingleton, computeRealtimePositions } from "@/lib/astro/transits";
 import { resolveACGFull, computeParans } from "@/lib/astro/acg-lines";
 import { solve12MonthTransits, type TransitHit } from "@/lib/astro/transit-solver";
-import { computeHouseMatrix, mapTransitsToMatrix, computeGlobalPenalty } from "@/app/lib/house-matrix";
+import { computeHouseMatrix, mapTransitsToMatrix, computeGlobalPenalty, acgLineRawScore } from "@/app/lib/house-matrix";
 import { computeEventScores } from "@/app/lib/scoring-engine";
 import { houseFromLongitude, signFromLongitude } from "@/app/lib/geodetic";
 import { birthToUtc } from "@/lib/astro/birth-utc";
 import { determineSect, computeLotOfFortune, computeLotOfSpirit } from "@/app/lib/arabic-parts";
+import { GOAL_DEFINITIONS, buildEditorialEvidence, deriveScoreNarrative } from "@/app/lib/reading-tabs";
 
+import { computeProgressedBands } from "@/app/lib/progressions";
 import { writeTeacherReading, type TeacherReadingInput } from "@/lib/ai/prompts/teacher-reading";
 import type { Tone } from "@/lib/ai/schemas";
 import { houseTopic, spellAngle, closenessBand, houseVibe } from "./house-topics";
 import { computeSynastryAspects, classifyHouseBucket, computeRecommendation } from "./synastry";
 import type { AstrocartoReadingResult, RunAstrocartoInput } from "./types";
 
-const GOAL_INDEX_MAP: Record<string, number> = {
-  love:       3,
-  career:     6,
-  community:  7,
-  growth:     8,
-  relocation: 2,
-};
+const GOAL_INDEX_MAP = Object.fromEntries(
+  Object.entries(GOAL_DEFINITIONS)
+    .filter(([, definition]) => definition.eventIndex != null)
+    .map(([goalId, definition]) => [goalId, definition.eventIndex]),
+) as Record<string, number>;
 
 /** Parse ReadingFlow goal IDs (string or numeric) into matrix row indices. */
 function parseGoals(goals: unknown[] | undefined): number[] | undefined {
@@ -184,19 +185,86 @@ function aspectSentence(hit: TransitHit, transitSign: string, natalSign: string)
  * Build the pre-analyzed signal handed to the AI. The AI never sees orbs,
  * degrees, points, dignity labels, or km. Only the resolved facts.
  */
+/** Sepharial geodetic zodiac band the destination longitude falls in.
+ *  0°E (Greenwich) is 0° Aries; each 30° of longitude = one sign. */
+function geodeticBandForLon(lon: number): { sign: string; longitudeRange: string } {
+  const SIGNS = ["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"];
+  // Walk forward from 0°E (Aries) through 360°. Wrap negative lons.
+  const norm = ((lon % 360) + 360) % 360;
+  const idx = Math.floor(norm / 30) % 12;
+  const fromLon = idx * 30;
+  const toLon = fromLon + 30;
+  const fmt = (l: number) => {
+    if (l === 0) return "0°";
+    if (l <= 180) return `${l}°E`;
+    return `${360 - l}°W`;
+  };
+  return { sign: SIGNS[idx], longitudeRange: `${fmt(fromLon)}–${fmt(toLon)}` };
+}
+
+/** Decompose macroScore into 3 honest buckets the user can read. Sums to
+ *  macroScore (rounded). When per-house breakdowns are missing (cached or
+ *  mock readings), fall back to a sensible split that still explains the
+ *  number without lying about the math. */
+function deriveScoreBreakdown(matrixResult: any, acgLines: any[], rawTransits: TransitHit[]):
+  { place: number; timing: number; sky: number } {
+  const total = Math.round(matrixResult?.macroScore ?? 0);
+  const houses: any[] = Array.isArray(matrixResult?.houses) ? matrixResult.houses : [];
+
+  // Sum the per-house bucket weights when present. These come from the v4
+  // house-matrix and partition the score by mechanism.
+  let placeRaw = 0, timingRaw = 0, skyRaw = 0;
+  let haveBuckets = false;
+  for (const h of houses) {
+    const b = h?.breakdown;
+    if (!b || typeof b !== "object") continue;
+    const bn = b.bucketNatal, bo = b.bucketOccupants, bt = b.bucketTransit, bg = b.bucketGeodetic;
+    if ([bn, bo, bt, bg].every(v => typeof v === "number")) {
+      placeRaw += bn + bo;
+      timingRaw += bt;
+      skyRaw += bg;
+      haveBuckets = true;
+    }
+  }
+
+  if (haveBuckets) {
+    const sum = placeRaw + timingRaw + skyRaw;
+    if (sum > 0) {
+      const place = Math.round((placeRaw / sum) * total);
+      const sky = Math.round((skyRaw / sum) * total);
+      const timing = Math.max(0, total - place - sky);
+      return { place, timing, sky };
+    }
+  }
+
+  // Fallback split — proportional to evidence we DO have. Lines and transits
+  // are the date- and place-specific signal. World sky is residual.
+  const lineWeight = Math.min(2.0, 0.4 + (acgLines?.length ?? 0) * 0.15);
+  const transitWeight = Math.min(1.5, 0.3 + (rawTransits?.length ?? 0) * 0.05);
+  const skyWeight = 0.7;
+  const wSum = lineWeight + transitWeight + skyWeight;
+  const place = Math.round((lineWeight / wSum) * total);
+  const sky = Math.round((skyWeight / wSum) * total);
+  const timing = Math.max(0, total - place - sky);
+  return { place, timing, sky };
+}
+
 function buildAIInput(args: {
   destination: string;
+  destinationLat: number;
+  destinationLon: number;
   travelDate: string | null;
   matrixResult: any;
   acgLines: any[];
   rawTransits: TransitHit[];
+  eventScores: Array<{ eventName: string; finalScore: number }>;
   natalPlanets: any[];
   relocatedCusps: number[];
   natalAngles?: { ASC: number; IC: number; DSC: number; MC: number };
   travelType: "trip" | "relocation";
   goalIds: string[];
 }): TeacherReadingInput {
-  const { destination, travelDate, matrixResult, acgLines, rawTransits, natalPlanets, relocatedCusps, natalAngles, travelType, goalIds } = args;
+  const { destination, destinationLat, destinationLon, travelDate, matrixResult, acgLines, rawTransits, eventScores, natalPlanets, relocatedCusps, natalAngles, travelType, goalIds } = args;
 
   // Window: travel date ± 10 days, default to today + 10
   const start = travelDate ? new Date(travelDate) : new Date();
@@ -254,14 +322,24 @@ function buildAIInput(args: {
       };
     });
 
-  // Nearby ACG lines — top 3 by distance
+  // Nearby ACG lines — pass everything we render in §04 (cap matches the
+  // schema's LineNoteSchema.max). Carry both the band shorthand and the raw
+  // km so the prompt can write specific prose ("right on top of you" vs.
+  // "barely brushing"), and include the per-line raw contribution so the
+  // takeaway can name the dominant signal numerically.
   const nearbyLines = [...(acgLines || [])]
     .sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity))
-    .slice(0, 3)
+    .slice(0, 8)
     .map((l: any) => ({
       planet: l.planet,
       angle: spellAngle(l.angle || l.line || ""),
       closeness: closenessBand(l.distance_km ?? 9999),
+      distanceKm: Math.round(Number(l.distance_km ?? 9999)),
+      contribution: acgLineRawScore({
+        planet: l.planet,
+        angle: (l.angle || l.line || "").toString().toUpperCase(),
+        distance_km: Number(l.distance_km ?? 9999),
+      }),
     }));
 
   // Active houses — top 3 by absolute deviation from neutral 50
@@ -362,12 +440,93 @@ function buildAIInput(args: {
     .sort((a, b) => a.orb - b.orb)
     .slice(0, 5);
 
+  // Score breakdown — honest 3-bucket decomposition that sums to overallScore.
+  const scoreBreakdown = deriveScoreBreakdown(matrixResult, acgLines, rawTransits);
+
+  // Top line driver — the single closest line, surfaced as a ready-made
+  // phrase so the prompt can refer to it without re-doing math.
+  const closest = (acgLines || []).slice().sort(
+    (a: any, b: any) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity),
+  )[0];
+  const topLineDriver = closest
+    ? `${closest.planet} on your ${spellAngle(closest.angle || closest.line || "")}, ${Math.round(closest.distance_km)} km out`
+    : undefined;
+
+  // Geodetic band the destination falls in (Sepharial system).
+  const geodeticBand = typeof destinationLon === "number"
+    ? geodeticBandForLon(destinationLon)
+    : undefined;
+  const scoreNarrative = deriveScoreNarrative({
+    destination,
+    destinationLat,
+    destinationLon,
+    macroScore: matrixResult.macroScore,
+    macroVerdict: matrixResult.macroVerdict,
+    goalIds,
+    houses: matrixResult.houses,
+    eventScores,
+    natalPlanets,
+    geodeticBand: geodeticBand ?? null,
+  });
+
+  const editorialEvidence = buildEditorialEvidence({
+    destination,
+    scoreNarrative,
+    macroScore: matrixResult.macroScore,
+    macroVerdict: matrixResult.macroVerdict,
+    acgLines: nearbyLines.map((line) => ({
+      planet: line.planet,
+      angle: line.angle,
+      distanceKm: line.distanceKm,
+      contribution: line.contribution,
+    })),
+    shiftDrivers: {
+      relocatedAngles: angleShifts ?? [],
+      relocatedHouses: planetHouseShifts ?? [],
+      aspectsToAngles,
+    },
+    timingDrivers: {
+      windows: [],
+      transits: topTransits.map((transit) => ({
+        label: transit.aspect,
+        dateRange: transit.dateRange,
+        tone: transit.tone,
+      })),
+    },
+  });
+
+  const ANGLE_LONG = {
+    ASC: "Ascendant",
+    IC: "Imum Coeli",
+    DSC: "Descendant",
+    MC: "Midheaven",
+  } as const;
+  const ANGLE_TOPIC = {
+    ASC: "self",
+    IC: "home",
+    DSC: "partners",
+    MC: "career",
+  } as const;
+  const personalGeodetic = scoreNarrative.geodetic.personal.flatMap((row) =>
+    row.hits.map((hit) => ({
+      planet: hit.planet,
+      angle: ANGLE_LONG[row.anchor],
+      angleTopic: ANGLE_TOPIC[row.anchor],
+      closeness: hit.closeness,
+      family: hit.family,
+    })),
+  );
+
   return {
     destination,
     dateRange,
     overallScore: matrixResult.macroScore,
     travelType,
     goalIds,
+    scoreBreakdown,
+    editorialEvidence,
+    ...(topLineDriver ? { topLineDriver } : {}),
+    ...(geodeticBand ? { geodeticBand } : {}),
     topTransits,
     nearbyLines,
     activeHouses,
@@ -375,6 +534,7 @@ function buildAIInput(args: {
     ...(angleShifts ? { angleShifts } : {}),
     ...(planetHouseShifts ? { planetHouseShifts } : {}),
     ...(aspectsToAngles.length ? { aspectsToAngles } : {}),
+    ...(personalGeodetic.length ? { personalGeodetic } : {}),
   };
 }
 
@@ -439,6 +599,15 @@ export async function runAstrocarto(
   const rawTransits = await solve12MonthTransits(natalPlanets, refDate);
   const mappedTransits = mapTransitsToMatrix(rawTransits, natalPlanets, relocatedCusps, profile.birth_lat ?? undefined);
   const globalPenalty = computeGlobalPenalty(mappedTransits);
+  // A1: raw transit positions at refDate — feed Step 5b (transit-on-geodetic-angle).
+  // computeHouseMatrix tolerates undefined; the cost is one extra SwissEph call.
+  const transitPositionsAtRef = await computeRealtimePositions(refDate);
+  // A5: progressed Sun/Moon bands at refDate (async, day-for-a-year).
+  const progressedBands = await computeProgressedBands({
+    birthDateUtc: dtUtcBirth,
+    refDate,
+    destLon: targetLon,
+  });
 
   // 4. Sect, Arabic parts, parans
   const sunPlanet = natalPlanets.find((p: any) => (p.planet || p.name || "").toLowerCase() === "sun");
@@ -475,12 +644,23 @@ export async function runAstrocarto(
     lotOfSpiritLon,
     sect,
     selectedGoals,
+    transitPositions: transitPositionsAtRef,
+    refDate,
+    progressedBands,
   });
 
   const ascLon = relocatedCusps[0] ?? 0;
+  const activeLinePlanets = new Set(
+    acgLines
+      .filter((line: any) => Number(line.distance_km ?? Infinity) <= 2000)
+      .map((line: any) => String(line.planet || "").toLowerCase())
+      .filter(Boolean),
+  );
   const relocatedPlanets = natalPlanets.map((p: any) => ({
     name: p.planet || p.name,
     house: houseFromLongitude(p.longitude, ascLon),
+    dignityStatus: p.dignityStatus || p.dignity || p.essentialDignity,
+    hasLine: activeLinePlanets.has(String(p.planet || p.name || "").toLowerCase()),
   }));
   const eventScores = computeEventScores(matrixResult, relocatedPlanets);
 
@@ -515,6 +695,8 @@ export async function runAstrocarto(
       lotOfSpiritLon: pLotS,
       sect: pSect,
       selectedGoals,
+      transitPositions: transitPositionsAtRef,
+      refDate,
     });
 
     partnerMatrix = {
@@ -553,10 +735,13 @@ export async function runAstrocarto(
   // 8. Teacher AI synthesis — graceful fallback if Gemini fails
   const aiInput = buildAIInput({
     destination,
+    destinationLat: targetLat,
+    destinationLon: targetLon,
     travelDate: travelDate ?? null,
     matrixResult,
     acgLines,
     rawTransits,
+    eventScores,
     natalPlanets,
     relocatedCusps,
     natalAngles,
@@ -582,6 +767,20 @@ export async function runAstrocarto(
     ...(goalIds && goalIds.length ? { goalIds } : {}),
     macroScore: matrixResult.macroScore,
     macroVerdict: matrixResult.macroVerdict,
+    scoreBreakdown: aiInput.scoreBreakdown,
+    scoreNarrative: {
+      selectedGoals: aiInput.editorialEvidence.selectedGoals,
+      themes: aiInput.editorialEvidence.scoreDrivers.themes,
+      strongestThemes: aiInput.editorialEvidence.scoreDrivers.strongestThemes,
+      lessEmphasized: aiInput.editorialEvidence.scoreDrivers.lessEmphasized,
+      leanIntoEvidence: aiInput.editorialEvidence.scoreDrivers.leanIntoEvidence,
+      watchOutEvidence: aiInput.editorialEvidence.scoreDrivers.watchOutEvidence,
+      geodetic: {
+        overall: aiInput.editorialEvidence.placeDrivers.overallGeodetic,
+        personal: aiInput.editorialEvidence.placeDrivers.personalGeodetic,
+      },
+    },
+    geodeticBand: aiInput.geodeticBand,
     houses: matrixResult.houses,
     houseSystem: matrixResult.houseSystem,
     planetaryLines: acgLines,
@@ -600,6 +799,26 @@ export async function runAstrocarto(
     },
     ...(matrixResult.lotOfFortune ? { lotOfFortune: matrixResult.lotOfFortune } : {}),
     ...(matrixResult.lotOfSpirit ? { lotOfSpirit: matrixResult.lotOfSpirit } : {}),
+    ...(matrixResult.activeGeoTransits && matrixResult.activeGeoTransits.length > 0
+      ? { activeGeoTransits: matrixResult.activeGeoTransits }
+      : {}),
+    ...(matrixResult.natalWorldPoints && matrixResult.natalWorldPoints.hits.length > 0
+      ? { natalWorldPoints: matrixResult.natalWorldPoints }
+      : {}),
+    ...(matrixResult.chartRuler ? { chartRuler: matrixResult.chartRuler } : {}),
+    ...(matrixResult.personalEclipses && matrixResult.personalEclipses.hits.length > 0
+      ? { personalEclipses: matrixResult.personalEclipses }
+      : {}),
+    ...(matrixResult.progressedBands ? { progressedBands: matrixResult.progressedBands } : {}),
+    ...(matrixResult.midpointTriggers && matrixResult.midpointTriggers.length > 0
+      ? { midpointTriggers: matrixResult.midpointTriggers }
+      : {}),
+    ...(matrixResult.harmonic45Hits && matrixResult.harmonic45Hits.length > 0
+      ? { harmonic45Hits: matrixResult.harmonic45Hits }
+      : {}),
+    ...(matrixResult.modalityCohorts && matrixResult.modalityCohorts.length > 0
+      ? { modalityCohorts: matrixResult.modalityCohorts }
+      : {}),
     ...(teacherReading ? { teacherReading } : {}),
     ...(partnerNatalPlanets ? { partnerNatalPlanets, synastryAspects } : {}),
     ...(partnerMatrix && synastryDerived

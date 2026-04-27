@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { TeacherReading } from "@/lib/ai/schemas";
+import type { ScoreNarrative } from "@/app/lib/reading-tabs";
 
 /** Final shape persisted into readings.details for an astrocartography reading. */
 export interface AstrocartoReadingResult {
@@ -14,6 +16,14 @@ export interface AstrocartoReadingResult {
   goalIds?: string[];
   macroScore: number;
   macroVerdict: string;
+  /** 3-bucket decomposition of macroScore. Sums to macroScore (rounded).
+   *  Consumed by the V4 view's §01 score pills so the reader can see where
+   *  the points came from. Optional only because cached readings predate it. */
+  scoreBreakdown?: { place: number; timing: number; sky: number };
+  scoreNarrative?: ScoreNarrative;
+  /** Sepharial geodetic band the destination longitude falls in. Drives the
+   *  V4 view's §05 "world sky" section. Optional for back-compat. */
+  geodeticBand?: { sign: string; longitudeRange: string };
   houses: any[];
   houseSystem?: string;
   planetaryLines: any[];

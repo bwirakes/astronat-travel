@@ -1,0 +1,222 @@
+/* ChartInteractive — self-contained styles scoped to .chart-int.
+   Local tokens map onto globals.css design-system tokens so the
+   stylesheet flips correctly between dark/light themes. */
+
+.chart-int {
+  --ci-bg: var(--bg);
+  --ci-tint: var(--surface);
+  --ci-ink: var(--text-primary);
+  --ci-ink-soft: var(--text-secondary);
+  --ci-ink-faint: var(--text-tertiary);
+  --ci-border: var(--surface-border);
+  --ci-accent: var(--color-spiced-life, #E67A7A);
+  --ci-accent-blue: var(--color-y2k-blue, #0456fb);
+  --ci-ease: var(--ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+
+  margin: 24px 0 40px;
+  font-family: var(--font-body, system-ui);
+  color: var(--ci-ink);
+}
+
+.chart-int .chart-int-tabs {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  margin-bottom: 20px;
+}
+.chart-int .chart-int-tab {
+  background: var(--ci-bg); border: 1px solid var(--ci-border);
+  border-radius: var(--radius-md, 8px); padding: 16px 18px;
+  text-align: left; cursor: pointer; font-family: inherit;
+  display: flex; flex-direction: column; gap: 10px;
+  transition: all 0.18s var(--ci-ease);
+}
+.chart-int .chart-int-tab:hover { border-color: var(--ci-ink-faint); }
+.chart-int .chart-int-tab.on {
+  border-color: var(--ci-ink); background: var(--ci-ink); color: var(--ci-bg);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+}
+.chart-int .chart-int-tab-label {
+  font-family: var(--font-primary, serif); font-size: 20px; line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+.chart-int .chart-int-tab-tilt {
+  display: flex; align-items: center; gap: 8px;
+}
+.chart-int .chart-int-tab-tilt-l {
+  font-family: var(--font-mono, monospace);
+  font-size: 10.5px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ci-ink-soft);
+}
+.chart-int .chart-int-tab.on .chart-int-tab-tilt-l {
+  color: color-mix(in oklab, var(--ci-bg) 78%, transparent);
+}
+.chart-int .chart-int-tilt-dots {
+  display: inline-flex; align-items: center; gap: 3px;
+}
+.chart-int .chart-int-tilt-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  border: 1px solid var(--ci-ink-soft);
+  background: transparent; box-sizing: border-box;
+}
+.chart-int .tone-supportive .chart-int-tilt-dot { border-color: var(--ci-accent-blue); }
+.chart-int .tone-supportive .chart-int-tilt-dot.on { background: var(--ci-accent-blue); }
+.chart-int .tone-friction   .chart-int-tilt-dot { border-color: var(--ci-accent); }
+.chart-int .tone-friction   .chart-int-tilt-dot.on { background: var(--ci-accent); }
+.chart-int .tone-mixed      .chart-int-tilt-dot.on { background: var(--ci-ink-soft); }
+.chart-int .chart-int-tab.on .chart-int-tilt-dot {
+  border-color: color-mix(in oklab, var(--ci-bg) 60%, transparent);
+}
+.chart-int .chart-int-tab.on .tone-supportive .chart-int-tilt-dot.on {
+  background: color-mix(in oklab, var(--ci-accent-blue) 60%, var(--ci-bg));
+}
+.chart-int .chart-int-tab.on .tone-friction   .chart-int-tilt-dot.on {
+  background: color-mix(in oklab, var(--ci-accent) 60%, var(--ci-bg));
+}
+.chart-int .chart-int-tab.on .tone-mixed      .chart-int-tilt-dot.on {
+  background: color-mix(in oklab, var(--ci-bg) 65%, transparent);
+}
+.chart-int .chart-int-tab-sum {
+  font-size: 12.5px; line-height: 1.45; color: var(--ci-ink-soft); font-weight: 300;
+}
+.chart-int .chart-int-tab.on .chart-int-tab-sum { color: color-mix(in oklab, var(--ci-bg) 78%, transparent); }
+
+.chart-int .chart-int-hint {
+  display: flex; gap: 14px; align-items: baseline;
+  padding: 14px 18px;
+  background: color-mix(in oklab, var(--ci-accent-blue) 8%, var(--ci-bg));
+  border-radius: var(--radius-md, 8px); margin-bottom: 20px;
+  font-size: 13.5px; line-height: 1.5; color: var(--ci-ink-soft);
+  font-weight: 300;
+}
+.chart-int .chart-int-hint em { font-style: normal; font-weight: 500; color: var(--ci-ink); }
+.chart-int .chart-int-hint-k {
+  font-family: var(--font-mono, monospace); font-size: 9px; letter-spacing: 0.18em;
+  color: var(--ci-accent-blue); text-transform: uppercase;
+  white-space: nowrap; font-weight: 500;
+}
+
+.chart-int .chart-int-body {
+  display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 28px; align-items: start; margin-bottom: 28px;
+}
+.chart-int .chart-int-wheel-wrap {
+  background: var(--ci-bg); border: 1px solid var(--ci-border);
+  border-radius: var(--radius-md, 8px); padding: 16px; aspect-ratio: 1;
+}
+.chart-int .chart-int-wheel { width: 100%; height: 100%; display: block; font-family: var(--font-body, system-ui); }
+
+.chart-int .chart-int-ring { fill: none; stroke: var(--ci-border); stroke-width: 1; }
+.chart-int .chart-int-ring.outer { stroke: var(--ci-ink); stroke-width: 1.5; }
+.chart-int .chart-int-ring.transit-ring { stroke-dasharray: 2 4; opacity: 0.6; }
+.chart-int .chart-int-spoke { stroke: var(--ci-border); stroke-width: 1; opacity: 0.35; }
+.chart-int .chart-int-axis { stroke: var(--ci-ink); stroke-width: 1; opacity: 0.25; stroke-dasharray: 4 4; }
+
+.chart-int .chart-int-angle-g { cursor: pointer; }
+.chart-int .chart-int-angle-g:focus { outline: none; }
+.chart-int .chart-int-angle-hit { fill: transparent; }
+.chart-int .chart-int-angle-k {
+  font-family: var(--font-mono, monospace); font-size: 13px; font-weight: 600;
+  letter-spacing: 0.1em; fill: var(--ci-ink); transition: fill 0.15s;
+}
+.chart-int .chart-int-angle-k.hot { fill: var(--ci-accent); }
+.chart-int .chart-int-angle-name {
+  font-size: 9.5px; letter-spacing: 0.08em;
+  fill: var(--ci-ink-faint); text-transform: uppercase;
+  font-family: var(--font-mono, monospace);
+}
+.chart-int .chart-int-angle-g:hover .chart-int-angle-k,
+.chart-int .chart-int-angle-g:focus-visible .chart-int-angle-k { fill: var(--ci-accent); }
+
+.chart-int .chart-int-planet-g { cursor: pointer; }
+.chart-int .chart-int-planet-g:focus { outline: none; }
+.chart-int .chart-int-planet-hit { fill: transparent; }
+.chart-int .chart-int-planet-bg.natal { fill: var(--ci-bg); stroke: var(--ci-ink-faint); stroke-width: 1; opacity: 0.85; }
+.chart-int .chart-int-planet-bg.transit { stroke: var(--ci-bg); stroke-width: 2; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.12)); }
+.chart-int .chart-int-planet-glyph.natal { font-size: 14px; font-weight: 600; opacity: 0.72; transition: opacity 0.15s, font-size 0.15s; }
+.chart-int .chart-int-planet-glyph.transit { font-size: 15px; font-weight: 600; fill: var(--ci-bg); }
+.chart-int .chart-int-planet-g.transit.active .chart-int-planet-bg { stroke: var(--ci-ink); stroke-width: 2.5; }
+.chart-int .chart-int-planet-halo { opacity: 0.25; animation: chart-int-pulse 2.4s ease-in-out infinite; }
+@keyframes chart-int-pulse { 0%,100% { opacity: 0.15; } 50% { opacity: 0.35; } }
+.chart-int .chart-int-planet-g:hover .chart-int-planet-glyph,
+.chart-int .chart-int-planet-g:focus-visible .chart-int-planet-glyph { opacity: 1; }
+.chart-int .chart-int-planet-g:hover .chart-int-planet-bg,
+.chart-int .chart-int-planet-g:focus-visible .chart-int-planet-bg { stroke: var(--ci-ink); }
+
+.chart-int .chart-int-aspect-g { cursor: pointer; }
+.chart-int .chart-int-aspect-g:focus { outline: none; }
+.chart-int .chart-int-aspect-hit { stroke: transparent; stroke-width: 16; fill: none; }
+.chart-int .chart-int-aspect { fill: none; stroke-width: 1.5; transition: stroke-width 0.15s, opacity 0.15s; opacity: 0.65; }
+.chart-int .chart-int-aspect.strongest { stroke: var(--ci-accent); stroke-width: 2; opacity: 0.9; }
+.chart-int .chart-int-aspect.supportive { stroke: var(--ci-accent-blue); stroke-dasharray: 3 4; }
+.chart-int .chart-int-aspect.friction { stroke: var(--color-spiced-life, #E67A7A); stroke-dasharray: 6 3; }
+.chart-int .chart-int-aspect-g:hover .chart-int-aspect,
+.chart-int .chart-int-aspect-g:focus-visible .chart-int-aspect { stroke-width: 3; opacity: 1; }
+
+.chart-int .chart-int-center-k { font-family: var(--font-mono, monospace); font-size: 8px; letter-spacing: 0.24em; fill: var(--ci-ink-faint); text-transform: uppercase; }
+.chart-int .chart-int-center-m { font-family: var(--font-primary, serif); font-size: 14px; letter-spacing: -0.005em; fill: var(--ci-ink); }
+
+.chart-int .chart-int-tip {
+  background: var(--ci-ink); color: var(--ci-bg);
+  border-radius: var(--radius-md, 8px); padding: 24px 26px;
+  position: sticky; top: 20px;
+  min-height: 380px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.chart-int .chart-int-tip-tag {
+  font-family: var(--font-mono, monospace); font-size: 10px; letter-spacing: 0.18em;
+  color: var(--gold, #C9A96E); text-transform: uppercase; font-weight: 500;
+}
+.chart-int .chart-int-tip-aspect .chart-int-tip-tag { color: var(--ci-accent); }
+.chart-int .chart-int-tip-title {
+  font-family: var(--font-primary, serif); font-size: 22px; font-weight: 400;
+  letter-spacing: -0.01em; line-height: 1.2; margin: 0;
+  color: var(--ci-bg); text-wrap: balance;
+}
+.chart-int .chart-int-tip-body {
+  font-size: 14.5px; line-height: 1.6; font-weight: 300;
+  color: color-mix(in oklab, var(--ci-bg) 92%, transparent); margin: 0; text-wrap: pretty;
+}
+.chart-int .chart-int-tip-kv {
+  display: grid; grid-template-columns: 78px 1fr; gap: 12px;
+  padding-top: 10px; border-top: 1px solid color-mix(in oklab, var(--ci-bg) 14%, transparent);
+}
+.chart-int .chart-int-tip-k { font-family: var(--font-mono, monospace); font-size: 9px; letter-spacing: 0.16em; color: color-mix(in oklab, var(--ci-bg) 50%, transparent); text-transform: uppercase; padding-top: 2px; }
+.chart-int .chart-int-tip-v { font-size: 13px; line-height: 1.5; font-weight: 300; color: color-mix(in oklab, var(--ci-bg) 88%, transparent); }
+.chart-int .chart-int-tip-hint {
+  margin-top: auto; padding-top: 14px;
+  border-top: 1px solid color-mix(in oklab, var(--ci-bg) 14%, transparent);
+  font-size: 12px; line-height: 1.5; font-weight: 300;
+  color: color-mix(in oklab, var(--ci-bg) 58%, transparent); font-style: italic;
+}
+
+.chart-int .chart-int-legend {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px;
+  background: var(--ci-border); border: 1px solid var(--ci-border);
+  border-radius: var(--radius-md, 8px); overflow: hidden;
+}
+.chart-int .chart-int-legend-row {
+  display: grid; grid-template-columns: 24px 140px 1fr; gap: 12px;
+  align-items: center; padding: 14px 16px; background: var(--ci-bg);
+}
+.chart-int .chart-int-legend-dot { width: 14px; height: 14px; border-radius: 50%; justify-self: center; }
+.chart-int .chart-int-legend-dot.natal { background: var(--ci-bg); border: 1.5px solid var(--ci-ink-faint); }
+.chart-int .chart-int-legend-dot.transit { background: var(--ci-accent); }
+.chart-int .chart-int-legend-dot.angle { background: var(--ci-ink); }
+.chart-int .chart-int-legend-line { width: 22px; height: 2px; justify-self: center; }
+.chart-int .chart-int-legend-line.strongest { background: var(--ci-accent); }
+.chart-int .chart-int-legend-line.supportive { background: transparent; border-top: 2px dashed var(--ci-accent-blue); }
+.chart-int .chart-int-legend-line.friction { background: transparent; border-top: 2px dashed var(--color-spiced-life, #E67A7A); }
+.chart-int .chart-int-legend-l {
+  font-family: var(--font-primary, serif); font-size: 14px;
+  color: var(--ci-ink); letter-spacing: -0.005em;
+}
+.chart-int .chart-int-legend-d { font-size: 12.5px; line-height: 1.45; color: var(--ci-ink-soft); font-weight: 300; }
+
+@media (max-width: 780px) {
+  .chart-int .chart-int-body { grid-template-columns: 1fr; gap: 16px; }
+  .chart-int .chart-int-tip { position: static; min-height: 0; padding: 20px; }
+}
+@media (max-width: 640px) {
+  .chart-int .chart-int-tabs { grid-template-columns: 1fr; gap: 8px; }
+  .chart-int .chart-int-legend { grid-template-columns: 1fr; }
+}

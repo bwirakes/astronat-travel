@@ -1,14 +1,13 @@
 "use client";
 
 import type { CSSProperties, FormEvent, ReactElement } from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Loader2, Sparkles } from "lucide-react";
 import CityAutocomplete from "@/app/components/CityAutocomplete";
 import { AcgMap, type NatalData } from "@/app/components/AcgMap";
 import AcgLinesCard from "@/app/components/AcgLinesCard";
 import RelocationBiWheel from "@/app/(frontend)/(app)/reading/[id]/components/v4/RelocationBiWheel";
 import { PLANET_COLORS, PLANET_GLYPHS } from "@/app/lib/planet-data";
-import "@/app/(frontend)/(app)/reading/[id]/components/v4/v4.css";
 
 interface LocationState {
   label: string;
@@ -50,6 +49,81 @@ interface HouseDebug extends HouseResult {
   breakdown?: Record<string, number>;
 }
 
+interface GeoTransitHit {
+  planet: string;
+  angle: "ASC" | "MC" | "DSC" | "IC";
+  house: number;
+  orb: number;
+  severity: number;
+  direction: string;
+  personalActivation: boolean;
+  natalContact?: string;
+  natalOrb?: number;
+}
+interface WorldPointHit {
+  planet: string;
+  point: string;
+  pointLon: number;
+  orb: number;
+  severity: number;
+  direction: string;
+}
+interface ChartRulerInfoView {
+  relocatedAscSign: string;
+  ruler: string;
+  rulerNatalHouse?: number;
+  rulerRelocatedHouse?: number;
+  rulerRelocatedHouseSign?: string;
+  rulerAngular: boolean;
+}
+interface EclipseHitView {
+  kind: "solar" | "lunar";
+  dateUtc: string;
+  degree: number;
+  sign: string;
+  daysFromTarget: number;
+  activatedAngle: string;
+  angleOrb: number;
+  natalContact: string;
+  natalOrb: number;
+  direction: string;
+  severity: number;
+}
+interface ProgressedBandView {
+  planet: "Sun" | "Moon";
+  longitude: number;
+  sign: string;
+  longitudeRange: string;
+  destinationInBand: boolean;
+}
+interface ProgressionsView {
+  progressedDateUtc: string;
+  yearsElapsed: number;
+  aggregate: number;
+  bands: ProgressedBandView[];
+}
+interface MidpointTriggerView {
+  transitPlanet: string;
+  transitLon: number;
+  natalA: string;
+  natalB: string;
+  midpointLon: number;
+  orb: number;
+}
+interface HarmonicHitView {
+  transitPlanet: string;
+  natalPlanet: string;
+  angle: 45 | 135;
+  orb: number;
+}
+interface ModalityCohortView {
+  planetA: string;
+  planetB: string;
+  aspectAngle: 0 | 90 | 180;
+  modality: "cardinal" | "fixed" | "mutable";
+  orb: number;
+}
+
 interface ScoringRawOutput {
   explanations?: {
     overall?: string;
@@ -73,6 +147,15 @@ interface ScoringRawOutput {
   lots?: Record<string, unknown>;
   sect?: string;
   globalPenalty?: number;
+  // A1–A8 surfacing
+  activeGeoTransits?: GeoTransitHit[];
+  natalWorldPoints?: { aggregate: number; hits: WorldPointHit[] } | null;
+  chartRuler?: ChartRulerInfoView | null;
+  personalEclipses?: { aggregate: number; hits: EclipseHitView[] } | null;
+  progressedBands?: ProgressionsView | null;
+  midpointTriggers?: MidpointTriggerView[];
+  harmonic45Hits?: HarmonicHitView[];
+  modalityCohorts?: ModalityCohortView[];
 }
 
 interface ScoringRawInput {
@@ -163,13 +246,23 @@ const microLabelStyle: CSSProperties = {
 };
 
 const tableWrapStyle: CSSProperties = {
+  // Lets wide tables (e.g. 18-column House Breakdown) scroll horizontally
+  // instead of squishing the cells. `WebkitOverflowScrolling` keeps momentum
+  // scroll on iOS Safari.
   overflowX: "auto",
+  WebkitOverflowScrolling: "touch",
+  maxWidth: "100%",
   border: "1px solid var(--surface-border)",
   borderRadius: "var(--radius-sm)",
   background: "var(--surface)",
 };
 
 const tableStyle: CSSProperties = {
+  // `min-width: max-content` is the trick that activates the wrap's
+  // overflow: when total cell content exceeds the viewport, the table grows
+  // past 100% and the wrapper scrolls. With plain `width: 100%`, the table
+  // would compress and the scroll never triggers.
+  minWidth: "max-content",
   width: "100%",
   borderCollapse: "collapse",
   fontSize: "0.82rem",
@@ -194,6 +287,10 @@ const tableCellStyle: CSSProperties = {
   borderBottom: "1px solid var(--surface-border)",
   verticalAlign: "middle",
   background: "var(--surface)",
+  // Keep numeric/short cells on one line so they don't wrap and break the
+  // horizontal scroll rhythm. Long string fields render fine — browsers
+  // honor explicit \n in formatCell output.
+  whiteSpace: "nowrap",
 };
 
 function locationFromLabel(label: string): LocationState {
@@ -613,7 +710,7 @@ export default function ScoringTesterClient(): ReactElement {
                     Relocation Bi-Wheel
                   </h4>
                   {hasBiWheelData ? (
-                    <div className="v4-root" style={{ minHeight: "auto", background: "transparent" }}>
+                    <div style={{ minHeight: "auto", background: "transparent" }}>
                       <RelocationBiWheel
                         natalPlanets={wheelPlanets}
                         natalAnglesDeg={rawOutput?.natalAngles ?? null}
@@ -703,39 +800,7 @@ export default function ScoringTesterClient(): ReactElement {
               </div>
             )}
 
-            <div>
-              <h3 style={{ fontFamily: "var(--font-secondary)", fontSize: "1.25rem", marginBottom: "0.75rem" }}>
-                House Breakdown
-              </h3>
-              <div style={tableWrapStyle}>
-                <table style={tableStyle}>
-                  <thead>
-                    <tr>
-                      <th style={tableHeaderStyle}>House</th>
-                      <th style={tableHeaderStyle}>Ruler</th>
-                      <th style={tableHeaderStyle}>Condition</th>
-                      <th style={{ ...tableHeaderStyle, textAlign: "right" }}>Score</th>
-                      {["base", "dignity", "occupants", "acgLine", "geodetic", "transits", "paran", "natalBridge", "lotBonus"].map((key) => (
-                        <th key={key} style={{ ...tableHeaderStyle, textAlign: "right" }}>{key}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {debugHouses.map((house) => (
-                      <tr key={`breakdown-${house.house}`}>
-                        <td style={{ ...tableCellStyle, fontFamily: "var(--font-mono)", color: "var(--color-y2k-blue)" }}>H{house.house}</td>
-                        <td style={tableCellStyle}>{house.rulerPlanet ?? "—"}</td>
-                        <td style={tableCellStyle}>{house.rulerCondition ?? "—"}</td>
-                        <td style={{ ...tableCellStyle, textAlign: "right", fontWeight: 800 }}>{house.score}</td>
-                        {["base", "dignity", "occupants", "acgLine", "geodetic", "transits", "paran", "natalBridge", "lotBonus"].map((key) => (
-                          <td key={key} style={{ ...tableCellStyle, textAlign: "right" }}>{formatCell(house.breakdown?.[key])}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <HouseBreakdownPanel debugHouses={debugHouses} />
 
             <div>
               <h3 style={{ fontFamily: "var(--font-secondary)", fontSize: "1.25rem", marginBottom: "0.75rem" }}>
@@ -796,6 +861,8 @@ export default function ScoringTesterClient(): ReactElement {
                 </table>
               </div>
             </div>
+
+            <GeodeticEnginePanel rawOutput={rawOutput} />
 
             {transitHits.length > 0 && (
               <div>
@@ -941,4 +1008,354 @@ export default function ScoringTesterClient(): ReactElement {
       )}
     </div>
   );
+}
+
+// ── Generic data-driven table helpers ─────────────────────────────────────
+//
+// Anywhere we used to hardcode a list of column keys for a table, we now
+// derive them from the data itself. Columns are pulled from the union of
+// keys across all rows (so optional fields still get a column when present
+// on at least one row), while still letting callers pin / hide / reorder
+// columns if they need a specific layout.
+
+interface DataTableColumn<T> {
+    /** Object key on the row — also used as the header label by default. */
+    key: keyof T & string;
+    /** Optional override for the header label. */
+    label?: string;
+    /** Optional cell renderer; default = formatCell on the raw value. */
+    render?: (row: T) => React.ReactNode;
+    /** "right" for numeric columns. */
+    align?: "left" | "right";
+    /** When true, value is rendered bold + colored when non-zero. */
+    emphasizeNonZero?: boolean;
+}
+
+interface DataTableProps<T extends Record<string, unknown>> {
+    rows: T[];
+    /** Explicit columns. When omitted, columns are auto-derived from rows. */
+    columns?: DataTableColumn<T>[];
+    /** Columns to pin to the front (only used in auto-derive mode). */
+    pinFirst?: (keyof T & string)[];
+    /** When true, columns whose value is 0/empty for every row are hidden. */
+    hideAllZeroColumns?: boolean;
+    /** When true, hides columns whose value is undefined for every row.
+     *  Default true — keeps the table tidy when readings predate a field. */
+    hideAllMissingColumns?: boolean;
+    rowKey: (row: T, index: number) => string;
+    /** Renders empty state copy when rows is empty. Default: nothing. */
+    empty?: React.ReactNode;
+}
+
+function autoDeriveColumns<T extends Record<string, unknown>>(
+    rows: T[],
+    pinFirst: (keyof T & string)[] = [],
+): DataTableColumn<T>[] {
+    if (rows.length === 0) return [];
+    const seen = new Set<string>();
+    const ordered: string[] = [];
+    for (const k of pinFirst) {
+        if (rows.some((r) => Object.prototype.hasOwnProperty.call(r, k))) {
+            seen.add(k);
+            ordered.push(k);
+        }
+    }
+    for (const row of rows) {
+        for (const k of Object.keys(row)) {
+            if (!seen.has(k)) {
+                seen.add(k);
+                ordered.push(k);
+            }
+        }
+    }
+    return ordered.map((key) => {
+        const sample = rows.find((r) => r[key as keyof T] !== undefined)?.[key as keyof T];
+        const align: "left" | "right" = typeof sample === "number" ? "right" : "left";
+        return { key: key as keyof T & string, align, emphasizeNonZero: typeof sample === "number" };
+    });
+}
+
+function DataTable<T extends Record<string, unknown>>({
+    rows,
+    columns,
+    pinFirst,
+    hideAllZeroColumns = false,
+    hideAllMissingColumns = true,
+    rowKey,
+    empty,
+}: DataTableProps<T>) {
+    if (rows.length === 0) {
+        return empty ? <div style={tableWrapStyle}>{empty}</div> : null;
+    }
+    let cols = columns ?? autoDeriveColumns(rows, pinFirst);
+    if (hideAllMissingColumns) {
+        cols = cols.filter((c) => rows.some((r) => r[c.key] !== undefined));
+    }
+    if (hideAllZeroColumns) {
+        cols = cols.filter((c) =>
+            rows.some((r) => {
+                const v = r[c.key];
+                if (v === undefined || v === null || v === "") return false;
+                if (typeof v === "number") return v !== 0;
+                if (typeof v === "boolean") return v;
+                return true;
+            }),
+        );
+    }
+    return (
+        <div style={tableWrapStyle}>
+            <table style={tableStyle}>
+                <thead>
+                    <tr>
+                        {cols.map((c) => (
+                            <th
+                                key={c.key}
+                                style={{
+                                    ...tableHeaderStyle,
+                                    textAlign: c.align === "right" ? "right" : "left",
+                                }}
+                            >
+                                {c.label ?? c.key}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows.map((row, i) => (
+                        <tr key={rowKey(row, i)}>
+                            {cols.map((c) => {
+                                const raw = row[c.key];
+                                const isNumber = typeof raw === "number";
+                                const nonZero = isNumber && raw !== 0;
+                                const cellContent = c.render
+                                    ? c.render(row)
+                                    : formatCell(raw as PrimitiveCell);
+                                const cellStyle: React.CSSProperties = {
+                                    ...tableCellStyle,
+                                    textAlign: c.align === "right" ? "right" : "left",
+                                };
+                                if (c.emphasizeNonZero && nonZero) {
+                                    cellStyle.fontWeight = 800;
+                                    cellStyle.color = (raw as number) > 0
+                                        ? "var(--color-success, #16a34a)"
+                                        : "var(--color-warning, #dc2626)";
+                                }
+                                return (
+                                    <td key={c.key} style={cellStyle}>
+                                        {cellContent}
+                                    </td>
+                                );
+                            })}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
+type PrimitiveCell = string | number | boolean | null | undefined;
+
+// ── House Breakdown panel ────────────────────────────────────────────────
+//
+// Auto-derives breakdown columns from the actual `breakdown` keys returned
+// by computeHouseMatrix, so any new field added to HouseBreakdown shows up
+// here without a code change. Adds: a "hide all-zero columns" toggle, a
+// score column with status, and bold/colored emphasis on non-zero values.
+
+function HouseBreakdownPanel({ debugHouses }: { debugHouses: HouseDebug[] }) {
+    const [hideZeros, setHideZeros] = useState(true);
+
+    const rows = useMemo(() => {
+        return debugHouses.map((h) => ({
+            house: `H${h.house}`,
+            ruler: h.rulerPlanet ?? "—",
+            condition: h.rulerCondition ?? "—",
+            score: h.score,
+            status: h.status,
+            ...(h.breakdown ?? {}),
+        }));
+    }, [debugHouses]);
+
+    if (rows.length === 0) return null;
+
+    return (
+        <div>
+            <div
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: "0.5rem",
+                    marginBottom: "0.75rem",
+                }}
+            >
+                <h3 style={{ fontFamily: "var(--font-secondary)", fontSize: "1.25rem", margin: 0 }}>
+                    House Breakdown
+                </h3>
+                <label
+                    style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "0.75rem",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.1em",
+                        color: "var(--text-secondary)",
+                        cursor: "pointer",
+                        userSelect: "none",
+                    }}
+                >
+                    <input
+                        type="checkbox"
+                        checked={hideZeros}
+                        onChange={(e) => setHideZeros(e.target.checked)}
+                        style={{ marginRight: "0.4rem", verticalAlign: "middle" }}
+                    />
+                    hide columns that are 0 everywhere
+                </label>
+            </div>
+            <DataTable
+                rows={rows}
+                pinFirst={["house", "ruler", "condition", "score", "status"]}
+                hideAllZeroColumns={hideZeros}
+                rowKey={(r) => `breakdown-${r.house}`}
+            />
+        </div>
+    );
+}
+
+// ── Geodetic Engine (A1–A8) panel ──────────────────────────────────────────
+// Renders all the new geodetic engine outputs in one stack of small tables.
+// Each subsection only renders when its data exists.
+function GeodeticEnginePanel({ rawOutput }: { rawOutput?: ScoringRawOutput }) {
+    if (!rawOutput) return null;
+    const geo = rawOutput.activeGeoTransits ?? [];
+    const wp = rawOutput.natalWorldPoints;
+    const cr = rawOutput.chartRuler;
+    const ec = rawOutput.personalEclipses;
+    const pb = rawOutput.progressedBands;
+    const mp = rawOutput.midpointTriggers ?? [];
+    const h45 = rawOutput.harmonic45Hits ?? [];
+    const mc = rawOutput.modalityCohorts ?? [];
+
+    const anyData = geo.length || (wp && wp.hits.length) || cr || (ec && ec.hits.length)
+        || pb || mp.length || h45.length || mc.length;
+    if (!anyData) return null;
+
+    return (
+        <div>
+            <h3 style={{ fontFamily: "var(--font-secondary)", fontSize: "1.25rem", marginBottom: "0.75rem" }}>
+                Geodetic Engine (A1–A8)
+            </h3>
+
+            {geo.length > 0 && (
+                <SubPanel title="A1 · Active Geo-Transits">
+                    <DataTable
+                        rows={geo as unknown as Record<string, unknown>[]}
+                        pinFirst={["planet", "angle", "house", "orb", "severity", "direction", "personalActivation"]}
+                        rowKey={(_, i) => `geo-${i}`}
+                    />
+                </SubPanel>
+            )}
+
+            {wp && wp.hits.length > 0 && (
+                <SubPanel title={`A2 · Natal World Points  (aggregate=${wp.aggregate})`}>
+                    <DataTable
+                        rows={wp.hits as unknown as Record<string, unknown>[]}
+                        pinFirst={["planet", "point", "orb", "severity", "direction"]}
+                        rowKey={(_, i) => `wp-${i}`}
+                    />
+                </SubPanel>
+            )}
+
+            {cr && (
+                <SubPanel title="A3 · Chart Ruler (relocated)">
+                    <DataTable
+                        rows={[cr as unknown as Record<string, unknown>]}
+                        pinFirst={[
+                            "relocatedAscSign", "ruler",
+                            "rulerNatalHouse", "rulerRelocatedHouse",
+                            "rulerRelocatedHouseSign", "rulerAngular",
+                        ]}
+                        rowKey={() => "chart-ruler"}
+                    />
+                </SubPanel>
+            )}
+
+            {ec && ec.hits.length > 0 && (
+                <SubPanel title={`A4 · Personal Eclipses  (aggregate=${ec.aggregate})`}>
+                    <DataTable
+                        rows={ec.hits as unknown as Record<string, unknown>[]}
+                        pinFirst={[
+                            "kind", "dateUtc", "degree", "sign",
+                            "activatedAngle", "angleOrb",
+                            "natalContact", "natalOrb",
+                            "direction", "severity",
+                        ]}
+                        rowKey={(_, i) => `ec-${i}`}
+                    />
+                </SubPanel>
+            )}
+
+            {pb && (
+                <SubPanel title={`A5 · Progressed Bands  (years=${pb.yearsElapsed}, aggregate=${pb.aggregate})`}>
+                    <DataTable
+                        rows={pb.bands as unknown as Record<string, unknown>[]}
+                        pinFirst={["planet", "longitude", "sign", "longitudeRange", "destinationInBand"]}
+                        rowKey={(_, i) => `pb-${i}`}
+                    />
+                </SubPanel>
+            )}
+
+            {mp.length > 0 && (
+                <SubPanel title={`A6 · Midpoint Triggers  (${mp.length} total, top 5)`}>
+                    <DataTable
+                        rows={mp.slice(0, 5) as unknown as Record<string, unknown>[]}
+                        pinFirst={["transitPlanet", "natalA", "natalB", "midpointLon", "orb"]}
+                        rowKey={(_, i) => `mp-${i}`}
+                    />
+                </SubPanel>
+            )}
+
+            {h45.length > 0 && (
+                <SubPanel title={`A6 · 45°/135° Harmonic Hits  (${h45.length} total, top 5)`}>
+                    <DataTable
+                        rows={h45.slice(0, 5) as unknown as Record<string, unknown>[]}
+                        pinFirst={["transitPlanet", "angle", "natalPlanet", "orb"]}
+                        rowKey={(_, i) => `h45-${i}`}
+                    />
+                </SubPanel>
+            )}
+
+            {mc.length > 0 && (
+                <SubPanel title="A8 · Modality Cohorts (late-degree malefic pairs)">
+                    <DataTable
+                        rows={mc as unknown as Record<string, unknown>[]}
+                        pinFirst={["planetA", "aspectAngle", "planetB", "modality", "orb"]}
+                        rowKey={(_, i) => `mc-${i}`}
+                    />
+                </SubPanel>
+            )}
+        </div>
+    );
+}
+
+function SubPanel({ title, children }: { title: string; children: React.ReactNode }) {
+    return (
+        <div style={{ marginBottom: "1rem" }}>
+            <div
+                style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "0.75rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.12em",
+                    color: "var(--color-y2k-blue)",
+                    marginBottom: "0.4rem",
+                }}
+            >
+                {title}
+            </div>
+            {children}
+        </div>
+    );
 }
