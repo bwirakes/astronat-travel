@@ -736,89 +736,6 @@
 }
 @keyframes v4-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
 
-/* ─── STEP 2: Windows ────────────────────────────────────────── */
-.v4-root .v4-windows { display: flex; flex-direction: column; gap: 14px; }
-.v4-root .v4-win {
-  background: var(--v4-bg); border: 1px solid var(--v4-border);
-  border-radius: var(--radius-lg, 12px); padding: 24px 26px;
-  display: flex; flex-direction: column; gap: 8px;
-}
-.v4-root .v4-win-primary { border-color: var(--v4-accent); background: color-mix(in oklab, var(--v4-accent) 6%, var(--v4-bg)); }
-.v4-root .v4-win-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-.v4-root .v4-win-flavor {
-  font-family: var(--font-body, system-ui); font-size: 13px; font-weight: 500;
-  color: var(--v4-ink); display: flex; align-items: center; gap: 10px;
-  letter-spacing: 0.02em;
-}
-.v4-root .v4-win-emoji { color: var(--v4-accent); font-size: 16px; }
-.v4-root .v4-win-pill {
-  font-family: var(--font-mono, monospace); font-size: 9px; letter-spacing: 0.18em;
-  text-transform: uppercase; color: var(--color-eggshell, #F8F5EC);
-  background: var(--v4-accent); padding: 4px 10px; border-radius: 99px;
-}
-.v4-root .v4-win-pill-your {
-  background: transparent; color: var(--v4-ink-faint);
-  border: 1px solid var(--v4-border);
-}
-.v4-root .v4-win-winner {
-  border-color: var(--v4-accent-blue);
-  background: color-mix(in oklab, var(--v4-accent-blue) 5%, var(--v4-bg));
-}
-.v4-root .v4-win-winner .v4-win-meter-fill { background: var(--v4-accent-blue); }
-.v4-root .v4-win-winner .v4-win-pill { background: var(--v4-accent-blue); }
-.v4-root .v4-win-dates {
-  font-family: var(--font-primary, serif); font-size: clamp(28px, 3.5vw, 38px);
-  line-height: 1.05; letter-spacing: -0.015em; color: var(--v4-ink); margin-top: 4px;
-}
-.v4-root .v4-win-nights {
-  font-family: var(--font-mono, monospace); font-size: 11px; letter-spacing: 0.12em;
-  color: var(--v4-ink-faint); text-transform: uppercase;
-}
-.v4-root .v4-win-reason {
-  font-family: var(--font-body, system-ui); font-size: 15px; line-height: 1.55;
-  color: var(--v4-ink-soft); font-weight: 300; margin: 6px 0 4px;
-  text-wrap: pretty;
-}
-.v4-root .v4-win-meter { height: 4px; background: var(--v4-border); border-radius: 99px; overflow: hidden; margin-top: 6px; }
-.v4-root .v4-win-meter-fill { height: 100%; background: var(--v4-accent); border-radius: 99px; }
-.v4-root .v4-win-score {
-  font-family: var(--font-mono, monospace); font-size: 10px; letter-spacing: 0.14em;
-  color: var(--v4-ink-faint); text-transform: uppercase; margin-top: 4px;
-}
-.v4-root .v4-win-score strong { color: var(--v4-ink); font-weight: 600; }
-
-/* ─── STEP 2 daily strip ─────────────────────────────────────── */
-.v4-root .v4-daily {
-  margin: 8px 0 24px;
-  padding: 16px 18px 12px;
-  background: var(--v4-bg);
-  border: 1px solid var(--v4-border);
-  border-radius: var(--radius-md, 8px);
-}
-.v4-root .v4-daily-strip {
-  display: flex; gap: 2px; align-items: flex-end;
-  height: 56px; width: 100%;
-}
-.v4-root .v4-daily-bar {
-  flex: 1; min-width: 2px; border-radius: 1px;
-  transition: opacity 0.15s ease;
-}
-.v4-root .v4-daily-bar:hover { opacity: 0.75; }
-.v4-root .v4-daily-good { background: var(--v4-accent); }
-.v4-root .v4-daily-ok   { background: var(--gold, #C9A96E); opacity: 0.7; }
-.v4-root .v4-daily-low  { background: var(--v4-ink-faint); opacity: 0.5; }
-.v4-root .v4-daily-anchor {
-  outline: 2px solid var(--v4-accent-blue);
-  outline-offset: 1px;
-  z-index: 1;
-}
-.v4-root .v4-daily-axis {
-  display: flex; justify-content: space-between; margin-top: 8px;
-  font-family: var(--font-mono, monospace); font-size: 9px;
-  letter-spacing: 0.16em; text-transform: uppercase;
-  color: var(--v4-ink-faint);
-}
-
 /* ─── STEP 3: Vibes ──────────────────────────────────────────── */
 .v4-root .v4-vibes { display: flex; flex-direction: column; gap: 28px; }
 .v4-root .v4-vibe {
@@ -875,31 +792,6 @@
 }
 .v4-root .v4-callout p { font-family: var(--font-body, system-ui); font-size: 14px; line-height: 1.55; color: var(--v4-ink-soft); font-weight: 300; margin: 0; text-wrap: pretty; }
 
-/* ─── STEP 5: Todo list ──────────────────────────────────────── */
-.v4-root .v4-todo { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0; }
-.v4-root .v4-todo li {
-  display: grid; grid-template-columns: 42px 1fr; gap: 18px;
-  padding: 22px 0; border-bottom: 1px solid var(--v4-border);
-  align-items: start;
-}
-.v4-root .v4-todo li:last-child { border-bottom: none; }
-.v4-root .v4-todo-n {
-  width: 30px; height: 30px; border-radius: 50%;
-  background: var(--v4-accent); color: var(--color-eggshell, #F8F5EC);
-  font-family: var(--font-body, system-ui); font-size: 13px; font-weight: 600;
-  display: flex; align-items: center; justify-content: center;
-  margin-top: 2px;
-}
-.v4-root .v4-todo-h {
-  font-family: var(--font-primary, serif); font-size: 22px; font-weight: 400;
-  letter-spacing: -0.005em; line-height: 1.2; color: var(--v4-ink);
-  margin: 0 0 6px; text-wrap: balance;
-}
-.v4-root .v4-todo-b {
-  font-family: var(--font-body, system-ui); font-size: 14px; line-height: 1.55;
-  color: var(--v4-ink-soft); font-weight: 300; margin: 0; text-wrap: pretty;
-}
-
 /* ─── STEP 6: Reveal (astrology) ─────────────────────────────── */
 .v4-root .v4-reveal {
   width: 100%; background: transparent; border: 1px solid var(--v4-border);
@@ -942,11 +834,6 @@
 .v4-root .v4-astro-line-dist { font-family: var(--font-mono, monospace); font-size: 10px; letter-spacing: 0.12em; color: var(--v4-accent); text-transform: uppercase; font-weight: 400; }
 .v4-root .v4-astro-line-note { font-family: var(--font-body, system-ui); font-size: 13px; line-height: 1.5; color: var(--v4-ink-soft); font-weight: 300; margin-top: 2px; }
 
-.v4-root .v4-astro-weeks { display: flex; flex-direction: column; gap: 16px; }
-.v4-root .v4-astro-week { padding: 14px 16px; background: var(--v4-tint); border-radius: var(--radius-md, 8px); }
-.v4-root .v4-astro-week-h { font-family: var(--font-mono, monospace); font-size: 10px; letter-spacing: 0.14em; color: var(--v4-accent); text-transform: uppercase; }
-.v4-root .v4-astro-week-t { font-family: var(--font-primary, serif); font-size: 18px; letter-spacing: -0.005em; color: var(--v4-ink); margin: 4px 0 6px; }
-.v4-root .v4-astro-week-b { font-family: var(--font-body, system-ui); font-size: 13px; line-height: 1.55; color: var(--v4-ink-soft); font-weight: 300; margin: 0; text-wrap: pretty; }
 .v4-root .v4-astro-empty { font-family: var(--font-mono, monospace); font-size: 10px; letter-spacing: 0.14em; color: var(--v4-ink-faint); text-transform: uppercase; text-align: center; padding: 16px; }
 
 /* ─── §04 Planetary lines (promoted) ────────────────────────── */
@@ -1007,15 +894,6 @@
   color: var(--v4-ink-soft); font-weight: 300; text-wrap: pretty;
 }
 
-/* ─── §06 Week-by-week block (absorbed from old §06) ────────── */
-.v4-root .v4-weeks-block {
-  margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--v4-border);
-}
-.v4-root .v4-weeks-h {
-  font-family: var(--font-primary, serif); font-size: 18px;
-  letter-spacing: -0.005em; color: var(--v4-ink);
-  margin: 0 0 14px;
-}
 
 /* ─── Footer ─────────────────────────────────────────────────── */
 .v4-root .v4-foot { padding: 56px 32px 64px; border-top: 1px solid var(--v4-border); background: var(--v4-tint); }
@@ -1426,14 +1304,9 @@
 @media (max-width: 640px) {
   .v4-root .v4-step { padding: 56px 20px; }
   .v4-root .v4-step-hero { padding: 20px 16px 24px; min-height: 0; }
-  .v4-root .v4-win { padding: 18px 20px; }
-  .v4-root .v4-win-dates { font-size: 24px; }
   .v4-root .v4-vibes { gap: 22px; }
   .v4-root .v4-vibe { padding-bottom: 22px; }
   .v4-root .v4-vibe-icon { font-size: 28px; margin-bottom: 10px; }
-  .v4-root .v4-todo li { grid-template-columns: 34px 1fr; gap: 12px; padding: 18px 0; }
-  .v4-root .v4-todo-n { width: 26px; height: 26px; font-size: 12px; }
-  .v4-root .v4-todo-h { font-size: 18px; }
   .v4-root .v4-reveal { padding: 20px 22px; gap: 14px; }
   .v4-root .v4-reveal-icon { width: 32px; height: 32px; font-size: 22px; }
   .v4-root .v4-astro { padding: 22px 20px 26px; gap: 24px; }
