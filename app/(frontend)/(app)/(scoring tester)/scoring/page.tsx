@@ -8,7 +8,7 @@ export default function ScoringPage() {
       kicker="HOUSE MATRIX"
       backLabel="Home"
       backHref="/dashboard"
-      maxWidth="1440px"
+      maxWidth="1280px"
     >
       <ScoringTesterClient />
     </DashboardLayout>
