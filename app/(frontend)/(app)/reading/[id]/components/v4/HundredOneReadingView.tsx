@@ -218,9 +218,9 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                             value={activeTab}
                             onValueChange={(v) => { if (v) selectTab(v); }}
                             orientation="horizontal"
-                            className="w-full"
+                            className="w-full min-w-0"
                         >
-                            <div className="flex flex-col gap-[34px]">
+                            <div className="flex flex-col gap-[34px] min-w-0">
                                 <TabsList variant="line" className="reading-tabs-list">
                                     {vm.tabs.definitions.map((tab) => (
                                         <TabsTrigger key={tab.id} value={tab.id} className="reading-tab-trigger">
