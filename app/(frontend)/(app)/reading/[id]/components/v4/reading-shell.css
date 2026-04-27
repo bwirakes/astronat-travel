@@ -6,7 +6,6 @@
 
 .reading-tabs-list {
   flex-shrink: 0;
-  width: 100%;
   background: transparent;
   padding: 0;
   border-radius: 0;
@@ -23,6 +22,10 @@
   min-height: unset !important;
   width: 100% !important;
   max-width: 100% !important;
+  /* Critical: lets the list shrink below its 5×210px intrinsic content width
+     so it doesn't push parent flex containers wider than the viewport.
+     overflow-x: auto then handles the actual horizontal scroll. */
+  min-width: 0 !important;
   justify-content: flex-start !important;
   border-bottom: 1px solid var(--surface-border);
   mask-image: linear-gradient(to right, transparent 0, black 10px, black calc(100% - 10px), transparent 100%);

@@ -4,8 +4,9 @@
 
 import { AcgMap, type NatalData } from "@/app/components/AcgMap";
 import AcgLinesCard from "@/app/components/AcgLinesCard";
+import ReadingGeodeticMap from "../parts/ReadingGeodeticMap";
 import { acgLineRawScore } from "@/app/lib/house-matrix";
-import { getOrdinal } from "@/app/lib/astro-wording";
+import type { PersonalGeodeticEvidence, PersonalGeodeticHit } from "@/app/lib/reading-tabs";
 import TabSection from "./TabSection";
 import type { V4VM } from "./types";
 
@@ -73,7 +74,19 @@ export default function PlaceFieldTab({ vm, natalForMap, birthIso, reading, relo
                     </div>
                 )}
 
-                {/* Personal geodetics list */}
+                {/* Bridge — AI-written one-liner connecting the impersonal band
+                    above to the personal hits below. */}
+                {vm.chrome.step4GeodeticBridge && (
+                    <p
+                        className="mt-6 mb-0 max-w-[620px] text-[15.5px] leading-[1.55] italic"
+                        style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
+                    >
+                        {vm.chrome.step4GeodeticBridge}
+                    </p>
+                )}
+
+                {/* Personal geodetic hits — one row per (planet × angle) within 5°.
+                    AI prose front, math behind <details>. */}
                 <div className="my-7">
                     <h3
                         className="font-normal tracking-[-0.01em] leading-[1.15] m-0 mb-2"
@@ -83,52 +96,65 @@ export default function PlaceFieldTab({ vm, natalForMap, birthIso, reading, relo
                             color: "var(--text-primary)",
                         }}
                     >
-                        Personal Geodetics
+                        Your chart on this place
                     </h3>
-                    {vm.scoreNarrative.geodetic.personal.length === 0 ? (
-                        <p
-                            className="text-[10px] tracking-[0.14em] uppercase text-center p-4 m-0"
+                    <PersonalGeodeticHits
+                        rows={vm.scoreNarrative.geodetic.personal}
+                        notes={extractGeodeticHitNotes(reading)}
+                    />
+                </div>
+
+                {/* Methodology — plain paragraph, AI-written or default copy. */}
+                {vm.chrome.step4GeodeticMethod && (
+                    <div
+                        className="mt-2 mb-7 p-[clamp(18px,2.4vw,24px)] border rounded-[10px]"
+                        style={{
+                            borderColor: "var(--surface-border)",
+                            background: "color-mix(in oklab, var(--text-primary) 3%, transparent)",
+                        }}
+                    >
+                        <div
+                            className="text-[10.5px] tracking-[0.18em] uppercase mb-2"
                             style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}
                         >
-                            No natal planets sit close to the main geodetic anchors here.
-                        </p>
-                    ) : vm.scoreNarrative.geodetic.personal.map((entry) => (
-                        <article
-                            key={`${entry.anchor}-${entry.house}`}
-                            className="grid gap-4 items-center mt-[10px] border p-[clamp(20px,2.6vw,28px)] grid-cols-1 sm:grid-cols-[150px_1fr_auto]"
-                            style={{
-                                borderColor: "var(--surface-border)",
-                                background: "var(--bg)",
-                                borderRadius: "var(--shape-asymmetric-md, 12px)",
-                            }}
+                            How we counted
+                        </div>
+                        <p
+                            className="text-[14px] leading-[1.6] m-0 max-w-[620px]"
+                            style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
                         >
-                            <div>
-                                <strong
-                                    className="block text-[28px]"
-                                    style={{ fontFamily: FONT_PRIMARY, color: "var(--text-primary)" }}
-                                >
-                                    {entry.anchor}
-                                </strong>
-                                <span
-                                    className="text-xs"
-                                    style={{ color: "var(--text-tertiary)" }}
-                                >
-                                    {getOrdinal(entry.house)} house field
-                                </span>
-                            </div>
-                            <p className="m-0" style={{ color: "var(--text-secondary)" }}>
-                                {entry.planets.length
-                                    ? `${entry.planets.join(", ")} touches this place anchor.`
-                                    : "This anchor contributes to the background score."}
-                            </p>
-                            <span
-                                className="font-mono"
-                                style={{ fontFamily: FONT_MONO, color: "var(--text-primary)" }}
-                            >
-                                {entry.bucketScore}/100
-                            </span>
-                        </article>
-                    ))}
+                            {vm.chrome.step4GeodeticMethod}
+                        </p>
+                    </div>
+                )}
+
+                {/* Geodetic anatomy — regional view focused on the destination */}
+                <div
+                    className="mt-7 p-[clamp(20px,2.6vw,28px)] border rounded-[10px]"
+                    style={{
+                        borderColor: "var(--surface-border)",
+                        background: "var(--bg)",
+                    }}
+                >
+                    <div
+                        className="text-[10.5px] tracking-[0.18em] uppercase mb-1"
+                        style={{ fontFamily: FONT_MONO, color: "var(--color-y2k-blue)" }}
+                    >
+                        Geodetic anatomy · {vm.location.city}
+                    </div>
+                    <p
+                        className="text-[13px] leading-[1.5] m-0 mb-4 max-w-[560px]"
+                        style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
+                    >
+                        The shaded patch shows everywhere on Earth that shares this city's geodetic ASC + MC pairing.
+                        The red dashed line is the MC meridian; the gold curves are the ASC sign boundaries bracketing
+                        you above and below.
+                    </p>
+                    <ReadingGeodeticMap
+                        lat={vm.location.lat}
+                        lon={vm.location.lon}
+                        city={vm.location.city}
+                    />
                 </div>
 
                 {/* Astrocartography map */}
@@ -192,4 +218,152 @@ export default function PlaceFieldTab({ vm, natalForMap, birthIso, reading, relo
                 </div>
         </TabSection>
     );
+}
+
+const ANGLE_TOPIC: Record<"ASC" | "IC" | "DSC" | "MC", string> = {
+    ASC: "self",
+    IC: "home",
+    DSC: "partners",
+    MC: "career",
+};
+
+function hitKey(planet: string, anchor: "ASC" | "IC" | "DSC" | "MC"): string {
+    return `${planet.toLowerCase()}-${anchor}`;
+}
+
+/** Pulls AI-written per-hit notes off the persisted teacher reading and
+ *  returns a Map keyed by `${planet-lowercase}-${ASC|IC|DSC|MC}`. The
+ *  prompt schema guarantees this shape; falls back to an empty map on
+ *  cached readings that predate the field. */
+function extractGeodeticHitNotes(reading: any): Map<string, string> {
+    const out = new Map<string, string>();
+    const raw = reading?.teacherReading?.geodeticHits;
+    if (!Array.isArray(raw)) return out;
+    for (const entry of raw) {
+        if (typeof entry?.hitKey === "string" && typeof entry?.note === "string") {
+            out.set(entry.hitKey.toLowerCase(), entry.note);
+        }
+    }
+    return out;
+}
+
+function PersonalGeodeticHits({
+    rows,
+    notes,
+}: {
+    rows: PersonalGeodeticEvidence[];
+    notes: Map<string, string>;
+}) {
+    // Flatten into one row per (planet × anchor). Anchors with no hits
+    // are dropped — the methodology paragraph below explains why.
+    const flat = rows.flatMap((row) =>
+        row.hits.map((hit) => ({ row, hit })),
+    );
+
+    if (flat.length === 0) {
+        return (
+            <p
+                className="text-[14.5px] leading-[1.55] m-0 max-w-[560px]"
+                style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
+            >
+                No planets in your chart sit close to this place's four points.
+                The land still has its own flavor, but your chart is not made
+                stronger or weaker here.
+            </p>
+        );
+    }
+
+    return (
+        <div className="flex flex-col gap-[10px]">
+            {flat.map(({ row, hit }) => (
+                <GeodeticHitRow
+                    key={hitKey(hit.planet, row.anchor)}
+                    anchor={row.anchor}
+                    hit={hit}
+                    note={notes.get(hitKey(hit.planet, row.anchor))}
+                />
+            ))}
+        </div>
+    );
+}
+
+function GeodeticHitRow({
+    anchor,
+    hit,
+    note,
+}: {
+    anchor: "ASC" | "IC" | "DSC" | "MC";
+    hit: PersonalGeodeticHit;
+    note: string | undefined;
+}) {
+    const topic = ANGLE_TOPIC[anchor];
+    const heading = `${capitalize(hit.planet)} on your ${topic} point (${anchor})`;
+    return (
+        <article
+            className="border p-[clamp(20px,2.6vw,28px)]"
+            style={{
+                borderColor: "var(--surface-border)",
+                background: "var(--bg)",
+                borderRadius: "var(--shape-asymmetric-md, 12px)",
+            }}
+        >
+            <header className="mb-2">
+                <strong
+                    className="block text-[19px] leading-[1.3]"
+                    style={{ fontFamily: FONT_PRIMARY, color: "var(--text-primary)" }}
+                >
+                    {heading}
+                </strong>
+            </header>
+            <p
+                className="m-0 text-[15px] leading-[1.6] max-w-[620px]"
+                style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
+            >
+                {note || fallbackHitNote(hit, anchor, topic)}
+            </p>
+            <details className="mt-3">
+                <summary
+                    className="cursor-pointer text-[11px] tracking-[0.14em] uppercase select-none"
+                    style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}
+                >
+                    Show details
+                </summary>
+                <div
+                    className="mt-2 text-[12.5px] leading-[1.6]"
+                    style={{ fontFamily: FONT_MONO, color: "var(--text-secondary)" }}
+                >
+                    {capitalize(hit.planet)} · {hit.orbDeg}° from {anchor} · {hit.closeness} · {familyLabel(hit.family)}
+                </div>
+            </details>
+        </article>
+    );
+}
+
+function fallbackHitNote(
+    hit: PersonalGeodeticHit,
+    anchor: "ASC" | "IC" | "DSC" | "MC",
+    topic: string,
+): string {
+    const proximity = hit.closeness === "very close" ? "right on" : "close to";
+    const feel = hit.family === "gentle"
+        ? "Things here may feel easier and warmer."
+        : hit.family === "rough"
+            ? "Things here may feel harder and more pushy."
+            : hit.family === "bright"
+                ? "Things here may stand out more than usual."
+                : "Things here pick up a mild flavor from this planet.";
+    return `${capitalize(hit.planet)} sits ${proximity} your ${topic} point (${anchor}). ${feel}`;
+}
+
+function familyLabel(family: PersonalGeodeticHit["family"]): string {
+    switch (family) {
+        case "gentle": return "gentle planet";
+        case "rough": return "rough planet";
+        case "bright": return "bright planet";
+        default: return "neutral planet";
+    }
+}
+
+function capitalize(s: string): string {
+    return s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : s;
 }

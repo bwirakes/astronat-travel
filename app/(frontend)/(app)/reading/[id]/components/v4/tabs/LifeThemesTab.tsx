@@ -9,16 +9,33 @@ interface Props {
 
 export default function LifeThemesTab({ vm }: Props) {
     const selectedGoal = vm.scoreNarrative.selectedGoals[0];
-    const themeBars = vm.scoreNarrative.themes.length
+    const rawBars = vm.scoreNarrative.themes.length
         ? vm.scoreNarrative.themes
         : [...vm.scoreNarrative.strongestThemes, ...vm.scoreNarrative.lessEmphasized];
+    const themeBars = [...rawBars].sort((a, b) => b.score - a.score);
 
     const intro = selectedGoal
         ? `${selectedGoal.label} is the lens here. The chart ranks each life area by how useful this place is for that outcome.`
         : "This chart ranks where the place adds the most emphasis, from strongest support to quieter background themes.";
 
+    const summary = (() => {
+        if (themeBars.length < 4) return null;
+        const top = themeBars.slice(0, 3).map((t) => t.label);
+        const quietest = themeBars[themeBars.length - 1].label;
+        const list = `${top[0]}, ${top[1]}, and ${top[2]}`;
+        return `${list} are loudest here — ${quietest} stays quieter.`;
+    })();
+
     return (
         <TabSection kicker="Life Themes" title="Where life gets louder." intro={intro}>
+            {summary && (
+                <p
+                    className="mb-5 text-[15px] leading-[1.55]"
+                    style={{ color: "var(--text-secondary)" }}
+                >
+                    {summary}
+                </p>
+            )}
             <div className="flex flex-col gap-4">
                     {themeBars.map((theme) => {
                         const isGoal = !!(theme.goalId && vm.goalIds.includes(theme.goalId));
