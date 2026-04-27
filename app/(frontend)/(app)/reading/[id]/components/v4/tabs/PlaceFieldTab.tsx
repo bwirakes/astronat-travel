@@ -3,26 +3,25 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 /**
- * PlaceFieldTab — "geodetics activate how you feel in a specific place."
+ * PlaceFieldTab — three layers of progressive disclosure for an ESL beginner.
  *
- * Structure (top → bottom; progressive disclosure):
+ *   LAYER 1 — the answer.
+ *     0. VerdictCard
+ *     1. Headline (Mostly aligned / A pressured place / A mixed corner / Quiet)
+ *     2. HighlightColumn pair — Lean into / Watch out for, with planet anchors
+ *        and "open →" CTAs that scroll to the matching contact row.
  *
- *   0. VerdictCard         — one-sentence read of what this place does to you.
- *   1. Highlights/Lowlights — paired summary cards (the corners that lift / press).
- *   2. Where your chart lights up here — natal wheel + geodetic overlay + per-hit list.
- *   3. What this place is — GeodeticGridCard wired to real angle data.
- *   4. When it intensifies — ActiveTransitsCard with A1 + A4 + A5 layers.
- *   5. Where on Earth this sits — InteractiveGeodeticWorldMap.
- *   6. Life areas activated — HouseMatrixCard.
- *   7. Methodology — collapsed <details> with the 7-step framework.
+ *   LAYER 2 — the picture.
+ *     3. Where your chart lights up here — natal wheel with geodetic overlay
+ *        + zoomed `ReadingGeodeticMap` (city-centered) + 1-line key.
+ *     4. ContactList — every natal contact within 5° of a corner.
  *
- * Reuses (no new wheels, no new maps):
- *   - NatalMockupWheel (via NatalWithGeodeticOverlay)
- *   - GeodeticGridCard
- *   - ActiveTransitsCard
- *   - HouseMatrixCard
- *   - InteractiveGeodeticWorldMap
- *   - AcgLinesCard (kept as the planetary-line-by-distance receipt)
+ *   LAYER 3 — the receipts (all collapsed in <details> blocks).
+ *     5. What each corner means in the zodiac (GeodeticGridCard)
+ *     6. When this place gets louder (ActiveTransitsCard + eclipses + progression)
+ *     7. All 12 life areas, ranked (HouseMatrixCard)
+ *     8. Planetary lines on Earth (AcgLinesCard)
+ *     9. How we calculated this (6-step framework)
  */
 
 import AcgLinesCard from "@/app/components/AcgLinesCard";
@@ -30,7 +29,7 @@ import ActiveTransitsCard from "@/app/components/ActiveTransitsCard";
 import GeodeticGridCard, { type GeodeticGridAngle } from "@/app/components/GeodeticGridCard";
 import HouseMatrixCard from "@/app/components/HouseMatrixCard";
 import NatalWithGeodeticOverlay from "@/app/components/NatalWithGeodeticOverlay";
-import InteractiveGeodeticWorldMap from "@/app/geodetic/components/InteractiveGeodeticWorldMap";
+import ReadingGeodeticMap from "../parts/ReadingGeodeticMap";
 import { acgLineRawScore, type HouseMatrixResult } from "@/app/lib/house-matrix";
 import { geodeticASCLongitude, geodeticMCLongitude, signFromLongitude } from "@/app/lib/geodetic";
 import type { PersonalGeodeticHit } from "@/app/lib/reading-tabs";
@@ -52,35 +51,36 @@ const FONT_PRIMARY = "var(--font-primary, serif)";
 const FONT_BODY = "var(--font-body, system-ui)";
 const FONT_MONO = "var(--font-mono, monospace)";
 
-const ANGLE_DESC: Record<"ASC" | "IC" | "DSC" | "MC", string> = {
+type Anchor = "ASC" | "IC" | "DSC" | "MC";
+
+const ANGLE_DESC: Record<Anchor, string> = {
     ASC: "Rising energy. The face you show the world here.",
     IC:  "Roots, home, and where you anchor. The private base.",
     DSC: "Partnerships and reflections. Who you attract here.",
     MC:  "Career, authority, and visibility. How your work lands.",
 };
 
-const ANGLE_FULL: Record<"ASC" | "IC" | "DSC" | "MC", string> = {
+const ANGLE_FULL: Record<Anchor, string> = {
     ASC: "ASCENDANT",
     IC: "NADIR",
     DSC: "DESCENDANT",
     MC: "MIDHEAVEN",
 };
 
-const ANGLE_TOPIC: Record<"ASC" | "IC" | "DSC" | "MC", string> = {
+const ANGLE_TOPIC: Record<Anchor, string> = {
     ASC: "self",
     IC: "home",
     DSC: "partners",
     MC: "career",
 };
 
-// 7-step Geodetic 101 mapping framework — verbatim, used in the methodology
-// footer so the user can confirm the structure of the tab against the doc.
-const FRAMEWORK_STEPS = [
-    ["Establish your base chart",       "Natal, national or event chart — date, time, place must be accurate."],
+// 6-step framework — Geodetic 101 minus the "Rule of Three" step (we don't
+// run national-chart cross-referencing yet, so we don't claim it).
+const FRAMEWORK_STEPS: Array<[string, string]> = [
+    ["Establish your base chart",       "Natal chart — date, time, place must be accurate."],
     ["Calculate the geodetic frame",    "Derive geodetic MC (from longitude) and ASC (from longitude + latitude) for the destination."],
     ["Map natal planets to geodetic degrees", "Convert each natal planet's position to a geographic longitude on the world map."],
     ["Identify active zones",           "Find where current transit / eclipse / lunation degrees land using the geodetic formula."],
-    ["Apply the rule of three",         "Confirm with national-chart contacts, additional timing layers, and ACG lines before interpreting."],
     ["Layer temporal techniques",       "Apply transits, progressions, and Solar Arc directions to the geodetic frame for precise timing."],
     ["Interpret the houses",            "Read the geodetic house themes for the target — what life domains are activated?"],
 ];
@@ -90,16 +90,15 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
     const geoMC = geodeticMCLongitude(lon);
     const geoASC = geodeticASCLongitude(lon, lat);
 
-    const angleLons: Record<"ASC" | "IC" | "DSC" | "MC", number> = {
+    const angleLons: Record<Anchor, number> = {
         ASC: geoASC,
         MC: geoMC,
         DSC: (geoASC + 180) % 360,
         IC: (geoMC + 180) % 360,
     };
 
-    // Per-anchor hit lookup, used to wire GeodeticGridCard + per-hit list.
     const hits = vm.scoreNarrative.geodetic.personal;
-    const tightestPerAnchor = new Map<"ASC" | "IC" | "DSC" | "MC", PersonalGeodeticHit>();
+    const tightestPerAnchor = new Map<Anchor, PersonalGeodeticHit>();
     for (const row of hits) {
         for (const hit of row.hits) {
             const cur = tightestPerAnchor.get(row.anchor);
@@ -107,7 +106,6 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
         }
     }
     const flatHits = hits.flatMap((row) => row.hits.map((hit) => ({ row, hit })));
-
     const hitNotes = extractGeodeticHitNotes(reading);
 
     const natalPlanetsForWheel = (reading?.natalPlanets ?? []).map((p: any) => ({
@@ -120,9 +118,14 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
         ? reading.relocatedCusps
         : new Array(12).fill(0).map((_, i) => i * 30);
 
-    // Derived data for the sections.
     const verdict = vm.chrome.step4GeodeticBridge || buildFallbackVerdict(city, hits);
-    const summary = deriveSummary({ hits, activeTransits: vm.geodetic?.activeTransits ?? [], eclipses: vm.eclipses?.hits ?? [], progressedBands: vm.progressions?.bands ?? [], destLon: lon });
+    const summary = deriveSummary({
+        hits,
+        activeTransits: vm.geodetic?.activeTransits ?? [],
+        eclipses: vm.eclipses?.hits ?? [],
+        progressedBands: vm.progressions?.bands ?? [],
+    });
+    const headline = deriveHeadline(summary);
 
     const gridRows: GeodeticGridAngle[] = (["ASC", "IC", "DSC", "MC"] as const).map((anchor) => {
         const lonAngle = angleLons[anchor];
@@ -141,10 +144,10 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
         };
     });
 
-    // ActiveTransitsCard expects { planets, type, aspect, system?, orb? }.
-    // We feed two parallel streams: "natal" (existing reading.transitWindows
-    // top hits, when available) + "geodetic" (A1 active transits).
-    const activeTransitRows = buildActiveTransitRows(vm.geodetic?.activeTransits ?? [], reading?.transitWindows ?? []);
+    const activeTransitRows = buildActiveTransitRows(
+        vm.geodetic?.activeTransits ?? [],
+        reading?.transitWindows ?? [],
+    );
 
     const matrix: HouseMatrixResult | null = reading?.houses && Array.isArray(reading.houses) && reading.houses.length > 0
         ? {
@@ -157,29 +160,35 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
         }
         : null;
 
+    const hasTemporalLayer = activeTransitRows.length > 0
+        || (vm.eclipses?.hits.length ?? 0) > 0
+        || !!vm.progressions;
+
     return (
         <TabSection
             kicker="Place Field"
-            title={`How ${city} activates your chart`}
-            intro="Geodetics is the time-invariant signature of a place — every visitor lands in the same band, but only your chart sits where it sits, and only your corners line up where they line up. Here's what's lit up for you."
+            title={`Does ${city} help or strain you?`}
+            intro="Two layers stack here. First — what's permanent: where this city's corners (the four directions of its sky) line up against your natal chart. Second — what's live right now: transits, eclipses, and progressions amplifying or dimming that baseline."
         >
-            {/* ── 0. Verdict ──────────────────────────────────────────────── */}
+            {/* ── LAYER 1 ────────────────────────────────────────────────── */}
+
             <VerdictCard verdict={verdict} />
 
-            {/* ── 1. Highlights / Lowlights ──────────────────────────────── */}
+            <HeadlineRow headline={headline} highlights={summary.highlights.length} lowlights={summary.lowlights.length} />
+
             <div
-                className="mt-6 grid grid-cols-1 md:grid-cols-2"
+                className="mt-4 grid grid-cols-1 md:grid-cols-2"
                 style={{ gap: "clamp(0.75rem, 1.5vw, 1.25rem)" }}
             >
-                <HighlightCard
-                    title="Highlights"
+                <HighlightColumn
+                    title="Lean into"
                     subtitle="The corners this place lifts"
                     accent="var(--sage, #7b9e87)"
                     rows={summary.highlights}
-                    empty="No corners lifted in this window — the place is quietly neutral for your chart."
+                    empty="No corners lifted in this window."
                 />
-                <HighlightCard
-                    title="Lowlights"
+                <HighlightColumn
+                    title="Watch out for"
                     subtitle="The corners this place presses"
                     accent="var(--color-spiced-life, #dc2626)"
                     rows={summary.lowlights}
@@ -187,56 +196,66 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
                 />
             </div>
 
-            {/* ── 2. Natal wheel with geodetic overlay ──────────────────── */}
-            <section className="mt-10">
+            {/* ── LAYER 2 ────────────────────────────────────────────────── */}
+
+            <section className="mt-12">
                 <SectionLabel>Where your chart lights up here</SectionLabel>
-                <p className="text-[14.5px] leading-[1.55] mb-4 max-w-[640px]"
-                    style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}>
-                    Your natal wheel never changes. The four geodetic markers around the rim are the corners
-                    of <strong>{city}</strong>. When a planet sits inside one of the lit wedges, that corner is activated.
+                <p
+                    className="text-[14.5px] leading-[1.55] mb-4 max-w-[640px]"
+                    style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
+                >
+                    Your natal wheel never changes — these are your planets, fixed at birth. The
+                    four pills around the rim are the corners of <strong>{city}</strong>. When a planet
+                    sits inside a colored wedge, that corner is activated for you. Hover any pill
+                    to focus on it.
                 </p>
-                <div className="max-w-[640px] mx-auto">
-                    <NatalWithGeodeticOverlay
-                        isDark
-                        planets={natalPlanetsForWheel}
-                        cusps={cusps}
-                        geoMC={geoMC}
-                        geoASC={geoASC}
-                    />
+
+                <div
+                    className="grid grid-cols-1 md:grid-cols-2"
+                    style={{ gap: "clamp(1rem, 2vw, 1.5rem)", alignItems: "start" }}
+                >
+                    <div className="max-w-[640px] mx-auto md:mx-0 w-full">
+                        <NatalWithGeodeticOverlay
+                            isDark
+                            planets={natalPlanetsForWheel}
+                            cusps={cusps}
+                            geoMC={geoMC}
+                            geoASC={geoASC}
+                        />
+                        <CornerKey />
+                    </div>
+
+                    <div className="w-full">
+                        <ReadingGeodeticMap lat={lat} lon={lon} city={city} />
+                        <p
+                            className="mt-2 text-[12.5px] leading-[1.5]"
+                            style={{ fontFamily: FONT_BODY, color: "var(--text-tertiary)" }}
+                        >
+                            Where {city} sits on the geodetic grid. The dashed red line is the city's
+                            Midheaven meridian; the gold curves are Ascendant boundaries. The shaded
+                            block is the "rising-zone" your city falls into.
+                        </p>
+                    </div>
                 </div>
 
-                {/* Per-hit list. Single full-width card; rows separated by top
-                    borders, each row's left edge tinted by family. */}
                 {flatHits.length > 0 && (
-                    <div className="mt-6">
-                        <ContactList
-                            rows={flatHits}
-                            notes={hitNotes}
-                        />
+                    <div id="geodetic-contacts" className="mt-8">
+                        <ContactList rows={flatHits} notes={hitNotes} />
                     </div>
                 )}
             </section>
 
-            {/* ── 3. The geodetic frame, as a four-card grid ────────────── */}
-            <section className="mt-10">
-                <SectionLabel>What this place is</SectionLabel>
-                <p className="text-[14.5px] leading-[1.55] mb-4 max-w-[640px]"
-                    style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}>
-                    The four corners of {city}'s geodetic chart, with which natal planet (if any) sits on each one.
-                </p>
+            {/* ── LAYER 3 — collapsed receipts ──────────────────────────── */}
+
+            <DetailsBlock title="What each corner means in the zodiac" intro="The four corners of this city's chart, with the natal planet — if any — sitting on each.">
                 <GeodeticGridCard destination={city} angles={gridRows} />
-            </section>
+            </DetailsBlock>
 
-            {/* ── 4. Temporal layer ─────────────────────────────────────── */}
-            {(activeTransitRows.length > 0 || (vm.eclipses?.hits.length ?? 0) > 0 || vm.progressions) && (
-                <section className="mt-10">
-                    <SectionLabel>When it intensifies</SectionLabel>
-                    <p className="text-[14.5px] leading-[1.55] mb-4 max-w-[640px]"
-                        style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}>
-                        Permanent geodetic alignment is just the baseline. Live transits, eclipses,
-                        and progressions amplify or dim it on a timeline.
-                    </p>
-
+            {hasTemporalLayer && (
+                <DetailsBlock
+                    title="When this place gets louder"
+                    intro="Permanent geodetic alignment is just the baseline. Live transits, eclipses, and progressions push it up or down on a timeline."
+                >
                     {(vm.eclipses?.hits ?? []).length > 0 && (
                         <div className="mb-4 flex flex-wrap gap-2">
                             {(vm.eclipses?.hits ?? []).map((e, i) => (
@@ -244,44 +263,22 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
                             ))}
                         </div>
                     )}
-
                     {activeTransitRows.length > 0 && (
                         <ActiveTransitsCard transits={activeTransitRows} travelDate={vm.travelDateISO ?? ""} />
                     )}
-
                     {vm.progressions && (
                         <ProgressionLine bands={vm.progressions.bands} />
                     )}
-                </section>
+                </DetailsBlock>
             )}
 
-            {/* ── 5. Geodetic world map ─────────────────────────────────── */}
-            <section className="mt-10">
-                <SectionLabel>Where on Earth this sits</SectionLabel>
-                <p className="text-[14.5px] leading-[1.55] mb-4 max-w-[640px]"
-                    style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}>
-                    The Sepharial geodetic map: 12 zodiac sign bands wrap the Earth, with curved
-                    Ascendant boundaries dividing it further. Anywhere in the same band shares
-                    this city's MC sign.
-                </p>
-                <InteractiveGeodeticWorldMap />
-            </section>
-
-            {/* ── 6. Life areas activated (full house matrix) ───────────── */}
             {matrix && (
-                <section className="mt-10">
-                    <SectionLabel>Life areas activated</SectionLabel>
-                    <p className="text-[14.5px] leading-[1.55] mb-4 max-w-[640px]"
-                        style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}>
-                        The 12 houses, ranked by how much {city} amplifies or dims each one for you. Click a row to see the math.
-                    </p>
+                <DetailsBlock title="All 12 life areas, ranked" intro={`How much ${city} amplifies or dims each life area for you. Click a row to see the math.`}>
                     <HouseMatrixCard matrix={matrix} />
-                </section>
+                </DetailsBlock>
             )}
 
-            {/* ── 7. Planetary lines (kept; ACG receipt) ────────────────── */}
-            <section className="mt-10">
-                <SectionLabel>Planetary lines</SectionLabel>
+            <DetailsBlock title="Planetary lines on Earth (ACG)" intro="Astrocartography uses a different system from geodetics — it draws each natal planet as a curved line where that planet was angular at your birth moment. Shown here for reference; the geodetic story above is what's primary on this tab.">
                 <AcgLinesCard
                     planetLines={relocatedAcgLines.map((l: any) => {
                         const angleStr = String(l.angle ?? l.line ?? "");
@@ -313,24 +310,11 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
                     birthCity={reading?.birth?.city || "—"}
                     destination={vm.location.city}
                 />
-            </section>
+            </DetailsBlock>
 
-            {/* ── 8. Methodology footer ─────────────────────────────────── */}
-            <details
-                className="mt-10 border rounded-[10px] p-[clamp(16px,2.2vw,22px)]"
-                style={{
-                    borderColor: "var(--surface-border)",
-                    background: "color-mix(in oklab, var(--text-primary) 3%, transparent)",
-                }}
-            >
-                <summary
-                    className="cursor-pointer text-[10.5px] tracking-[0.18em] uppercase select-none"
-                    style={{ fontFamily: FONT_MONO, color: "var(--color-y2k-blue)" }}
-                >
-                    How we read this — the 7-step framework
-                </summary>
+            <DetailsBlock title="How we calculated this" intro="The 6-step Geodetic 101 framework, in order.">
                 <ol
-                    className="mt-4 m-0 pl-5 space-y-2.5 max-w-[680px] text-[13.5px] leading-[1.55]"
+                    className="m-0 pl-5 space-y-2.5 max-w-[680px] text-[13.5px] leading-[1.55]"
                     style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
                 >
                     {FRAMEWORK_STEPS.map(([title, body], i) => (
@@ -348,11 +332,13 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
                         {vm.chrome.step4GeodeticMethod}
                     </p>
                 )}
-                <p className="mt-3 text-[12px] tracking-[0.04em]"
-                    style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}>
+                <p
+                    className="mt-3 text-[12px] tracking-[0.04em]"
+                    style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}
+                >
                     Birth: {birthIso?.slice(0, 10) ?? "—"} · Destination: {vm.location.city} ({lat.toFixed(2)}°, {lon.toFixed(2)}°)
                 </p>
-            </details>
+            </DetailsBlock>
         </TabSection>
     );
 }
@@ -396,12 +382,73 @@ function VerdictCard({ verdict }: { verdict: string }) {
     );
 }
 
-interface SummaryRow {
-    icon: string;
-    text: string;
+function HeadlineRow({
+    headline, highlights, lowlights,
+}: {
+    headline: string;
+    highlights: number;
+    lowlights: number;
+}) {
+    return (
+        <div className="mt-8 mb-2">
+            <h2
+                className="m-0"
+                style={{
+                    fontFamily: FONT_PRIMARY,
+                    fontSize: "clamp(1.6rem, 4vw, 2.4rem)",
+                    lineHeight: 1.05,
+                    letterSpacing: "-0.02em",
+                    color: "var(--text-primary)",
+                    textTransform: "uppercase",
+                }}
+            >
+                {headline}.
+            </h2>
+            <div className="mt-2 flex gap-2 flex-wrap">
+                <CountPill count={highlights} label="lifts"   accent="var(--sage, #7b9e87)" />
+                <CountPill count={lowlights}  label="presses" accent="var(--color-spiced-life, #dc2626)" />
+            </div>
+        </div>
+    );
 }
 
-function HighlightCard({
+function CountPill({ count, label, accent }: { count: number; label: string; accent: string }) {
+    return (
+        <span
+            style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                padding: "0.3rem 0.75rem",
+                border: `1px solid ${accent}`,
+                borderRadius: "999px",
+                fontFamily: FONT_MONO,
+                fontSize: "0.6rem",
+                letterSpacing: "0.18em",
+                color: "var(--text-primary)",
+                textTransform: "uppercase",
+                fontWeight: 700,
+            }}
+        >
+            <span aria-hidden style={{ width: 8, height: 8, borderRadius: 2, background: accent }} />
+            {count} {label}
+        </span>
+    );
+}
+
+interface SummaryRow {
+    /** What sits on top of the anchor stack — typically a planet glyph or
+     *  eclipse symbol. Prominent like the Stage1 "day number". */
+    glyph: string;
+    /** Small label above and below the glyph — typically corner code. */
+    kicker: string;
+    /** Plain-English impact sentence shown in the middle column. */
+    impact: string;
+    /** Anchor id to scroll to on click. */
+    targetId: string;
+}
+
+function HighlightColumn({
     title, subtitle, accent, rows, empty,
 }: {
     title: string;
@@ -445,6 +492,7 @@ function HighlightCard({
             >
                 {subtitle}
             </p>
+
             {rows.length === 0 ? (
                 <p
                     style={{
@@ -460,23 +508,7 @@ function HighlightCard({
             ) : (
                 <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
                     {rows.map((r, i) => (
-                        <li
-                            key={`row-${i}`}
-                            style={{
-                                display: "grid",
-                                gridTemplateColumns: "28px 1fr",
-                                gap: "0.6rem",
-                                alignItems: "baseline",
-                                padding: "0.7rem 0",
-                                borderTop: "1px solid var(--surface-border)",
-                                fontFamily: FONT_BODY,
-                                fontSize: "0.92rem",
-                                color: "var(--text-primary)",
-                            }}
-                        >
-                            <span aria-hidden style={{ color: accent, fontFamily: FONT_MONO }}>{r.icon}</span>
-                            <span>{r.text}</span>
-                        </li>
+                        <HighlightRow key={`row-${i}`} row={r} accent={accent} />
                     ))}
                 </ul>
             )}
@@ -484,10 +516,122 @@ function HighlightCard({
     );
 }
 
+function HighlightRow({ row, accent }: { row: SummaryRow; accent: string }) {
+    const handlePick = () => {
+        const el = document.getElementById(row.targetId);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    return (
+        <li>
+            <button
+                onClick={handlePick}
+                style={{
+                    width: "100%",
+                    display: "grid",
+                    gridTemplateColumns: "54px 1fr auto",
+                    gap: "0.85rem",
+                    alignItems: "center",
+                    textAlign: "left",
+                    padding: "0.7rem 0",
+                    background: "transparent",
+                    border: "none",
+                    borderTop: "1px solid var(--surface-border)",
+                    cursor: "pointer",
+                    color: "var(--text-primary)",
+                }}
+            >
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                    <span
+                        style={{
+                            fontFamily: FONT_MONO,
+                            fontSize: "0.52rem",
+                            letterSpacing: "0.2em",
+                            color: "var(--text-tertiary)",
+                            textTransform: "uppercase",
+                            fontWeight: 700,
+                        }}
+                    >
+                        {row.kicker}
+                    </span>
+                    <span
+                        style={{
+                            fontFamily: FONT_BODY,
+                            fontSize: "1.5rem",
+                            fontWeight: 800,
+                            lineHeight: 1,
+                            color: "var(--text-primary)",
+                            letterSpacing: "-0.02em",
+                        }}
+                    >
+                        {row.glyph}
+                    </span>
+                </div>
+                <p
+                    style={{
+                        fontFamily: FONT_BODY,
+                        fontSize: "0.9rem",
+                        lineHeight: 1.45,
+                        margin: 0,
+                        color: "var(--text-primary)",
+                    }}
+                >
+                    {row.impact}
+                </p>
+                <span
+                    style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: "0.55rem",
+                        letterSpacing: "0.15em",
+                        color: accent,
+                        textTransform: "uppercase",
+                        fontWeight: 700,
+                    }}
+                >
+                    open →
+                </span>
+            </button>
+        </li>
+    );
+}
+
+function CornerKey() {
+    return (
+        <div
+            className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[10.5px] tracking-[0.12em] uppercase"
+            style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}
+        >
+            <KeyRow swatch="var(--color-y2k-blue, #4a7cff)" label="Primary corners (ASC, MC)" />
+            <KeyRow swatch="var(--text-secondary)" label="Secondary (DSC, IC)" />
+            <KeyRow swatch="var(--color-y2k-blue, #4a7cff)" label="Lit wedge = a planet within 5°" filled />
+        </div>
+    );
+}
+
+function KeyRow({ swatch, label, filled }: { swatch: string; label: string; filled?: boolean }) {
+    return (
+        <span className="inline-flex items-center gap-2">
+            {filled ? (
+                <span
+                    aria-hidden
+                    className="inline-block w-[14px] h-[10px] rounded-sm"
+                    style={{ background: swatch, opacity: 0.32 }}
+                />
+            ) : (
+                <span
+                    aria-hidden
+                    className="inline-block w-[14px] h-[2px]"
+                    style={{ background: swatch }}
+                />
+            )}
+            <span style={{ color: "var(--text-secondary)" }}>{label}</span>
+        </span>
+    );
+}
+
 function ContactList({
     rows, notes,
 }: {
-    rows: { row: { anchor: "ASC" | "IC" | "DSC" | "MC" }; hit: PersonalGeodeticHit }[];
+    rows: { row: { anchor: Anchor }; hit: PersonalGeodeticHit }[];
     notes: Map<string, string>;
 }) {
     return (
@@ -520,6 +664,7 @@ function ContactList({
                     return (
                         <li
                             key={`hit-${i}-${row.anchor}-${hit.planet}`}
+                            id={contactRowId(hit.planet, row.anchor)}
                             style={{
                                 display: "grid",
                                 gridTemplateColumns: "auto 1fr",
@@ -583,6 +728,57 @@ function ContactList({
     );
 }
 
+function DetailsBlock({
+    title, intro, children,
+}: {
+    title: string;
+    intro?: string;
+    children: React.ReactNode;
+}) {
+    return (
+        <details
+            className="mt-4 border rounded-[10px]"
+            style={{
+                borderColor: "var(--surface-border)",
+                background: "color-mix(in oklab, var(--text-primary) 3%, transparent)",
+            }}
+        >
+            <summary
+                className="cursor-pointer select-none flex items-baseline gap-3 list-none p-[clamp(14px,2vw,18px)]"
+                style={{
+                    fontFamily: FONT_PRIMARY,
+                    fontSize: "1.05rem",
+                    color: "var(--text-primary)",
+                }}
+            >
+                <span
+                    aria-hidden
+                    style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: "0.7rem",
+                        color: "var(--color-y2k-blue)",
+                        letterSpacing: "0.1em",
+                    }}
+                >
+                    +
+                </span>
+                {title}
+            </summary>
+            <div className="px-[clamp(14px,2vw,18px)] pb-[clamp(14px,2vw,18px)]">
+                {intro && (
+                    <p
+                        className="text-[13.5px] leading-[1.55] mb-3 max-w-[680px]"
+                        style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
+                    >
+                        {intro}
+                    </p>
+                )}
+                {children}
+            </div>
+        </details>
+    );
+}
+
 function EclipseChip({ hit }: { hit: V4EclipseHit }) {
     const date = hit.dateUtc.slice(0, 10);
     return (
@@ -594,8 +790,10 @@ function EclipseChip({ hit }: { hit: V4EclipseHit }) {
                 fontFamily: FONT_MONO,
             }}
         >
-            <span className="text-[10px] tracking-[0.14em] uppercase font-bold"
-                style={{ color: "var(--color-spiced-life, #dc2626)" }}>
+            <span
+                className="text-[10px] tracking-[0.14em] uppercase font-bold"
+                style={{ color: "var(--color-spiced-life, #dc2626)" }}
+            >
                 {hit.kind === "solar" ? "Solar eclipse" : "Lunar eclipse"}
             </span>
             <span className="text-[12.5px]" style={{ color: "var(--text-primary)" }}>
@@ -610,8 +808,10 @@ function ProgressionLine({ bands }: { bands: V4ProgressedBand[] }) {
     const inBand = bands.find((b) => b.destinationInBand);
     if (!inBand) return null;
     return (
-        <p className="mt-3 text-[13px] leading-[1.55]"
-            style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}>
+        <p
+            className="mt-3 text-[13px] leading-[1.55]"
+            style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
+        >
             <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>Progressed {inBand.planet}</span>
             {" is in "}
             <em>{inBand.sign}</em>
@@ -623,65 +823,100 @@ function ProgressionLine({ bands }: { bands: V4ProgressedBand[] }) {
 // ── Derivation helpers ────────────────────────────────────────────────────
 
 function deriveSummary(args: {
-    hits: { anchor: "ASC" | "IC" | "DSC" | "MC"; hits: PersonalGeodeticHit[] }[];
+    hits: { anchor: Anchor; hits: PersonalGeodeticHit[] }[];
     activeTransits: V4GeoTransit[];
     eclipses: V4EclipseHit[];
     progressedBands: V4ProgressedBand[];
-    destLon: number;
 }): { highlights: SummaryRow[]; lowlights: SummaryRow[] } {
     const highlights: SummaryRow[] = [];
     const lowlights: SummaryRow[] = [];
 
-    // Per-anchor hits, classified by family.
     for (const row of args.hits) {
         for (const hit of row.hits) {
-            const text = `${capitalize(hit.planet)} on your ${ANGLE_TOPIC[row.anchor]} corner — ${hit.orbDeg}°`;
-            const icon = planetGlyph(hit.planet);
-            if (hit.family === "rough") lowlights.push({ icon, text });
-            else if (hit.family === "gentle" || hit.family === "bright") highlights.push({ icon, text });
-            // neutral hits skipped from the summary — they show up in the contact list below
+            const impact = `${capitalize(hit.planet)} ${impactVerb(hit.family)} your ${ANGLE_TOPIC[row.anchor]} corner.`;
+            const r: SummaryRow = {
+                glyph: planetGlyph(hit.planet),
+                kicker: row.anchor,
+                impact,
+                targetId: contactRowId(hit.planet, row.anchor),
+            };
+            if (hit.family === "rough") lowlights.push(r);
+            else if (hit.family === "gentle" || hit.family === "bright") highlights.push(r);
         }
     }
 
-    // A1 active geo-transits.
     for (const t of args.activeTransits) {
-        const text = `${capitalize(t.planet)} live on the ${t.angle} corner${t.personalActivation && t.natalContact ? ` — hits your ${capitalize(t.natalContact)}` : ""}`;
-        const icon = planetGlyph(t.planet);
-        if (t.severity > 0) highlights.push({ icon, text });
-        else if (t.severity < 0) lowlights.push({ icon, text });
+        const tail = t.personalActivation && t.natalContact ? ` — hits your ${capitalize(t.natalContact)}` : "";
+        const r: SummaryRow = {
+            glyph: planetGlyph(t.planet),
+            kicker: t.angle,
+            impact: `Live ${capitalize(t.planet)} on the ${t.angle} corner${tail}.`,
+            targetId: "geodetic-contacts",
+        };
+        if (t.severity > 0) highlights.push(r);
+        else if (t.severity < 0) lowlights.push(r);
     }
 
-    // A4 eclipses → always lowlights (they're caution-by-design).
     for (const e of args.eclipses) {
-        const text = `${e.kind === "solar" ? "Solar" : "Lunar"} eclipse on ${e.activatedAngle} (${e.dateUtc.slice(0, 10)}) — hits your ${capitalize(e.natalContact)}`;
-        lowlights.push({ icon: "🌒", text });
+        lowlights.push({
+            glyph: "🌒",
+            kicker: e.activatedAngle,
+            impact: `${e.kind === "solar" ? "Solar" : "Lunar"} eclipse on your ${e.activatedAngle} (${e.dateUtc.slice(0, 10)}) — hits your ${capitalize(e.natalContact)}.`,
+            targetId: "geodetic-contacts",
+        });
     }
 
-    // A5 progressed bands → highlight when destination matches the progressed-Sun band.
     const progSun = args.progressedBands.find((b) => b.planet === "Sun" && b.destinationInBand);
     if (progSun) {
-        highlights.push({ icon: "→", text: `Progressed Sun in ${progSun.sign} — this longitude band is your current identity zone` });
+        highlights.push({
+            glyph: "→",
+            kicker: "PROG",
+            impact: `Progressed Sun in ${progSun.sign} — this longitude band is your current identity zone.`,
+            targetId: "geodetic-contacts",
+        });
     }
 
     return { highlights, lowlights };
 }
 
+function deriveHeadline(s: { highlights: SummaryRow[]; lowlights: SummaryRow[] }): string {
+    const h = s.highlights.length;
+    const l = s.lowlights.length;
+    if (h === 0 && l === 0) return "A quiet place";
+    if (h >= l * 2 && h >= 2) return "Mostly aligned";
+    if (l >= h * 2 && l >= 2) return "A pressured place";
+    if (h === 0) return "A pressured place";
+    if (l === 0) return "Mostly aligned";
+    return "A mixed corner";
+}
+
+function impactVerb(family: PersonalGeodeticHit["family"]): string {
+    switch (family) {
+        case "gentle": return "warms";
+        case "rough":  return "presses";
+        case "bright": return "amplifies";
+        default:       return "tinges";
+    }
+}
+
 function buildFallbackVerdict(
     city: string,
-    hits: { anchor: "ASC" | "IC" | "DSC" | "MC"; hits: PersonalGeodeticHit[] }[],
+    hits: { anchor: Anchor; hits: PersonalGeodeticHit[] }[],
 ): string {
-    const tightest: { anchor: "ASC" | "IC" | "DSC" | "MC"; hit: PersonalGeodeticHit } | null =
+    const tightest: { anchor: Anchor; hit: PersonalGeodeticHit } | null =
         hits.flatMap((r) => r.hits.map((h) => ({ anchor: r.anchor, hit: h })))
             .sort((a, b) => a.hit.orbDeg - b.hit.orbDeg)[0] ?? null;
     if (!tightest) {
         return `${city} doesn't strongly activate any corner of your chart — it's a quiet, neutral place for you.`;
     }
-    const family = tightest.hit.family;
-    const verb = family === "rough" ? "presses" : family === "gentle" ? "warms" : family === "bright" ? "amplifies" : "tinges";
+    const verb = impactVerb(tightest.hit.family);
     return `${city} ${verb} your ${ANGLE_TOPIC[tightest.anchor]} corner via ${capitalize(tightest.hit.planet)} (${tightest.hit.orbDeg}° from the ${tightest.anchor}).`;
 }
 
-function buildActiveTransitRows(activeGeo: V4GeoTransit[], natalTransits: any[]): Array<{ planets: string; type: string; aspect: string; system?: string; orb?: number }> {
+function buildActiveTransitRows(
+    activeGeo: V4GeoTransit[],
+    natalTransits: any[],
+): Array<{ planets: string; type: string; aspect: string; system?: string; orb?: number }> {
     const out: Array<{ planets: string; type: string; aspect: string; system?: string; orb?: number }> = [];
     for (const t of activeGeo) {
         out.push({
@@ -692,7 +927,6 @@ function buildActiveTransitRows(activeGeo: V4GeoTransit[], natalTransits: any[])
             orb: Math.round(t.orb * 10) / 10,
         });
     }
-    // Up to 5 strongest natal transits, when present on the persisted reading.
     for (const nt of (natalTransits ?? []).slice(0, 5)) {
         const tName = String(nt.transit_planet ?? nt.transitPlanet ?? "").trim();
         const nName = String(nt.natal_planet ?? nt.natalPlanet ?? "").trim();
@@ -725,6 +959,10 @@ function planetGlyph(planet: string): string {
         chiron: "⚷", "true node": "☊", "north node": "☊",
     };
     return G[planet.toLowerCase()] ?? "•";
+}
+
+function contactRowId(planet: string, anchor: Anchor): string {
+    return `contact-${planet.toLowerCase().replace(/\s+/g, "-")}-${anchor.toLowerCase()}`;
 }
 
 function extractGeodeticHitNotes(reading: any): Map<string, string> {

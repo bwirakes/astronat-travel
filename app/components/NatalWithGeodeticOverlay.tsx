@@ -1,33 +1,17 @@
 "use client";
 
 /**
- * NatalWithGeodeticOverlay — wraps `NatalMockupWheel` (the user's existing
- * natal chart visual) and overlays four geodetic angle markers for the
- * destination on top.
+ * NatalWithGeodeticOverlay — wraps `NatalMockupWheel` and stacks four
+ * geodetic angle markers (ASC / MC / DSC / IC) above it.
  *
- * Why a wrapper, not a prop on NatalMockupWheel:
- *   The natal wheel is a stable, well-tested visual used elsewhere. Adding
- *   place-specific overlay logic into it would couple unrelated concerns.
- *   This wrapper renders the natal wheel as the base layer and stacks a
- *   transparent SVG above with the same viewBox (800×800) so coordinates
- *   stay aligned via the shared geometry helpers.
- *
- * What the overlay shows:
- *   - Four radial markers at geo-MC / geo-IC / geo-ASC / geo-DSC.
- *   - A faint ±5° wedge per angle that visually "lights up" when a natal
- *     planet sits inside the orb (the engine's Step 5 contact rule).
- *   - Small mono labels at the rim.
- *
- * The natal wheel never changes. The overlay tells you which corners of
- * THIS place are activated by YOUR chart.
+ * Hover any corner to dim the others and emphasise its ±5° wedge.
  */
 
+import { useState } from "react";
 import NatalMockupWheel, { type NatalPlanet } from "./NatalMockupWheel";
 import {
     NATAL_WHEEL_SIGNS as SIGNS,
     natalWheelSvgXY as svgXY,
-    WHEEL_CX as CX,
-    WHEEL_CY as CY,
 } from "@/app/lib/natal-wheel-shared";
 
 interface Props {
@@ -39,22 +23,22 @@ interface Props {
     onPlanetClick?: (planetName: string) => void;
 }
 
-/** Wedge radii — sized so the overlay sits *outside* the natal wheel
- *  (which extends to R.outer = 385) without colliding with planet glyphs. */
-const ORB_INNER_R = 386;
-const ORB_OUTER_R = 416;
-const TICK_INNER_R = 386;
-const TICK_OUTER_R = 432;
-const LABEL_R = 448;
+const ORB_INNER_R = 388;
+const ORB_OUTER_R = 420;
+const TICK_INNER_R = 388;
+const TICK_OUTER_R = 438;
+const LABEL_R = 466;
+const PILL_W = 44;
+const PILL_H = 22;
 
-const ANGLE_STYLE = {
+const ANGLE_STYLE: Record<AngleName, { tone: string; primary: boolean }> = {
     ASC: { tone: "var(--color-y2k-blue, #4a7cff)", primary: true  },
     MC:  { tone: "var(--color-y2k-blue, #4a7cff)", primary: true  },
     DSC: { tone: "var(--text-secondary)",          primary: false },
     IC:  { tone: "var(--text-secondary)",          primary: false },
-} as const;
+};
 
-type AngleName = keyof typeof ANGLE_STYLE;
+type AngleName = "ASC" | "MC" | "DSC" | "IC";
 
 function angularDiff(a: number, b: number): number {
     let d = Math.abs(a - b) % 360;
@@ -62,7 +46,6 @@ function angularDiff(a: number, b: number): number {
     return d;
 }
 
-/** Annular path covering ±halfWidth degrees around `centerLon`. */
 function arcBand(centerLon: number, halfWidth: number, rOut: number, rIn: number, asc: number): string {
     const a = svgXY(centerLon - halfWidth, rOut, asc);
     const b = svgXY(centerLon + halfWidth, rOut, asc);
@@ -74,6 +57,7 @@ function arcBand(centerLon: number, halfWidth: number, rOut: number, rIn: number
 export default function NatalWithGeodeticOverlay({
     isDark, planets, cusps, geoMC, geoASC, onPlanetClick,
 }: Props) {
+    const [hovered, setHovered] = useState<AngleName | null>(null);
     const natalAsc = cusps[0] ?? 0;
 
     const angles: Array<{ name: AngleName; lon: number }> = [
@@ -83,7 +67,6 @@ export default function NatalWithGeodeticOverlay({
         { name: "IC",  lon: (geoMC + 180) % 360 },
     ];
 
-    // Per-angle: does any natal planet sit inside the ±5° wedge?
     const lit = angles.map((a) => {
         const minOrb = planets.reduce(
             (best, p) => Math.min(best, angularDiff(p.longitude, a.lon)),
@@ -94,7 +77,6 @@ export default function NatalWithGeodeticOverlay({
 
     return (
         <div style={{ position: "relative", width: "100%" }}>
-            {/* Base layer: untouched natal wheel. */}
             <NatalMockupWheel
                 isDark={isDark}
                 planets={planets}
@@ -102,12 +84,10 @@ export default function NatalWithGeodeticOverlay({
                 onPlanetClick={onPlanetClick}
             />
 
-            {/* Overlay layer: same viewBox + asc rotation, geodetic markers only.
-                pointer-events: none so hover on natal planets still works. */}
             <svg
                 viewBox="0 0 800 800"
                 xmlns="http://www.w3.org/2000/svg"
-                aria-label={`Geodetic angle overlay for the destination`}
+                aria-label="Geodetic angle overlay for the destination"
                 style={{
                     position: "absolute",
                     inset: 0,
@@ -117,23 +97,26 @@ export default function NatalWithGeodeticOverlay({
                     pointerEvents: "none",
                 }}
             >
-                {/* ±5° wedges, glow when a natal planet sits inside. */}
-                {lit.map((a) => (
-                    <path
-                        key={`wedge-${a.name}`}
-                        d={arcBand(a.lon, 5, ORB_OUTER_R, ORB_INNER_R, natalAsc)}
-                        fill={ANGLE_STYLE[a.name].tone}
-                        opacity={a.wide ? 0.32 : 0.10}
-                    />
-                ))}
+                {lit.map((a) => {
+                    const dim = hovered !== null && hovered !== a.name;
+                    return (
+                        <path
+                            key={`wedge-${a.name}`}
+                            d={arcBand(a.lon, 5, ORB_OUTER_R, ORB_INNER_R, natalAsc)}
+                            fill={ANGLE_STYLE[a.name].tone}
+                            opacity={dim ? 0.04 : a.wide ? (hovered === a.name ? 0.45 : 0.32) : 0.10}
+                            style={{ transition: "opacity 220ms ease" }}
+                        />
+                    );
+                })}
 
-                {/* Radial tick at each angle longitude. */}
                 {lit.map((a) => {
                     const inner = svgXY(a.lon, TICK_INNER_R, natalAsc);
                     const outer = svgXY(a.lon, TICK_OUTER_R, natalAsc);
                     const tone = ANGLE_STYLE[a.name].tone;
+                    const dim = hovered !== null && hovered !== a.name;
                     return (
-                        <g key={`tick-${a.name}`}>
+                        <g key={`tick-${a.name}`} style={{ opacity: dim ? 0.25 : 1, transition: "opacity 220ms ease" }}>
                             <line
                                 x1={inner.x} y1={inner.y}
                                 x2={outer.x} y2={outer.y}
@@ -146,25 +129,54 @@ export default function NatalWithGeodeticOverlay({
                     );
                 })}
 
-                {/* Outboard label. */}
                 {lit.map((a) => {
                     const p = svgXY(a.lon, LABEL_R, natalAsc);
                     const tone = ANGLE_STYLE[a.name].tone;
+                    const dim = hovered !== null && hovered !== a.name;
+                    const active = hovered === a.name;
                     return (
-                        <text
+                        <g
                             key={`label-${a.name}`}
-                            x={p.x}
-                            y={p.y}
-                            fontSize={20}
-                            fontWeight={700}
-                            fill={tone}
-                            textAnchor="middle"
-                            dominantBaseline="central"
-                            fontFamily="var(--font-mono, monospace)"
-                            style={{ paintOrder: "stroke", stroke: "var(--bg)", strokeWidth: 4 }}
+                            style={{
+                                pointerEvents: "auto",
+                                cursor: "pointer",
+                                opacity: dim ? 0.4 : 1,
+                                transition: "opacity 220ms ease",
+                            }}
+                            onMouseEnter={() => setHovered(a.name)}
+                            onMouseLeave={() => setHovered(null)}
+                            onFocus={() => setHovered(a.name)}
+                            onBlur={() => setHovered(null)}
+                            tabIndex={0}
+                            role="button"
+                            aria-label={`${a.name} corner${a.wide ? " — activated by a planet within 5°" : ""}`}
                         >
-                            {a.name}
-                        </text>
+                            {/* Pill background — solid bg fill so labels are readable
+                                against any wheel content sitting behind. */}
+                            <rect
+                                x={p.x - PILL_W / 2}
+                                y={p.y - PILL_H / 2}
+                                width={PILL_W}
+                                height={PILL_H}
+                                rx={PILL_H / 2}
+                                fill="var(--bg)"
+                                stroke={tone}
+                                strokeWidth={active ? 2.5 : 1.5}
+                            />
+                            <text
+                                x={p.x}
+                                y={p.y}
+                                fontSize={13}
+                                fontWeight={700}
+                                fill={tone}
+                                textAnchor="middle"
+                                dominantBaseline="central"
+                                fontFamily="var(--font-mono, monospace)"
+                                letterSpacing={1}
+                            >
+                                {a.name}
+                            </text>
+                        </g>
                     );
                 })}
             </svg>
@@ -181,8 +193,3 @@ export function signAtLon(lon: number) {
     const idx = Math.floor((((lon % 360) + 360) % 360) / 30) % 12;
     return SIGNS[idx];
 }
-
-// Keep `CX`/`CY` referenced so future overlay tweaks (a center marker, etc.)
-// can use the shared geometry without re-importing.
-void CX;
-void CY;
