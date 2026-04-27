@@ -8,7 +8,6 @@ import { AcgMap, type NatalData } from "@/app/components/AcgMap";
 import AcgLinesCard from "@/app/components/AcgLinesCard";
 import RelocationBiWheel from "@/app/(frontend)/(app)/reading/[id]/components/v4/RelocationBiWheel";
 import { PLANET_COLORS, PLANET_GLYPHS } from "@/app/lib/planet-data";
-import "@/app/(frontend)/(app)/reading/[id]/components/v4/v4.css";
 
 interface LocationState {
   label: string;
@@ -613,7 +612,7 @@ export default function ScoringTesterClient(): ReactElement {
                     Relocation Bi-Wheel
                   </h4>
                   {hasBiWheelData ? (
-                    <div className="v4-root" style={{ minHeight: "auto", background: "transparent" }}>
+                    <div style={{ minHeight: "auto", background: "transparent" }}>
                       <RelocationBiWheel
                         natalPlanets={wheelPlanets}
                         natalAnglesDeg={rawOutput?.natalAngles ?? null}

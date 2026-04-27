@@ -6,6 +6,7 @@ import { AcgMap, type NatalData } from "@/app/components/AcgMap";
 import AcgLinesCard from "@/app/components/AcgLinesCard";
 import { acgLineRawScore } from "@/app/lib/house-matrix";
 import { getOrdinal } from "@/app/lib/astro-wording";
+import TabSection from "./TabSection";
 import type { V4VM } from "./types";
 
 interface Props {
@@ -22,14 +23,11 @@ const FONT_MONO = "var(--font-mono, monospace)";
 
 export default function PlaceFieldTab({ vm, natalForMap, birthIso, reading, relocatedAcgLines }: Props) {
     return (
-        <section className="v4-step v4-step-tint v4-tab-panel-section">
-            <div className="v4-reading-panel-body">
-                <div className="v4-step-num">Place Field</div>
-                <h2 className="v4-h2">The land, then your chart on the land.</h2>
-                <p className="v4-step-intro">
-                    The outcome comes first: this tab separates what the place always carries from what it does to your birth chart specifically.
-                </p>
-
+        <TabSection
+            kicker="Place Field"
+            title="The land, then your chart on the land."
+            intro="The outcome comes first: this tab separates what the place always carries from what it does to your birth chart specifically."
+        >
                 {/* Geodetic band — distinct surface to keep separate from astrocartography */}
                 {vm.geodetic && (
                     <div
@@ -88,7 +86,12 @@ export default function PlaceFieldTab({ vm, natalForMap, birthIso, reading, relo
                         Personal Geodetics
                     </h3>
                     {vm.scoreNarrative.geodetic.personal.length === 0 ? (
-                        <p className="v4-astro-empty">No natal planets sit close to the main geodetic anchors here.</p>
+                        <p
+                            className="text-[10px] tracking-[0.14em] uppercase text-center p-4 m-0"
+                            style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}
+                        >
+                            No natal planets sit close to the main geodetic anchors here.
+                        </p>
                     ) : vm.scoreNarrative.geodetic.personal.map((entry) => (
                         <article
                             key={`${entry.anchor}-${entry.house}`}
@@ -187,7 +190,6 @@ export default function PlaceFieldTab({ vm, natalForMap, birthIso, reading, relo
                         destination={vm.location.city}
                     />
                 </div>
-            </div>
-        </section>
+        </TabSection>
     );
 }

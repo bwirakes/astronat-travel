@@ -1,6 +1,7 @@
 "use client";
 
 import ChartInteractive from "../ChartInteractive";
+import TabSection from "./TabSection";
 import type { V4VM } from "./types";
 
 interface Props {
@@ -105,12 +106,11 @@ export default function TimingTab({ vm, narrativeLoading }: Props) {
         : vm.todo;
 
     return (
-        <section className="v4-step v4-step-tint v4-tab-panel-section">
-            <div className="v4-reading-panel-body">
-                <div className="v4-step-num">Timing</div>
-                <h2 className="v4-h2">When to use what this place offers.</h2>
-                <p className="v4-step-intro">{vm.tabs.timing?.closingVerdict || vm.chrome.monthChartCallout}</p>
-
+        <TabSection
+            kicker="Timing"
+            title="When to use what this place offers."
+            intro={vm.tabs.timing?.closingVerdict || vm.chrome.monthChartCallout}
+        >
                 {vm.dailySeries.length > 0 && (
                     <div
                         className="my-[8px] mb-6 px-[18px] pt-4 pb-3 rounded-[8px] border"
@@ -211,7 +211,12 @@ export default function TimingTab({ vm, narrativeLoading }: Props) {
                             Week by week
                         </h3>
                         {narrativeLoading && vm.astrology.weeks.length === 0 ? (
-                            <div className="v4-astro-empty">Loading week-by-week narrative…</div>
+                            <div
+                                className="text-[10px] tracking-[0.14em] uppercase text-center p-4"
+                                style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}
+                            >
+                                Loading week-by-week narrative…
+                            </div>
                         ) : (
                             <div className="flex flex-col gap-4">
                                 {vm.astrology.weeks.map((w) => (
@@ -244,7 +249,6 @@ export default function TimingTab({ vm, narrativeLoading }: Props) {
                         )}
                     </div>
                 )}
-            </div>
-        </section>
+        </TabSection>
     );
 }

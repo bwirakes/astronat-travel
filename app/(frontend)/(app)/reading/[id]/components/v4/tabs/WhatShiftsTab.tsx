@@ -1,6 +1,7 @@
 "use client";
 
 import NatalMockupWheel, { type NatalPlanet } from "@/app/components/NatalMockupWheel";
+import TabSection from "./TabSection";
 import type { V4VM } from "./types";
 
 interface Props {
@@ -20,12 +21,11 @@ const ASPECT_LEFT_BORDER: Record<string, string> = {
 
 export default function WhatShiftsTab({ vm, isDark, relocatedWheel }: Props) {
     return (
-        <section className="v4-step v4-step-tint v4-tab-panel-section">
-            <div className="v4-reading-panel-body">
-                <div className="v4-step-num">What Shifts</div>
-                <h2 className="v4-h2">What changes when your chart moves here.</h2>
-                <p className="v4-step-intro">{vm.chrome.step7Intro}</p>
-
+        <TabSection
+            kicker="What Shifts"
+            title="What changes when your chart moves here."
+            intro={vm.chrome.step7Intro}
+        >
                 <p
                     className="text-[14px] leading-[1.5] font-light m-0 mb-4 max-w-[560px]"
                     style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
@@ -61,7 +61,12 @@ export default function WhatShiftsTab({ vm, isDark, relocatedWheel }: Props) {
                     {relocatedWheel ? (
                         <NatalMockupWheel isDark={isDark} planets={relocatedWheel.planets} cusps={relocatedWheel.cusps} />
                     ) : (
-                        <p className="v4-astro-empty">Relocated house cusps are not available for this reading.</p>
+                        <p
+                            className="text-[10px] tracking-[0.14em] uppercase text-center p-4 m-0"
+                            style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}
+                        >
+                            Relocated house cusps are not available for this reading.
+                        </p>
                     )}
                 </div>
 
@@ -197,7 +202,12 @@ export default function WhatShiftsTab({ vm, isDark, relocatedWheel }: Props) {
                 {/* Aspects to angles */}
                 <div className="grid gap-3 mt-8 grid-cols-1 sm:[grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
                     {vm.relocated.aspectsToAngles.length === 0 && (
-                        <div className="v4-astro-empty">No tight aspects to the angles in this relocated chart.</div>
+                        <div
+                            className="text-[10px] tracking-[0.14em] uppercase text-center p-4"
+                            style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}
+                        >
+                            No tight aspects to the angles in this relocated chart.
+                        </div>
                     )}
                     {vm.relocated.aspectsToAngles.map((a, i) => {
                         const strengthKey = a.strength.replace(/\s/g, "-");
@@ -258,8 +268,7 @@ export default function WhatShiftsTab({ vm, isDark, relocatedWheel }: Props) {
                         );
                     })}
                 </div>
-            </div>
-        </section>
+        </TabSection>
     );
 }
 

@@ -29,8 +29,8 @@ export default function OverviewTab({ vm, copiedTab, selectTab }: Props) {
     const verdictColor = VERDICT_COLORS[vm.hero.verdict.band] ?? "var(--text-secondary)";
 
     return (
-        <section className="v4-step v4-step-tint v4-tab-panel-section">
-            <div className="v4-reading-panel-body">
+        <section className="px-0 py-[88px]" style={{ background: "var(--surface)" }}>
+            <div className="w-full max-w-none">
                 {/* Hero summary — verdict pill + h1 answer + why + score bar + CTA */}
                 <section className="max-w-[680px] mx-auto text-center mb-[clamp(42px,6vw,72px)]">
                     <div
@@ -153,10 +153,22 @@ export default function OverviewTab({ vm, copiedTab, selectTab }: Props) {
                     </section>
                 )}
 
-                <div className="v4-step-num">Overview</div>
-                <h2 className="v4-h2">{selectedGoal ? `${vm.location.city} for ${selectedGoal.label}.` : `What ${vm.location.city} supports.`}</h2>
-
-                {/* Wider intro callout — addresses "text isn't using the full space" feedback */}
+                <div
+                    className="text-[11px] tracking-[0.22em] uppercase mb-5"
+                    style={{ fontFamily: FONT_MONO, color: "var(--color-y2k-blue)" }}
+                >
+                    Overview
+                </div>
+                <h2
+                    className="font-normal leading-none tracking-[-0.02em] m-0 mb-5 [text-wrap:balance]"
+                    style={{
+                        fontFamily: FONT_PRIMARY,
+                        fontSize: "clamp(34px, 5vw, 56px)",
+                        color: "var(--text-primary)",
+                    }}
+                >
+                    {selectedGoal ? `${vm.location.city} for ${selectedGoal.label}.` : `What ${vm.location.city} supports.`}
+                </h2>
                 <p
                     className="relative mb-[clamp(42px,5vw,64px)] p-[clamp(20px,3vw,30px)] border-l-4 leading-[1.65]"
                     style={{
@@ -165,7 +177,6 @@ export default function OverviewTab({ vm, copiedTab, selectTab }: Props) {
                         color: "var(--text-primary)",
                         borderColor: "var(--color-y2k-blue)",
                         background: "color-mix(in oklab, var(--color-y2k-blue) 7%, transparent)",
-                        maxWidth: "none",
                     }}
                 >
                     {vm.tabs.overview?.scoreExplanation || vm.hero.explainer}

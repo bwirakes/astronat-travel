@@ -7,6 +7,7 @@ import type {
     V4ChartMonth,
     V4ChartPlanet,
 } from "@/app/lib/reading-viewmodel";
+import "./ChartInteractive.css";
 
 interface Props {
     angles: V4ChartAngle[];
