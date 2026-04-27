@@ -185,7 +185,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
         <>
             <AppNavbar />
             <div
-                className="min-h-screen"
+                className="min-h-screen w-full max-w-full overflow-x-clip"
                 style={{
                     background: "var(--bg)",
                     color: "var(--text-primary)",
@@ -195,8 +195,8 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                 <div
                     className="pt-4 mx-auto"
                     style={{
-                        padding: "16px clamp(20px, 4vw, 32px) 0",
-                        maxWidth: "min(1200px, 96vw)",
+                        padding: "16px clamp(16px, 4vw, 32px) 0",
+                        maxWidth: "1200px",
                     }}
                 >
                     <BackButton />
@@ -208,9 +208,9 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                     aria-label="Reading content"
                 >
                     <div
-                        className="mx-auto"
+                        className="mx-auto w-full min-w-0"
                         style={{
-                            maxWidth: "min(1200px, 96vw)",
+                            maxWidth: "1200px",
                             padding: "0 clamp(16px, 3vw, 28px)",
                         }}
                     >
@@ -327,7 +327,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
 
                 {showUpsell && (
                     <section className="px-8 py-[88px]">
-                        <div className="mx-auto" style={{ maxWidth: "min(1200px, 96vw)" }}>
+                        <div className="mx-auto" style={{ maxWidth: "1200px" }}>
                             <UpsellCelebrationCard />
                         </div>
                     </section>
@@ -337,7 +337,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                     className="px-8 pt-14 pb-16 border-t"
                     style={{ borderColor: "var(--surface-border)" }}
                 >
-                    <div className="mx-auto" style={{ maxWidth: "min(1200px, 96vw)" }}>
+                    <div className="mx-auto" style={{ maxWidth: "1200px" }}>
                         <p
                             className="text-[14px] leading-[1.6] font-light max-w-[600px] mx-auto mb-[14px] text-center [text-wrap:pretty]"
                             style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
