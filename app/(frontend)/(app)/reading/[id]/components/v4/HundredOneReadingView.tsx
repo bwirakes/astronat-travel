@@ -335,7 +335,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
 
                 <footer
                     className="px-8 pt-14 pb-16 border-t"
-                    style={{ borderColor: "var(--surface-border)", background: "var(--surface)" }}
+                    style={{ borderColor: "var(--surface-border)" }}
                 >
                     <div className="mx-auto" style={{ maxWidth: "min(1200px, 96vw)" }}>
                         <p

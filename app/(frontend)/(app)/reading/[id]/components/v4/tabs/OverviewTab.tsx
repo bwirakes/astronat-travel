@@ -29,7 +29,7 @@ export default function OverviewTab({ vm, copiedTab, selectTab }: Props) {
     const verdictColor = VERDICT_COLORS[vm.hero.verdict.band] ?? "var(--text-secondary)";
 
     return (
-        <section className="px-0 py-[88px]" style={{ background: "var(--surface)" }}>
+        <section className="px-0 py-[88px]">
             <div className="w-full max-w-none">
                 {/* Hero summary — verdict pill + h1 answer + why + score bar + CTA */}
                 <section className="max-w-[680px] mx-auto text-center mb-[clamp(42px,6vw,72px)]">
