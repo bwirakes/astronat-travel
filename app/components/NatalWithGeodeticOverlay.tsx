@@ -32,10 +32,10 @@ const PILL_W = 44;
 const PILL_H = 22;
 
 const ANGLE_STYLE: Record<AngleName, { tone: string; primary: boolean }> = {
-    ASC: { tone: "var(--color-y2k-blue, #4a7cff)", primary: true  },
-    MC:  { tone: "var(--color-y2k-blue, #4a7cff)", primary: true  },
-    DSC: { tone: "var(--text-secondary)",          primary: false },
-    IC:  { tone: "var(--text-secondary)",          primary: false },
+    ASC: { tone: "var(--gold)",          primary: true  },
+    MC:  { tone: "var(--gold)",          primary: true  },
+    DSC: { tone: "var(--text-secondary)", primary: false },
+    IC:  { tone: "var(--text-secondary)", primary: false },
 };
 
 type AngleName = "ASC" | "MC" | "DSC" | "IC";

@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
+import ScoreDial from "@/app/components/ScoreDial";
 import {
     BUCKET_COPY,
     dayCardCopy,
@@ -215,87 +216,6 @@ export function Stage1Summary({
                 >
                     Read what it means <ArrowRight size={15} />
                 </button>
-            </div>
-        </div>
-    );
-}
-
-function ScoreDial({ score }: { score: number }) {
-    const clamped = Math.max(0, Math.min(100, score));
-    const radius = 58;
-    const circumference = 2 * Math.PI * radius;
-    const arcCircumference = circumference * 0.75;
-    const filled = (clamped / 100) * arcCircumference;
-    const ring =
-        clamped >= 70
-            ? "var(--sage)"
-            : clamped >= 50
-            ? "var(--gold)"
-            : "var(--color-spiced-life)";
-
-    return (
-        <div style={{ position: "relative", width: 160, height: 160 }}>
-            <svg width="160" height="160" viewBox="0 0 160 160" fill="none">
-                <circle
-                    cx="80"
-                    cy="80"
-                    r={radius}
-                    stroke="rgba(248,245,236,0.08)"
-                    strokeWidth="12"
-                    fill="none"
-                    strokeDasharray={`${arcCircumference} ${circumference}`}
-                    strokeLinecap="round"
-                    transform="rotate(135 80 80)"
-                />
-                <circle
-                    cx="80"
-                    cy="80"
-                    r={radius}
-                    stroke={ring}
-                    strokeWidth="12"
-                    fill="none"
-                    strokeDasharray={`${filled} ${circumference}`}
-                    strokeLinecap="round"
-                    transform="rotate(135 80 80)"
-                    style={{ filter: `drop-shadow(0 0 8px ${ring}66)`, transition: "stroke-dasharray 0.6s ease" }}
-                />
-            </svg>
-            <div
-                style={{
-                    position: "absolute",
-                    inset: 0,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "0.1rem",
-                }}
-            >
-                <span
-                    style={{
-                        fontFamily: "var(--font-body)",
-                        fontSize: "3rem",
-                        fontWeight: 800,
-                        color: "var(--color-eggshell)",
-                        lineHeight: 1,
-                        letterSpacing: "-0.03em",
-                        fontVariantNumeric: "tabular-nums",
-                    }}
-                >
-                    {Math.round(clamped)}
-                </span>
-                <span
-                    style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: "0.55rem",
-                        letterSpacing: "0.25em",
-                        color: "var(--color-acqua)",
-                        textTransform: "uppercase",
-                        fontWeight: 700,
-                    }}
-                >
-                    / 100 overall
-                </span>
             </div>
         </div>
     );
