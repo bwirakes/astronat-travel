@@ -16,6 +16,10 @@ interface Props {
     relocatedAcgLines: any[];
 }
 
+const FONT_PRIMARY = "var(--font-primary, serif)";
+const FONT_BODY = "var(--font-body, system-ui)";
+const FONT_MONO = "var(--font-mono, monospace)";
+
 export default function PlaceFieldTab({ vm, natalForMap, birthIso, reading, relocatedAcgLines }: Props) {
     return (
         <section className="v4-step v4-step-tint v4-tab-panel-section">
@@ -25,39 +29,108 @@ export default function PlaceFieldTab({ vm, natalForMap, birthIso, reading, relo
                 <p className="v4-step-intro">
                     The outcome comes first: this tab separates what the place always carries from what it does to your birth chart specifically.
                 </p>
+
+                {/* Geodetic band — distinct surface to keep separate from astrocartography */}
                 {vm.geodetic && (
-                    <div className="v4-geodetic">
-                        <div className="v4-geodetic-kicker">
-                            <span className="v4-geodetic-tag">Overall Geodetics</span>
-                            <span className="v4-geodetic-meta">{vm.geodetic.longitudeRange}</span>
+                    <div
+                        className="mt-9 px-6 pt-6 pb-[22px] border rounded-[10px]"
+                        style={{
+                            borderColor: "var(--surface-border)",
+                            background: "color-mix(in oklab, var(--text-primary) 4%, transparent)",
+                        }}
+                    >
+                        <div className="flex items-baseline flex-wrap gap-[10px] mb-[10px]">
+                            <span
+                                className="text-[10.5px] tracking-[0.12em] uppercase font-bold px-2 py-[3px] rounded-full"
+                                style={{
+                                    fontFamily: FONT_MONO,
+                                    color: "var(--color-y2k-blue)",
+                                    background: "color-mix(in oklab, var(--color-y2k-blue) 10%, transparent)",
+                                }}
+                            >
+                                Overall Geodetics
+                            </span>
+                            <span
+                                className="text-[11px] tracking-[0.04em]"
+                                style={{ fontFamily: FONT_MONO, color: "var(--text-secondary)" }}
+                            >
+                                {vm.geodetic.longitudeRange}
+                            </span>
                         </div>
-                        <h3 className="v4-geodetic-h">{vm.location.city} sits in {vm.geodetic.sign}<span className="v4-geodetic-flavor"> — {vm.geodetic.flavor}.</span></h3>
-                        <p className="v4-geodetic-note">{vm.geodetic.note}</p>
+                        <h3
+                            className="text-[22px] leading-[1.3] font-normal m-0 mb-[10px] tracking-[-0.01em] [text-wrap:pretty]"
+                            style={{ fontFamily: FONT_PRIMARY, color: "var(--text-primary)" }}
+                        >
+                            {vm.location.city} sits in {vm.geodetic.sign}
+                            <span className="italic" style={{ color: "var(--text-secondary)" }}>
+                                {" "}— {vm.geodetic.flavor}.
+                            </span>
+                        </h3>
+                        <p
+                            className="text-[15px] leading-[1.55] font-light m-0 mb-3 max-w-[560px]"
+                            style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
+                        >
+                            {vm.geodetic.note}
+                        </p>
                     </div>
                 )}
 
-                <div className="v4-personal-geodetic">
-                    <h3 className="v4-reloc-h">Personal Geodetics</h3>
+                {/* Personal geodetics list */}
+                <div className="my-7">
+                    <h3
+                        className="font-normal tracking-[-0.01em] leading-[1.15] m-0 mb-2"
+                        style={{
+                            fontFamily: FONT_PRIMARY,
+                            fontSize: "clamp(22px, 2.8vw, 30px)",
+                            color: "var(--text-primary)",
+                        }}
+                    >
+                        Personal Geodetics
+                    </h3>
                     {vm.scoreNarrative.geodetic.personal.length === 0 ? (
                         <p className="v4-astro-empty">No natal planets sit close to the main geodetic anchors here.</p>
                     ) : vm.scoreNarrative.geodetic.personal.map((entry) => (
-                        <article key={`${entry.anchor}-${entry.house}`} className="v4-personal-geo-card">
+                        <article
+                            key={`${entry.anchor}-${entry.house}`}
+                            className="grid gap-4 items-center mt-[10px] border p-[clamp(20px,2.6vw,28px)] grid-cols-1 sm:grid-cols-[150px_1fr_auto]"
+                            style={{
+                                borderColor: "var(--surface-border)",
+                                background: "var(--bg)",
+                                borderRadius: "var(--shape-asymmetric-md, 12px)",
+                            }}
+                        >
                             <div>
-                                <strong>{entry.anchor}</strong>
-                                <span>{getOrdinal(entry.house)} house field</span>
+                                <strong
+                                    className="block text-[28px]"
+                                    style={{ fontFamily: FONT_PRIMARY, color: "var(--text-primary)" }}
+                                >
+                                    {entry.anchor}
+                                </strong>
+                                <span
+                                    className="text-xs"
+                                    style={{ color: "var(--text-tertiary)" }}
+                                >
+                                    {getOrdinal(entry.house)} house field
+                                </span>
                             </div>
-                            <p>
+                            <p className="m-0" style={{ color: "var(--text-secondary)" }}>
                                 {entry.planets.length
                                     ? `${entry.planets.join(", ")} touches this place anchor.`
                                     : "This anchor contributes to the background score."}
                             </p>
-                            <span className="v4-personal-geo-score">{entry.bucketScore}/100</span>
+                            <span
+                                className="font-mono"
+                                style={{ fontFamily: FONT_MONO, color: "var(--text-primary)" }}
+                            >
+                                {entry.bucketScore}/100
+                            </span>
                         </article>
                     ))}
                 </div>
 
+                {/* Astrocartography map */}
                 {natalForMap && (
-                    <div className="v4-acg-map-wrap">
+                    <div className="mt-6 w-full">
                         <AcgMap
                             natal={natalForMap}
                             birthDateTimeUTC={birthIso}
@@ -72,13 +145,16 @@ export default function PlaceFieldTab({ vm, natalForMap, birthIso, reading, relo
                             }}
                             interactive
                         />
-                        <p className="v4-acg-map-hint">
+                        <p
+                            className="mt-[10px] text-[12.5px] leading-[1.5] font-light text-center max-w-[540px] mx-auto"
+                            style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
+                        >
                             These lines are the chart receipt: where your planets are strongest on Earth near {vm.location.city}.
                         </p>
                     </div>
                 )}
 
-                <div className="v4-lines-card">
+                <div className="mt-6">
                     <AcgLinesCard
                         planetLines={relocatedAcgLines.map((l: any) => {
                             const angleStr = String(l.angle ?? l.line ?? "");
