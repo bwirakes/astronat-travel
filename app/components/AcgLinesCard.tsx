@@ -2,12 +2,16 @@
 
 import { useState } from "react";
 import PlanetIcon from "./PlanetIcon";
-import { PLANET_COLORS, getOrbStrengthColor } from "@/app/lib/planet-data";
+import { PLANET_COLORS } from "@/app/lib/planet-data";
 import styles from "@/app/(frontend)/(app)/flow/flow.module.css";
 
 interface PlanetLine {
     planet: string; angle: string; distance_km: number;
     orb?: number; is_paran?: boolean; meaning?: { badge: string };
+    /** Signed raw contribution this line makes to the geodetic bucket of
+     *  the score (same math as house-matrix.ts). Rendered as a `+N` / `-N`
+     *  chip on the row so the user can trace lines back to the §01 score. */
+    contribution?: number;
 }
 
 interface NatalPlanet {
@@ -29,14 +33,39 @@ function getInfluenceTier(km: number): { label: string; color: string } {
     return { label: "Distant", color: "var(--text-tertiary)" };
 }
 
-function getOrbLabel(orb: number | undefined): { label: string; color: string } | null {
-    if (orb === undefined || orb === null) return null;
-    if (orb <= 5) return { label: `${orb.toFixed(1)}° orb`, color: "var(--sage)" };
-    return { label: `${orb.toFixed(1)}° orb`, color: "var(--text-tertiary)" };
+// 3-dot importance bar. Mirrors the same thresholds as getInfluenceTier so
+// "Strong/Moderate/Weak" and "●●●/●●○/●○○" agree by construction.
+function getImportanceDots(km: number): 1 | 2 | 3 {
+    if (km <= 161) return 3;
+    if (km <= 483) return 2;
+    return 1;
 }
 
-export default function AcgLinesCard({ planetLines, destination }: AcgLinesCardProps) {
+function DotBar({ filled, color }: { filled: 1 | 2 | 3; color: string }) {
+    return (
+        <span
+            className={styles.lineDots}
+            role="img"
+            aria-label={`Importance: ${filled} of 3`}
+            title={["light", "moderate", "strong"][filled - 1] + " influence"}
+        >
+            {[0, 1, 2].map((i) => (
+                <span
+                    key={i}
+                    className={styles.lineDot}
+                    style={{
+                        background: i < filled ? color : "transparent",
+                        borderColor: color,
+                    }}
+                />
+            ))}
+        </span>
+    );
+}
+
+export default function AcgLinesCard({ planetLines, birthCity, destination }: AcgLinesCardProps) {
     const [showAll, setShowAll] = useState(false);
+    const locationLabel = destination || birthCity || "birth place";
 
     const allLines = [...planetLines].sort((a, b) => a.distance_km - b.distance_km);
     const seen = new Map<string, PlanetLine>();
@@ -52,12 +81,21 @@ export default function AcgLinesCard({ planetLines, destination }: AcgLinesCardP
     const renderLine = (line: PlanetLine, i: number) => {
         const planetKey = line.planet?.split("-")[0] || line.planet;
         const color = PLANET_COLORS[planetKey] || PLANET_COLORS[line.planet] || "#ffffff";
-        const orbColor = getOrbStrengthColor(line.distance_km);
         const tier = getInfluenceTier(line.distance_km);
-        const orbLabel = getOrbLabel(line.orb);
         const isClose = line.distance_km <= 300;
+        const importance = getImportanceDots(line.distance_km);
+        // Hover/AT label retains the quantitative detail dropped from the row.
+        const ariaDetail = `${tier.label.toLowerCase()} · ${line.distance_km} km`;
+        const c = typeof line.contribution === "number" ? line.contribution : null;
+        const chipText = c === null ? null : (c > 0 ? `+${c}` : c < 0 ? `${c}` : "0");
+        const chipColor = c === null ? null : (c > 0 ? "var(--sage)" : c < 0 ? "var(--v4-accent, #E47A7A)" : "var(--text-tertiary)");
         return (
-            <div key={i} className={`${styles.lineRow} ${isClose ? styles.lineRowHighlight : ""}`}>
+            <div
+                key={i}
+                className={`${styles.lineRow} ${isClose ? styles.lineRowHighlight : ""}`}
+                title={`${line.planet} on ${line.angle} — ${ariaDetail}${c !== null ? ` · ${chipText} pts` : ""}`}
+            >
+                <DotBar filled={importance} color={color} />
                 <div className={styles.lineInfo}>
                     <div className={styles.planetSvgIcon}>
                         <PlanetIcon planet={line.planet} color={color} size={16} />
@@ -65,18 +103,15 @@ export default function AcgLinesCard({ planetLines, destination }: AcgLinesCardP
                     <span style={{ fontWeight: 600, color, fontSize: "0.82rem" }}>{line.planet}</span>
                     <span className={styles.lineAngle}>{line.angle}</span>
                 </div>
-                <div className={styles.lineMeta}>
-                    <span className={styles.lineOrbDot} style={{ background: orbColor }} />
-                    <span className={styles.lineDist}>{line.distance_km} km</span>
-                    <span style={{ fontSize: "0.68rem", fontWeight: 600, color: tier.color, marginLeft: "0.3rem" }}>
-                        {tier.label}
+                {chipText && (
+                    <span
+                        className={styles.lineContribChip}
+                        style={{ color: chipColor!, borderColor: chipColor! }}
+                        aria-label={`Contributes ${chipText} points to your score via astrocartography`}
+                    >
+                        {chipText}
                     </span>
-                    {orbLabel && (
-                        <span style={{ fontSize: "0.65rem", color: orbLabel.color, marginLeft: "0.4rem", opacity: 0.8 }}>
-                            {orbLabel.label}
-                        </span>
-                    )}
-                </div>
+                )}
             </div>
         );
     };
@@ -84,7 +119,7 @@ export default function AcgLinesCard({ planetLines, destination }: AcgLinesCardP
     return (
         <>
             <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", marginBottom: "var(--space-sm)" }}>
-                {acgLines.length} lines near {destination} · sorted by proximity
+                {acgLines.length} lines near {locationLabel} · sorted by proximity
             </p>
 
             {acgLines.length === 0 && paranLines.length === 0 && (

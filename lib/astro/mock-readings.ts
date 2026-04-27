@@ -21,6 +21,17 @@ export const MOCK_READING_DETAILS: Record<string, any> = {
       { planet: "Venus", line: "AS", distance: "45km", tier: "Moderate" },
       { planet: "Jupiter", line: "IC", distance: "120km", tier: "Weak" },
     ],
+    birth: {
+      city: "Los Angeles, CA",
+      lat: 34.0522,
+      lon: -118.2437,
+      date: "1988-08-17",
+      time: "07:34 AM"
+    },
+    natalAngles: { ASC: 135, IC: 220, DSC: 315, MC: 40 },
+    natalCusps: [135, 160, 185, 220, 250, 280, 315, 340, 5, 40, 70, 100],
+    relocatedAngles: { ASC: 180, IC: 270, DSC: 0, MC: 90 },
+    relocatedCusps: [180, 210, 240, 270, 300, 330, 0, 30, 60, 90, 120, 150],
     natalPlanets: [
       { name: "Sun", sign: "Leo", longitude: 145 },
       { name: "Moon", sign: "Scorpio", longitude: 228 },
@@ -53,6 +64,30 @@ export const MOCK_READING_DETAILS: Record<string, any> = {
     planetaryLines: [
       { planet: "Saturn", line: "DSC", distance: "5km", tier: "Strong" },
       { planet: "Neptune", line: "MC", distance: "88km", tier: "Moderate" },
+    ],
+    birth: {
+      city: "Seattle, WA",
+      lat: 47.6062,
+      lon: -122.3321,
+      date: "1991-03-04",
+      time: "11:18 PM"
+    },
+    natalAngles: { ASC: 24, IC: 116, DSC: 204, MC: 296 },
+    natalCusps: [24, 51, 78, 116, 151, 181, 204, 231, 258, 296, 331, 1],
+    relocatedAngles: { ASC: 92, IC: 184, DSC: 272, MC: 4 },
+    relocatedCusps: [92, 121, 150, 184, 217, 246, 272, 301, 330, 4, 37, 66],
+    natalPlanets: [
+      { name: "Sun", sign: "Pisces", longitude: 344, house: 12 },
+      { name: "Moon", sign: "Virgo", longitude: 168, house: 6 },
+      { name: "Mercury", sign: "Aries", longitude: 6, house: 1 },
+      { name: "Venus", sign: "Aquarius", longitude: 318, house: 11 },
+      { name: "Mars", sign: "Gemini", longitude: 73, house: 3 },
+      { name: "Jupiter", sign: "Leo", longitude: 137, house: 5 },
+      { name: "Saturn", sign: "Capricorn", longitude: 288, house: 10 },
+      { name: "Uranus", sign: "Capricorn", longitude: 282, house: 10 },
+      { name: "Neptune", sign: "Capricorn", longitude: 286, house: 10 },
+      { name: "Pluto", sign: "Scorpio", longitude: 230, house: 8 },
+      { name: "Chiron", sign: "Cancer", longitude: 101, house: 4 }
     ]
   },
   "3": {
@@ -73,6 +108,30 @@ export const MOCK_READING_DETAILS: Record<string, any> = {
     planetaryLines: [
       { planet: "Jupiter", line: "AS", distance: "8km", tier: "Strong" },
       { planet: "Venus", line: "MC", distance: "22km", tier: "Strong" },
+    ],
+    birth: {
+      city: "Toronto, Canada",
+      lat: 43.6532,
+      lon: -79.3832,
+      date: "1985-11-21",
+      time: "04:42 AM"
+    },
+    natalAngles: { ASC: 212, IC: 302, DSC: 32, MC: 122 },
+    natalCusps: [212, 240, 269, 302, 334, 2, 32, 60, 89, 122, 154, 182],
+    relocatedAngles: { ASC: 356, IC: 86, DSC: 176, MC: 266 },
+    relocatedCusps: [356, 25, 55, 86, 116, 146, 176, 205, 235, 266, 296, 326],
+    natalPlanets: [
+      { name: "Sun", sign: "Scorpio", longitude: 239, house: 2 },
+      { name: "Moon", sign: "Pisces", longitude: 351, house: 5 },
+      { name: "Mercury", sign: "Sagittarius", longitude: 252, house: 2 },
+      { name: "Venus", sign: "Libra", longitude: 205, house: 12 },
+      { name: "Mars", sign: "Virgo", longitude: 164, house: 10 },
+      { name: "Jupiter", sign: "Aquarius", longitude: 312, house: 4 },
+      { name: "Saturn", sign: "Scorpio", longitude: 236, house: 2 },
+      { name: "Uranus", sign: "Sagittarius", longitude: 255, house: 2 },
+      { name: "Neptune", sign: "Capricorn", longitude: 272, house: 3 },
+      { name: "Pluto", sign: "Scorpio", longitude: 216, house: 1 },
+      { name: "Chiron", sign: "Gemini", longitude: 78, house: 8 }
     ]
   }
 };

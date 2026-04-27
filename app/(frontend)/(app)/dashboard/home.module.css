@@ -75,88 +75,7 @@
     display: inline-block;
 }
 
-/* ── Birthday Optimizer Banner ──────────────────────────── */
-.banner {
-    background: var(--color-y2k-blue);
-    color: #fff;
-    border: none;
-    border-radius: var(--radius-lg);
-    padding: var(--space-md) var(--space-lg);
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    cursor: pointer;
-    transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
-    width: 100%;
-    margin-bottom: var(--space-md);
-    height: 120px;
-    max-height: 120px;
-    position: relative;
-    overflow: hidden;
-}
 
-.bannerSpiral {
-    position: absolute;
-    right: -20px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 180px;
-    height: 180px;
-    opacity: 0.15;
-    pointer-events: none;
-    animation: astro-spin 40s linear infinite;
-}
-
-.banner::before {
-    display: none; /* remove old glow */
-}
-
-.banner:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(4, 86, 251, 0.4);
-}
-
-.bannerTag {
-    font-family: var(--font-mono);
-    font-size: 0.6rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.7);
-    margin-bottom: 0.2rem;
-}
-
-.bannerTitleMain {
-    font-family: var(--font-primary);
-    font-size: clamp(1.75rem, 4vw, 3rem);
-    line-height: 0.9;
-    color: #fff;
-    text-transform: uppercase;
-    letter-spacing: -0.02em;
-    position: relative;
-    z-index: 2;
-}
-
-.bannerTitleScript {
-    font-family: var(--font-display-alt-2);
-    font-size: clamp(2.5rem, 5vw, 3.5rem);
-    line-height: 0.6;
-    color: #fff;
-    font-style: italic;
-    position: relative;
-    z-index: 2;
-    margin-top: -0.2rem;
-    margin-left: 1rem;
-}
-
-.bannerSub {
-    font-family: var(--font-secondary);
-    font-size: 0.85rem;
-    color: rgba(255,255,255,0.8);
-    position: relative;
-    z-index: 2;
-    margin-top: auto;
-}
 
 /* ── Section Kicker (SKILL.md H4 pattern) ───────────────── */
 .sectionKicker {
@@ -360,6 +279,10 @@
         gap: var(--space-sm);
         margin-right: 0;
         padding-right: 0;
+    }
+
+    .exploreGrid > :first-child {
+        grid-column: 1 / -1;
     }
 }
 

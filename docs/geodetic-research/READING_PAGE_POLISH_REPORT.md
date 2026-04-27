@@ -168,3 +168,4 @@ no longer render.
   builtin → Turbopack build error.
 - Fix: extracted the helper to `app/lib/personal-lens-text.ts` (pure,
   no deps). `personal-lens.ts` re-exports it for any server caller.
+a

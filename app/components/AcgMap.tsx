@@ -34,12 +34,20 @@ interface AcgMapProps {
   birthDateTimeUTC?: string;
   /** Birth longitude in decimal degrees (east positive) — REQUIRED */
   birthLon?: number;
+  /** Birth latitude in decimal degrees (north positive) */
+  birthLat?: number;
+  /** Optional birth city label used when zooming to birth place */
+  birthCity?: string;
   /** Optional: a specific city to highlight with a pin */
   highlightCity?: { lat: number; lon: number; name: string; score?: number };
   /** If true, smaller/compact map for embedding in cards */
   compact?: boolean;
   /** If true, click anywhere on map to get score for that lat/lon */
   interactive?: boolean;
+  /** If true (default when interactive), auto-zoom to the highlighted city
+   *  on mount. Pass false to keep the global view so users can see all
+   *  planetary lines across the world before deciding to zoom in. */
+  autoZoomToCity?: boolean;
   /** Callback when user clicks a location in interactive mode */
   onLocationClick?: (lat: number, lon: number) => void;
   /** Callback emitted when distances are computed vs the highlightCity */
@@ -114,9 +122,10 @@ const MapControls = ({ hasCity }: { hasCity: boolean }) => {
 // ── AcgMap Component ───────────────────────────────────────────
 
 export function AcgMap({ 
-    natal, birthDateTimeUTC, birthLon, highlightCity, 
+    natal, birthDateTimeUTC, birthLon, birthLat, birthCity, highlightCity, 
     compact = false, interactive = false, 
-    onLocationClick, onLinesCalculated 
+    onLocationClick, onLinesCalculated,
+    autoZoomToCity = true,
 }: AcgMapProps) {
   
   const [hoveredLine, setHoveredLine] = useState<AcgLine | null>(null);
@@ -139,6 +148,16 @@ export function AcgMap({
   };
   
   const [serverLines, setServerLines] = useState<any[]>([]);
+  const birthPlace = useMemo(() => {
+    if (typeof birthLat !== "number" || typeof birthLon !== "number") return null;
+    if (!Number.isFinite(birthLat) || !Number.isFinite(birthLon)) return null;
+    return {
+      lat: birthLat,
+      lon: birthLon,
+      name: birthCity?.trim() || "Birth place",
+    };
+  }, [birthLat, birthLon, birthCity]);
+  const focusCity = highlightCity ?? birthPlace;
 
   useEffect(() => {
     if (birthDateTimeUTC) {
@@ -188,18 +207,18 @@ export function AcgMap({
 
   // Hook to calculate distance outputs for ChartClient + Tooltips
   const distances = useMemo(() => {
-      if (!highlightCity) return new Map<string, number>();
+      if (!focusCity) return new Map<string, number>();
       const distMap = new Map<string, number>();
       
       lines.forEach(line => {
           let minD = Infinity;
           if (line.angle === 'MC' || line.angle === 'IC') {
               // Minimal distance from a pure vertical meridian is along the parallel
-              minD = haversine(highlightCity.lat, highlightCity.lon, highlightCity.lat, line.longitude!);
+              minD = haversine(focusCity.lat, focusCity.lon, focusCity.lat, line.longitude!);
           } else if (line.curve_segments) {
               line.curve_segments.forEach(seg => {
                 seg.forEach(pt => {
-                    const d = haversine(highlightCity.lat, highlightCity.lon, pt.lat, pt.lon);
+                    const d = haversine(focusCity.lat, focusCity.lon, pt.lat, pt.lon);
                     if (d < minD) minD = d;
                 });
               });
@@ -207,11 +226,11 @@ export function AcgMap({
           distMap.set(`${line.planet}-${line.angle}`, Math.round(minD));
       });
       return distMap;
-  }, [lines, highlightCity]);
+  }, [lines, focusCity]);
 
   // Bubble up distances
   useEffect(() => {
-      if (onLinesCalculated && highlightCity && distances.size > 0) {
+      if (onLinesCalculated && focusCity && distances.size > 0) {
           const out = lines.map(line => ({
               planet: line.planet,
               angle: line.angle,
@@ -219,7 +238,7 @@ export function AcgMap({
           }));
           onLinesCalculated(out);
       }
-  }, [distances, highlightCity]);
+  }, [distances, focusCity, lines, onLinesCalculated]);
 
 
   const getOpacity = (line: AcgLine) => {
@@ -394,8 +413,8 @@ export function AcgMap({
         })}
 
         {/* Layer 7: Highlighted City Pin */}
-        {highlightCity && (
-          <g id="city-pin" transform={`translate(${projectLon(highlightCity.lon)}, ${projectLat(highlightCity.lat)})`}>
+        {focusCity && (
+          <g id="city-pin" transform={`translate(${projectLon(focusCity.lon)}, ${projectLat(focusCity.lat)})`}>
             {/* Outer pulse ring */}
             <motion.circle
               r={compact ? 4 : 6}
@@ -410,7 +429,7 @@ export function AcgMap({
             {/* Inner pin */}
             <circle r={compact ? 3 : 4} fill="var(--color-y2k-blue)" />
             {/* Custom Label */}
-            {!compact && highlightCity.name && (
+            {!compact && focusCity.name && (
               <g transform={`translate(8, 4)`}>
                 <text
                     style={{ 
@@ -421,7 +440,7 @@ export function AcgMap({
                         letterSpacing: '0.05em'
                     }}
                 >
-                    {highlightCity.name.toUpperCase()}
+                    {focusCity.name.toUpperCase()}
                 </text>
               </g>
             )}
@@ -504,8 +523,7 @@ export function AcgMap({
                  <button onClick={() => resetTransform()} style={{ width: 24, height: 24, padding: 0, background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}>↺</button>
               </div>
 
-              {/* Attach MapControls so "zoomToElement" triggers on mount targeting Jakarta */}
-              <MapControls hasCity={!!highlightCity} />
+              <MapControls hasCity={!!focusCity && autoZoomToCity} />
 
               <TransformComponent 
                  wrapperStyle={{ width: "100%", height: "100%", cursor: 'grab', display: 'flex', alignItems: 'center', justifyContent: 'center' }}

@@ -133,15 +133,18 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
   const handleGenerate = async () => {
     setLoading(true);
     setErrorMsg("");
-    
-    if (isDemo) {
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    // Stale `?demo=true` in the URL should not override real generation for signed-in users.
+    if (isDemo && !user) {
       setTimeout(() => {
         setLoading(false);
         router.push("/reading/1?demo=true");
       }, 1200);
       return;
     }
-    
+
     try {
       // Use already-resolved coords if user selected from dropdown, otherwise geocode
       let targetLat = destLat ?? 0;

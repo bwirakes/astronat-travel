@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { READING_TAB_IDS } from "@/app/lib/reading-tabs";
 
 export const ToneSchema = z.enum(["supportive", "challenging", "neutral"]);
 export type Tone = z.infer<typeof ToneSchema>;
@@ -69,19 +70,30 @@ const TodoSchema = z.object({
 // page is actually personalised instead of repeating the same shell on
 // every reading.
 const ChromeSchema = z.object({
-  // Step 3 intro: "Astrologers read cities like they read people. ..." today
-  // is hardcoded. We let the AI write a 2–3 sentence intro that names this
-  // specific place.
+  // §01 score-bar caption. One pithy line under the bar that names where
+  // the points came from in plain English. ≤ 14 words.
+  step1Breakdown: z.string().optional(),
+  // §03 intro — "Why this place, for you" lead-in.
   step3Intro: z.string(),
-  // Step 7 intro: today's hardcoded paragraph about relocated charts. AI
-  // writes a place-specific version.
+  // §04 intro — "Planetary lines near {city}" lead-in. Guides the user on
+  // how to read the map and the line list. ≤ 30 words.
+  step4Intro: z.string().optional(),
+  // §04 takeaway — single goal-aware "so what" sentence at the top of the
+  // lines section. Names the dominant line and ties it to the user's first
+  // goal. ≤ 30 words.
+  step4Takeaway: z.string().optional(),
+  // §04 geodetic note — one sentence on what the destination's Sepharial
+  // geodetic band feels like as a *place* (not a personal chart signal).
+  // Distinct from astrocartography: same for every visitor to this
+  // longitude. Names the sign and tilts language by its archetype. ≤ 30 words.
+  step4GeodeticNote: z.string().optional(),
+  // §06 callout — replaces the (incorrect) hardcoded callout under the
+  // month-by-month chart. ≤ 28 words.
+  monthChartCallout: z.string().optional(),
+  // §07 intro — relocated-chart lead-in (was step7 in the old numbering).
   step7Intro: z.string(),
-  // Step 7 angles sub: "The four angles change." → e.g. "Your four angles
-  // shift sign." Specific to the chart.
   step7AnglesSub: z.string(),
-  // Step 7 houses sub: "Planets move into new houses."
   step7HousesSub: z.string(),
-  // Step 7 aspects sub: "New aspects to the angles."
   step7AspectsSub: z.string(),
 });
 
@@ -111,6 +123,34 @@ const WindowSchema = z.object({
   note: z.string(),
 });
 
+const ReadingTabIdSchema = z.enum(READING_TAB_IDS);
+
+const EditorialSpineSchema = z.object({
+  thesis: z.string(),
+  primaryQuestion: z.string(),
+  throughline: z.string(),
+  transitionOrder: z.array(ReadingTabIdSchema),
+});
+
+const TabEditorialSchema = z.object({
+  lead: z.string(),
+  plainEnglishSummary: z.string(),
+  evidenceCaption: z.string(),
+  nextTabBridge: z.string().optional(),
+});
+
+const OverviewEditorialSchema = z.object({
+  scoreExplanation: z.string(),
+  goalExplanation: z.string(),
+  leanInto: z.array(z.string()).max(5),
+  watchOut: z.array(z.string()).max(5),
+});
+
+const TimingEditorialSchema = z.object({
+  activationAdvice: z.array(z.string()).max(5),
+  closingVerdict: z.string(),
+});
+
 export const TeacherReadingSchema = z.object({
   // Legacy shape — kept for back-compat with cached readings.
   summary: z.object({
@@ -137,6 +177,10 @@ export const TeacherReadingSchema = z.object({
   // readings predate them. Once cached readings have rotated out, these can
   // be tightened to z.array(...).min(...).
   chrome: ChromeSchema.optional(),
+  editorialSpine: EditorialSpineSchema.optional(),
+  tabs: z.record(ReadingTabIdSchema, TabEditorialSchema).optional(),
+  overview: OverviewEditorialSchema.optional(),
+  timing: TimingEditorialSchema.optional(),
   hero: HeroSchema.optional(),
   windows: z.array(WindowSchema).max(3).optional(),
   vibes: z.array(VibeSchema).min(1).max(3).optional(),

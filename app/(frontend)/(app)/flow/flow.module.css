@@ -371,6 +371,40 @@
     flex-shrink: 0;
 }
 
+/* 3-dot importance bar — leading element of each line row. Filled count
+ * encodes the influence tier (Strong/Moderate/Weak) so the eye can sort
+ * the list before reading any words. */
+.lineDots {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+    margin-right: 0.4rem;
+}
+
+.lineDot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    border: 1px solid;
+    box-sizing: border-box;
+}
+
+/* Per-line contribution chip — signed integer "+N" / "-N" that traces
+ * back to the §01 score. Lives at the right edge of the row. */
+.lineContribChip {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 2px 7px;
+    border-radius: 99px;
+    border: 1px solid;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
 .lineDistRanking {
     font-size: 0.62rem;
     font-weight: 500;

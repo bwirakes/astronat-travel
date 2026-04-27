@@ -19,44 +19,28 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
     const container = useRef<HTMLDivElement>(null);
 
     useGSAP(() => {
-        const tl = gsap.timeline({ defaults: { ease: "power4.out" } });
+        const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
         // Hero greeting
         tl.fromTo(
             ".dashboard-hero",
-            { opacity: 0, scale: 0.95, y: 20 },
-            { opacity: 1, scale: 1, y: 0, duration: 1, ease: "back.out(1.2)" }
-        );
-
-        // Character-by-character Text Animation for the name
-        tl.fromTo(
-            ".greeting-char",
-            { opacity: 0, y: 20, rotationX: -90 },
-            { opacity: 1, y: 0, rotationX: 0, duration: 0.6, stagger: 0.04, ease: "back.out(2)" },
-            "-=0.7"
-        );
-
-        // Banner
-        tl.fromTo(
-            ".dashboard-banner",
-            { opacity: 0, y: 30, rotationX: -10 },
-            { opacity: 1, y: 0, rotationX: 0, duration: 0.8 },
-            "-=0.6"
+            { opacity: 0, y: 20 },
+            { opacity: 1, y: 0, duration: 0.8 }
         );
 
         // Explore cards stagger
         tl.fromTo(
             ".editorial-btn",
-            { opacity: 0, y: 40, scale: 0.9 },
-            { opacity: 1, y: 0, scale: 1, duration: 0.8, stagger: 0.1, ease: "elastic.out(1, 0.8)" },
-            "-=0.5"
+            { opacity: 0, y: 30 },
+            { opacity: 1, y: 0, duration: 0.8, stagger: 0.05 },
+            "-=0.6"
         );
 
         // Readings list
         tl.fromTo(
             ".dashboard-readings",
-            { opacity: 0, x: 20 },
-            { opacity: 1, x: 0, duration: 0.8, ease: "power3.out" },
+            { opacity: 0, y: 20 },
+            { opacity: 1, y: 0, duration: 0.8 },
             "-=0.6"
         );
 
@@ -64,8 +48,8 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
         tl.fromTo(
             ".dashboard-fab",
             { opacity: 0, y: 20 },
-            { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" },
-            "-=0.4"
+            { opacity: 1, y: 0, duration: 0.8 },
+            "-=0.6"
         );
 
         // ── Interactive Hover state for Explore cards ──
@@ -78,17 +62,6 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
                 gsap.to(card, { y: 0, scale: 1, duration: 0.4, ease: "power2.out" });
             });
         });
-
-        // ── Interactive Hover state for Dashboard Banner ──
-        const banner = document.querySelector(".dashboard-banner");
-        if (banner) {
-             banner.addEventListener("mouseenter", () => {
-                  gsap.to(banner, { scale: 1.01, duration: 0.4, ease: "power2.out" });
-             });
-             banner.addEventListener("mouseleave", () => {
-                  gsap.to(banner, { scale: 1, duration: 0.4, ease: "power2.out" });
-             });
-        }
     }, { scope: container });
 
     return (
@@ -106,12 +79,8 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
                         )}
                     </div>
                     <h1 className={styles.greeting}>
-                        Hello, <em className={styles.greetingName} style={{ display: "inline-block", perspective: "400px" }}>
-                            {profile.first_name.split("").map((char: string, i: number) => (
-                                <span key={i} className="greeting-char" style={{ display: "inline-block", opacity: 0 }}>
-                                    {char === " " ? "\u00A0" : char}
-                                </span>
-                            ))}
+                        Hello, <em className={styles.greetingName}>
+                            {profile.first_name}
                         </em>
                     </h1>
                 </div>
@@ -119,34 +88,15 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
                 {/* ── 2-Column Grid fills full height ── */}
                 <div className={styles.dashboardGrid}>
                     <section className={styles.exploreSection}>
-                        {/* Birthday Optimizer — flat strip */}
-                        <button
-                            className={`${styles.banner} dashboard-banner`}
-                            style={{ opacity: 0 }}
-                            onClick={() => router.push("/birthday?demo=true")}
-                        >
-                            <svg className={styles.bannerSpiral} viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2">
-                                {[...Array(12)].map((_, i) => (
-                                    <path key={i} d="M50 50 C 40 10, 90 10, 100 50" transform={`rotate(${i * 30} 50 50)`} />
-                                ))}
-                            </svg>
-                            <div className={styles.bannerTag}>SOLAR RETURN</div>
-                            <div>
-                                <span className={styles.bannerTitleMain}>BIRTHDAY</span>
-                                <span className={styles.bannerTitleScript}>Optimizer</span>
-                            </div>
-                            <div className={styles.bannerSub}>How will you make the best of your solar return?</div>
-                        </button>
-
                         <div className={styles.exploreHeader}>
                             <h4 className={styles.sectionKicker}>EXPLORE</h4>
                         </div>
                         <div className={styles.exploreGrid}>
-                            <LifeGoalsButton onClick={() => router.push("/goals?demo=true")} />
-                            <CouplesButton onClick={() => router.push("/couples?demo=true")} />
-                            <MyChartButton onClick={() => router.push("/chart?demo=true")} />
-                            <WorldChartsButton onClick={() => router.push("/mundane?demo=true")} />
-                            <TransitsButton onClick={() => router.push("/reading/new?type=transits")} />
+                            <MyChartButton onClick={() => router.push("/chart")} />
+                            {/* <LifeGoalsButton onClick={() => router.push("/goals?demo=true")} /> */}
+                            <CouplesButton onClick={() => router.push("/couples")} />
+                            <WorldChartsButton onClick={() => router.push("/mundane")} />
+                            {/* <TransitsButton onClick={() => router.push("/reading/new?type=transits")} /> */}
                             <SkyWeatherButton onClick={() => router.push("/reading/new?type=weather")} />
                             <LearnButton onClick={() => router.push("/learn")} />
                         </div>
@@ -216,7 +166,7 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
                                         </div>
                                         <button className={styles.viewBtn} onClick={(e) => {
                                             e.stopPropagation();
-                                            const suffix = isWeather ? '?type=weather' : '?demo=true';
+                                            const suffix = isWeather ? '?type=weather' : '';
                                             router.push(`/reading/${s.id}${suffix}`);
                                         }}>View &rsaquo;</button>
                                     </div>

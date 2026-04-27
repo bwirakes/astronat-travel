@@ -10,6 +10,7 @@ import { BackButton } from "@/components/app/back-button";
 import UpsellCelebrationCard from "@/app/components/UpsellCelebrationCard";
 import AppNavbar from "@/app/components/AppNavbar";
 import { ScoreRing, getVerdict } from "@/app/components/ScoreRing";
+import { hasV4TeacherReading } from "@/app/lib/reading-viewmodel";
 import WeatherReading from "./components/weather/WeatherReading";
 import HundredOneReadingView from "./components/v4/HundredOneReadingView";
 
@@ -161,8 +162,18 @@ function ReadingContent() {
             houses: d.houses || [],
             transitWindows: d.transitWindows || [],
             planetaryLines: d.planetaryLines || [],
+            acgLines: d.acgLines || [],
+            userPlanetaryLines: d.userPlanetaryLines || [],
             natalPlanets: d.natalPlanets || [],
             relocatedCusps: d.relocatedCusps || [],
+            natalCusps: d.natalCusps || [],
+            natalAngles: d.natalAngles,
+            birth: d.birth,
+            birthDate: d.birth?.date || d.birthDate,
+            birthTime: d.birth?.time || d.birthTime,
+            birthLat: d.birth?.lat ?? d.birthLat,
+            birthLon: d.birth?.lon ?? d.birthLon,
+            teacherReading: d.teacherReading,
             aiInsights: d.aiInsights || DEFAULT_AI_INSIGHTS,
             // Synastry-only fields (undefined for astrocartography)
             partnerName: d.partnerName,
@@ -197,7 +208,12 @@ function ReadingContent() {
   useEffect(() => {
     if (!reading || isDemo || typeof params.id !== 'string' || params.id.length < 30) return;
     if (reading.weatherForecast) return;
-    if (reading.teacherReading) return;
+    if (reading.teacherReading) {
+      if (!hasV4TeacherReading(reading.teacherReading)) {
+        console.info("[reading-page] teacherReading is incomplete for V4; using deterministic V4 fallbacks.");
+      }
+      return;
+    }
 
     if (reading.narrative) {
       setNarrative(reading.narrative);
@@ -358,7 +374,15 @@ function SynastryReadingView({
     planet: (p.name || p.planet || "").charAt(0).toUpperCase() + (p.name || p.planet || "").slice(1),
     longitude: p.longitude,
   }));
-  const evenCusps = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330];
+  const equalHousesFallback = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330];
+  const userChartCusps =
+    Array.isArray(reading.relocatedCusps) && reading.relocatedCusps.length === 12
+      ? reading.relocatedCusps
+      : equalHousesFallback;
+  const partnerChartCusps =
+    Array.isArray(reading.partnerRelocatedCusps) && reading.partnerRelocatedCusps.length === 12
+      ? reading.partnerRelocatedCusps
+      : equalHousesFallback;
 
   const recStyle = RECOMMENDATION_STYLE[recommendation] ?? RECOMMENDATION_STYLE.caution;
 
@@ -538,7 +562,7 @@ function SynastryReadingView({
                   <motion.div key="user-natal" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}>
                     <div className="flex flex-col md:flex-row gap-8 items-center">
                       <div className="flex-1 max-w-[500px] w-full mx-auto">
-                        <NatalMockupWheel isDark={true} planets={userPlanetsFormatted as any} cusps={evenCusps} />
+                        <NatalMockupWheel isDark={true} planets={userPlanetsFormatted as any} cusps={userChartCusps} />
                       </div>
                       <div className="flex-1 space-y-3">
                         <h4 className="font-secondary text-2xl">Your natal blueprint</h4>
@@ -554,7 +578,7 @@ function SynastryReadingView({
                   <motion.div key="partner-natal" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}>
                     <div className="flex flex-col md:flex-row gap-8 items-center">
                       <div className="flex-1 max-w-[500px] w-full mx-auto">
-                        <NatalMockupWheel isDark={true} planets={partnerPlanetsFormatted as any} cusps={evenCusps} />
+                        <NatalMockupWheel isDark={true} planets={partnerPlanetsFormatted as any} cusps={partnerChartCusps} />
                       </div>
                       <div className="flex-1 space-y-3">
                         <h4 className="font-secondary text-2xl">{partnerName}&apos;s natal blueprint</h4>

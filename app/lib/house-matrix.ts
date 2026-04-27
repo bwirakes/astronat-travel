@@ -163,6 +163,36 @@ const ANGLE_STRENGTH: Record<string, number> = {
     IC:  0.90,  // Least angular for public scoring: private/roots
 };
 
+// ACG line raw-contribution constants — same values used inside Step 4 of
+// computeHouseMatrix below. Hoisted so per-line scoring is exact, not
+// approximate.
+const ACG_SIGMA_KM = 250;
+const ACG_SIGMA_SQ_2 = 2 * ACG_SIGMA_KM * ACG_SIGMA_KM;
+
+/**
+ * Per-line raw contribution to the geodetic bucket — the same math the
+ * house matrix runs internally for each line, exposed so the V4 view can
+ * render a `+N` chip per row that traces back to the §01 score.
+ *
+ * Sign convention: positive lifts the bucket (benefics, luminaries),
+ * negative drops it (strong malefics). Magnitude decays with distance²
+ * (Gaussian, σ = 250 km) and scales by angle strength (ASC > MC > DSC > IC).
+ */
+export function acgLineRawScore(line: { planet: string; angle: string; distance_km: number }): number {
+    const pName = (line.planet || "").toLowerCase();
+    const angleKey = (line.angle || "").toUpperCase();
+    let baseInfluence = 10;
+    if (BENEFIC_PLANETS.includes(pName))      baseInfluence = 30;
+    else if (LUMINARIES.includes(pName))       baseInfluence = 18;
+    else if (STRONG_MALEFICS.includes(pName))  baseInfluence = -25;
+    const angleScale = ANGLE_STRENGTH[angleKey] ?? 1.0;
+    const km = Number(line.distance_km);
+    if (!isFinite(km) || km < 0) return 0;
+    return Math.round(
+        baseInfluence * angleScale * Math.exp(-(km * km) / ACG_SIGMA_SQ_2),
+    );
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 /**
@@ -534,32 +564,12 @@ export function computeHouseMatrix(params: {
         // horizon — the most direct expression of the planet's energy on you.
 
         let acgLine = 0;
-        const SIGMA_ACG = 250;
-        const SIGMA_SQ_2 = 2 * SIGMA_ACG * SIGMA_ACG;
-
         for (const line of acgLines) {
             const lineHouse = ANGLE_TO_HOUSE[line.angle];
             if (lineHouse !== h) continue;
-
-            const pName = line.planet.toLowerCase();
-            const isBeneficLine  = BENEFIC_PLANETS.includes(pName);
-            const isLuminaryLine = LUMINARIES.includes(pName);
-            const isMaleficLine  = STRONG_MALEFICS.includes(pName);
-
-            let baseInfluence = 10;
-            if (isBeneficLine)  baseInfluence = 30;
-            else if (isLuminaryLine) baseInfluence = 18;
-            else if (isMaleficLine)  baseInfluence = -25;
-
-            // Gap 6: scale by angle strength
-            const angleStr = (line.angle || "").toUpperCase();
-            const angleScale = ANGLE_STRENGTH[angleStr] ?? 1.0;
-
-            // Continuous Gaussian decay
-            const modifier = baseInfluence * angleScale * Math.exp(-(line.distance_km * line.distance_km) / SIGMA_SQ_2);
-            acgLine += modifier;
+            acgLine += acgLineRawScore(line);
         }
-        acgLine = Math.max(-35, Math.min(35, Math.round(acgLine)));
+        acgLine = Math.max(-35, Math.min(35, acgLine));
 
         // ── Step 5: Geodetic Grid (P2-A: Sun as luminary) ───────────────────
         let geodetic = 0;

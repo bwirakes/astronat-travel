@@ -43,6 +43,7 @@ const nextConfig = {
       { source: '/mockup-reading-version-2', destination: '/mockup/reading-version-2', permanent: true },
       { source: '/mockup-relocation-1', destination: '/mockup/relocation-1', permanent: true },
       { source: '/mockup-relocation-2', destination: '/mockup/relocation-2', permanent: true },
+      { source: '/mockup-chart', destination: '/chart', permanent: true },
       { source: '/mock-reading-design', destination: '/mockup/reading-design', permanent: true },
     ];
   },

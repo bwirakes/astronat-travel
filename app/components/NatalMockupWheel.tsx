@@ -1,13 +1,23 @@
-import React from "react";
+"use client";
+
+import React, { useRef, useState } from "react";
 import { SIGN_PATHS } from "./SignIcon";
 import { PLANET_COLORS } from "@/app/lib/planet-data";
+import { PlanetPlacementHoverContent } from "@/app/components/ui/planet-placement-hover-content";
+import {
+  WHEEL_CX as CX,
+  WHEEL_CY as CY,
+  NATAL_WHEEL_SIGNS as SIGNS,
+  NATAL_WHEEL_ELEM_FILL as ELEM_FILL,
+  NATAL_WHEEL_ELEM_STROKE as ELEM_STROKE,
+  NATAL_WHEEL_HOUSE_ELEM_FILL as HOUSE_ELEM_FILL,
+  natalWheelToRad as toRad,
+  natalWheelSvgXY as svgXY,
+} from "@/app/lib/natal-wheel-shared";
 
 // ═══════════════════════════════════════════════════════════════
 // CONSTANTS & COLORS
 // ═══════════════════════════════════════════════════════════════
-
-const CX = 400;
-const CY = 400;
 
 const R = {
   outer:       385,
@@ -22,61 +32,33 @@ const PLANET_GLYPHS: Record<string, string> = {
   "Sun": "☉", "Moon": "☽", "Mercury": "☿", "Venus": "♀", "Mars": "♂",
   "Jupiter": "♃", "Saturn": "♄", "Uranus": "♅", "Neptune": "♆", "Pluto": "♇",
   "North Node": "☊", "South Node": "☋", "Chiron": "⚷",
-  "Ascendant": "ASC", "MC": "MC", "IC": "IC", "DC": "DC"
+  "Ascendant": "ASC", "MC": "MC", "IC": "IC", "DSC": "DSC", "DC": "DC"
 };
 
-type Element = "fire" | "earth" | "air" | "water";
-
-const SIGNS: { name: string; glyph: string; lon: number; elem: Element }[] = [
-  { name: "Aries",       glyph: "♈", lon:   0, elem: "fire"  },
-  { name: "Taurus",      glyph: "♉", lon:  30, elem: "earth" },
-  { name: "Gemini",      glyph: "♊", lon:  60, elem: "air"   },
-  { name: "Cancer",      glyph: "♋", lon:  90, elem: "water" },
-  { name: "Leo",         glyph: "♌", lon: 120, elem: "fire"  },
-  { name: "Virgo",       glyph: "♍", lon: 150, elem: "earth" },
-  { name: "Libra",       glyph: "♎", lon: 180, elem: "air"   },
-  { name: "Scorpio",     glyph: "♏", lon: 210, elem: "water" },
-  { name: "Sagittarius", glyph: "♐", lon: 240, elem: "fire"  },
-  { name: "Capricorn",   glyph: "♑", lon: 270, elem: "earth" },
-  { name: "Aquarius",    glyph: "♒", lon: 300, elem: "air"   },
-  { name: "Pisces",      glyph: "♓", lon: 330, elem: "water" },
-];
-
-const ELEM_FILL: Record<Element, string> = {
-  fire:  "rgba(230,122,122,0.22)",
-  earth: "rgba(201,169,110,0.20)",
-  air:   "rgba(202,241,240,0.20)",
-  water: "rgba(0,253,0,0.13)",
-};
-
-const ELEM_STROKE: Record<Element, string> = {
-  fire:  "rgba(230,122,122,0.60)",
-  earth: "rgba(201,169,110,0.55)",
-  air:   "rgba(202,241,240,0.55)",
-  water: "rgba(0,253,0,0.45)",
-};
-
-const HOUSE_ELEM_FILL: Record<Element, string> = {
-  fire:  "rgba(230,122,122,0.18)",
-  earth: "rgba(201,169,110,0.17)",
-  air:   "rgba(202,241,240,0.17)",
-  water: "rgba(0,253,0,0.12)",
-};
+const ANGLE_POINTS = [
+  { planet: "Ascendant", label: "ASC", idx: 0, house: 1 },
+  { planet: "DSC", label: "DSC", idx: 6, house: 7 },
+  { planet: "MC", label: "MC", idx: 9, house: 10 },
+  { planet: "IC", label: "IC", idx: 3, house: 4 },
+] as const;
 
 // ═══════════════════════════════════════════════════════════════
 // MATH HELPERS
 // ═══════════════════════════════════════════════════════════════
 
-function toRad(deg: number) {
-  return (deg * Math.PI) / 180;
+function signFromLongitude(lon: number) {
+  const normalized = ((lon % 360) + 360) % 360;
+  return SIGNS[Math.floor(normalized / 30)]?.name || "Aries";
 }
 
-function svgXY(lon: number, r: number, asc: number) {
-  const angle = toRad(180 - (lon - asc));
-  return {
-    x: parseFloat((CX + r * Math.cos(angle)).toFixed(3)),
-    y: parseFloat((CY + r * Math.sin(angle)).toFixed(3)),
-  };
+function degreeFromLongitude(lon: number) {
+  const normalized = ((lon % 360) + 360) % 360;
+  return `${Math.floor(normalized % 30)}°`;
+}
+
+function isNodePlacement(planetName: string) {
+  const normalized = planetName.toLowerCase();
+  return normalized.includes("node") || normalized === "true node";
 }
 
 function zodiacSectorPath(signLon: number, asc: number): string {
@@ -127,6 +109,10 @@ function getAspect(lon1: number, lon2: number) {
 export interface NatalPlanet {
   planet: string;
   longitude: number;
+  sign?: string;
+  house?: number;
+  degree?: string;
+  implication?: string;
   isAngle?: boolean;
 }
 
@@ -134,9 +120,29 @@ export interface NatalMockupWheelProps {
   isDark: boolean;
   planets: NatalPlanet[];
   cusps: number[]; // Array of 12 elements
+  onPlanetClick?: (planetName: string) => void;
 }
 
-export default function NatalMockupWheel({ isDark, planets, cusps }: NatalMockupWheelProps) {
+interface AspectLine {
+  id: string;
+  planetA: string;
+  planetB: string;
+  type: string;
+  color: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  length: number;
+}
+
+export default function NatalMockupWheel({ isDark, planets, cusps, onPlanetClick }: NatalMockupWheelProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [hoveredPlanet, setHoveredPlanet] = useState<{
+    planet: NatalPlanet;
+    x: number;
+    y: number;
+  } | null>(null);
   const asc = cusps[0] || 0;
 
   const c = {
@@ -153,11 +159,11 @@ export default function NatalMockupWheel({ isDark, planets, cusps }: NatalMockup
     planetBg:        "var(--surface)",
   };
 
-  const stdPlanets = planets.filter(p => !p.isAngle);
+  const stdPlanets = planets.filter(p => !p.isAngle && !isNodePlacement(p.planet));
 
   // Compute Aspects
   const ALL_ASPECTS = (() => {
-    const acc: any[] = [];
+    const acc: AspectLine[] = [];
     for (let i = 0; i < stdPlanets.length; i++) {
         for (let j = i + 1; j < stdPlanets.length; j++) {
             const p1 = stdPlanets[i], p2 = stdPlanets[j];
@@ -185,7 +191,31 @@ export default function NatalMockupWheel({ isDark, planets, cusps }: NatalMockup
      return { ...p, lonAdj: p.longitude + offset };
   });
 
+  const setHoverFromPointer = (event: React.PointerEvent<SVGGElement>, planet: NatalPlanet) => {
+    if (event.pointerType === "touch") return; // touch taps go to accordion, not tooltip
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    setHoveredPlanet({
+      planet,
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    });
+  };
+
+  const setHoverFromSvgPoint = (planet: NatalPlanet, x: number, y: number) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    setHoveredPlanet({
+      planet,
+      x: (x / 800) * rect.width,
+      y: (y / 800) * rect.height,
+    });
+  };
+
   return (
+    <div ref={containerRef} style={{ position: "relative", width: "100%" }}>
     <svg viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg" style={{ overflow: "visible", width: "100%", height: "100%", maxHeight: "80vh" }}>
       <defs>
         {stdPlanets.map((p) => {
@@ -269,17 +299,56 @@ export default function NatalMockupWheel({ isDark, planets, cusps }: NatalMockup
         })}
 
         {cusps.length === 12 && cusps.map((cusp, i) => {
-          const isAxis = i === 0 || i === 3 || i === 6 || i === 9;
           const from = svgXY(cusp, R.zodiacInner, asc);
           const to   = svgXY(cusp, R.inner, asc);
+          const anglePoint = ANGLE_POINTS.find((angle) => angle.idx === i);
+
+          if (!anglePoint) {
+            return (
+              <line key={i}
+                x1={from.x} y1={from.y} x2={to.x} y2={to.y}
+                stroke={c.houseLine}
+                strokeWidth="1.2"
+                strokeDasharray="6 4"
+              />
+            );
+          }
+
+          const mid = svgXY(cusp, (R.zodiacInner + R.inner) / 2, asc);
+          const anglePlanet: NatalPlanet = {
+            planet: anglePoint.planet,
+            longitude: cusp,
+            sign: signFromLongitude(cusp),
+            house: anglePoint.house,
+            degree: degreeFromLongitude(cusp),
+          };
+          const isHovered = hoveredPlanet?.planet.planet === anglePoint.planet;
+
           return (
-            <line key={i}
-              x1={from.x} y1={from.y} x2={to.x} y2={to.y}
-              stroke={isAxis ? c.houseAxis : c.houseLine}
-              strokeWidth={isAxis ? 2.5 : 1.2}
-              strokeDasharray={isAxis ? undefined : "6 4"}
-              filter={isAxis ? "url(#glow-lines)" : undefined}
-            />
+            <g
+              key={i}
+              role="button"
+              tabIndex={0}
+              aria-label={`${anglePoint.label} line in ${anglePlanet.sign}`}
+              onPointerEnter={(event) => setHoverFromPointer(event, anglePlanet)}
+              onPointerMove={(event) => setHoverFromPointer(event, anglePlanet)}
+              onPointerLeave={() => setHoveredPlanet(null)}
+              onFocus={() => setHoverFromSvgPoint(anglePlanet, mid.x, mid.y)}
+              onBlur={() => setHoveredPlanet(null)}
+              style={{ cursor: "zoom-in", outline: "none" }}
+            >
+              <line
+                x1={from.x} y1={from.y} x2={to.x} y2={to.y}
+                stroke="transparent"
+                strokeWidth="18"
+              />
+              <line
+                x1={from.x} y1={from.y} x2={to.x} y2={to.y}
+                stroke={c.houseAxis}
+                strokeWidth={isHovered ? 4 : 2.5}
+                filter="url(#glow-lines)"
+              />
+            </g>
           );
         })}
 
@@ -305,7 +374,7 @@ export default function NatalMockupWheel({ isDark, planets, cusps }: NatalMockup
 
         {cusps.length === 12 && cusps.map((cusp, i) => {
           const next = cusps[(i + 1) % 12];
-          let mid = next >= cusp ? (cusp + next) / 2 : ((cusp + next + 360) / 2) % 360;
+          const mid = next >= cusp ? (cusp + next) / 2 : ((cusp + next + 360) / 2) % 360;
           const pt = svgXY(mid, R.houseNums, asc);
           return (
             <text key={i} x={pt.x} y={pt.y}
@@ -340,19 +409,37 @@ export default function NatalMockupWheel({ isDark, planets, cusps }: NatalMockup
         const color = PLANET_COLORS[p.planet] || "#FFF";
         const glyphStr = PLANET_GLYPHS[p.planet] || p.planet.charAt(0);
 
+        const isHovered = hoveredPlanet?.planet.planet === p.planet;
+        const hoverLabel = p.sign && p.house
+          ? `${p.planet} in ${p.sign}, ${p.house} house`
+          : p.planet;
+
         return (
-          <g key={p.planet} id={`planet-${p.planet}`}>
+          <g
+            key={p.planet}
+            id={`planet-${p.planet}`}
+            role="button"
+            tabIndex={0}
+            aria-label={hoverLabel}
+            onPointerEnter={(event) => setHoverFromPointer(event, p)}
+            onPointerMove={(event) => setHoverFromPointer(event, p)}
+            onPointerLeave={() => setHoveredPlanet(null)}
+            onFocus={() => setHoverFromSvgPoint(p, pt.x, pt.y)}
+            onBlur={() => setHoveredPlanet(null)}
+            onClick={() => { setHoveredPlanet(null); onPlanetClick?.(p.planet); }}
+            style={{ cursor: "zoom-in", outline: "none" }}
+          >
             <line
               x1={pt.x} y1={pt.y} x2={pinPt.x} y2={pinPt.y}
-              stroke={color} strokeWidth="0.8" opacity="0.35"
+              stroke={color} strokeWidth={isHovered ? "1.4" : "0.8"} opacity={isHovered ? "0.85" : "0.35"}
             />
             <circle cx={pinPt.x} cy={pinPt.y} r="2.8" fill={color} opacity="0.9" />
-            <circle cx={pt.x} cy={pt.y} r="28" fill={color} opacity="0.08" />
-            <circle cx={pt.x} cy={pt.y} r="22" fill={color} opacity="0.05" />
+            <circle cx={pt.x} cy={pt.y} r={isHovered ? "34" : "28"} fill={color} opacity={isHovered ? "0.18" : "0.08"} />
+            <circle cx={pt.x} cy={pt.y} r={isHovered ? "27" : "22"} fill={color} opacity={isHovered ? "0.1" : "0.05"} />
             <circle cx={pt.x} cy={pt.y} r="20"
               fill={c.planetBg}
               stroke={color}
-              strokeWidth="1.8"
+              strokeWidth={isHovered ? "2.8" : "1.8"}
             />
             <text
               x={pt.x} y={pt.y}
@@ -377,5 +464,33 @@ export default function NatalMockupWheel({ isDark, planets, cusps }: NatalMockup
         );
       })}
     </svg>
+    {hoveredPlanet?.planet.sign && hoveredPlanet.planet.house ? (
+      <div
+        role="status"
+        style={{
+          position: "absolute",
+          left: `min(calc(100% - 320px), ${hoveredPlanet.x + 20}px)`,
+          top: `min(calc(100% - 220px), max(10px, ${hoveredPlanet.y - 60}px))`,
+          zIndex: 50,
+          width: "300px",
+          pointerEvents: "none",
+          background: "rgba(10, 10, 10, 0.98)",
+          backdropFilter: "blur(6px)",
+          border: "1px solid var(--surface-border)",
+          borderRadius: "var(--radius-md)",
+          padding: "var(--space-lg)",
+          boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
+        }}
+      >
+        <PlanetPlacementHoverContent
+          planet={hoveredPlanet.planet.planet}
+          sign={hoveredPlanet.planet.sign}
+          house={hoveredPlanet.planet.house}
+          degree={hoveredPlanet.planet.degree}
+          implication={hoveredPlanet.planet.implication}
+        />
+      </div>
+    ) : null}
+    </div>
   );
 }

@@ -6,10 +6,8 @@ describe("astro-wording", () => {
     expect(PLANET_DOMAINS["Sun"]).toBe("YOUR IDENTITY AND WHERE YOU SHINE");
   });
 
-  it('HOUSE_DOMAINS[9] === "travel, education, publishing, religion, astrology, and philosophy"', () => {
-    expect(HOUSE_DOMAINS[9]).toBe(
-      "travel, education, publishing, religion, astrology, and philosophy"
-    );
+  it('HOUSE_DOMAINS[9] matches app/lib/astro-wording (9th house copy)', () => {
+    expect(HOUSE_DOMAINS[9]).toBe("beliefs and big adventures");
   });
 
   it('getOrdinal(1) === "1st"', () => {
