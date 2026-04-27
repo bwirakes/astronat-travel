@@ -701,40 +701,6 @@
     grid-column: 2;
   }
 }
-.v4-root .v4-theme-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.v4-root .v4-theme-bar {
-  border: 1px solid var(--v4-border);
-  background: var(--v4-bg);
-  border-radius: var(--radius-md, 10px);
-  padding: 16px;
-}
-.v4-root .v4-theme-bar.is-goal {
-  border-color: var(--v4-border);
-  background: color-mix(in oklab, var(--v4-ink) 4%, transparent);
-}
-.v4-root .v4-theme-bar-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  color: var(--v4-ink);
-  font-size: 14px;
-  margin-bottom: 10px;
-}
-.v4-root .v4-theme-track {
-  height: 8px;
-  background: var(--v4-border);
-  overflow: hidden;
-  border-radius: 99px;
-}
-.v4-root .v4-theme-track div {
-  height: 100%;
-  background: var(--v4-accent-blue);
-  border-radius: inherit;
-}
 .v4-root .v4-personal-geodetic {
   margin: 28px 0;
 }
