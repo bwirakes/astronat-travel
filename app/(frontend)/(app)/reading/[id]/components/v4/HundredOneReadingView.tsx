@@ -217,7 +217,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                                     )}
 
                                     <main className="v4-tab-panels">
-                                        <TabsContent value="overview" className="v4-tabs-panel v4-overview-panel mt-0 outline-none">
+                                        <TabsContent value="overview" className="v4-tabs-panel mt-0 outline-none">
                                             <OverviewTab vm={vm} copiedTab={copiedTab} selectTab={selectTab} />
                                         </TabsContent>
 
