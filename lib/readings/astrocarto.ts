@@ -16,6 +16,7 @@ import { birthToUtc } from "@/lib/astro/birth-utc";
 import { determineSect, computeLotOfFortune, computeLotOfSpirit } from "@/app/lib/arabic-parts";
 import { GOAL_DEFINITIONS, buildEditorialEvidence, deriveScoreNarrative } from "@/app/lib/reading-tabs";
 
+import { computeProgressedBands } from "@/app/lib/progressions";
 import { writeTeacherReading, type TeacherReadingInput } from "@/lib/ai/prompts/teacher-reading";
 import type { Tone } from "@/lib/ai/schemas";
 import { houseTopic, spellAngle, closenessBand, houseVibe } from "./house-topics";
@@ -494,6 +495,28 @@ function buildAIInput(args: {
     },
   });
 
+  const ANGLE_LONG = {
+    ASC: "Ascendant",
+    IC: "Imum Coeli",
+    DSC: "Descendant",
+    MC: "Midheaven",
+  } as const;
+  const ANGLE_TOPIC = {
+    ASC: "self",
+    IC: "home",
+    DSC: "partners",
+    MC: "career",
+  } as const;
+  const personalGeodetic = scoreNarrative.geodetic.personal.flatMap((row) =>
+    row.hits.map((hit) => ({
+      planet: hit.planet,
+      angle: ANGLE_LONG[row.anchor],
+      angleTopic: ANGLE_TOPIC[row.anchor],
+      closeness: hit.closeness,
+      family: hit.family,
+    })),
+  );
+
   return {
     destination,
     dateRange,
@@ -511,6 +534,7 @@ function buildAIInput(args: {
     ...(angleShifts ? { angleShifts } : {}),
     ...(planetHouseShifts ? { planetHouseShifts } : {}),
     ...(aspectsToAngles.length ? { aspectsToAngles } : {}),
+    ...(personalGeodetic.length ? { personalGeodetic } : {}),
   };
 }
 
@@ -575,6 +599,15 @@ export async function runAstrocarto(
   const rawTransits = await solve12MonthTransits(natalPlanets, refDate);
   const mappedTransits = mapTransitsToMatrix(rawTransits, natalPlanets, relocatedCusps, profile.birth_lat ?? undefined);
   const globalPenalty = computeGlobalPenalty(mappedTransits);
+  // A1: raw transit positions at refDate — feed Step 5b (transit-on-geodetic-angle).
+  // computeHouseMatrix tolerates undefined; the cost is one extra SwissEph call.
+  const transitPositionsAtRef = await computeRealtimePositions(refDate);
+  // A5: progressed Sun/Moon bands at refDate (async, day-for-a-year).
+  const progressedBands = await computeProgressedBands({
+    birthDateUtc: dtUtcBirth,
+    refDate,
+    destLon: targetLon,
+  });
 
   // 4. Sect, Arabic parts, parans
   const sunPlanet = natalPlanets.find((p: any) => (p.planet || p.name || "").toLowerCase() === "sun");
@@ -611,6 +644,9 @@ export async function runAstrocarto(
     lotOfSpiritLon,
     sect,
     selectedGoals,
+    transitPositions: transitPositionsAtRef,
+    refDate,
+    progressedBands,
   });
 
   const ascLon = relocatedCusps[0] ?? 0;
@@ -659,6 +695,8 @@ export async function runAstrocarto(
       lotOfSpiritLon: pLotS,
       sect: pSect,
       selectedGoals,
+      transitPositions: transitPositionsAtRef,
+      refDate,
     });
 
     partnerMatrix = {
@@ -761,6 +799,26 @@ export async function runAstrocarto(
     },
     ...(matrixResult.lotOfFortune ? { lotOfFortune: matrixResult.lotOfFortune } : {}),
     ...(matrixResult.lotOfSpirit ? { lotOfSpirit: matrixResult.lotOfSpirit } : {}),
+    ...(matrixResult.activeGeoTransits && matrixResult.activeGeoTransits.length > 0
+      ? { activeGeoTransits: matrixResult.activeGeoTransits }
+      : {}),
+    ...(matrixResult.natalWorldPoints && matrixResult.natalWorldPoints.hits.length > 0
+      ? { natalWorldPoints: matrixResult.natalWorldPoints }
+      : {}),
+    ...(matrixResult.chartRuler ? { chartRuler: matrixResult.chartRuler } : {}),
+    ...(matrixResult.personalEclipses && matrixResult.personalEclipses.hits.length > 0
+      ? { personalEclipses: matrixResult.personalEclipses }
+      : {}),
+    ...(matrixResult.progressedBands ? { progressedBands: matrixResult.progressedBands } : {}),
+    ...(matrixResult.midpointTriggers && matrixResult.midpointTriggers.length > 0
+      ? { midpointTriggers: matrixResult.midpointTriggers }
+      : {}),
+    ...(matrixResult.harmonic45Hits && matrixResult.harmonic45Hits.length > 0
+      ? { harmonic45Hits: matrixResult.harmonic45Hits }
+      : {}),
+    ...(matrixResult.modalityCohorts && matrixResult.modalityCohorts.length > 0
+      ? { modalityCohorts: matrixResult.modalityCohorts }
+      : {}),
     ...(teacherReading ? { teacherReading } : {}),
     ...(partnerNatalPlanets ? { partnerNatalPlanets, synastryAspects } : {}),
     ...(partnerMatrix && synastryDerived

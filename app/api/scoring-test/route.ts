@@ -16,6 +16,7 @@ import { computeEventScores, type OccupancyPlanet } from "@/app/lib/scoring-engi
 import { houseFromLongitude } from "@/app/lib/geodetic";
 import { essentialDignityLabel } from "@/app/lib/dignity";
 import { determineSect, computeLotOfFortune, computeLotOfSpirit } from "@/app/lib/arabic-parts";
+import { computeProgressedBands } from "@/app/lib/progressions";
 
 interface ScoringLocation {
   label: string;
@@ -159,6 +160,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const mappedTransits = mapTransitsToMatrix(rawTransits, natalPlanets, relocatedCusps, birthPlace.lat);
     const globalPenalty = computeGlobalPenalty(rawTransits);
     const parans = computeParans(allLines, travelLocation.lat);
+    // A1: raw transit positions at the travel date — feeds Step 5b
+    // (transit-on-geodetic-angle activation) inside computeHouseMatrix.
+    const transitPositions = await computeRealtimePositions(travelDate);
+    // A5: progressed Sun/Moon bands at travel date.
+    const progressedBands = await computeProgressedBands({
+      birthDateUtc: dtUtc,
+      refDate: travelDate,
+      destLon: travelLocation.lon,
+    });
 
     const sunPlanet = natalPlanets.find((planet) => planetName(planet).toLowerCase() === "sun");
     const moonPlanet = natalPlanets.find((planet) => planetName(planet).toLowerCase() === "moon");
@@ -184,6 +194,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       lotOfFortuneLon,
       lotOfSpiritLon,
       sect,
+      transitPositions,
+      refDate: travelDate,
+      progressedBands,
     });
 
     const relocatedPlanets: OccupancyPlanet[] = natalPlanets.map((planet) => ({
@@ -228,6 +241,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       },
       houses: houseScores,
       eventScores,
+      activeGeoTransits: matrixResult.activeGeoTransits ?? [],
+      natalWorldPoints: matrixResult.natalWorldPoints ?? null,
+      chartRuler: matrixResult.chartRuler ?? null,
+      personalEclipses: matrixResult.personalEclipses ?? null,
+      progressedBands: matrixResult.progressedBands ?? null,
+      midpointTriggers: matrixResult.midpointTriggers ?? [],
+      harmonic45Hits: matrixResult.harmonic45Hits ?? [],
+      modalityCohorts: matrixResult.modalityCohorts ?? [],
       aspects: {
         transitHits: rawTransits,
         mappedTransits,

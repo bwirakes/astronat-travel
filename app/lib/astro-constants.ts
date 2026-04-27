@@ -103,3 +103,65 @@ export const HOUSE_THEMES: Record<number, string> = {
     12: "Solitude & Spirituality",
 };
 
+// ── A3: Chart-ruler relocation tracking ────────────────────────────────────
+//
+// Geodetic 101 PDF p.7: "You're Taurus rising in Jakarta (Venus chart-ruler
+// in 3rd house). In NYC you become Libra rising, still ruled by Venus, but
+// it's now in your 9th house. Different chart-ruler house = different
+// trip themes." Uses the TRADITIONAL ruler set (no Uranus/Neptune/Pluto)
+// because that's what classical relocation analysis assumes.
+
+export interface ChartRulerInfo {
+    /** Sign on the relocated ASC. */
+    relocatedAscSign: string;
+    /** Traditional ruler of that sign — the chart's relocated ruler. */
+    ruler: string;
+    /** Natal house of the ruler (from the birth chart, if known). */
+    rulerNatalHouse?: number;
+    /** Relocated house the ruler lands in at the destination. */
+    rulerRelocatedHouse?: number;
+    /** True iff the ruler lands on a relocated angular house (1/4/7/10). */
+    rulerAngular: boolean;
+    /** Cusp sign of the ruler's relocated house — useful for narrative
+     *  ("Venus runs your trip from a Cancer-flavored 9th"). */
+    rulerRelocatedHouseSign?: string;
+}
+
+/** Resolve which natal planet rules the relocated chart and where it lands.
+ *  Returns null when the relocated ASC sign or its ruler can't be found. */
+export function resolveChartRuler(params: {
+    relocatedAscLon: number;
+    natalPlanets: Array<{ planet?: string; name?: string; longitude: number; house?: number }>;
+    /** Resolves a natal planet's relocated house. Provided by the caller
+     *  because house systems differ (Placidus vs whole-sign). */
+    getRelocatedHouse: (planetLon: number) => number;
+    /** Sign on each relocated house cusp 1–12 (0-indexed). Optional. */
+    relocatedCuspSigns?: string[];
+}): ChartRulerInfo | null {
+    const { relocatedAscLon, natalPlanets, getRelocatedHouse, relocatedCuspSigns } = params;
+    const normalized = ((relocatedAscLon % 360) + 360) % 360;
+    const relocatedAscSign = ZODIAC_SIGNS[Math.floor(normalized / 30) % 12];
+    const ruler = SIGN_RULERS[relocatedAscSign];
+    if (!ruler) return null;
+
+    const rulerPlanet = natalPlanets.find(
+        (p) => (p.planet ?? p.name ?? "").toLowerCase() === ruler.toLowerCase(),
+    );
+    if (!rulerPlanet) {
+        return { relocatedAscSign, ruler, rulerAngular: false };
+    }
+
+    const rulerRelocatedHouse = getRelocatedHouse(rulerPlanet.longitude);
+    const rulerAngular = ANGULAR_HOUSES.includes(rulerRelocatedHouse);
+    const rulerRelocatedHouseSign = relocatedCuspSigns?.[rulerRelocatedHouse - 1];
+
+    return {
+        relocatedAscSign,
+        ruler,
+        rulerNatalHouse: rulerPlanet.house,
+        rulerRelocatedHouse,
+        rulerAngular,
+        ...(rulerRelocatedHouseSign ? { rulerRelocatedHouseSign } : {}),
+    };
+}
+

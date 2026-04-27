@@ -35,6 +35,8 @@ import {
     LUMINARIES,
     HOUSE_THEMES,
     STRONG_MALEFICS,
+    resolveChartRuler,
+    type ChartRulerInfo,
 } from "./astro-constants";
 import { KNOWN_BENEFIC_COMBOS, KNOWN_MALEFIC_COMBOS, getOccupantModifier, applySectModulation, W_EVENTS } from "./planet-library";
 import { essentialDignityScore, essentialDignityLabel } from "./dignity";
@@ -46,6 +48,19 @@ import {
 } from "./geodetic";
 import { computeHouseNumber } from "./house-system";
 import { isOuterPlanet, computeOuterPlanetScore } from "./outer-planet-scoring";
+import { scoreAngleTransits, type AngleName, type AngleTransitContribution } from "./geodetic/angle-transits";
+import { scoreNatalWorldPoints, type NatalWorldPointsResult } from "./geodetic/natal-world-points";
+import { scorePersonalEclipses, type PersonalEclipsesResult, type PersonalEclipseHit } from "./geodetic/personal-eclipses";
+import {
+    computeMidpointTriggers,
+    compute45HarmonicHits,
+    computeModalityCohorts,
+    type MidpointTrigger,
+    type HarmonicHit,
+    type ModalityCohort,
+} from "./geodetic/harmonic-triggers";
+import type { ProgressionsResult } from "./progressions";
+import type { ComputedPosition } from "@/lib/astro/transits";
 
 
 
@@ -102,6 +117,29 @@ export interface HouseBreakdown {
     occupants: number;
     acgLine: number;
     geodetic: number;
+    /** A1: live transit on the destination's geodetic angle (MC/IC/ASC/DSC).
+     *  Routed to H10/H4/H1/H7 respectively. Doubled when the same transit
+     *  longitude also conjuncts a natal planet (the PDF "personal activation"
+     *  case). Capped ±20 to keep bucketGeodetic inside its 15% budget. */
+    geodeticTransit: number;
+    /** A2: per-house share of the natal world-points aggregate. Non-zero
+     *  only on H1 and H10 (identity / career angles). Capped ±12. */
+    worldPoints: number;
+    /** A3: chart-ruler relocation bias. Applied only at the relocated
+     *  house the ruler lands in: +10 if ruler is angular (1/4/7/10),
+     *  −5 otherwise (reflects the PDF's claim that an angular relocated
+     *  ruler is what makes a place "feel" personally lit up). */
+    chartRuler: number;
+    /** A4: personal-eclipse-on-geodetic-zone penalty. Negative-only;
+     *  fires only when an eclipse degree both lights up the destination's
+     *  geo-angle AND conjuncts a natal planet within ±3°. Routed to the
+     *  matching angular house. Per-house cap −10. */
+    eclipsePenalty: number;
+    /** A5: secondary-progressions soft alignment. +5 when the destination
+     *  longitude falls in the progressed-Sun band, +2 when it also falls
+     *  in the progressed-Moon band. Identical across all 12 houses (the
+     *  signal is a global background field, not per-house). */
+    progression: number;
     transits: number;
     retrograde: number;
     transitRx: number;
@@ -113,6 +151,25 @@ export interface HouseBreakdown {
     bucketOccupants: number;
     bucketTransit: number;
     bucketGeodetic: number;
+}
+
+/** A1: one row per (transit planet × geodetic angle) hit. Surfaced at the
+ *  top level of HouseMatrixResult so the UI can render "this place is lit
+ *  up right now by Jupiter on the MC" without re-running the math. */
+export interface GeoTransitActivation {
+    planet: string;
+    angle: AngleName;
+    house: number;          // 1, 4, 7, or 10
+    orb: number;
+    severity: number;       // signed contribution (post personal-activation doubling)
+    direction: "benefic" | "malefic" | "luminary" | "neutral";
+    /** True iff transit longitude is also within ±3° of a natal planet —
+     *  the PDF "particularly ripe" case. */
+    personalActivation: boolean;
+    /** Name of the natal planet the transit conjuncts, when personalActivation. */
+    natalContact?: string;
+    /** Tightest natal orb (degrees), when personalActivation. */
+    natalOrb?: number;
 }
 
 export interface HouseScore {
@@ -133,6 +190,32 @@ export interface HouseMatrixResult {
     houseSystem: string;     // NEW: "placidus" | "whole-sign"
     lotOfFortune?: { longitude: number; house: number; sign: string };
     lotOfSpirit?: { longitude: number; house: number; sign: string };
+    /** A1: live geodetic-angle transit hits at the destination, sorted by
+     *  |severity| desc. Empty array when no transits are within orb. */
+    activeGeoTransits?: GeoTransitActivation[];
+    /** A2: aggregate score + per-planet hits for natal planets within ±5°
+     *  of one of the 8 sensitive degrees (0° cardinal / 15° fixed). */
+    natalWorldPoints?: NatalWorldPointsResult;
+    /** A3: relocated chart-ruler info. Surfaced even when the ruler isn't
+     *  found among natal planets (e.g. partner readings without the
+     *  full set), so the UI can still render the ASC sign. */
+    chartRuler?: ChartRulerInfo;
+    /** A4: eclipses in [refDate ± 180d] that both light up the destination's
+     *  geo-angle AND conjunct a natal planet. Empty `hits` when nothing
+     *  qualifies; aggregate 0 in that case. */
+    personalEclipses?: PersonalEclipsesResult;
+    /** A5: progressed-Sun / progressed-Moon longitude bands at the
+     *  reference date. Surfaced verbatim from the helper. */
+    progressedBands?: ProgressionsResult;
+    /** A6: transits within ±1.5° of a natal-planet midpoint. Informational
+     *  only — no bucket weight applied yet. */
+    midpointTriggers?: MidpointTrigger[];
+    /** A6: transits forming 45° or 135° harmonics to natal planets.
+     *  Informational only. */
+    harmonic45Hits?: HarmonicHit[];
+    /** A8: pairs of late-degree malefic transits in the same modality —
+     *  flag for "anything in late {modality} signs is exposed." */
+    modalityCohorts?: ModalityCohort[];
 }
 
 // ── Hoisted Matrix Constants ──────────────────────────────────────────────
@@ -394,6 +477,17 @@ export function computeHouseMatrix(params: {
     sect?: "day" | "night";
     /** Optional array of selected goal indexes to simulate Intent-Driven Mode */
     selectedGoals?: number[];
+    /** A1: raw transiting-planet positions at the reference date. Powers
+     *  Step 5b (transit-on-geodetic-angle activation). When omitted, Step
+     *  5b contributes 0 and `activeGeoTransits` is an empty array. */
+    transitPositions?: ComputedPosition[];
+    /** A4: reference date for the eclipse-window scan. Typically the
+     *  travel date. When omitted, A4 contributes 0 and `personalEclipses`
+     *  is undefined. */
+    refDate?: Date;
+    /** A5: precomputed secondary-progression bands. Async by nature, so
+     *  the caller resolves them and hands them to the sync engine. */
+    progressedBands?: ProgressionsResult;
 }): HouseMatrixResult {
     const {
         natalPlanets,
@@ -409,6 +503,9 @@ export function computeHouseMatrix(params: {
         lotOfSpiritLon,
         sect,
         selectedGoals,
+        transitPositions,
+        refDate,
+        progressedBands,
     } = params;
 
     // Determine house system
@@ -447,6 +544,136 @@ export function computeHouseMatrix(params: {
         { lon: geoASC,                   house: 1 },
         { lon: (geoASC + 180) % 360,    house: 7 },
     ];
+
+    // ── A1 precompute: live transit hits on the four geodetic angles ──
+    // PDF p.5–6: "When transiting Jupiter is at 15° Capricorn it lights up
+    // the 75°–90°W band — eastern North America. If your natal Sun also sits
+    // at 15° Capricorn, that region is particularly ripe."
+    //
+    // We reuse the mundane scorer for the angle-transit math, then layer a
+    // PERSONAL ACTIVATION check (transit lon ≈ any natal planet ±3°) and
+    // double the contribution when that condition holds. Hits are routed to
+    // the house ruled by their angle: ASC→1, IC→4, DSC→7, MC→10.
+    const ANGLE_TO_HOUSE_GEO: Record<AngleName, number> = {
+        ASC: 1, IC: 4, DSC: 7, MC: 10,
+    };
+    const PERSONAL_ACTIVATION_ORB = 3;
+    const PER_HOUSE_GEO_TRANSIT_CAP = 20;
+
+    const geoTransitByHouse = new Map<number, number>();
+    const activeGeoTransits: GeoTransitActivation[] = [];
+
+    if (transitPositions && transitPositions.length > 0) {
+        const angleHits = scoreAngleTransits({
+            positions: transitPositions,
+            geoMC,
+            geoASC,
+        });
+
+        for (const c of angleHits.contributions) {
+            // Personal activation: any natal planet within ±3° of this transit's
+            // ecliptic longitude? Use the tightest match.
+            const transitLon = transitPositions.find(
+                (p) => p.name.toLowerCase() === c.planet.toLowerCase(),
+            )?.longitude;
+
+            let natalContact: string | undefined;
+            let natalOrb: number | undefined;
+            if (transitLon !== undefined) {
+                for (const np of natalPlanets) {
+                    const npName = (np.planet || (np as any).name || "");
+                    if (!npName) continue;
+                    const d = angularDiff(transitLon, np.longitude);
+                    if (d <= PERSONAL_ACTIVATION_ORB && (natalOrb === undefined || d < natalOrb)) {
+                        natalContact = npName;
+                        natalOrb = Math.round(d * 100) / 100;
+                    }
+                }
+            }
+            const personalActivation = natalContact !== undefined;
+
+            const severity = personalActivation ? c.severity * 2 : c.severity;
+            const targetHouse = ANGLE_TO_HOUSE_GEO[c.angle];
+
+            geoTransitByHouse.set(
+                targetHouse,
+                (geoTransitByHouse.get(targetHouse) ?? 0) + severity,
+            );
+            activeGeoTransits.push({
+                planet: c.planet,
+                angle: c.angle,
+                house: targetHouse,
+                orb: c.orb,
+                severity,
+                direction: c.direction,
+                personalActivation,
+                natalContact,
+                natalOrb,
+            });
+        }
+        activeGeoTransits.sort((a, b) => Math.abs(b.severity) - Math.abs(a.severity));
+    }
+
+    // ── A2 precompute: natal planets at the 8 sensitive degrees ─────────
+    // PDF p.2: cardinal 0° + fixed 15° = "world axis." Natal planets within
+    // orb of these get a public-visibility boost, applied to H1 (identity)
+    // and H10 (career) only — the angles where this trait expresses.
+    const natalWorldPoints = scoreNatalWorldPoints(natalPlanets);
+    const WORLD_POINTS_HOUSES = new Set([1, 10]);
+
+    // ── A3 precompute: chart-ruler relocation ────────────────────────────
+    // PDF p.7 (Brandon Jakarta→NYC example): same Venus chart-ruler, new
+    // relocated house = different trip flavor. Bias the relocated ruler's
+    // house only — angular = +10, otherwise −5.
+    const relocatedCuspSigns = relocatedCusps.map((c) => signFromLongitude(c));
+    const chartRuler = resolveChartRuler({
+        relocatedAscLon: ascLon,
+        natalPlanets,
+        getRelocatedHouse: getHouseNum,
+        relocatedCuspSigns,
+    }) ?? undefined;
+    const chartRulerHouse = chartRuler?.rulerRelocatedHouse;
+    const chartRulerBias = chartRuler?.rulerAngular ? 10 : -5;
+
+    // ── A4 precompute: personal eclipse hits at the destination ──────────
+    // PDF p.4: "Hold off when ... an eclipse is activating that zone,
+    // ESPECIALLY if it hits a difficult planet in your natal chart." The
+    // helper enforces that conjunction — only hits with both a geo-angle
+    // activation AND a natal contact survive. Per-house penalty cap −10.
+    const ECLIPSE_ANGLE_TO_HOUSE: Record<PersonalEclipseHit["activatedAngle"], number> = {
+        geoMC: 10, geoIC: 4, geoASC: 1, geoDSC: 7,
+    };
+    const PER_HOUSE_ECLIPSE_CAP = -10;
+    const personalEclipses = refDate
+        ? scorePersonalEclipses({ refDate, destLat, destLon, natalPlanets })
+        : { aggregate: 0, hits: [] as PersonalEclipseHit[] };
+    const eclipsePenaltyByHouse = new Map<number, number>();
+    for (const hit of personalEclipses.hits) {
+        const targetHouse = ECLIPSE_ANGLE_TO_HOUSE[hit.activatedAngle];
+        eclipsePenaltyByHouse.set(
+            targetHouse,
+            (eclipsePenaltyByHouse.get(targetHouse) ?? 0) + hit.severity,
+        );
+    }
+
+    // ── A5: global progression bias ──────────────────────────────────────
+    // PDF p.5: progressed Sun/Moon entering a new sign shifts the
+    // personally-activated longitude band. Already aggregated by the helper
+    // (+5 Sun match, +2 Moon match). Capped here for safety.
+    const progressionAggregate = Math.max(-7, Math.min(7, progressedBands?.aggregate ?? 0));
+
+    // ── A6 + A8: harmonic / midpoint / modality flags (informational) ────
+    // No scoring weight in this pass — surfaced for narrative consumers.
+    const harmonicSafeTransits = transitPositions ?? [];
+    const midpointTriggers = harmonicSafeTransits.length > 0
+        ? computeMidpointTriggers({ natalPlanets, transitPositions: harmonicSafeTransits })
+        : [];
+    const harmonic45Hits = harmonicSafeTransits.length > 0
+        ? compute45HarmonicHits({ natalPlanets, transitPositions: harmonicSafeTransits })
+        : [];
+    const modalityCohorts = harmonicSafeTransits.length > 0
+        ? computeModalityCohorts({ transitPositions: harmonicSafeTransits })
+        : [];
 
     const houses: HouseScore[] = [];
 
@@ -595,6 +822,31 @@ export function computeHouseMatrix(params: {
             }
         }
 
+        // ── Step 5b: Live transit on geodetic angle (A1) ─────────────────────
+        // Pull this house's share of the precomputed geo-transit hits and cap
+        // it at ±20 so a single Mars-on-MC hit can't blow past the 15%
+        // bucketGeodetic budget.
+        const rawGeoTransit = geoTransitByHouse.get(h) ?? 0;
+        const geodeticTransit = Math.max(
+            -PER_HOUSE_GEO_TRANSIT_CAP,
+            Math.min(PER_HOUSE_GEO_TRANSIT_CAP, Math.round(rawGeoTransit)),
+        );
+
+        // ── Step 5c: World points (A2) — only on H1 and H10 ──────────────────
+        const worldPoints = WORLD_POINTS_HOUSES.has(h) ? natalWorldPoints.aggregate : 0;
+
+        // ── Step 5d: Chart-ruler relocation bias (A3) ────────────────────────
+        const chartRulerContribution = chartRulerHouse === h ? chartRulerBias : 0;
+
+        // ── Step 5e: Personal eclipse penalty (A4) ───────────────────────────
+        const rawEclipsePenalty = eclipsePenaltyByHouse.get(h) ?? 0;
+        const eclipsePenalty = Math.max(PER_HOUSE_ECLIPSE_CAP, Math.min(0, Math.round(rawEclipsePenalty)));
+
+        // ── Step 5f: Progression bias (A5) ────────────────────────────────────
+        // Identical for every house — it's a global background field, not
+        // angle-specific. Applied to bucketGeodetic.
+        const progression = progressionAggregate;
+
         // ── Step 6: Transits & Astrodynes (P3-A: Aspect-specific weights) ────
         let transitPts = 0;
         for (const t of transits) {
@@ -684,10 +936,10 @@ export function computeHouseMatrix(params: {
         //   Transits (dynamic, time-dep)    30%   ⇒ natal+transits = 55%+30% = 85%
         //   Geodetic (background field)     15%   ⇒ background = 15%
         //
-        const rawNatal     = base + dignity + lotBonus;
+        const rawNatal     = base + dignity + lotBonus + worldPoints + chartRulerContribution;
         const rawOccupants = occupants + natalBridge + retrograde + transitRx + 50;
-        const rawTransit   = transitPts + paranPts + 50;
-        const rawGeodetic  = acgLine + geodetic + 50;
+        const rawTransit   = transitPts + paranPts + eclipsePenalty + 50;
+        const rawGeodetic  = acgLine + geodetic + geodeticTransit + progression + 50;
 
         // Min-Max Normalize Per Bucket (Symmetrically bounded around 50)
         // We use tight, real-world observable standard deviation bounds rather than
@@ -715,6 +967,11 @@ export function computeHouseMatrix(params: {
             status: statusFromScore(score),
             breakdown: {
                 base, globalPenalty, dignity, occupants, acgLine, geodetic,
+                geodeticTransit,
+                worldPoints,
+                chartRuler: chartRulerContribution,
+                eclipsePenalty,
+                progression,
                 transits: transitPts, retrograde, transitRx, paran: paranPts,
                 natalBridge, lotBonus,
                 bucketNatal:     Math.round(bucketNatal),
@@ -784,6 +1041,14 @@ export function computeHouseMatrix(params: {
     const result: HouseMatrixResult = {
         houses, macroScore, macroVerdict,
         houseSystem,
+        activeGeoTransits,
+        natalWorldPoints,
+        ...(chartRuler ? { chartRuler } : {}),
+        personalEclipses,
+        ...(progressedBands ? { progressedBands } : {}),
+        midpointTriggers,
+        harmonic45Hits,
+        modalityCohorts,
     };
 
     // Add Lot positions to result if computed

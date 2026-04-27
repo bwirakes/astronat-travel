@@ -124,6 +124,91 @@ export interface V4WeekRow {
     body: string;
 }
 
+/** A1: a single transit hit on the destination's geodetic angle. Surfaced
+ *  on the Place tab as "this place is currently activated by Jupiter on
+ *  the MC" when the engine detects a live geo-angle hit. `personalActivation`
+ *  is true when the same transit is also conjunct one of the user's natal
+ *  planets within ±3°. */
+export interface V4GeoTransit {
+    planet: string;                                                 // e.g. "Mars"
+    angle: "ASC" | "MC" | "DSC" | "IC";
+    house: number;                                                  // 1, 4, 7, or 10
+    orb: number;                                                    // ecliptic orb to the angle
+    severity: number;                                               // signed contribution
+    direction: "benefic" | "malefic" | "luminary" | "neutral";
+    personalActivation: boolean;
+    natalContact?: string;
+    natalOrb?: number;
+}
+
+/** A3: chart-ruler relocation snapshot for the Place tab. */
+export interface V4ChartRuler {
+    relocatedAscSign: string;          // "Libra"
+    ruler: string;                     // "Venus"
+    rulerNatalHouse?: number;
+    rulerRelocatedHouse?: number;
+    rulerRelocatedHouseSign?: string;
+    rulerAngular: boolean;             // true iff ruler in 1/4/7/10 of relocated chart
+}
+
+/** A2: a single natal planet at one of the 8 sensitive degrees. */
+export interface V4WorldPointHit {
+    planet: string;                    // "Sun"
+    point: string;                     // "0° Aries"
+    pointLon: number;                  // 0–360
+    orb: number;                       // 0–5
+    severity: number;
+    direction: "luminary" | "benefic" | "malefic" | "neutral";
+}
+
+/** A2: top-level world-points summary. `aggregate` is already capped ±12
+ *  by the engine — this is the same number applied to H1/H10 inside
+ *  computeHouseMatrix, surfaced for transparency. */
+export interface V4WorldPointsView {
+    aggregate: number;
+    hits: V4WorldPointHit[];
+}
+
+/** A4: a single eclipse hit at the destination (zone + natal contact). */
+export interface V4EclipseHit {
+    kind: "solar" | "lunar";
+    dateUtc: string;
+    degree: number;
+    sign: string;
+    daysFromTarget: number;
+    activatedAngle: "geoMC" | "geoIC" | "geoASC" | "geoDSC";
+    angleOrb: number;
+    natalContact: string;
+    natalOrb: number;
+    direction: "luminary" | "benefic" | "malefic" | "neutral";
+    severity: number;
+}
+
+/** A4: top-level eclipse summary. `aggregate` is already capped by the
+ *  engine; surfaced for transparency. Empty `hits` when nothing qualifies. */
+export interface V4EclipsesView {
+    aggregate: number;
+    hits: V4EclipseHit[];
+}
+
+/** A5: a single progressed-planet band. */
+export interface V4ProgressedBand {
+    planet: "Sun" | "Moon";
+    longitude: number;
+    sign: string;
+    longitudeRange: string;
+    destinationInBand: boolean;
+}
+
+/** A5: secondary-progression bands at the reference date. `aggregate` is
+ *  the soft +5/+2 modifier the engine applies to bucketGeodetic. */
+export interface V4ProgressionsView {
+    progressedDateUtc: string;
+    yearsElapsed: number;
+    aggregate: number;
+    bands: V4ProgressedBand[];
+}
+
 export type V4TravelType = "trip" | "relocation";
 
 export interface V4ReadingVM {
@@ -217,6 +302,8 @@ export interface V4ReadingVM {
         step4Intro: string;
         step4Takeaway: string;
         step4GeodeticNote: string;
+        step4GeodeticBridge: string;
+        step4GeodeticMethod: string;
         monthChartCallout: string;
         step7Intro: string;
         step7AnglesSub: string;
@@ -239,6 +326,10 @@ export interface V4ReadingVM {
         longitudeRange: string;         // "90°E–120°E"
         flavor: string;                 // one-line vibe of the sign as a place
         note: string;                   // AI-written or templated body
+        /** A1: live transit hits on the destination's four geodetic angles at
+         *  the reference date. Already filtered/sorted by Step 5b — sorted by
+         *  |severity| desc. Empty array when nothing is in orb. */
+        activeTransits: V4GeoTransit[];
     } | null;
 
     relocated: {
@@ -253,7 +344,20 @@ export interface V4ReadingVM {
         relocatedAnglesDeg: Record<"ASC"|"IC"|"DSC"|"MC", number> | null;
         natalCuspsDeg: number[];
         relocatedCuspsDeg: number[];
+        /** A3: chart-ruler relocation. PDF p.7 — same Venus chart-ruler,
+         *  new house at the destination. Null when the relocated ASC
+         *  sign or its traditional ruler can't be resolved. */
+        chartRuler: V4ChartRuler | null;
     };
+    /** A2: natal planets at the 8 sensitive degrees (0° cardinal + 15°
+     *  fixed). Public-visibility signal. Always present (may be empty). */
+    worldPoints: V4WorldPointsView;
+    /** A4: eclipses in window that hit BOTH the destination's geo-angle
+     *  AND a natal planet. Always present (may be empty). */
+    eclipses: V4EclipsesView;
+    /** A5: progressed-Sun / progressed-Moon longitude bands. Null when
+     *  birth date isn't available (e.g. cached readings missing it). */
+    progressions: V4ProgressionsView | null;
 }
 
 // ─── Constants and dictionaries ──────────────────────────────────────
@@ -1235,6 +1339,7 @@ const GEODETIC_SIGN_FLAVOR: Record<string, string> = {
  *  and falls back gracefully when the band is missing. */
 function deriveGeodetic(reading: any): {
     sign: string; longitudeRange: string; flavor: string; note: string;
+    activeTransits: V4GeoTransit[];
 } | null {
     const band = reading?.geodeticBand;
     if (!band || !band.sign) return null;
@@ -1244,7 +1349,42 @@ function deriveGeodetic(reading: any): {
     const aiNote = reading?.teacherReading?.chrome?.step4GeodeticNote;
     const note = aiNote
         || `Every visitor to this longitude lands in ${sign}-flavored land — ${flavor}. This is a property of the place itself, not your chart.`;
-    return { sign, longitudeRange, flavor, note };
+    const activeTransits = normalizeActiveGeoTransits(reading?.activeGeoTransits);
+    return { sign, longitudeRange, flavor, note, activeTransits };
+}
+
+/** Coerce the persisted activeGeoTransits payload into V4GeoTransit shape.
+ *  Tolerates older readings that predate this field by returning []. */
+function normalizeActiveGeoTransits(raw: unknown): V4GeoTransit[] {
+    if (!Array.isArray(raw)) return [];
+    const ANGLES = new Set(["ASC", "MC", "DSC", "IC"] as const);
+    const DIRECTIONS = new Set(["benefic", "malefic", "luminary", "neutral"] as const);
+    const out: V4GeoTransit[] = [];
+    for (const e of raw) {
+        if (!e || typeof e !== "object") continue;
+        const angle = String((e as any).angle ?? "").toUpperCase();
+        const direction = String((e as any).direction ?? "").toLowerCase();
+        if (!ANGLES.has(angle as any) || !DIRECTIONS.has(direction as any)) continue;
+        const planet = String((e as any).planet ?? "");
+        const house = Number((e as any).house);
+        const orb = Number((e as any).orb);
+        const severity = Number((e as any).severity);
+        if (!planet || !Number.isFinite(house) || !Number.isFinite(orb) || !Number.isFinite(severity)) continue;
+        const natalContactRaw = (e as any).natalContact;
+        const natalOrbRaw = (e as any).natalOrb;
+        out.push({
+            planet,
+            angle: angle as V4GeoTransit["angle"],
+            house,
+            orb,
+            severity,
+            direction: direction as V4GeoTransit["direction"],
+            personalActivation: Boolean((e as any).personalActivation),
+            ...(typeof natalContactRaw === "string" ? { natalContact: natalContactRaw } : {}),
+            ...(Number.isFinite(natalOrbRaw) ? { natalOrb: Number(natalOrbRaw) } : {}),
+        });
+    }
+    return out;
 }
 
 /** Deterministic §04 takeaway used until the AI fills in `step4Takeaway`.
@@ -1625,6 +1765,9 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
             step4Takeaway: reading?.teacherReading?.chrome?.step4Takeaway
                 || defaultStep4Takeaway(reading, city, goalIds),
             step4GeodeticNote: reading?.teacherReading?.chrome?.step4GeodeticNote || "",
+            step4GeodeticBridge: reading?.teacherReading?.chrome?.step4GeodeticBridge || "",
+            step4GeodeticMethod: reading?.teacherReading?.chrome?.step4GeodeticMethod
+                || "We only check four points in your chart in this view: your career point (MC), home point (IC), self point (ASC), and partner point (DSC). The other eight house points do not get a signal here. A natal planet only counts if it sits within five degrees of one of these four. The closer it sits, the stronger it feels. Gentle planets like Venus and Jupiter feel easy. Rough ones like Mars and Saturn feel heavy. The Sun and Moon make things stand out.",
             monthChartCallout: reading?.teacherReading?.chrome?.monthChartCallout
                 || `The blue lines are supportive angles between the sky this month and your chart. The coral lines are friction. Hover any dot to learn what it is.`,
             step7Intro: reading?.teacherReading?.chrome?.step7Intro
@@ -1662,8 +1805,128 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
             relocatedAnglesDeg: getAngleLons(reading),
             natalCuspsDeg: deriveNatalCusps(reading),
             relocatedCuspsDeg: Array.isArray(reading?.relocatedCusps) && reading.relocatedCusps.length === 12 ? reading.relocatedCusps : [],
+            chartRuler: deriveChartRuler(reading),
         },
+        worldPoints: deriveWorldPoints(reading),
+        eclipses: deriveEclipses(reading),
+        progressions: deriveProgressions(reading),
     };
+}
+
+/** A5: coerce the persisted progressedBands payload into V4ProgressionsView. */
+function deriveProgressions(reading: any): V4ProgressionsView | null {
+    const raw = reading?.progressedBands;
+    if (!raw || typeof raw !== "object") return null;
+    const progressedDateUtc = String(raw.progressedDateUtc ?? "");
+    const yearsElapsed = Number(raw.yearsElapsed);
+    const aggregate = Number(raw.aggregate);
+    if (!progressedDateUtc || !Number.isFinite(yearsElapsed) || !Number.isFinite(aggregate)) return null;
+    const PLANETS = new Set(["Sun", "Moon"] as const);
+    const bands: V4ProgressedBand[] = [];
+    if (Array.isArray(raw.bands)) {
+        for (const e of raw.bands) {
+            if (!e || typeof e !== "object") continue;
+            const planet = String((e as any).planet ?? "");
+            if (!PLANETS.has(planet as any)) continue;
+            const longitude = Number((e as any).longitude);
+            const sign = String((e as any).sign ?? "");
+            const longitudeRange = String((e as any).longitudeRange ?? "");
+            if (!Number.isFinite(longitude) || !sign || !longitudeRange) continue;
+            bands.push({
+                planet: planet as V4ProgressedBand["planet"],
+                longitude, sign, longitudeRange,
+                destinationInBand: Boolean((e as any).destinationInBand),
+            });
+        }
+    }
+    return { progressedDateUtc, yearsElapsed, aggregate, bands };
+}
+
+/** A4: coerce the persisted personalEclipses payload into V4EclipsesView. */
+function deriveEclipses(reading: any): V4EclipsesView {
+    const raw = reading?.personalEclipses;
+    if (!raw || typeof raw !== "object") return { aggregate: 0, hits: [] };
+    const aggregate = Number(raw.aggregate);
+    const safeAggregate = Number.isFinite(aggregate) ? aggregate : 0;
+    if (!Array.isArray(raw.hits)) return { aggregate: safeAggregate, hits: [] };
+    const ANGLES = new Set(["geoMC", "geoIC", "geoASC", "geoDSC"] as const);
+    const KINDS = new Set(["solar", "lunar"] as const);
+    const DIRECTIONS = new Set(["luminary", "benefic", "malefic", "neutral"] as const);
+    const hits: V4EclipseHit[] = [];
+    for (const e of raw.hits) {
+        if (!e || typeof e !== "object") continue;
+        const kind = String((e as any).kind ?? "").toLowerCase();
+        const angle = String((e as any).activatedAngle ?? "");
+        const direction = String((e as any).direction ?? "").toLowerCase();
+        if (!KINDS.has(kind as any) || !ANGLES.has(angle as any) || !DIRECTIONS.has(direction as any)) continue;
+        const dateUtc = String((e as any).dateUtc ?? "");
+        const sign = String((e as any).sign ?? "");
+        const natalContact = String((e as any).natalContact ?? "");
+        const degree = Number((e as any).degree);
+        const daysFromTarget = Number((e as any).daysFromTarget);
+        const angleOrb = Number((e as any).angleOrb);
+        const natalOrb = Number((e as any).natalOrb);
+        const severity = Number((e as any).severity);
+        if (!dateUtc || !natalContact || ![degree, daysFromTarget, angleOrb, natalOrb, severity].every(Number.isFinite)) continue;
+        hits.push({
+            kind: kind as V4EclipseHit["kind"],
+            dateUtc, degree, sign, daysFromTarget,
+            activatedAngle: angle as V4EclipseHit["activatedAngle"],
+            angleOrb, natalContact, natalOrb,
+            direction: direction as V4EclipseHit["direction"],
+            severity,
+        });
+    }
+    return { aggregate: safeAggregate, hits };
+}
+
+/** A3: coerce the persisted chartRuler payload into V4ChartRuler. */
+function deriveChartRuler(reading: any): V4ChartRuler | null {
+    const raw = reading?.chartRuler;
+    if (!raw || typeof raw !== "object") return null;
+    const relocatedAscSign = String(raw.relocatedAscSign ?? "");
+    const ruler = String(raw.ruler ?? "");
+    if (!relocatedAscSign || !ruler) return null;
+    const rulerNatalHouse = Number(raw.rulerNatalHouse);
+    const rulerRelocatedHouse = Number(raw.rulerRelocatedHouse);
+    const rulerRelocatedHouseSign = typeof raw.rulerRelocatedHouseSign === "string"
+        ? raw.rulerRelocatedHouseSign : undefined;
+    return {
+        relocatedAscSign,
+        ruler,
+        rulerAngular: Boolean(raw.rulerAngular),
+        ...(Number.isFinite(rulerNatalHouse) ? { rulerNatalHouse } : {}),
+        ...(Number.isFinite(rulerRelocatedHouse) ? { rulerRelocatedHouse } : {}),
+        ...(rulerRelocatedHouseSign ? { rulerRelocatedHouseSign } : {}),
+    };
+}
+
+/** A2: coerce the persisted natalWorldPoints payload into V4WorldPointsView.
+ *  Always returns an object — empty `hits` when nothing's in orb. */
+function deriveWorldPoints(reading: any): V4WorldPointsView {
+    const raw = reading?.natalWorldPoints;
+    if (!raw || typeof raw !== "object") return { aggregate: 0, hits: [] };
+    const aggregate = Number(raw.aggregate);
+    const safeAggregate = Number.isFinite(aggregate) ? aggregate : 0;
+    if (!Array.isArray(raw.hits)) return { aggregate: safeAggregate, hits: [] };
+    const DIRECTIONS = new Set(["luminary", "benefic", "malefic", "neutral"] as const);
+    const hits: V4WorldPointHit[] = [];
+    for (const e of raw.hits) {
+        if (!e || typeof e !== "object") continue;
+        const direction = String((e as any).direction ?? "").toLowerCase();
+        if (!DIRECTIONS.has(direction as any)) continue;
+        const planet = String((e as any).planet ?? "");
+        const point = String((e as any).point ?? "");
+        const pointLon = Number((e as any).pointLon);
+        const orb = Number((e as any).orb);
+        const severity = Number((e as any).severity);
+        if (!planet || !point || ![pointLon, orb, severity].every(Number.isFinite)) continue;
+        hits.push({
+            planet, point, pointLon, orb, severity,
+            direction: direction as V4WorldPointHit["direction"],
+        });
+    }
+    return { aggregate: safeAggregate, hits };
 }
 
 function heroBaselineContext(windowScore: number, baseline: number, travelType: V4TravelType): string {
