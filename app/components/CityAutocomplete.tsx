@@ -35,6 +35,9 @@ export default function CityAutocomplete({
     const [selectedIndex, setSelectedIndex] = useState(-1);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    // Suppresses the next fetch after a programmatic value change from handleSelect,
+    // otherwise the value-watching effect re-opens the dropdown right after a pick.
+    const skipNextFetchRef = useRef(false);
 
     // Debounced fetch from the Photon autocomplete endpoint
     const fetchSuggestions = useCallback(async (query: string) => {
@@ -59,6 +62,10 @@ export default function CityAutocomplete({
     }, []);
 
     useEffect(() => {
+        if (skipNextFetchRef.current) {
+            skipNextFetchRef.current = false;
+            return;
+        }
         if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => fetchSuggestions(value), 500);
         return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
@@ -76,6 +83,7 @@ export default function CityAutocomplete({
     }, []);
 
     const handleSelect = (s: Suggestion) => {
+        skipNextFetchRef.current = true;
         onChange(s.label);
         setSuggestions([]);
         setOpen(false);

@@ -12,25 +12,34 @@ export default async function NewReadingPage({ searchParams }: { searchParams: P
     const access = user ? await getReadingAccess(user.id) : null;
     const { type } = await searchParams;
     const isWeather = type === "weather";
+    const title = isWeather ? "Sky Weather" : "New Reading";
+    const containerStyle = {
+        maxWidth: "960px",
+        margin: "0 auto",
+        width: "100%",
+        padding: "var(--space-lg) var(--space-md) var(--space-3xl)",
+        display: "flex",
+        flexDirection: "column" as const,
+    };
+
+    if (access && !access.canRead) {
+        return (
+            <>
+                <PageHeader title={title} />
+                <div style={containerStyle}>
+                    <LockedReadingView returnTo={isWeather ? "/reading/new?type=weather" : "/reading/new"} />
+                </div>
+            </>
+        );
+    }
 
     return (
         <>
-            <PageHeader title={isWeather ? "Sky Weather" : "New Reading"} />
-            <div style={{
-                maxWidth: "960px",
-                margin: "0 auto",
-                width: "100%",
-                padding: "var(--space-lg) var(--space-md) var(--space-3xl)",
-                display: "flex",
-                flexDirection: "column",
-            }}>
-                {access && !access.canRead ? (
-                    <LockedReadingView returnTo={isWeather ? "/reading/new?type=weather" : "/reading/new"} />
-                ) : (
-                    <Suspense fallback={null}>
-                        {isWeather ? <WeatherReadingFlow /> : <ReadingFlow />}
-                    </Suspense>
-                )}
+            <PageHeader title={title} />
+            <div style={containerStyle}>
+                <Suspense fallback={null}>
+                    {isWeather ? <WeatherReadingFlow /> : <ReadingFlow />}
+                </Suspense>
             </div>
         </>
     );

@@ -13,7 +13,12 @@ export default async function CouplesPage() {
     return (
       <>
         <PageHeader title="Couples & Family" />
-        <div style={{ padding: "var(--space-lg) var(--space-md) var(--space-3xl)" }}>
+        <div style={{
+          maxWidth: "960px",
+          margin: "0 auto",
+          width: "100%",
+          padding: "var(--space-lg) var(--space-md) var(--space-3xl)",
+        }}>
           <LockedReadingView returnTo="/couples" />
         </div>
       </>

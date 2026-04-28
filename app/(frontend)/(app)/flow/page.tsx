@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ArrowLeft, Sun, Moon, TrendingUp, Loader2 } from "lucide-react";
 import Image from "next/image";
 import ThemeToggle from "@/app/components/ThemeToggle";
+import CityAutocomplete from "@/app/components/CityAutocomplete";
 import { useOnboardingStore } from "@/lib/store/onboardingStore";
 import { Suspense } from "react";
 import { createClient } from '@/lib/supabase/client';
@@ -128,11 +129,13 @@ function FlowPageInner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dob: store.birthDate, time: store.birthTime, birthplace: store.birthCity }),
       });
-      // Optionally run geocoding so the destination screen works faster
-      fetch(`/api/geocode?city=${encodeURIComponent(store.birthCity)}`)
-        .then(r => r.json())
-        .then(geo => { if (geo?.lat) store.setBirthCoords(parseFloat(geo.lat), parseFloat(geo.lon)); })
-        .catch(() => {});
+      // Backstop geocode for users who typed a city without picking a suggestion.
+      if (store.birthLat == null || store.birthLon == null) {
+        fetch(`/api/geocode?city=${encodeURIComponent(store.birthCity)}`)
+          .then(r => r.json())
+          .then(geo => { if (geo?.lat) store.setBirthCoords(parseFloat(geo.lat), parseFloat(geo.lon)); })
+          .catch(() => {});
+      }
     } catch {
       // Allow proceeding even if mock fails
     }
@@ -364,26 +367,40 @@ function FlowPageInner() {
                     </div>
 
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <button onClick={() => store.setBirthTimeKnown(!store.birthTimeKnown)} style={{
-                        width: "32px", height: "18px", borderRadius: "9px", border: "none", cursor: "pointer",
-                        background: store.birthTimeKnown ? "var(--surface-border)" : "var(--color-y2k-blue)",
-                        position: "relative", transition: "all 0.2s ease",
-                      }}>
-                        <div style={{
-                          position: "absolute", top: "2px", left: store.birthTimeKnown ? "2px" : "16px", width: "14px", height: "14px",
-                          borderRadius: "50%", background: "white", transition: "all 0.2s ease",
-                        }} />
-                      </button>
+                      {(() => {
+                        const unknown = !store.birthTimeKnown;
+                        return (
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={unknown}
+                            aria-label="I don't know my birth time"
+                            onClick={() => store.setBirthTimeKnown(!store.birthTimeKnown)}
+                            style={{
+                              width: "32px", height: "18px", borderRadius: "9px", border: "none", cursor: "pointer",
+                              background: unknown ? "var(--color-y2k-blue)" : "var(--surface-border)",
+                              position: "relative", transition: "all 0.2s ease",
+                            }}>
+                            <div style={{
+                              position: "absolute", top: "2px", left: unknown ? "16px" : "2px", width: "14px", height: "14px",
+                              borderRadius: "50%", background: "white", transition: "all 0.2s ease",
+                            }} />
+                          </button>
+                        );
+                      })()}
                       <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-tertiary)", letterSpacing: "0.05em" }}>
                         I don&apos;t know my birth time
                       </span>
                     </div>
 
-                    <div className="input-group">
-                      <label className="input-label">City of birth</label>
-                      <input className="input-field" type="text" placeholder="e.g. Jakarta, Indonesia"
-                        value={store.birthCity} onChange={e => store.setBirthCity(e.target.value)} />
-                    </div>
+                    <CityAutocomplete
+                      id="birth-city"
+                      label="City of birth"
+                      value={store.birthCity}
+                      onChange={(val) => store.setBirthCity(val)}
+                      onSelect={(s) => { store.setBirthCity(s.label); store.setBirthCoords(s.lat, s.lon); }}
+                      placeholder="e.g. Jakarta, Indonesia"
+                    />
 
                     {sunSign && (
                       <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} style={{
@@ -447,9 +464,9 @@ function FlowPageInner() {
 
                     <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1.5rem" }}>
                       {[
-                        { icon: <Sun size={14} />, planet: "Sun", sign: sunSign || "Leo", insight: "You radiate wherever intensity meets purpose." },
-                        { icon: <Moon size={14} />, planet: "Moon", sign: "Scorpio", insight: "Your emotional home is depth — you feel what others miss." },
-                        { icon: <TrendingUp size={14} />, planet: "Rising", sign: "Aries", insight: "The world sees you as bold, direct, unfiltered." },
+                        { icon: <Sun size={14} />, planet: "Sun", sign: sunSign || "Leo", insight: "Your core motivation — what you radiate when you're at your most yourself." },
+                        { icon: <Moon size={14} />, planet: "Moon", sign: "—", insight: "Computed once your full chart is calculated. Reveals your emotional baseline." },
+                        { icon: <TrendingUp size={14} />, planet: "Rising", sign: "—", insight: "Computed from your exact birth time and place. Shapes how the world meets you." },
                       ].map(({ icon, planet, sign, insight }) => (
                         <motion.div key={planet} initial={{ opacity: 0, x: -15 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}
                           style={{
