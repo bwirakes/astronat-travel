@@ -16,6 +16,14 @@ export interface AstrocartoReadingResult {
   goalIds?: string[];
   macroScore: number;
   macroVerdict: string;
+  /** Date+goal-adjusted hero score, persisted at reading-generation time so
+   *  the readings list and the reading detail header agree. Computed by
+   *  app/lib/hero-score.ts:computeHeroScore. Optional only for legacy rows
+   *  that predate the field — runtime falls back to the live-derived value. */
+  heroWindowScore?: number;
+  /** Provenance for `heroWindowScore` (which fallback branch produced it).
+   *  See HeroScoreSource in app/lib/hero-score.ts. */
+  heroScoreSource?: string;
   /** 3-bucket decomposition of macroScore. Sums to macroScore (rounded).
    *  Consumed by the V4 view's §01 score pills so the reader can see where
    *  the points came from. Optional only because cached readings predate it. */

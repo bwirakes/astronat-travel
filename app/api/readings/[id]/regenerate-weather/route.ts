@@ -4,6 +4,7 @@ import { writeWeatherReading, type WeatherReadingInput } from "@/lib/ai/prompts/
 import type { Tone } from "@/lib/ai/schemas";
 import { findTravelWindows, defaultRankLabels } from "@/lib/readings/travel-windows";
 import { computePersonalLens } from "@/lib/readings/personal-lens";
+import { computeHeroScore } from "@/app/lib/hero-score";
 
 /**
  * POST /api/readings/[id]/regenerate-weather
@@ -34,7 +35,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
 
     const { data: reading, error: loadErr } = await supabase
         .from("readings")
-        .select("id, user_id, details")
+        .select("id, user_id, details, reading_date")
         .eq("id", id)
         .eq("user_id", user.id)
         .single();
@@ -194,7 +195,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
                     : `Average ${c.score}/100 across ${c.nightsLabel}.`),
         }));
 
-        const newDetails = {
+        const rebuiltDetails = {
             ...details,
             weatherForecast: {
                 ...wf,
@@ -206,9 +207,16 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
             },
         };
 
+        const hero = computeHeroScore(rebuiltDetails, reading.reading_date);
+        const newDetails = {
+            ...rebuiltDetails,
+            heroWindowScore: hero.score,
+            heroScoreSource: hero.source,
+        };
+
         const { error: updateErr } = await supabase
             .from("readings")
-            .update({ details: newDetails, reading_score: macroScore })
+            .update({ details: newDetails, reading_score: hero.score })
             .eq("id", id)
             .eq("user_id", user.id);
 
