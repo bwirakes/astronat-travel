@@ -34,7 +34,7 @@
 
 .dashboardGrid {
     display: flex;
-    flex-direction: column-reverse;
+    flex-direction: column;
     gap: var(--space-md);
 }
 
@@ -211,31 +211,7 @@
     color: var(--text-secondary);
 }
 
-/* ── Floating Action Button ──────────────────────────────── */
-.fab {
-    position: fixed;
-    bottom: var(--space-xl);
-    right: max(clamp(0.75rem, 2vw, 1.25rem), calc(50vw - 640px + clamp(0.75rem, 2vw, 1.25rem)));
-    margin: 0;
-    z-index: 100;
-    width: max-content;
-    background: var(--color-y2k-blue);
-    color: #fff;
-    border: none;
-    border-radius: var(--radius-full);
-    padding: 0.7rem 1.5rem;
-    font-family: var(--font-body);
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-    transition: background 0.15s var(--ease), transform 0.15s var(--ease);
-}
-
-.fab:hover {
-    background: #0340c5;
-    transform: translateY(-2px);
-}
+/* ── Floating Action Button styles moved to NewReadingFAB.module.css ── */
 
 /* ═══ RESPONSIVE — Tablet (≥768px): 2-column grid ════════ */
 @media (min-width: 768px) {
@@ -245,10 +221,6 @@
 
     .content {
         padding: 0 clamp(1rem, 2vw, 2rem) var(--space-xl);
-    }
-    
-    .fab {
-        right: max(clamp(1rem, 2vw, 2rem), calc(50vw - 640px + clamp(1rem, 2vw, 2rem)));
     }
 
     .dashboardGrid {
