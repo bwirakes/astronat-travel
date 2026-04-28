@@ -41,7 +41,7 @@ export default function ProfilePage() {
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
         
       if (data) {
         setProfile({
@@ -97,7 +97,8 @@ export default function ProfilePage() {
     const supabase = createClient();
     const { error } = await supabase
       .from('profiles')
-      .update({
+      .upsert({
+        id: userId,
         first_name: profile.firstName || null,
         birth_date: profile.birthDate || null,
         birth_time: profile.birthTime || '12:00:00',
@@ -105,8 +106,7 @@ export default function ProfilePage() {
         birth_city: profile.birthCity || null,
         birth_lat: lat,
         birth_lon: lon,
-      })
-      .eq('id', userId);
+      });
       
     setSaving(false);
     if (error) {
