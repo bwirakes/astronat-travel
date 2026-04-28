@@ -1699,13 +1699,24 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
         return buildRangeHighlights(travelDateISO, _tw, _baseline, goalIds);
     })();
 
+    // Pin the hero window's headline score to the persisted `heroWindowScore`
+    // (written by app/lib/hero-score.ts at reading-generation time) so the
+    // detail page and the readings list always show the same number for the
+    // same row. Falls back to the live-derived window score for legacy rows
+    // that predate the persisted field. Alternates and drivers continue to
+    // flow from the live derivation.
+    const persistedHeroScore = typeof reading?.heroWindowScore === "number" && Number.isFinite(reading.heroWindowScore)
+        ? Math.round(reading.heroWindowScore)
+        : null;
+    const heroWindow = (persistedHeroScore !== null && travelWindows[0])
+        ? { ...travelWindows[0], score: persistedHeroScore }
+        : travelWindows[0];
+
     const timingPercentile: number = (() => {
         if (!dailySeries.length) return 50;
-        const userScore = travelWindows[0]?.score ?? _baseline;
+        const userScore = heroWindow?.score ?? _baseline;
         return fieldPercentile(dailySeries, userScore);
     })();
-
-    const heroWindow = travelWindows[0];
 
     const city = (reading?.destination || "—").toString().split(",")[0]?.trim() || "—";
     const region = (reading?.destination || "").toString().split(",").slice(1).join(",").trim();
