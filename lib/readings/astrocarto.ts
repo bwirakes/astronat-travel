@@ -574,12 +574,17 @@ export async function runAstrocarto(
       .maybeSingle();
     partnerProfile = pp;
 
-    if (partnerProfile?.birth_lat != null && partnerProfile.birth_lon != null) {
-      const partnerData = await loadOrComputePartnerNatal(partnerId, partnerProfile);
-      partnerNatalPlanets = partnerData.planets;
-      dtUtcPartner = partnerData.dtUtc;
-      synastryAspects = computeSynastryAspects(natalPlanets, partnerNatalPlanets);
+    if (!partnerProfile) {
+      throw new Error("Partner profile not found.");
     }
+    if (partnerProfile.birth_lat == null || partnerProfile.birth_lon == null) {
+      throw new Error("Partner profile is missing birth coordinates. Please re-add the partner with a city from the dropdown.");
+    }
+
+    const partnerData = await loadOrComputePartnerNatal(partnerId, partnerProfile);
+    partnerNatalPlanets = partnerData.planets;
+    dtUtcPartner = partnerData.dtUtc;
+    synastryAspects = computeSynastryAspects(natalPlanets, partnerNatalPlanets);
   }
 
   // 3. Relocated cusps + ACG lines + transits at destination
@@ -784,7 +789,7 @@ export async function runAstrocarto(
     houses: matrixResult.houses,
     houseSystem: matrixResult.houseSystem,
     planetaryLines: acgLines,
-    transitWindows: rawTransits.slice(0, 10),
+    transitWindows: rawTransits,
     eventScores,
     natalPlanets,
     relocatedCusps,
