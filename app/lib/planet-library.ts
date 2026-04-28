@@ -3,6 +3,8 @@
  * Part 2 of the AstroNat Computation Engine
  */
 
+import { WIDE_SCORING_V1 } from "./scoring-flags";
+
 export const LIFE_EVENTS = [
     "Identity & Self-Discovery",    // 0
     "Wealth & Financial Growth",    // 1
@@ -29,7 +31,7 @@ type Matrix2D = number[][];
  * A 9x12 matrix linearly mapping the 12 relocated House Volumes to 9 specific Life Goals.
  * Rows = Life Events [0-8], Cols = Houses [0-11]
  */
-export const W_EVENTS: Matrix2D = [
+const W_EVENTS_BASE: Matrix2D = [
     // H1    H2    H3    H4    H5    H6    H7    H8    H9   H10   H11   H12
     [ 0.70, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.30, 0.00, 0.00, 0.00 ], // 0: Identity
     [ 0.00, 0.70, 0.00, 0.00, 0.00, 0.00, 0.00, 0.30, 0.00, 0.00, 0.00, 0.00 ], // 1: Wealth
@@ -41,6 +43,23 @@ export const W_EVENTS: Matrix2D = [
     [ 0.00, 0.00, 0.30, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.70, 0.00 ], // 7: Friendship
     [ 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.30, 0.30, 0.00, 0.00, 0.40 ]  // 8: Spirituality
 ];
+
+// WIDE_SCORING_V1: Health and Spirituality gain angular legs so they're not
+// trapped under the cadent-house floor (H6/H12 had a -6 Lilly malus that
+// capped these events near 50, making "Highly Productive" unreachable).
+const W_EVENTS_WIDE_V1: Matrix2D = [
+    [ 0.70, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.30, 0.00, 0.00, 0.00 ], // 0: Identity
+    [ 0.00, 0.70, 0.00, 0.00, 0.00, 0.00, 0.00, 0.30, 0.00, 0.00, 0.00, 0.00 ], // 1: Wealth
+    [ 0.00, 0.00, 0.00, 1.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00 ], // 2: Home
+    [ 0.00, 0.00, 0.00, 0.00, 0.40, 0.00, 0.60, 0.00, 0.00, 0.00, 0.00, 0.00 ], // 3: Romance
+    [ 0.30, 0.00, 0.00, 0.00, 0.00, 0.55, 0.00, 0.00, 0.00, 0.00, 0.00, 0.15 ], // 4: Health (+H1 vitality)
+    [ 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.80, 0.00, 0.00, 0.00, 0.20, 0.00 ], // 5: Partnerships
+    [ 0.00, 0.15, 0.00, 0.00, 0.00, 0.25, 0.00, 0.00, 0.00, 0.60, 0.00, 0.00 ], // 6: Career
+    [ 0.00, 0.00, 0.30, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.70, 0.00 ], // 7: Friendship
+    [ 0.00, 0.00, 0.00, 0.25, 0.00, 0.00, 0.00, 0.20, 0.20, 0.00, 0.00, 0.35 ]  // 8: Spirituality (+H4 roots)
+];
+
+export const W_EVENTS: Matrix2D = WIDE_SCORING_V1 ? W_EVENTS_WIDE_V1 : W_EVENTS_BASE;
 
 /**
  * Layer B: The Generalized Planetary Affinity Matrix (M_affinity)

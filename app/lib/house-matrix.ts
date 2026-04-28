@@ -61,6 +61,7 @@ import {
 } from "./geodetic/harmonic-triggers";
 import type { ProgressionsResult } from "./progressions";
 import type { ComputedPosition } from "@/lib/astro/transits";
+import { WIDE_SCORING_V1 } from "./scoring-flags";
 
 
 
@@ -222,9 +223,11 @@ export interface HouseMatrixResult {
 
 // Gap 3: Lilly additive accidental dignity points (Operator Inflation x3)
 // H1/H10 = +15, H4/H7 = +12, H11 = +9, H5/H9 = +6, H2/H3/H8 = +3, H6/H12 = -6
-const LILLY_ACCIDENTAL: Record<number, number> = {
-    1: 15, 10: 15, 4: 12, 7: 12, 11: 9, 5: 6, 9: 6, 2: 3, 3: 3, 8: 3, 6: -6, 12: -6,
-};
+// WIDE_SCORING_V1: H6/H12 malus reduced to -2 to lift the cadent floor that was
+// making Health (anchored on H6) and Spirituality (anchored on H12) unreachable.
+const LILLY_ACCIDENTAL: Record<number, number> = WIDE_SCORING_V1
+    ? { 1: 15, 10: 15, 4: 12, 7: 12, 11: 9, 5: 6, 9: 6, 2: 3, 3: 3, 8: 3, 6: -2, 12: -2 }
+    : { 1: 15, 10: 15, 4: 12, 7: 12, 11: 9, 5: 6, 9: 6, 2: 3, 3: 3, 8: 3, 6: -6, 12: -6 };
 
 // Hellenistic Planetary Joys
 const PLANETARY_JOYS: Record<string, number> = {
@@ -634,6 +637,12 @@ export function computeHouseMatrix(params: {
     }) ?? undefined;
     const chartRulerHouse = chartRuler?.rulerRelocatedHouse;
     const chartRulerBias = chartRuler?.rulerAngular ? 10 : -5;
+    // WIDE_SCORING_V1: chart ruler also acts as a global lift on every house's
+    // natal bucket (relocated ASC sign change recomputes ruler dignity for all
+    // 12 houses, not just one). This is the dominant place-driven signal.
+    const chartRulerGlobalLift = WIDE_SCORING_V1
+        ? (chartRuler?.rulerAngular ? 6 : -3)
+        : 0;
 
     // ── A4 precompute: personal eclipse hits at the destination ──────────
     // PDF p.4: "Hold off when ... an eclipse is activating that zone,
@@ -796,7 +805,10 @@ export function computeHouseMatrix(params: {
             if (lineHouse !== h) continue;
             acgLine += acgLineRawScore(line);
         }
-        acgLine = Math.max(-35, Math.min(35, acgLine));
+        // WIDE_SCORING_V1: lift the per-house line cap so a planet directly on
+        // the horizon can move the bucket the way astrology says it should.
+        const acgCap = WIDE_SCORING_V1 ? 55 : 35;
+        acgLine = Math.max(-acgCap, Math.min(acgCap, acgLine));
 
         // ── Step 5: Geodetic Grid (P2-A: Sun as luminary) ───────────────────
         let geodetic = 0;
@@ -936,7 +948,7 @@ export function computeHouseMatrix(params: {
         //   Transits (dynamic, time-dep)    30%   ⇒ natal+transits = 55%+30% = 85%
         //   Geodetic (background field)     15%   ⇒ background = 15%
         //
-        const rawNatal     = base + dignity + lotBonus + worldPoints + chartRulerContribution;
+        const rawNatal     = base + dignity + lotBonus + worldPoints + chartRulerContribution + chartRulerGlobalLift;
         const rawOccupants = occupants + natalBridge + retrograde + transitRx + 50;
         const rawTransit   = transitPts + paranPts + eclipsePenalty + 50;
         const rawGeodetic  = acgLine + geodetic + geodeticTransit + progression + 50;
@@ -950,11 +962,19 @@ export function computeHouseMatrix(params: {
         const bucketTransit   = normalizeBucket(rawTransit, 20, 80); // original: 0, 100
         const bucketGeodetic  = normalizeBucket(rawGeodetic, 15, 85); // original: -10, 110
 
+        // WIDE_SCORING_V1: lift geodetic bucket weight 15% -> 22% so place
+        // (ACG lines, geodetic angles) carries more signal. Pull from natal/
+        // transit proportionally to keep total = 1.0.
+        const wNatal     = WIDE_SCORING_V1 ? 0.27 : 0.30;
+        const wOccupants = 0.25;
+        const wTransit   = WIDE_SCORING_V1 ? 0.26 : 0.30;
+        const wGeodetic  = WIDE_SCORING_V1 ? 0.22 : 0.15;
+
         const score = Math.round(
-            (0.30 * bucketNatal)
-          + (0.25 * bucketOccupants)
-          + (0.30 * bucketTransit)
-          + (0.15 * bucketGeodetic)
+            (wNatal * bucketNatal)
+          + (wOccupants * bucketOccupants)
+          + (wTransit * bucketTransit)
+          + (wGeodetic * bucketGeodetic)
         );
 
         houses.push({
@@ -1154,16 +1174,22 @@ export function mapTransitsToMatrix(
 
 /**
  * Computes a global timing penalty based on tense applying hard transits.
+ * WIDE_SCORING_V1: also subtracts a "global lift" from applying soft transits
+ * with benefic planets, so benefic days lift the chart instead of only malefic
+ * days dragging it down. Net result is symmetric around 0; cap ±12.
  */
 export function computeGlobalPenalty(transits: any[]): number {
     let penalty = 0;
+    let lift = 0;
     for (const t of transits) {
         const aspectStr = (t.aspect || t.type || "").toLowerCase();
         const isHardTransit = ["square", "opposition", "□", "☍"].some((a) =>
             aspectStr.includes(a)
         );
-        if (!isHardTransit) continue;
-        
+        const isSoftTransit = ["trine", "sextile", "△", "⚹"].some((a) =>
+            aspectStr.includes(a)
+        );
+
         const applying = t.applying ?? true;
         if (!applying) continue;
 
@@ -1172,15 +1198,27 @@ export function computeGlobalPenalty(transits: any[]): number {
             t.p1 ||
             (t.planets ? t.planets.split(" ")[0] : "")
         ).toLowerCase();
-        
+
         const isMalefic = STRONG_MALEFICS.some((m) => tPlanet.includes(m));
+        const isBenefic = BENEFIC_PLANETS.includes(tPlanet);
         const orb = t.orb ?? 5;
 
-        if (orb <= 1 && isMalefic)      penalty += 14;
-        else if (orb <= 2 && isMalefic) penalty += 10;
-        else if (orb <= 3 && isMalefic) penalty += 6;
-        else if (orb <= 1)              penalty += 8;
-        else if (orb <= 3)              penalty += 4;
+        if (isHardTransit) {
+            if (orb <= 1 && isMalefic)      penalty += 14;
+            else if (orb <= 2 && isMalefic) penalty += 10;
+            else if (orb <= 3 && isMalefic) penalty += 6;
+            else if (orb <= 1)              penalty += 8;
+            else if (orb <= 3)              penalty += 4;
+        } else if (WIDE_SCORING_V1 && isSoftTransit && isBenefic) {
+            // Benefic soft transits lift the chart globally
+            if (orb <= 1)      lift += 10;
+            else if (orb <= 2) lift += 7;
+            else if (orb <= 3) lift += 4;
+        }
+    }
+    if (WIDE_SCORING_V1) {
+        const net = penalty - lift;
+        return Math.max(-12, Math.min(12, net));
     }
     return Math.min(25, penalty);
 }
