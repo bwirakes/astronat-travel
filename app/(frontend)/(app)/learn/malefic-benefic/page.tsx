@@ -4,7 +4,6 @@ import React, { useRef, useState, useEffect } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import Navbar from "@/app/components/Navbar";
 import {
   NatalWheelSVG,
   R,
@@ -13,6 +12,7 @@ import {
 } from "@/app/components/natal/NatalWheelSVG";
 import { AstronatCard } from "@/app/components/ui/astronat-card";
 
+import { PageHeader } from "@/components/app/page-header-context";
 if (typeof window !== "undefined") {
   gsap.registerPlugin(useGSAP, ScrollTrigger);
 }
@@ -183,6 +183,7 @@ export default function MaleficBeneficLearnPage() {
         transition: "background-color 0.6s ease",
       }}
     >
+      <PageHeader backTo="/learn" backLabel="Academy" />
       {/* ═══ FIXED BACKGROUND WHEEL ═══ */}
       <div className="fixed inset-0 z-0 flex items-center justify-center pointer-events-none">
         <div style={{ width: "min(100vh, 820px)", aspectRatio: "1" }}>
@@ -193,25 +194,6 @@ export default function MaleficBeneficLearnPage() {
         </div>
       </div>
 
-      {/* ═══ NAVBAR ═══ */}
-      <div className="fixed top-0 left-0 w-full z-50 pointer-events-auto">
-        <div
-          style={{
-            background: isDark
-              ? "linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.4), transparent)"
-              : "linear-gradient(to bottom, var(--color-eggshell), rgba(248,245,236,0.4), transparent)",
-          }}
-        >
-          <Navbar
-            activeHref="/learn"
-            centerContent={
-              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/40">
-                Learn · Benefic vs Malefic
-              </span>
-            }
-          />
-        </div>
-      </div>
 
       {/* ═══ SCROLLING CONTENT ═══ */}
       <div className="relative z-20">

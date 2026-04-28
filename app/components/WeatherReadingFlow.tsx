@@ -335,11 +335,14 @@ export default function WeatherReadingFlow() {
                                     </p>
                                 )}
 
-                                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1.5rem" }}>
+                                <div style={{ display: "flex", gap: "0.6rem", marginTop: "1.5rem" }}>
+                                    <button className="btn btn-secondary" onClick={back} style={{ padding: "0.75rem 1.25rem" }}>
+                                        <ArrowLeft size={14} /> Back
+                                    </button>
                                     <button
                                         className="btn btn-primary"
                                         disabled={cities.length === 0}
-                                        style={{ padding: "0.75rem 1.5rem", borderRadius: "var(--shape-asymmetric-md)", opacity: cities.length === 0 ? 0.35 : 1 }}
+                                        style={{ flex: 1, justifyContent: "center", padding: "0.75rem", borderRadius: "var(--shape-asymmetric-md)", opacity: cities.length === 0 ? 0.35 : 1 }}
                                         onClick={next}
                                     >
                                         Continue <ArrowRight size={15} />

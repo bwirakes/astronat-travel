@@ -4,9 +4,9 @@ import React, { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import Navbar from "@/app/components/Navbar";
 import { LearnIntroCard, LearnSectionCard, LearnOutroCard } from "@/app/components/learn/ScrollytellingCards";
 
+import { PageHeader } from "@/components/app/page-header-context";
 if (typeof window !== "undefined") {
   gsap.registerPlugin(useGSAP, ScrollTrigger);
 }
@@ -58,8 +58,9 @@ export default function ConstellationsLearnPage() {
 
   return (
     <div ref={containerRef} className="bg-[#050505] text-white font-body min-h-screen overflow-x-hidden">
-      <Navbar activeHref="/learn" />
       
+      
+      <PageHeader backTo="/learn" backLabel="Academy" />
       <section className="h-screen flex items-center justify-center relative">
         <div className="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(circle_at_center,rgba(4,86,251,0.15),transparent)]" />
         <LearnIntroCard 

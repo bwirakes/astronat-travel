@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Download, Search } from "lucide-react";
-import DashboardLayout from "@/app/components/DashboardLayout";
+import { PageHeader } from "@/components/app/page-header-context";
 import type { EventType, PatternEvent } from "@/lib/astro/geodetic-patterns";
 import { BODIES, GEN_END_YEAR, GEN_START_YEAR, SIGNS } from "@/lib/astro/geodetic-patterns";
 import { COUNTRY_CHARTS } from "@/lib/astro/mundane-charts";
@@ -81,15 +81,9 @@ export default function GeodeticPatternsPage() {
   );
 
   return (
-    <DashboardLayout
-      title="Geodetic Patterns"
-      kicker="RESEARCH"
-      backLabel="Geodetic"
-      backHref="/geodetic"
-      paddingTop="var(--space-lg)"
-      maxWidth="1200px"
-    >
-      <div style={lightScope}>
+    <>
+      <PageHeader title="Geodetic Patterns" />
+      <div style={{ ...lightScope, padding: "var(--space-lg) var(--space-md) var(--space-3xl)", width: "100%" }}>
         <p style={intro}>
           22-technique research framework for mapping world events to planetary lines.
           Filter by category, body, or sign — or search — to build a protocol. Data: {GEN_START_YEAR}–{GEN_END_YEAR}.
@@ -173,7 +167,7 @@ export default function GeodeticPatternsPage() {
 
         <UnifiedTable events={visible} />
       </div>
-    </DashboardLayout>
+    </>
   );
 }
 

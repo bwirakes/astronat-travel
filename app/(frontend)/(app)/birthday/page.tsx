@@ -1,6 +1,6 @@
-import DashboardLayout from "@/app/components/DashboardLayout";
 import LockedReadingView from "@/app/components/LockedReadingView";
 import BirthdayClient from "./BirthdayClient";
+import { PageHeader } from "@/components/app/page-header-context";
 import { createClient } from "@/lib/supabase/server";
 import { getReadingAccess } from "@/lib/access";
 
@@ -13,9 +13,12 @@ export default async function BirthdayPage() {
   // users can preview the feature. The real generation API still enforces limits.
   if (access && !access.canRead) {
     return (
-      <DashboardLayout title="Birthday Optimizer" kicker="SOLAR RETURN" backLabel="Home" backHref="/dashboard">
-        <LockedReadingView returnTo="/birthday" />
-      </DashboardLayout>
+      <>
+        <PageHeader title="Birthday Optimizer" />
+        <div style={{ padding: "var(--space-lg) var(--space-md) var(--space-3xl)" }}>
+          <LockedReadingView returnTo="/birthday" />
+        </div>
+      </>
     );
   }
 

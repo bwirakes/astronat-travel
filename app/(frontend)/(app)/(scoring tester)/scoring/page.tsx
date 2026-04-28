@@ -1,16 +1,13 @@
-import DashboardLayout from "@/app/components/DashboardLayout";
+import { PageHeader } from "@/components/app/page-header-context";
 import ScoringTesterClient from "./ScoringTesterClient";
 
 export default function ScoringPage() {
   return (
-    <DashboardLayout
-      title="Scoring Tester"
-      kicker="HOUSE MATRIX"
-      backLabel="Home"
-      backHref="/dashboard"
-      maxWidth="1280px"
-    >
-      <ScoringTesterClient />
-    </DashboardLayout>
+    <>
+      <PageHeader title="Scoring Tester" />
+      <div style={{ width: "100%", padding: "var(--space-lg) var(--space-md) var(--space-3xl)" }}>
+        <ScoringTesterClient />
+      </div>
+    </>
   );
 }

@@ -3,10 +3,10 @@
 import React from "react";
 import Link from "next/link";
 import { AstronatCard } from "@/app/components/ui/astronat-card";
-import Navbar from "@/app/components/Navbar";
 import PlanetIcon from "@/app/components/PlanetIcon";
 import SignIcon from "@/app/components/SignIcon";
 import { Compass, BookOpen, Layers, Zap, Hexagon, Star } from "lucide-react";
+import { PageHeader } from "@/components/app/page-header-context";
 
 const TOPICS = [
   { 
@@ -59,8 +59,7 @@ const TOPICS = [
 export default function LearnIndexPage() {
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text-primary)] font-body pb-32 overflow-x-hidden transition-colors duration-300">
-      <Navbar activeHref="/learn" />
-      
+      <PageHeader title="Academy" />
       {/* Editorial Hero Section */}
       <section className="pt-48 pb-24 px-6 md:px-12 max-w-7xl mx-auto flex flex-col items-center text-center">
         <div className="inline-block font-mono text-[10px] uppercase tracking-[0.4em] px-5 py-2 border border-current rounded-full mb-10 opacity-60">

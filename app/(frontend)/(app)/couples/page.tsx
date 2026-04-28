@@ -1,6 +1,6 @@
-import DashboardLayout from "@/app/components/DashboardLayout";
 import LockedReadingView from "@/app/components/LockedReadingView";
 import CouplesClient from "./CouplesClient";
+import { PageHeader } from "@/components/app/page-header-context";
 import { createClient } from "@/lib/supabase/server";
 import { getReadingAccess } from "@/lib/access";
 
@@ -11,9 +11,17 @@ export default async function CouplesPage() {
 
   if (access && !access.canRead) {
     return (
-      <DashboardLayout title="Couples & Family" kicker="SYNASTRY" backLabel="Home" backHref="/dashboard">
-        <LockedReadingView returnTo="/couples" />
-      </DashboardLayout>
+      <>
+        <PageHeader title="Couples & Family" />
+        <div style={{
+          maxWidth: "960px",
+          margin: "0 auto",
+          width: "100%",
+          padding: "var(--space-lg) var(--space-md) var(--space-3xl)",
+        }}>
+          <LockedReadingView returnTo="/couples" />
+        </div>
+      </>
     );
   }
 

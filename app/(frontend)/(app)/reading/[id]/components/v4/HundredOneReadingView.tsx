@@ -3,9 +3,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import AppNavbar from "@/app/components/AppNavbar";
-import { BackButton } from "@/components/app/back-button";
 import UpsellCelebrationCard from "@/app/components/UpsellCelebrationCard";
+import { PageHeader } from "@/components/app/page-header-context";
 import { type NatalPlanet } from "@/app/components/NatalMockupWheel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
 import { toV4ViewModel } from "@/app/lib/reading-viewmodel";
@@ -22,6 +21,13 @@ const FONT_PRIMARY = "var(--font-primary, serif)";
 const FONT_BODY = "var(--font-body, system-ui)";
 const FONT_MONO = "var(--font-mono, monospace)";
 
+const VERDICT_COLORS: Record<string, string> = {
+    tough: "var(--color-spiced-life)",
+    mixed: "var(--gold)",
+    solid: "var(--sage)",
+    peak: "var(--sage)",
+};
+
 const MAP_PLANET_NAMES = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"] as const;
 
 function useIsDark(): boolean {
@@ -36,21 +42,30 @@ function useIsDark(): boolean {
     return isDark;
 }
 
-function relocatedWheelFromVm(vm: ReturnType<typeof toV4ViewModel>): { cusps: number[]; planets: NatalPlanet[] } | null {
-    const cusps = vm.relocated.relocatedCuspsDeg;
+function wheelFromVm(
+    vm: ReturnType<typeof toV4ViewModel>,
+    mode: "natal" | "relocated",
+): { cusps: number[]; planets: NatalPlanet[] } | null {
+    const cusps = mode === "relocated" ? vm.relocated.relocatedCuspsDeg : vm.relocated.natalCuspsDeg;
     if (!Array.isArray(cusps) || cusps.length !== 12 || !cusps.every((c) => typeof c === "number" && Number.isFinite(c))) {
         return null;
     }
-    const planets: NatalPlanet[] = vm.chart.natal.map((cp) => ({
-        planet: cp.p,
-        longitude: cp.deg,
-        sign: cp.sign,
-        degree: cp.degree,
-        house: cp.relocatedHouse ?? cp.natalHouse,
-        implication: cp.relocatedHouse
+    const planets: NatalPlanet[] = vm.chart.natal.map((cp) => {
+        const house = mode === "relocated"
+            ? (cp.relocatedHouse ?? cp.natalHouse)
+            : (cp.natalHouse ?? cp.relocatedHouse);
+        const implication = mode === "relocated" && cp.relocatedHouse
             ? `House ${cp.relocatedHouse} here · ${cp.plain}`
-            : cp.plain,
-    }));
+            : cp.plain;
+        return {
+            planet: cp.p,
+            longitude: cp.deg,
+            sign: cp.sign,
+            degree: cp.degree,
+            house,
+            implication,
+        };
+    });
     return { cusps, planets };
 }
 
@@ -143,7 +158,8 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
     const isDark = useIsDark();
     const panelsRef = useRef<HTMLDivElement>(null);
     const [activeTab, setActiveTab] = useState<ReadingTabId>(vm.tabs.definitions[0]?.id ?? "overview");
-    const relocatedWheel = useMemo(() => relocatedWheelFromVm(vm), [vm]);
+    const relocatedWheel = useMemo(() => wheelFromVm(vm, "relocated"), [vm]);
+    const natalWheel = useMemo(() => wheelFromVm(vm, "natal"), [vm]);
     const relocatedAcgLines = useMemo(() => {
         // page.tsx normalizes userPlanetaryLines to []; pick the first non-empty source.
         const candidates = [
@@ -183,7 +199,11 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
 
     return (
         <>
-            <AppNavbar />
+            <PageHeader
+                title={String(reading?.destination || "Reading").split(",")[0]}
+                backTo="/readings"
+                backLabel="All readings"
+            />
             <div
                 className="min-h-screen w-full max-w-full overflow-x-clip"
                 style={{
@@ -192,15 +212,73 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                     fontFamily: FONT_BODY,
                 }}
             >
-                <div
-                    className="pt-4 mx-auto"
-                    style={{
-                        padding: "16px clamp(16px, 4vw, 32px) 0",
-                        maxWidth: "1200px",
-                    }}
-                >
-                    <BackButton />
-                </div>
+                {(() => {
+                    const verdictColor = VERDICT_COLORS[vm.hero.verdict.band] ?? "var(--text-secondary)";
+                    const score = vm.hero.bestWindow?.score ?? vm.hero.baselineScore;
+                    const dates = vm.hero.bestWindow?.dates ?? "—";
+                    return (
+                        <div
+                            className="mx-auto"
+                            style={{ maxWidth: "1200px", padding: "0 clamp(16px, 4vw, 32px)" }}
+                        >
+                            <section
+                                className="flex flex-wrap items-end justify-between gap-x-[clamp(16px,2.4vw,28px)] gap-y-[14px] pt-2 pb-[clamp(16px,2vw,22px)] border-b"
+                                style={{ borderColor: "var(--surface-border)" }}
+                            >
+                                <div className="flex flex-col gap-[6px] min-w-0">
+                                    <span
+                                        className="leading-[0.95] tracking-[-0.02em]"
+                                        style={{
+                                            fontFamily: FONT_PRIMARY,
+                                            fontSize: "clamp(40px, 5.5vw, 72px)",
+                                            color: "var(--text-primary)",
+                                        }}
+                                    >
+                                        {vm.location.city}
+                                    </span>
+                                    <span
+                                        className="text-[12px] tracking-[0.18em] uppercase"
+                                        style={{ fontFamily: FONT_MONO, color: "var(--text-secondary)" }}
+                                    >
+                                        {vm.travelType === "relocation" && vm.travelDateISO
+                                            ? `Moving · ${dates}`
+                                            : dates}
+                                    </span>
+                                </div>
+                                <div className="flex flex-col items-end gap-[10px]">
+                                    <span className="flex items-baseline gap-1.5" style={{ fontFamily: FONT_PRIMARY }}>
+                                        <span
+                                            className="leading-none"
+                                            style={{
+                                                fontSize: "clamp(44px, 5.5vw, 72px)",
+                                                color: "var(--color-spiced-life)",
+                                            }}
+                                        >
+                                            {score}
+                                        </span>
+                                        <span
+                                            className="text-[13px]"
+                                            style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}
+                                        >
+                                            /100
+                                        </span>
+                                    </span>
+                                    <span
+                                        className="inline-flex items-center px-[12px] py-[5px] rounded-full border text-[10px] tracking-[0.2em] uppercase font-medium"
+                                        style={{
+                                            color: verdictColor,
+                                            borderColor: verdictColor,
+                                            background: `color-mix(in oklab, ${verdictColor} 6%, transparent)`,
+                                            fontFamily: FONT_MONO,
+                                        }}
+                                    >
+                                        {vm.hero.verdict.label}
+                                    </span>
+                                </div>
+                            </section>
+                        </div>
+                    );
+                })()}
 
                 <section
                     className="pt-[10px] pb-12 border-t"
@@ -284,11 +362,11 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                                         </TabsContent>
 
                                         <TabsContent value="what-shifts" className="mt-0 outline-none data-[state=inactive]:hidden">
-                                            <WhatShiftsTab vm={vm} isDark={isDark} relocatedWheel={relocatedWheel} />
+                                            <WhatShiftsTab vm={vm} isDark={isDark} relocatedWheel={relocatedWheel} natalWheel={natalWheel} />
                                         </TabsContent>
 
                                         <TabsContent value="timing" className="mt-0 outline-none data-[state=inactive]:hidden">
-                                            <TimingTab vm={vm} narrativeLoading={narrativeLoading} />
+                                            <TimingTab vm={vm} />
                                         </TabsContent>
                                     </main>
 
