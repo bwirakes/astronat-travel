@@ -4,6 +4,7 @@ import { getReadingAccess } from "@/lib/access";
 import { runAstrocarto } from "@/lib/readings/astrocarto";
 import { runGeodeticWeather } from "@/lib/readings/geodetic-weather";
 import { persistReading, logSearch } from "@/lib/readings/persist";
+import { computeHeroScore } from "@/app/lib/hero-score";
 
 /**
  * /api/readings/generate — thin dispatcher.
@@ -53,13 +54,14 @@ export async function POST(req: Request) {
         supabase,
         origin: new URL(req.url).origin,
       });
+      const hero = computeHeroScore(result as any, startDate);
       const { readingId } = await persistReading({
         supabase,
         userId: user.id,
         category: "mundane",
         readingDate: startDate,
-        readingScore: macroScore,
-        details: result,
+        readingScore: hero.score,
+        details: { ...result, heroWindowScore: hero.score, heroScoreSource: hero.source },
       });
       return NextResponse.json({ success: true, readingId });
     }
@@ -85,14 +87,16 @@ export async function POST(req: Request) {
       supabase,
     });
 
+    const readingDate = travelDate || new Date().toISOString();
+    const hero = computeHeroScore(result as any, readingDate);
     const { readingId } = await persistReading({
       supabase,
       userId: user.id,
       partnerId,
       category: readingCategory ?? "astrocartography",
-      readingDate: travelDate || new Date().toISOString(),
-      readingScore: result.macroScore,
-      details: result,
+      readingDate,
+      readingScore: hero.score,
+      details: { ...result, heroWindowScore: hero.score, heroScoreSource: hero.source },
     });
 
     // Non-blocking: log to searches table for analytics
