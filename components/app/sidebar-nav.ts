@@ -26,7 +26,7 @@ export const PRIMARY_NAV: SidebarItem[] = [
   { href: "/chart", label: "My Chart", icon: Compass },
   { href: "/couples", label: "Couples", icon: Heart },
   { href: "/mundane", label: "World Charts", icon: Globe2, matchPrefix: "/mundane" },
-  { href: "/reading/new?type=weather", label: "Sky Weather", icon: Sun, matchPrefix: "/reading" },
+  { href: "/reading/new?type=weather", label: "Sky Weather", icon: Sun, matchPrefix: "/reading/new" },
   { href: "/readings", label: "Readings", icon: Sparkles },
   { href: "/learn", label: "Learn", icon: BookOpen, matchPrefix: "/learn" },
 ];
