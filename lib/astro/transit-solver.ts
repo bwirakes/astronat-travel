@@ -21,8 +21,11 @@ const SAMPLE_INTERVAL_DAYS = 7;
 /** Max orb to include a transit hit (degrees). */
 const MAX_ORB = 3.0;
 
-/** Max transit hits to return — prevents flooding the house matrix. */
-const MAX_RESULTS = 50;
+/** Max transit hits to return.
+ *  Sized for the V4 Timing tab: anchor-7 → anchor+90 day Gantt needs ~14 weeks
+ *  of weekly samples × ~10 hits/week ≈ 140 hits. 200 gives headroom and still
+ *  keeps the persisted reading payload small. */
+const MAX_RESULTS = 200;
 
 // ── In-process cache ─────────────────────────────────────────────────────────
 // Each reading fires ~52 SwissEph batches (7-day steps × 360-day window).
@@ -121,17 +124,36 @@ export async function solve12MonthTransits(
     current = new Date(current.getTime() + SAMPLE_INTERVAL_DAYS * 86_400_000);
   }
 
-  // Sort: closest to the reference date first (so "top" hits reflect the user's
-  // travel window, not whatever happened nearest the start of the 12-month scan),
-  // then tightest orb as a tie-breaker.
+  // Two-pass cap so no single combo eats the budget.
+  //
+  // Pass 1: per-combo cap. Each `(transit_planet, natal_planet, aspect)` combo
+  // is allowed at most PER_COMBO_CAP weekly samples, picked tightest-orb-first.
+  // This stops fast-moving bodies (Moon, Mercury, Venus) — which generate many
+  // hits per week — from crowding out outer-planet transits when sorted globally.
+  //
+  // Pass 2: global sort by proximity to the reference date so "top N" still
+  // reflects the user's travel window. Tightness is the tie-breaker.
+  const PER_COMBO_CAP = 6;
+  const byCombo = new Map<string, TransitHit[]>();
+  for (const h of results) {
+    const key = `${h.transit_planet}|${h.natal_planet}|${h.aspect}`;
+    if (!byCombo.has(key)) byCombo.set(key, []);
+    byCombo.get(key)!.push(h);
+  }
+  const balanced: TransitHit[] = [];
+  for (const arr of byCombo.values()) {
+    arr.sort((a, b) => a.orb - b.orb);
+    for (const h of arr.slice(0, PER_COMBO_CAP)) balanced.push(h);
+  }
+
   const refTime = referenceDate.getTime();
-  results.sort((a, b) => {
+  balanced.sort((a, b) => {
     const da = Math.abs(new Date(a.date).getTime() - refTime);
     const db = Math.abs(new Date(b.date).getTime() - refTime);
     return da !== db ? da - db : a.orb - b.orb;
   });
 
-  const hits = results.slice(0, MAX_RESULTS);
+  const hits = balanced.slice(0, MAX_RESULTS);
 
   if (_transitCache.size >= _CACHE_MAX) {
     const oldest = _transitCache.keys().next().value;
