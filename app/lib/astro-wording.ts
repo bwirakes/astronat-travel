@@ -59,7 +59,7 @@ export const getOrdinal = (n: number): string => {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 };
 
-const PLANET_EXPRESSION_NOUNS: Record<string, string> = {
+export const PLANET_EXPRESSION_NOUNS: Record<string, string> = {
   "Sun": "identity",
   "Moon": "emotional life",
   "Mercury": "voice and thinking",

@@ -10,7 +10,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { houseFromLongitude, signFromLongitude } from "./geodetic";
 import { acgLineRawScore } from "./house-matrix";
-import { buildScoredWindows, buildDailySeries, type DailyScore } from "./window-scoring";
+import { buildScoredWindows, buildDailySeries, buildRangeHighlights, solveTransitSpans, fieldPercentile, type DailyScore, type RangeHighlights, type TransitSpan } from "./window-scoring";
 import { READING_TABS, READING_TAB_IDS, deriveScoreNarrative, type EvidencePoint, type ReadingTabDefinition, type ReadingTabId, type ScoreNarrative } from "./reading-tabs";
 
 // ─── Output shape ─────────────────────────────────────────────────────
@@ -272,9 +272,14 @@ export interface V4ReadingVM {
         maximizeAdvice: string | null;
     };
     travelWindows: V4TravelWindow[];   // length 1–3, hero is index 0
-    /** Per-day score series across travelDate − 21d to travelDate + 35d.
-     *  Drives Step 2's DayDots strip — visual context for the windows. */
+    /** Per-day score series across travelDate − 21d to travelDate + 79d (90-day view). */
     dailySeries: DailyScore[];
+    /** Transit spans derived from weekly samples — drives the Gantt in TimingTab. */
+    transitSpans: TransitSpan[];
+    /** Best 2 / worst 2 non-overlapping 5-day windows in the 90-day horizon. */
+    rangeHighlights: RangeHighlights;
+    /** Percentile rank of the user's window score vs all 90 daily scores. */
+    timingPercentile: number;
 
     vibes: V4Vibe[];                    // exactly 3
 
@@ -1277,9 +1282,53 @@ function deriveNatalCusps(reading: any): number[] {
     if (Array.isArray(persisted) && persisted.length === 12 && persisted.every((c: any) => typeof c === "number")) {
         return persisted;
     }
-    const asc = reading?.natalAngles?.ASC;
-    if (typeof asc === "number" && isFinite(asc)) {
-        return Array.from({ length: 12 }, (_, i) => ((asc + i * 30) % 360 + 360) % 360);
+    // Fallback: anchor the four cardinal cusps to the persisted natalAngles
+    // (ASC, IC, DSC, MC) and fill the eight intermediate cusps by equal-spacing
+    // within each quadrant. This keeps the true ASC/IC/DSC/MC visible on the
+    // wheel even when the full 12-Placidus array wasn't persisted (older
+    // readings created before the natal-cusp migration).
+    const angles = reading?.natalAngles;
+    const norm = (x: number) => ((x % 360) + 360) % 360;
+    const arc = (from: number, to: number) => {
+        const d = norm(to - from);
+        return d === 0 ? 360 : d;
+    };
+    if (
+        angles &&
+        ["ASC", "IC", "DSC", "MC"].every((k) => typeof angles[k] === "number" && isFinite(angles[k]))
+    ) {
+        const ASC = norm(angles.ASC);
+        const IC  = norm(angles.IC);
+        const DSC = norm(angles.DSC);
+        const MC  = norm(angles.MC);
+        const cusps = new Array<number>(12);
+        cusps[0]  = ASC;
+        cusps[3]  = IC;
+        cusps[6]  = DSC;
+        cusps[9]  = MC;
+        // Quadrant 1 (ASC → IC): cusps 1, 2
+        const a = arc(ASC, IC);
+        cusps[1] = norm(ASC + a / 3);
+        cusps[2] = norm(ASC + (2 * a) / 3);
+        // Quadrant 2 (IC → DSC): cusps 4, 5
+        const b = arc(IC, DSC);
+        cusps[4] = norm(IC + b / 3);
+        cusps[5] = norm(IC + (2 * b) / 3);
+        // Quadrant 3 (DSC → MC): cusps 7, 8
+        const c = arc(DSC, MC);
+        cusps[7] = norm(DSC + c / 3);
+        cusps[8] = norm(DSC + (2 * c) / 3);
+        // Quadrant 4 (MC → ASC): cusps 10, 11
+        const d = arc(MC, ASC);
+        cusps[10] = norm(MC + d / 3);
+        cusps[11] = norm(MC + (2 * d) / 3);
+        return cusps;
+    }
+    // Last resort: equal-house from ASC alone. ASC stays correct; IC/MC will
+    // be approximate (ASC+90, ASC+270) since we have nothing else to anchor them.
+    const ascOnly = angles?.ASC;
+    if (typeof ascOnly === "number" && isFinite(ascOnly)) {
+        return Array.from({ length: 12 }, (_, i) => norm(ascOnly + i * 30));
     }
     return [];
 }
@@ -1630,15 +1679,26 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
 
     const travelWindows = deriveTravelWindows(reading, travelType, travelDateISO, goalIds);
 
-    // Daily series only meaningful for trips and only when we have transit hits.
+    // Daily series + derived timing structures — only for trips with transit hit data.
+    const _tw = reading?.transitWindows;
+    const _isHitShape = Array.isArray(_tw) && _tw[0] && "transit_planet" in _tw[0];
+    const _baseline = typeof reading?.macroScore === "number" ? reading.macroScore : 70;
+
     const dailySeries: DailyScore[] = (() => {
-        if (travelType === "relocation") return [];
-        const tw = reading?.transitWindows;
-        const isHitShape = Array.isArray(tw) && tw[0] && "transit_planet" in tw[0];
-        if (!isHitShape) return [];
-        const baseline = typeof reading?.macroScore === "number" ? reading.macroScore : 70;
-        return buildDailySeries(travelDateISO, tw, baseline, goalIds);
+        if (travelType === "relocation" || !_isHitShape) return [];
+        return buildDailySeries(travelDateISO, _tw, _baseline, goalIds, 7, 90);
     })();
+
+    const transitSpans: TransitSpan[] = (() => {
+        if (travelType === "relocation" || !_isHitShape || !travelDateISO) return [];
+        return solveTransitSpans(travelDateISO, _tw, 90, 8, goalIds);
+    })();
+
+    const rangeHighlights: RangeHighlights = (() => {
+        if (travelType === "relocation" || !_isHitShape) return { good: [], bad: [] };
+        return buildRangeHighlights(travelDateISO, _tw, _baseline, goalIds);
+    })();
+
     // Pin the hero window's headline score to the persisted `heroWindowScore`
     // (written by app/lib/hero-score.ts at reading-generation time) so the
     // detail page and the readings list always show the same number for the
@@ -1651,6 +1711,12 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
     const heroWindow = (persistedHeroScore !== null && travelWindows[0])
         ? { ...travelWindows[0], score: persistedHeroScore }
         : travelWindows[0];
+
+    const timingPercentile: number = (() => {
+        if (!dailySeries.length) return 50;
+        const userScore = heroWindow?.score ?? _baseline;
+        return fieldPercentile(dailySeries, userScore);
+    })();
 
     const city = (reading?.destination || "—").toString().split(",")[0]?.trim() || "—";
     const region = (reading?.destination || "").toString().split(",").slice(1).join(",").trim();
@@ -1738,6 +1804,9 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
         })(),
         travelWindows,
         dailySeries,
+        transitSpans,
+        rangeHighlights,
+        timingPercentile,
 
         vibes: deriveVibes(reading, goalIds),
 
