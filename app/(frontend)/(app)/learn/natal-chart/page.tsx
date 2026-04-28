@@ -4,10 +4,10 @@ import React, { useRef, useState, useEffect } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import Navbar from "@/app/components/Navbar";
 import { SIGN_PATHS } from "@/app/components/SignIcon";
 import Link from "next/link";
 
+import { PageHeader } from "@/components/app/page-header-context";
 if (typeof window !== "undefined") {
   gsap.registerPlugin(useGSAP, ScrollTrigger);
 }
@@ -253,6 +253,7 @@ function NatalWheelSVG({ isDark }: { isDark: boolean }) {
 
   return (
     <svg viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg" style={{ overflow: "visible" }}>
+      <PageHeader backTo="/learn" backLabel="Academy" />
       <defs>
         {PLANETS.map((p) => (
           <filter key={p.id} id={`glow-${p.id}`} x="-80%" y="-80%" width="260%" height="260%">
@@ -448,10 +449,6 @@ export default function NatalLearnPage() {
           <NatalWheelSVG isDark={isDark} />
         </div>
       </div>
-
-      {/* Navbar — standard, no centerContent */}
-      <Navbar activeHref="/learn" />
-
       {/* Scrolling Content */}
       <div className="relative z-20">
 

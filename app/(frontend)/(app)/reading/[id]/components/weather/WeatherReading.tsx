@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import AppNavbar from "@/app/components/AppNavbar";
+import { PageHeader } from "@/components/app/page-header-context";
 import {
     type GWCityForecast,
     type GWInterpretation,
@@ -150,8 +150,7 @@ export default function WeatherReading({ forecast, readingId }: Props) {
 
     return (
         <div className="min-h-screen w-full bg-[var(--bg)] text-[var(--text-primary)]">
-            <AppNavbar />
-
+            <PageHeader title={cityPrimary} backTo="/readings" backLabel="All readings" />
             <div style={{ padding: "clamp(1rem, 2.5vw, 2rem)" }}>
                 <div
                     style={{

@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import ThemeToggle from "@/app/components/ThemeToggle";
-import DashboardLayout from "@/app/components/DashboardLayout";
+import { PageHeader } from "@/components/app/page-header-context";
 import type { NatalData } from "@/app/components/ChartWheel";
 import NatalMockupWheel, { type NatalPlanet } from "@/app/components/NatalMockupWheel";
 import { TeaserCard } from "./chart-aux-ui";
@@ -733,14 +733,17 @@ export default function ChartPage({
         )}
       </AnimatePresence>
     </>
-  );  return (
-    <DashboardLayout
-      maxWidth="1280px"
-      paddingTop="var(--space-md)"
-      backLabel={isMundane ? "Explore Mundane" : "Home"}
-      backHref={isMundane ? "/mundane" : undefined}
-    >
-       {content}
-    </DashboardLayout>
+  );
+  return (
+    <>
+      <PageHeader
+        title={isMundane ? undefined : "My Chart"}
+        backTo={isMundane ? "/mundane" : undefined}
+        backLabel={isMundane ? "Explore Mundane" : undefined}
+      />
+      <div style={{ width: "100%", padding: "var(--space-md) var(--space-md) var(--space-3xl)" }}>
+        {content}
+      </div>
+    </>
   );
 }

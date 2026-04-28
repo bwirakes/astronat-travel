@@ -5,8 +5,7 @@ import { LogOut, Save, Loader2, CreditCard } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import ThemeToggle from "@/app/components/ThemeToggle";
-import DashboardLayout from "@/app/components/DashboardLayout";
+import { PageHeader } from "@/components/app/page-header-context";
 import CityAutocomplete from "@/app/components/CityAutocomplete";
 
 
@@ -142,8 +141,9 @@ export default function ProfilePage() {
   };
 
   return (
-    <DashboardLayout title="Your Profile" backLabel="Home" backHref="/dashboard">
-      <div style={{ maxWidth: "600px", margin: "0 auto" }}>
+    <>
+      <PageHeader title="Your Profile" />
+      <div style={{ maxWidth: "720px", margin: "0 auto", width: "100%", padding: "var(--space-lg) var(--space-md) var(--space-3xl)" }}>
         <p style={{ fontFamily: "var(--font-body)", color: "var(--text-secondary)", marginBottom: "var(--space-md)" }}>
           Manage your birth data and account settings.
         </p>
@@ -262,6 +262,6 @@ export default function ProfilePage() {
           </section>
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

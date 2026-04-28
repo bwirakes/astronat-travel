@@ -1,15 +1,16 @@
 "use client";
 
 import React from "react";
-import Navbar from "@/app/components/Navbar";
 import { LearnIntroCard, LearnSectionCard, LearnOutroCard } from "@/app/components/learn/ScrollytellingCards";
 import { AstronatCard } from "@/app/components/ui/astronat-card";
 
+import { PageHeader } from "@/components/app/page-header-context";
 export default function ViewingTheStarsPage() {
   return (
     <div className="bg-[#050505] text-white font-body min-h-screen">
-      <Navbar activeHref="/learn" />
       
+      
+      <PageHeader backTo="/learn" backLabel="Academy" />
       {/* Immersive Backdrop section */}
       <section className="h-screen relative flex items-center justify-center overflow-hidden">
         <div 

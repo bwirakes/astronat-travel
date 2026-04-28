@@ -7,8 +7,7 @@ import styles from "./home.module.css";
 import { ScoreRing, getVerdict } from "@/app/components/ScoreRing";
 import { BUCKET_COPY, tierToBucket, type Tier } from "@/app/lib/geodetic-weather-types";
 import { useRouter } from "next/navigation";
-import ThemeToggle from "@/app/components/ThemeToggle";
-import DashboardLayout from "@/app/components/DashboardLayout";
+import { PageHeader } from "@/components/app/page-header-context";
 import { LifeGoalsButton, CouplesButton, MyChartButton, WorldChartsButton, TransitsButton, LearnButton, SkyWeatherButton } from "@/app/components/ExploreButtons";
 import ReadingCreditPill from "@/app/components/ReadingCreditPill";
 import type { ReadingAccess } from "@/lib/access";
@@ -65,8 +64,9 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
     }, { scope: container });
 
     return (
-        <DashboardLayout showBack={false} maxWidth="100%" paddingTop="var(--space-lg)">
-            <div className={styles.page} ref={container}>
+        <>
+            <PageHeader />
+            <div className={styles.page} ref={container} style={{ width: "100%" }}>
 
 
             <div className={styles.content}>
@@ -193,6 +193,6 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
                 + New Reading
             </button>
         </div>
-        </DashboardLayout>
+        </>
     );
 }

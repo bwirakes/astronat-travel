@@ -1,11 +1,11 @@
 "use client";
 
 import React from "react";
-import Navbar from "@/app/components/Navbar";
 import { LearnIntroCard, LearnSectionCard, LearnOutroCard } from "@/app/components/learn/ScrollytellingCards";
 import { AstronatCard } from "@/app/components/ui/astronat-card";
 import SignIcon from "@/app/components/SignIcon";
 
+import { PageHeader } from "@/components/app/page-header-context";
 const SIGNS = [
   { name: "Aries", dates: "Mar 21 — Apr 19", symbol: "♈", mod: "Cardinal Fire", desc: "Aries doesn't ask permission. It moves first and figures out the plan midway. The first sign of the zodiac, it carries the energy of pure beginning — the sprint before strategy, the spark before the fire. Aries people are rarely the ones who hesitate; the gift is momentum, the growth edge is learning that not everything needs to be a fight." },
   { name: "Taurus", dates: "Apr 20 — May 20", symbol: "♉", mod: "Fixed Earth", desc: "Taurus builds slowly and keeps what it builds. Fixed earth: it holds its position the way a mountain holds its shape. This is the sign that understands that the finest things \u2014 food, beauty, trust, security \u2014 are not rushed. The shadow is stubbornness; the gift is loyalty so consistent it becomes a form of love." },
@@ -25,8 +25,9 @@ const SIGNS = [
 export default function ZodiacGlossaryPage() {
   return (
     <div className="bg-[var(--bg)] text-[var(--text-primary)] font-body min-h-screen transition-colors duration-300">
-      <Navbar activeHref="/learn" />
       
+      
+      <PageHeader backTo="/learn" backLabel="Academy" />
       <section className="pt-48 pb-24 px-6 text-center">
         <LearnIntroCard 
           category="Visual Glossary"

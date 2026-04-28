@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { motion } from "framer-motion";
 import { Cake } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import DashboardLayout from "@/app/components/DashboardLayout";
+import { PageHeader } from "@/components/app/page-header-context";
 import { ScoreRing, getVerdict, BAND_CONFIG } from "@/app/components/ScoreRing";
 
 const MOCK_RESULTS = [
@@ -62,14 +62,9 @@ function BirthdayContent() {
   };
 
   return (
-    <DashboardLayout
-      title="Birthday Optimizer"
-      kicker="SOLAR RETURN"
-      backLabel="Home"
-      backHref="/dashboard"
-      paddingTop="var(--space-lg)"
-    >
-      <div style={{ maxWidth: "800px", margin: "0 auto", position: "relative" }}>
+    <>
+      <PageHeader title="Birthday Optimizer" />
+      <div style={{ width: "100%", padding: "var(--space-lg) var(--space-md) var(--space-3xl)", position: "relative" }}>
         {/* Decorative element */}
         <div style={{ position: "absolute", top: "-2rem", right: "-2rem", opacity: 0.04, pointerEvents: "none" }}>
           <Cake size={200} strokeWidth={0.5} />
@@ -134,7 +129,7 @@ function BirthdayContent() {
           })}
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }
 

@@ -6,9 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { MOCK_READING_DETAILS } from "@/lib/astro/mock-readings";
 import NatalMockupWheel from "@/app/components/NatalMockupWheel";
-import { BackButton } from "@/components/app/back-button";
 import UpsellCelebrationCard from "@/app/components/UpsellCelebrationCard";
-import AppNavbar from "@/app/components/AppNavbar";
+import { PageHeader } from "@/components/app/page-header-context";
 import { ScoreRing, getVerdict } from "@/app/components/ScoreRing";
 import { hasV4TeacherReading } from "@/app/lib/reading-viewmodel";
 import WeatherReading from "./components/weather/WeatherReading";
@@ -388,11 +387,14 @@ function SynastryReadingView({
 
   return (
     <div className="min-h-screen w-full max-w-full bg-[var(--bg)] text-[var(--text-primary)] relative font-body overflow-x-hidden box-border">
-      <AppNavbar />
+      <PageHeader
+        title={String(reading?.destination || "Reading").split(",")[0]}
+        backTo="/readings"
+        backLabel="All readings"
+      />
 
       <div className="relative px-4 py-8 md:p-12">
         <div className="relative z-10 max-w-5xl mx-auto flex flex-col gap-10 md:gap-12">
-          <BackButton href="/readings" label="All readings" />
 
           {/* Header — destination + two-score layout side-by-side */}
           <header className="flex flex-col gap-6 border-b border-[var(--surface-border)] pb-8">

@@ -6,8 +6,7 @@ import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Image from "next/image";
 import Link from "next/link";
-import Navbar from "@/app/components/Navbar";
-
+import { PageHeader } from "@/components/app/page-header-context";
 if (typeof window !== "undefined") {
   gsap.registerPlugin(useGSAP, ScrollTrigger);
 }
@@ -180,6 +179,7 @@ export default function AcgLearnPage() {
   return (
     <div ref={wrapperRef} className="relative bg-[var(--color-black)] overflow-hidden">
 
+      <PageHeader backTo="/learn" backLabel="Academy" />
       {/* Fixed Background Map */}
       <div className="fixed inset-0 z-0">
         <Image
@@ -231,10 +231,6 @@ export default function AcgLearnPage() {
           ))}
         </svg>
       </div>
-
-      {/* Navbar — standard */}
-      <Navbar activeHref="/learn" />
-
       {/* Scrollable Content */}
       <div className="relative z-20">
 

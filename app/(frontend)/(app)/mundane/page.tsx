@@ -4,7 +4,7 @@ import { useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import DashboardLayout from "@/app/components/DashboardLayout";
+import { PageHeader } from "@/components/app/page-header-context";
 import { COUNTRY_CHARTS, type CountryChart } from "@/lib/astro/mundane-charts";
 import { MundaneCard } from "@/app/components/MundaneCard";
 
@@ -17,15 +17,9 @@ function MundaneClient() {
   );
 
   return (
-    <DashboardLayout
-      title="Country Charts"
-      kicker="MUNDANE ASTROLOGY"
-      backLabel="Home"
-      backHref="/dashboard"
-      paddingTop="var(--space-lg)"
-      maxWidth="860px"
-    >
-      <div>
+    <>
+      <PageHeader title="Country Charts" />
+      <div style={{ width: "100%", padding: "var(--space-lg) var(--space-md) var(--space-3xl)" }}>
         <p style={{ fontFamily: "var(--font-body)", color: "var(--text-secondary)", fontSize: "0.95rem", maxWidth: '500px', marginBottom: 'var(--space-lg)' }}>
           Explore the birth charts of nations and see how your personal energy resonates with the countries you visit.
         </p>
@@ -71,7 +65,7 @@ function MundaneClient() {
             </motion.div>
         </AnimatePresence>
       </div>
-    </DashboardLayout>
+    </>
   );
 }
 

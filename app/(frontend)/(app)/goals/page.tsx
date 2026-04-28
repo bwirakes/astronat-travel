@@ -1,9 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import GoalsClient from './GoalsClient';
-import Image from 'next/image';
-import ThemeToggle from "@/app/components/ThemeToggle";
-import DashboardLayout from "@/app/components/DashboardLayout";
+import { PageHeader } from "@/components/app/page-header-context";
 
 
 export default async function GoalsPage({ searchParams }: { searchParams: Promise<{ demo?: string }> }) {
@@ -33,15 +31,14 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
   }
 
   return (
-    <DashboardLayout title="What are you seeking?" kicker="PERSONALIZATION" backLabel="Home" backHref="/dashboard">
-      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-        <p style={{ fontFamily: 'var(--font-body)', color: 'var(--text-secondary)', marginBottom: 'var(--space-md)' }}>
+    <>
+      <PageHeader title="What are you seeking?" />
+      <div style={{ width: '100%', padding: 'var(--space-lg) var(--space-md) var(--space-3xl)' }}>
+        <p style={{ fontFamily: 'var(--font-body)', color: 'var(--text-secondary)', marginBottom: 'var(--space-md)', maxWidth: '65ch' }}>
           Your goals shape every reading. Select up to 3.
         </p>
-
-
-      <GoalsClient userId={userId} initialGoals={initialGoals} />
+        <GoalsClient userId={userId} initialGoals={initialGoals} />
       </div>
-    </DashboardLayout>
+    </>
   );
 }

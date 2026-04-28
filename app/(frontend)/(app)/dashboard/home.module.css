@@ -22,7 +22,7 @@
 .content {
     max-width: 1280px;
     margin: 0 auto;
-    padding: 0 clamp(0.75rem, 2vw, 1.25rem) var(--space-2xl);
+    padding: clamp(1.5rem, 4vw, 2.5rem) clamp(0.75rem, 2vw, 1.25rem) var(--space-2xl);
     display: flex;
     flex-direction: column;
     gap: 0;

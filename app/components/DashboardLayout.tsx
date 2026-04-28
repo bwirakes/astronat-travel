@@ -2,7 +2,10 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import AppNavbar from "./AppNavbar";
+// AppNavbar/sidebar chrome is now provided by app/(frontend)/(app)/layout.tsx
+// via <AppShell />. This component remains as a shim for pages that still use
+// its title/kicker/back-button affordances; migrate them to <PageHeader /> and
+// remove this wrapper over time.
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -62,16 +65,7 @@ export default function DashboardLayout({
   };
 
   return (
-    <div style={{ 
-      minHeight: "100vh", 
-      background: "var(--bg)", 
-      color: "var(--text-primary)",
-      display: "flex",
-      flexDirection: "column"
-    }}>
-      <AppNavbar />
-
-      <main className={`container ${paddingTop === "0" ? "home-layout-v2" : ""}`} style={{ 
+    <main className={`container ${paddingTop === "0" ? "home-layout-v2" : ""}`} style={{
         maxWidth, 
         paddingBottom, 
         paddingTop,
@@ -148,6 +142,5 @@ export default function DashboardLayout({
 
         {children}
       </main>
-    </div>
   );
 }

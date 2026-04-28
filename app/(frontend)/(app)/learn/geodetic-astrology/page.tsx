@@ -5,7 +5,6 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Link from "next/link";
-import Navbar from "@/app/components/Navbar";
 import { WORLD_MAP_PATH } from "@/app/components/worldMapPath";
 import { SIGN_PATHS } from "@/app/components/SignIcon";
 
@@ -15,6 +14,7 @@ if (typeof window !== "undefined") {
 
 import { GEODETIC_ZONES, ELEMENT_COLORS, projectLon, projectLat } from "@/app/geodetic/data/geodeticZones";
 
+import { PageHeader } from "@/components/app/page-header-context";
 // ═══════════════════════════════════════════════════════════════
 // WORLD MAP COMPONENT
 // ═══════════════════════════════════════════════════════════════
@@ -29,6 +29,7 @@ function GeodeticWorldMap({ activeZoneId }: { activeZoneId: string | null }) {
       preserveAspectRatio="xMidYMid meet"
       style={{ display: "block" }}
     >
+      <PageHeader backTo="/learn" backLabel="Academy" />
       <defs>
         {GEODETIC_ZONES.map(z => (
           <linearGradient key={z.id} id={`grad-${z.id}`} x1="0" y1="0" x2="0" y2="1">
@@ -192,9 +193,6 @@ export default function GeodeticLearnPage() {
       className="relative"
       style={{ backgroundColor: isDark ? "#000000" : "var(--color-eggshell)", transition: "background-color 0.6s ease" }}
     >
-      {/* Navbar — standard */}
-      <Navbar activeHref="/learn" />
-
       <div className="relative z-10">
 
         {/* INTRO SECTION */}

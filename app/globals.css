@@ -646,3 +646,24 @@ a {
     align-items: start;
   }
 }
+
+/* ── (app) chrome brand logo ─────────────────────────────────
+   Multi-color stacked SVG. Default theme is dark, so we invert
+   the dark-on-transparent glyph to a light variant. Light theme
+   keeps the original brand colors. */
+.app-brand-logo {
+  filter: invert(1) brightness(1.2);
+  display: block;
+  flex-shrink: 0;
+  width: auto;
+}
+[data-theme="light"] .app-brand-logo {
+  filter: none;
+}
+
+/* Floating page-level CTAs hide while the (app) mobile drawer is open
+   so they don't compete with the drawer's own pinned actions. */
+body[data-app-drawer-open="true"] .dashboard-fab,
+body[data-app-drawer-open="true"] .app-hide-when-drawer-open {
+  display: none !important;
+}
