@@ -45,12 +45,15 @@ import {
     houseFromLongitude,
     geodeticMCLongitude,
     geodeticASCLongitude,
+    geodeticHouseCusps,
+    geodeticHouseFromLongitude,
 } from "./geodetic";
 import { computeHouseNumber } from "./house-system";
 import { isOuterPlanet, computeOuterPlanetScore } from "./outer-planet-scoring";
 import { scoreAngleTransits, type AngleName, type AngleTransitContribution } from "./geodetic/angle-transits";
 import { scoreNatalWorldPoints, type NatalWorldPointsResult } from "./geodetic/natal-world-points";
 import { scorePersonalEclipses, type PersonalEclipsesResult, type PersonalEclipseHit } from "./geodetic/personal-eclipses";
+import { scorePersonalLunations, type PersonalLunationsResult, type PersonalLunationHit } from "./geodetic/personal-lunations";
 import {
     computeMidpointTriggers,
     compute45HarmonicHits,
@@ -136,6 +139,10 @@ export interface HouseBreakdown {
      *  geo-angle AND conjuncts a natal planet within ±3°. Routed to the
      *  matching angular house. Per-house cap −10. */
     eclipsePenalty: number;
+    /** A9: ordinary-lunation-on-geodetic-zone modifier. Bidirectional —
+     *  new moons add (+), full moons subtract (−). Same gating as A4
+     *  (zone + natal contact both required). Per-house cap ±6. */
+    lunation: number;
     /** A5: secondary-progressions soft alignment. +5 when the destination
      *  longitude falls in the progressed-Sun band, +2 when it also falls
      *  in the progressed-Moon band. Identical across all 12 houses (the
@@ -217,6 +224,18 @@ export interface HouseMatrixResult {
     /** A8: pairs of late-degree malefic transits in the same modality —
      *  flag for "anything in late {modality} signs is exposed." */
     modalityCohorts?: ModalityCohort[];
+    /** A9: ordinary lunations (new/full moons in ±30d) that hit the
+     *  destination's geo-angle AND a natal planet. Mirrors A4 eclipses
+     *  but with smaller magnitudes — aggregate capped ±10. Empty when
+     *  refDate is not provided. */
+    personalLunations?: PersonalLunationsResult;
+    /** A10: per-natal-planet whole-sign geodetic house assignment for the
+     *  destination. Surfaces "natal Mercury falls in geodetic H10 here" so
+     *  the UI can build a geodetic house wheel. Cusps are also exposed. */
+    geodeticHouseFrame?: {
+        cusps: number[]; // 12 cusps in ecliptic-longitude order
+        natalAssignments: Array<{ planet: string; longitude: number; house: number }>;
+    };
 }
 
 // ── Hoisted Matrix Constants ──────────────────────────────────────────────
@@ -668,8 +687,47 @@ export function computeHouseMatrix(params: {
     // ── A5: global progression bias ──────────────────────────────────────
     // PDF p.5: progressed Sun/Moon entering a new sign shifts the
     // personally-activated longitude band. Already aggregated by the helper
-    // (+5 Sun match, +2 Moon match). Capped here for safety.
-    const progressionAggregate = Math.max(-7, Math.min(7, progressedBands?.aggregate ?? 0));
+    // (+5 Sun match, +2 Moon match). Audit fix: cap raised ±7 → ±15 so
+    // progressions can actually shift narrative weight; was rendering as
+    // ~1% of total score, too quiet to register.
+    const progressionAggregate = Math.max(-15, Math.min(15, progressedBands?.aggregate ?? 0));
+
+    // ── A9: personal lunations (gap-fill from geodetic audit) ────────────
+    // Same gating as eclipses (geo-angle + natal contact both required) but
+    // smaller magnitudes (±5 per hit, ±10 aggregate). Routed to the same
+    // angle→house mapping. Surfaced top-level for narrative consumers.
+    const LUNATION_ANGLE_TO_HOUSE: Record<PersonalLunationHit["activatedAngle"], number> = {
+        geoMC: 10, geoIC: 4, geoASC: 1, geoDSC: 7,
+    };
+    const PER_HOUSE_LUNATION_CAP = 6;
+    const personalLunations = refDate
+        ? scorePersonalLunations({ refDate, destLat, destLon, natalPlanets })
+        : { aggregate: 0, hits: [] as PersonalLunationHit[] };
+    const lunationByHouse = new Map<number, number>();
+    for (const hit of personalLunations.hits) {
+        const targetHouse = LUNATION_ANGLE_TO_HOUSE[hit.activatedAngle];
+        lunationByHouse.set(
+            targetHouse,
+            (lunationByHouse.get(targetHouse) ?? 0) + hit.severity,
+        );
+    }
+
+    // ── A10: geodetic house wheel for the destination ───────────────────
+    // Per-planet whole-sign assignment so consumers can render "natal
+    // Saturn falls in geodetic H10 here." Distinct from the relocated
+    // chart's house assignments (which use the relocated ASC, not geo-ASC).
+    const geodeticCusps = geodeticHouseCusps(destLat, destLon);
+    const geodeticAssignments = natalPlanets
+        .map((p) => {
+            const name = (p.planet ?? (p as any).name ?? "").trim();
+            if (!name) return null;
+            return {
+                planet: name,
+                longitude: p.longitude,
+                house: geodeticHouseFromLongitude(p.longitude, destLat, destLon),
+            };
+        })
+        .filter((x): x is { planet: string; longitude: number; house: number } => x !== null);
 
     // ── A6 + A8: harmonic / midpoint / modality flags (informational) ────
     // No scoring weight in this pass — surfaced for narrative consumers.
@@ -854,6 +912,14 @@ export function computeHouseMatrix(params: {
         const rawEclipsePenalty = eclipsePenaltyByHouse.get(h) ?? 0;
         const eclipsePenalty = Math.max(PER_HOUSE_ECLIPSE_CAP, Math.min(0, Math.round(rawEclipsePenalty)));
 
+        // ── Step 5e2: Personal lunation modifier (A9) ────────────────────────
+        // Same routing as eclipse, but bidirectional (new = positive,
+        // full = negative) and tighter cap. Folded into bucketTransit
+        // alongside eclipsePenalty so the transit bucket carries the
+        // "what's stirring this season" signal.
+        const rawLunation = lunationByHouse.get(h) ?? 0;
+        const lunationContribution = Math.max(-PER_HOUSE_LUNATION_CAP, Math.min(PER_HOUSE_LUNATION_CAP, Math.round(rawLunation)));
+
         // ── Step 5f: Progression bias (A5) ────────────────────────────────────
         // Identical for every house — it's a global background field, not
         // angle-specific. Applied to bucketGeodetic.
@@ -950,7 +1016,7 @@ export function computeHouseMatrix(params: {
         //
         const rawNatal     = base + dignity + lotBonus + worldPoints + chartRulerContribution + chartRulerGlobalLift;
         const rawOccupants = occupants + natalBridge + retrograde + transitRx + 50;
-        const rawTransit   = transitPts + paranPts + eclipsePenalty + 50;
+        const rawTransit   = transitPts + paranPts + eclipsePenalty + lunationContribution + 50;
         const rawGeodetic  = acgLine + geodetic + geodeticTransit + progression + 50;
 
         // Min-Max Normalize Per Bucket (Symmetrically bounded around 50)
@@ -991,6 +1057,7 @@ export function computeHouseMatrix(params: {
                 worldPoints,
                 chartRuler: chartRulerContribution,
                 eclipsePenalty,
+                lunation: lunationContribution,
                 progression,
                 transits: transitPts, retrograde, transitRx, paran: paranPts,
                 natalBridge, lotBonus,
@@ -1065,10 +1132,15 @@ export function computeHouseMatrix(params: {
         natalWorldPoints,
         ...(chartRuler ? { chartRuler } : {}),
         personalEclipses,
+        personalLunations,
         ...(progressedBands ? { progressedBands } : {}),
         midpointTriggers,
         harmonic45Hits,
         modalityCohorts,
+        geodeticHouseFrame: {
+            cusps: geodeticCusps,
+            natalAssignments: geodeticAssignments,
+        },
     };
 
     // Add Lot positions to result if computed

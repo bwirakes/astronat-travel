@@ -18,7 +18,12 @@
  * Values are 0–5 severity rankings (0 = no signal, 5 = dominant signature).
  */
 
-export type RiskChannel = "seismic" | "hydro" | "atmospheric" | "civil" | "fire";
+export type RiskChannel =
+    | "seismic" | "hydro" | "atmospheric" | "civil" | "fire"
+    // Socioeconomic axes (audit gap fill): physical-risk channels don't
+    // capture Sun's political/capital meaning or Jupiter's financial/
+    // religious meaning. Same 0-5 scale, separate semantics.
+    | "political" | "financial" | "religious";
 
 export interface RiskProfile {
     seismic: number;
@@ -26,6 +31,9 @@ export interface RiskProfile {
     atmospheric: number;
     civil: number;
     fire: number;
+    political: number;
+    financial: number;
+    religious: number;
 }
 
 export const ZERO_PROFILE: RiskProfile = {
@@ -34,18 +42,24 @@ export const ZERO_PROFILE: RiskProfile = {
     atmospheric: 0,
     civil: 0,
     fire: 0,
+    political: 0,
+    financial: 0,
+    religious: 0,
 };
 
 const PLANET_BASE: Record<string, Partial<RiskProfile>> = {
     Mercury: { atmospheric: 3, seismic: 2 },
-    Sun: { fire: 2, seismic: 1 },
-    Mars: { fire: 4, civil: 3, seismic: 2 },
-    Jupiter: { hydro: 3, atmospheric: 1 },
+    // Sun: capitals, royal cities, political centres
+    Sun: { fire: 2, seismic: 1, political: 4, financial: 1 },
+    Mars: { fire: 4, civil: 3, seismic: 2, political: 1 },
+    // Jupiter: financial centres, religious sites, embassies
+    Jupiter: { hydro: 3, atmospheric: 1, financial: 4, religious: 3, political: 1 },
     Venus: { hydro: 1 },
-    Saturn: { seismic: 2, atmospheric: 2 },
-    Uranus: { atmospheric: 4, seismic: 3 },
-    Neptune: { hydro: 4, atmospheric: 2 },
-    Pluto: { seismic: 4, civil: 2 },
+    Saturn: { seismic: 2, atmospheric: 2, political: 2 },
+    Uranus: { atmospheric: 4, seismic: 3, political: 2 },
+    Neptune: { hydro: 4, atmospheric: 2, religious: 3 },
+    // Pluto: power capitals, mining regions, nuclear sites
+    Pluto: { seismic: 4, civil: 2, political: 3 },
     Moon: { hydro: 2 },
     NorthNode: { civil: 2, atmospheric: 2 },
     SouthNode: { civil: 2, atmospheric: 2 },
@@ -70,6 +84,9 @@ function add(dst: RiskProfile, src: Partial<RiskProfile>, mult: number): RiskPro
         atmospheric: dst.atmospheric + (src.atmospheric ?? 0) * mult,
         civil: dst.civil + (src.civil ?? 0) * mult,
         fire: dst.fire + (src.fire ?? 0) * mult,
+        political: dst.political + (src.political ?? 0) * mult,
+        financial: dst.financial + (src.financial ?? 0) * mult,
+        religious: dst.religious + (src.religious ?? 0) * mult,
     };
 }
 
@@ -81,6 +98,9 @@ function clamp5(profile: RiskProfile): RiskProfile {
         atmospheric: c(profile.atmospheric),
         civil: c(profile.civil),
         fire: c(profile.fire),
+        political: c(profile.political),
+        financial: c(profile.financial),
+        religious: c(profile.religious),
     };
 }
 
@@ -121,6 +141,9 @@ export function aggregateRisk(events: Array<{ layer: string; planets: string[]; 
             atmospheric: Math.max(agg.atmospheric, p.atmospheric),
             civil: Math.max(agg.civil, p.civil),
             fire: Math.max(agg.fire, p.fire),
+            political: Math.max(agg.political, p.political),
+            financial: Math.max(agg.financial, p.financial),
+            religious: Math.max(agg.religious, p.religious),
         };
     }
     return agg;
@@ -132,6 +155,9 @@ export const RISK_LABELS: Record<RiskChannel, string> = {
     atmospheric: "Atmospheric disruption",
     civil: "Civil / public tension",
     fire: "Fire / heat",
+    political: "Political / capital",
+    financial: "Financial centre",
+    religious: "Religious / spiritual",
 };
 
 export const RISK_GLOSS: Record<RiskChannel, string> = {
@@ -140,4 +166,7 @@ export const RISK_GLOSS: Record<RiskChannel, string> = {
     atmospheric: "Wind shear, magnetic flips, lightning, fronts.",
     civil: "Public tension, configurations on angles, Mars-world-point contacts.",
     fire: "Ignition signatures — wildfire risk, volcanic, explosive.",
+    political: "Capitals, government seats, royal cities, public-affairs nexus.",
+    financial: "Financial centres, trade hubs, embassies, law and commerce.",
+    religious: "Sacred sites, contemplative places, devotional and spiritual zones.",
 };

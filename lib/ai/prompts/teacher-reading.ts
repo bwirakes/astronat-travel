@@ -156,6 +156,8 @@ Use \`editorialEvidence.tabs\` for the exact tab IDs, labels, questions, and ord
 - \`step7AnglesSub\` — One sentence. Place-specific (e.g. "Your four corners all shift sign in {city}.").
 - \`step7HousesSub\` — One sentence. Place-specific.
 - \`step7AspectsSub\` — One sentence. Place-specific.
+- \`whatShiftsLead\` (≤ 35 words). One outcome-first sentence opening the §What-Shifts tab. Lead with the dominant angle move ("In {city}, your career point shifts from Aries to Cancer — work here softens"). No jargon. The engine will fall back to a templated lead if you omit this.
+- \`seasonalTriggerNotes[]\` — optional. One entry per item in \`editorialEvidence.seasonalTriggers\` (lunations, eclipses, progressed bands the engine has flagged for this place + date). Use the keys \`triggerKey\` (\`<kind>-<dateUtc>\` for lunations/eclipses, \`progression-sun\` / \`progression-moon\` for bands) and \`note\` (1–2 sentences, ≤ 32 words). Reference the \`planetMeaning\` archetype string the engine provides; do NOT invent meanings outside that lookup.
 
 **hero.explainer** (≤ 45 words) — For \`travelType: "trip"\`, frame around the date window. For \`travelType: "relocation"\`, frame around the place itself.
 

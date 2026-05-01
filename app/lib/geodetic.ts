@@ -73,3 +73,32 @@ export function houseFromLongitude(planetLon: number, ascLon: number): number {
     if (offset < 0) offset += 360;
     return Math.floor(offset / 30) + 1;
 }
+
+// ─ Geodetic House Wheel ──────────────────────────────────────────────────
+// The geodetic frame has its own 12-house wheel anchored on geo-ASC (the
+// rising point at the destination's longitude treated as local sidereal
+// time). Whole-sign is the v1 default; once we want quadrant-strength
+// scoring, bring in the same Placidus helper the relocated chart uses.
+
+/** 12 geodetic house cusps in ecliptic-longitude order (whole-sign).
+ *  cusps[i] is the cusp of house (i+1). */
+export function geodeticHouseCusps(lat: number, lon: number): number[] {
+    const ascLon = geodeticASCLongitude(lon, lat);
+    const ascSignStart = Math.floor(ascLon / 30) * 30;
+    const cusps: number[] = [];
+    for (let i = 0; i < 12; i++) {
+        cusps.push((ascSignStart + i * 30) % 360);
+    }
+    return cusps;
+}
+
+/** Geodetic house number (1-12) for a natal planet's ecliptic longitude
+ *  at a given destination. Whole-sign convention. */
+export function geodeticHouseFromLongitude(
+    planetLon: number,
+    destLat: number,
+    destLon: number,
+): number {
+    const ascLon = geodeticASCLongitude(destLon, destLat);
+    return houseFromLongitude(planetLon, ascLon);
+}

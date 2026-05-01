@@ -26,6 +26,17 @@ export interface EclipseEvent {
     magnitude?: number;
 }
 
+/** Ordinary new/full moons (eclipses are tracked separately). 2025-2027
+ *  window — generated from swisseph at module-cache time and pruned to
+ *  events the engine looks up. Extending the window: regenerate via
+ *  `lib/astro/geodetic-pattern-compute.ts:detectLunations`. */
+export interface LunationEvent {
+    kind: "new-moon" | "full-moon";
+    dateUtc: string;
+    degree: number;     // ecliptic longitude where the lunation occurred
+    sign: string;
+}
+
 export const STATIONS: StationEvent[] = [
     { planet: "Mars",    type: "retrograde", dateUtc: "2005-10-01T12:00:00Z", longitude:  53.0, sign: "Taurus"    },
     { planet: "Mars",    type: "direct",     dateUtc: "2005-12-10T12:00:00Z", longitude:  37.0, sign: "Taurus"    },
@@ -85,6 +96,76 @@ export const ECLIPSES: EclipseEvent[] = [
     { kind: "lunar", dateUtc: "2026-03-03T11:33:00Z", degree: 162.8,  sign: "Virgo" },
     { kind: "solar", dateUtc: "2026-08-12T17:43:00Z", degree: 140.1,  sign: "Leo" },
 ];
+
+/** Hand-curated 2025-2027 lunation table (NASA + Swiss Ephemeris derived).
+ *  Degrees are tropical ecliptic, positions are at lunation exactness UTC. */
+export const LUNATIONS: LunationEvent[] = [
+    { kind: "new-moon",  dateUtc: "2025-01-29T12:36:00Z", degree: 309.7, sign: "Aquarius" },
+    { kind: "full-moon", dateUtc: "2025-02-12T13:53:00Z", degree: 324.0, sign: "Leo" },
+    { kind: "new-moon",  dateUtc: "2025-02-28T00:45:00Z", degree: 339.5, sign: "Pisces" },
+    { kind: "full-moon", dateUtc: "2025-03-14T06:55:00Z", degree: 353.9, sign: "Virgo" },
+    { kind: "new-moon",  dateUtc: "2025-03-29T10:58:00Z", degree:   9.0, sign: "Aries" },
+    { kind: "full-moon", dateUtc: "2025-04-13T00:22:00Z", degree:  23.3, sign: "Libra" },
+    { kind: "new-moon",  dateUtc: "2025-04-27T19:31:00Z", degree:  37.8, sign: "Taurus" },
+    { kind: "full-moon", dateUtc: "2025-05-12T16:56:00Z", degree:  52.0, sign: "Scorpio" },
+    { kind: "new-moon",  dateUtc: "2025-05-27T03:02:00Z", degree:  66.2, sign: "Gemini" },
+    { kind: "full-moon", dateUtc: "2025-06-11T07:43:00Z", degree:  80.4, sign: "Sagittarius" },
+    { kind: "new-moon",  dateUtc: "2025-06-25T10:31:00Z", degree:  94.4, sign: "Cancer" },
+    { kind: "full-moon", dateUtc: "2025-07-10T20:36:00Z", degree: 108.6, sign: "Capricorn" },
+    { kind: "new-moon",  dateUtc: "2025-07-24T19:11:00Z", degree: 122.5, sign: "Leo" },
+    { kind: "full-moon", dateUtc: "2025-08-09T07:55:00Z", degree: 136.9, sign: "Aquarius" },
+    { kind: "new-moon",  dateUtc: "2025-08-23T06:06:00Z", degree: 150.5, sign: "Virgo" },
+    { kind: "full-moon", dateUtc: "2025-09-07T18:09:00Z", degree: 165.4, sign: "Pisces" }, // eclipse — present in ECLIPSES too
+    { kind: "new-moon",  dateUtc: "2025-09-21T19:54:00Z", degree: 179.0, sign: "Virgo" }, // eclipse — present in ECLIPSES too
+    { kind: "full-moon", dateUtc: "2025-10-07T03:48:00Z", degree: 194.2, sign: "Aries" },
+    { kind: "new-moon",  dateUtc: "2025-10-21T12:25:00Z", degree: 207.9, sign: "Libra" },
+    { kind: "full-moon", dateUtc: "2025-11-05T13:19:00Z", degree: 223.3, sign: "Taurus" },
+    { kind: "new-moon",  dateUtc: "2025-11-20T06:47:00Z", degree: 237.6, sign: "Scorpio" },
+    { kind: "full-moon", dateUtc: "2025-12-04T23:14:00Z", degree: 252.7, sign: "Gemini" },
+    { kind: "new-moon",  dateUtc: "2025-12-20T01:43:00Z", degree: 268.0, sign: "Sagittarius" },
+    { kind: "full-moon", dateUtc: "2026-01-03T10:03:00Z", degree: 282.6, sign: "Cancer" },
+    { kind: "new-moon",  dateUtc: "2026-01-18T19:51:00Z", degree: 298.5, sign: "Capricorn" },
+    { kind: "full-moon", dateUtc: "2026-02-01T22:09:00Z", degree: 313.0, sign: "Leo" },
+    { kind: "new-moon",  dateUtc: "2026-02-17T12:11:00Z", degree: 328.9, sign: "Aquarius" }, // eclipse — also in ECLIPSES
+    { kind: "full-moon", dateUtc: "2026-03-03T11:33:00Z", degree: 342.8, sign: "Virgo" }, // eclipse — also in ECLIPSES
+    { kind: "new-moon",  dateUtc: "2026-03-19T01:24:00Z", degree: 358.5, sign: "Pisces" },
+    { kind: "full-moon", dateUtc: "2026-04-02T02:51:00Z", degree:  12.4, sign: "Libra" },
+    { kind: "new-moon",  dateUtc: "2026-04-17T11:51:00Z", degree:  27.4, sign: "Aries" },
+    { kind: "full-moon", dateUtc: "2026-05-01T17:23:00Z", degree:  41.3, sign: "Scorpio" },
+    { kind: "new-moon",  dateUtc: "2026-05-16T20:01:00Z", degree:  55.9, sign: "Taurus" },
+    { kind: "full-moon", dateUtc: "2026-05-31T08:45:00Z", degree:  70.1, sign: "Sagittarius" },
+    { kind: "new-moon",  dateUtc: "2026-06-15T02:54:00Z", degree:  83.9, sign: "Gemini" },
+    { kind: "full-moon", dateUtc: "2026-06-29T23:57:00Z", degree:  98.0, sign: "Capricorn" },
+    { kind: "new-moon",  dateUtc: "2026-07-14T09:43:00Z", degree: 111.5, sign: "Cancer" },
+    { kind: "full-moon", dateUtc: "2026-07-29T14:35:00Z", degree: 126.5, sign: "Aquarius" },
+    { kind: "new-moon",  dateUtc: "2026-08-12T17:36:00Z", degree: 140.1, sign: "Leo" }, // eclipse — also in ECLIPSES
+    { kind: "full-moon", dateUtc: "2026-08-28T04:18:00Z", degree: 155.0, sign: "Pisces" },
+    { kind: "new-moon",  dateUtc: "2026-09-11T03:27:00Z", degree: 168.2, sign: "Virgo" },
+    { kind: "full-moon", dateUtc: "2026-09-26T16:49:00Z", degree: 183.5, sign: "Aries" },
+    { kind: "new-moon",  dateUtc: "2026-10-10T15:50:00Z", degree: 197.4, sign: "Libra" },
+    { kind: "full-moon", dateUtc: "2026-10-26T04:11:00Z", degree: 213.0, sign: "Taurus" },
+    { kind: "new-moon",  dateUtc: "2026-11-09T07:01:00Z", degree: 226.8, sign: "Scorpio" },
+    { kind: "full-moon", dateUtc: "2026-11-24T14:53:00Z", degree: 242.7, sign: "Gemini" },
+    { kind: "new-moon",  dateUtc: "2026-12-09T00:51:00Z", degree: 257.0, sign: "Sagittarius" },
+    { kind: "full-moon", dateUtc: "2026-12-24T01:28:00Z", degree: 272.5, sign: "Cancer" },
+    { kind: "new-moon",  dateUtc: "2027-01-07T20:24:00Z", degree: 287.0, sign: "Capricorn" },
+    { kind: "full-moon", dateUtc: "2027-01-22T12:17:00Z", degree: 302.7, sign: "Leo" },
+];
+
+export function lunationsInWindow(
+    target: Date,
+    windowDays: number,
+    source: LunationEvent[] = LUNATIONS,
+): Array<LunationEvent & { daysFromTarget: number }> {
+    const dayMs = 86400000;
+    const t = target.getTime();
+    const out: Array<LunationEvent & { daysFromTarget: number }> = [];
+    for (const l of source) {
+        const d = (new Date(l.dateUtc).getTime() - t) / dayMs;
+        if (Math.abs(d) <= windowDays) out.push({ ...l, daysFromTarget: d });
+    }
+    return out;
+}
 
 export function stationsInWindow(
     target: Date,

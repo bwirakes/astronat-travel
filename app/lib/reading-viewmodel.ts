@@ -191,6 +191,44 @@ export interface V4EclipsesView {
     hits: V4EclipseHit[];
 }
 
+/** A9: a single ordinary-lunation hit (new/full moon on a geo-angle that
+ *  also conjuncts a natal planet). Mirrors V4EclipseHit shape. */
+export interface V4LunationHit {
+    kind: "new-moon" | "full-moon";
+    dateUtc: string;
+    degree: number;
+    sign: string;
+    daysFromTarget: number;
+    activatedAngle: "geoMC" | "geoIC" | "geoASC" | "geoDSC";
+    angleOrb: number;
+    natalContact: string;
+    natalOrb: number;
+    direction: "luminary" | "benefic" | "malefic" | "neutral";
+    severity: number;
+}
+
+/** A9: top-level ordinary-lunation summary. */
+export interface V4LunationsView {
+    aggregate: number;
+    hits: V4LunationHit[];
+}
+
+/** A10: per-natal-planet whole-sign geodetic house assignment at the
+ *  destination. Distinct from the relocated chart's house assignments. */
+export interface V4GeodeticHouseAssignment {
+    planet: string;
+    longitude: number;
+    house: number;
+    sign: string;
+}
+
+/** A10: full geodetic house frame at the destination — 12 cusps + per-
+ *  natal-planet assignment. Empty cusps array when not computable. */
+export interface V4GeodeticHouseFrame {
+    cusps: number[];
+    natalAssignments: V4GeodeticHouseAssignment[];
+}
+
 /** A5: a single progressed-planet band. */
 export interface V4ProgressedBand {
     planet: "Sun" | "Moon";
@@ -314,6 +352,10 @@ export interface V4ReadingVM {
         step7AnglesSub: string;
         step7HousesSub: string;
         step7AspectsSub: string;
+        /** Outcome-first opener for the §What-Shifts tab. LLM-authored when
+         *  available; the UI falls back to a templated lead synthesized
+         *  from the dominant angle move. Empty string ⇒ use fallback. */
+        whatShiftsLead: string;
     };
 
     todo: Array<{ title: string; body: string }>;  // 4 items
@@ -360,6 +402,13 @@ export interface V4ReadingVM {
     /** A4: eclipses in window that hit BOTH the destination's geo-angle
      *  AND a natal planet. Always present (may be empty). */
     eclipses: V4EclipsesView;
+    /** A9: ordinary new/full moons in window (±30d) with the same gating
+     *  as eclipses. Smaller magnitudes; primarily narrative copy. */
+    lunations: V4LunationsView;
+    /** A10: 12-house geodetic frame at the destination (whole-sign) +
+     *  per-natal-planet house assignments. Distinct from the relocated
+     *  chart frame (which uses the relocated ASC, not geo-ASC). */
+    geodeticHouseFrame: V4GeodeticHouseFrame;
     /** A5: progressed-Sun / progressed-Moon longitude bands. Null when
      *  birth date isn't available (e.g. cached readings missing it). */
     progressions: V4ProgressionsView | null;
@@ -1858,6 +1907,9 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
                 || "Planets move into new houses.",
             step7AspectsSub: reading?.teacherReading?.chrome?.step7AspectsSub
                 || "New aspects to the angles.",
+            whatShiftsLead: typeof reading?.teacherReading?.chrome?.whatShiftsLead === "string"
+                ? reading.teacherReading.chrome.whatShiftsLead
+                : "",
         },
 
         todo: deriveTodo(heroWindow, city, reading, travelType, goalIds),
@@ -1889,6 +1941,8 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
         },
         worldPoints: deriveWorldPoints(reading),
         eclipses: deriveEclipses(reading),
+        lunations: deriveLunations(reading),
+        geodeticHouseFrame: deriveGeodeticHouseFrame(reading),
         progressions: deriveProgressions(reading),
     };
 }
@@ -1958,6 +2012,68 @@ function deriveEclipses(reading: any): V4EclipsesView {
         });
     }
     return { aggregate: safeAggregate, hits };
+}
+
+/** A9: coerce the persisted personalLunations payload into V4LunationsView. */
+function deriveLunations(reading: any): V4LunationsView {
+    const raw = reading?.personalLunations;
+    if (!raw || typeof raw !== "object") return { aggregate: 0, hits: [] };
+    const aggregate = Number(raw.aggregate);
+    const safeAggregate = Number.isFinite(aggregate) ? aggregate : 0;
+    if (!Array.isArray(raw.hits)) return { aggregate: safeAggregate, hits: [] };
+    const ANGLES = new Set(["geoMC", "geoIC", "geoASC", "geoDSC"] as const);
+    const KINDS = new Set(["new-moon", "full-moon"] as const);
+    const DIRECTIONS = new Set(["luminary", "benefic", "malefic", "neutral"] as const);
+    const hits: V4LunationHit[] = [];
+    for (const e of raw.hits) {
+        if (!e || typeof e !== "object") continue;
+        const kind = String((e as any).kind ?? "").toLowerCase();
+        const angle = String((e as any).activatedAngle ?? "");
+        const direction = String((e as any).direction ?? "").toLowerCase();
+        if (!KINDS.has(kind as any) || !ANGLES.has(angle as any) || !DIRECTIONS.has(direction as any)) continue;
+        const dateUtc = String((e as any).dateUtc ?? "");
+        const sign = String((e as any).sign ?? "");
+        const natalContact = String((e as any).natalContact ?? "");
+        const degree = Number((e as any).degree);
+        const daysFromTarget = Number((e as any).daysFromTarget);
+        const angleOrb = Number((e as any).angleOrb);
+        const natalOrb = Number((e as any).natalOrb);
+        const severity = Number((e as any).severity);
+        if (!dateUtc || !natalContact || ![degree, daysFromTarget, angleOrb, natalOrb, severity].every(Number.isFinite)) continue;
+        hits.push({
+            kind: kind as V4LunationHit["kind"],
+            dateUtc, degree, sign, daysFromTarget,
+            activatedAngle: angle as V4LunationHit["activatedAngle"],
+            angleOrb, natalContact, natalOrb,
+            direction: direction as V4LunationHit["direction"],
+            severity,
+        });
+    }
+    return { aggregate: safeAggregate, hits };
+}
+
+/** A10: coerce the persisted geodeticHouseFrame payload into V4GeodeticHouseFrame. */
+function deriveGeodeticHouseFrame(reading: any): V4GeodeticHouseFrame {
+    const raw = reading?.geodeticHouseFrame;
+    if (!raw || typeof raw !== "object") return { cusps: [], natalAssignments: [] };
+    const cusps = Array.isArray(raw.cusps)
+        ? raw.cusps.map((c: any) => Number(c)).filter((c: number) => Number.isFinite(c))
+        : [];
+    const assigns: V4GeodeticHouseAssignment[] = [];
+    if (Array.isArray(raw.natalAssignments)) {
+        for (const a of raw.natalAssignments) {
+            if (!a || typeof a !== "object") continue;
+            const planet = String((a as any).planet ?? "").trim();
+            const longitude = Number((a as any).longitude);
+            const house = Number((a as any).house);
+            if (!planet || !Number.isFinite(longitude) || !Number.isFinite(house)) continue;
+            assigns.push({
+                planet, longitude, house,
+                sign: signFromLongitude(longitude),
+            });
+        }
+    }
+    return { cusps, natalAssignments: assigns };
 }
 
 /** A3: coerce the persisted chartRuler payload into V4ChartRuler. */
