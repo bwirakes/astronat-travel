@@ -23,10 +23,13 @@ export default function NextTabNav({ activeTab, selectTab, bridgeText }: Props) 
         return null; // Don't show anything on the final tab (timeline)
     }
 
-    // Split the bridge into the main question and the explicit CTA ("Read your Life Themes")
+    // The bridge typically opens with a question that grabs attention before
+    // a sentence pointing to the next tab. We surface only the question (or
+    // the whole sentence when the bridge isn't phrased as one), and leave
+    // the standing CTA on the right of the row.
     const fullText = bridgeText || nextTab.fallbackBridge;
-    const [question, ...rest] = fullText.split("?");
-    const mainStatement = question + "?";
+    const questionEnd = fullText.indexOf("?");
+    const mainStatement = questionEnd >= 0 ? fullText.slice(0, questionEnd + 1) : fullText;
 
     return (
         <section 

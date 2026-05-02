@@ -17,8 +17,12 @@ const FONT_MONO = "var(--font-mono, monospace)";
 const FONT_DISPLAY_ALT_1 = "var(--font-display-alt-1, serif)";
 
 function WireframeGlobe() {
+    // Stroke 0.5 on a 100×100 viewBox renders ~1.5–2.5 px at the 300–500 px
+    // display sizes used here. Combined with the ~0.06 opacity wrapper, that
+    // lands at "barely visible texture" — enough to read as a wireframe
+    // globe without competing with the lede. 0.25 was effectively invisible.
     return (
-        <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="0.25" className="w-full h-full">
+        <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="0.5" className="w-full h-full">
             <circle cx="50" cy="50" r="48" />
             <ellipse cx="50" cy="50" rx="48" ry="16" />
             <ellipse cx="50" cy="50" rx="48" ry="32" />

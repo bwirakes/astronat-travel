@@ -43,15 +43,15 @@
 
 /* 1. Astrocartography */
 .acg {
-    background-image: linear-gradient(rgba(202, 241, 240, 0.6), rgba(202, 241, 240, 0.85)), url('/learn_acg.png');
-    color: #1B1B1B;
+    background-image: linear-gradient(rgba(202, 241, 240, 0.6), rgba(202, 241, 240, 0.85)), url('/learn_acg.jpg');
+    color: var(--color-charcoal);
 }
 
 .acgScript {
     font-family: var(--font-display-alt-2);
     font-size: clamp(2.5rem, 4vw, 3.5rem);
     line-height: 0.5;
-    color: #0456fb; /* Y2K Blue */
+    color: var(--color-y2k-blue);
     transform: rotate(-4deg);
     margin-bottom: 8px;
     text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
@@ -69,8 +69,8 @@
 
 /* 2. Geodetic */
 .geodetic {
-    background-image: linear-gradient(rgba(230, 122, 122, 0.65), rgba(230, 122, 122, 0.85)), url('/learn_geodetic.png');
-    color: #F8F5EC;
+    background-image: linear-gradient(rgba(230, 122, 122, 0.65), rgba(230, 122, 122, 0.85)), url('/learn_geodetic.jpg');
+    color: var(--color-eggshell);
 }
 
 .geoHeader {
@@ -93,8 +93,8 @@
 
 /* 3. Houses */
 .houses {
-    background-image: linear-gradient(rgba(248, 245, 236, 0.6), rgba(248, 245, 236, 0.85)), url('/learn_houses.png');
-    color: #1B1B1B;
+    background-image: linear-gradient(rgba(248, 245, 236, 0.6), rgba(248, 245, 236, 0.85)), url('/learn_houses.jpg');
+    color: var(--color-charcoal);
 }
 
 .housesPill {
@@ -111,21 +111,23 @@
 
 .housesMain {
     font-family: var(--font-display-alt-1);
+    /* Muted pastel sage — distinct from --sage which carries verdict-tone
+       semantics. Kept as a one-off decorative color for this card only. */
     font-size: clamp(2.5rem, 3.5vw, 3.2rem);
-    color: #869f80; /* Sage */
+    color: #869f80;
     z-index: 1;
 }
 
 /* 4. Divide */
 .divide {
-    background-image: linear-gradient(rgba(27, 27, 27, 0.65), rgba(27, 27, 27, 0.85)), url('/learn_divide.png');
-    color: #CAF1F0;
+    background-image: linear-gradient(rgba(27, 27, 27, 0.65), rgba(27, 27, 27, 0.85)), url('/learn_divide.jpg');
+    color: var(--color-acqua);
 }
 
 .divideScript {
     font-family: var(--font-display-alt-2);
     font-size: clamp(3rem, 4.5vw, 4rem);
-    color: #E67A7A;
+    color: var(--color-spiced-life);
     line-height: 0.4;
     margin-right: 15%;
     margin-bottom: 5px;
@@ -138,6 +140,6 @@
     font-size: clamp(1.8rem, 2.5vw, 2.2rem);
     letter-spacing: -0.04em;
     text-transform: uppercase;
-    color: #F8F5EC;
+    color: var(--color-eggshell);
     z-index: 1;
 }
