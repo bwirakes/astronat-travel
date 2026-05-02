@@ -13,6 +13,7 @@ import { geodeticPlanetMeaning } from "@/app/lib/geodetic/planet-meanings";
 import { HOUSE_THEMES, HOUSE_DOMAIN_SHORT } from "@/app/lib/astro-constants";
 import type { PersonalGeodeticHit } from "@/app/lib/reading-tabs";
 import type { V4EclipseHit, V4GeoTransit, V4LunationHit, V4Paran, V4ProgressedBand } from "@/app/lib/reading-viewmodel";
+import TabSection from "./TabSection";
 import type { V4VM } from "./types";
 
 interface Props {
@@ -290,26 +291,12 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
     );
 
     return (
-        <div style={{ paddingTop: "var(--space-2xl)", paddingBottom: "var(--space-3xl)" }}>
-
-            {/* ── Header ───────────────────────────────────────────────── */}
-            <div style={{ marginBottom: "var(--space-md)" }}>
-                <h1 style={{
-                    fontFamily:    "var(--font-primary)",
-                    fontSize:      "clamp(2rem, 4vw, 3.5rem)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.02em",
-                    margin:        "0 0 0.6rem 0",
-                    lineHeight:    1.1,
-                    color:         "var(--text-primary)",
-                }}>
-                    {city.toUpperCase()} · Geodetic Field
-                </h1>
-                <div style={DATELINE}>
-                    <span>{lat.toFixed(2)}°, {lon.toFixed(2)}°</span>
-                    <span>{vm.travelDateISO ? vm.travelDateISO.slice(0, 10) : "any time"}</span>
-                    <span>geo-ASC {signFromLongitude(geoASC)} · geo-MC {signFromLongitude(geoMC)}</span>
-                </div>
+        <TabSection kicker="Geography" title={`${city} · Geodetic field`}>
+            {/* Dateline — coordinates, travel date, derived geodetic angles. */}
+            <div style={{ ...DATELINE, marginBottom: "var(--space-md)" }}>
+                <span>{lat.toFixed(2)}°, {lon.toFixed(2)}°</span>
+                <span>{vm.travelDateISO ? vm.travelDateISO.slice(0, 10) : "any time"}</span>
+                <span>geo-ASC {signFromLongitude(geoASC)} · geo-MC {signFromLongitude(geoMC)}</span>
             </div>
 
             {/* ── Personalised opener (replaces verdict + how-to-read) ── */}
@@ -611,7 +598,7 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
                     </p>
                 </DetailsBlock>
             </div>
-        </div>
+        </TabSection>
     );
 }
 

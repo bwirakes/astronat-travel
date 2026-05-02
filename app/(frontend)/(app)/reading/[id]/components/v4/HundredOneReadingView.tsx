@@ -298,7 +298,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                             orientation="horizontal"
                             className="w-full min-w-0"
                         >
-                            <div className="flex flex-col gap-[34px] min-w-0">
+                            <div className="flex flex-col gap-[14px] min-w-0">
                                 <TabsList variant="line" className="reading-tabs-list">
                                     {vm.tabs.definitions.map((tab) => (
                                         <TabsTrigger key={tab.id} value={tab.id} className="reading-tab-trigger">
@@ -314,7 +314,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
 
                                 <div ref={panelsRef} className="flex-1 min-w-0">
                                     {copiedTab?.lead && activeTab !== "overview" && (
-                                        <section className="pb-6 mb-2 bg-transparent">
+                                        <section className="pb-2 bg-transparent">
                                             <p
                                                 className="leading-[1.1] m-0 mb-[10px] [text-wrap:balance]"
                                                 style={{

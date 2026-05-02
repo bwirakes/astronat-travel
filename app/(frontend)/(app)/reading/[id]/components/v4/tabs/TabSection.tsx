@@ -23,7 +23,7 @@ const FONT_MONO = "var(--font-mono, monospace)";
  */
 export default function TabSection({ kicker, title, intro, wideIntro, children }: Props) {
     return (
-        <section className="px-0 py-14 sm:py-[88px]">
+        <section className="px-0 py-5 sm:py-7">
             <div className="w-full max-w-none m-0">
                 <div
                     className="text-[11px] tracking-[0.22em] uppercase mb-5"
