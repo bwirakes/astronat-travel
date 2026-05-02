@@ -21,7 +21,6 @@ import {
     NATAL_WHEEL_SIGNS as SIGNS,
     natalWheelSvgXY as svgXY,
 } from "@/app/lib/natal-wheel-shared";
-import { HOUSE_THEMES, HOUSE_DOMAIN_SHORT } from "@/app/lib/astro-constants";
 
 type AngleName = "ASC" | "MC" | "DSC" | "IC";
 
@@ -304,106 +303,7 @@ export default function GeodeticHouseWheel({
                     )}
                 </div>
 
-                {/* House-domain legend — which life areas your natal planets land in
-                 *  in the geodetic frame. Renders only houses that have a planet,
-                 *  to keep noise low. Domain words come from HOUSE_THEMES (same
-                 *  vocabulary as Life Themes tab + HouseMatrixCard). */}
-                <HouseDomainLegend assignments={natalAssignments} />
             </div>
         </div>
     );
-}
-
-function HouseDomainLegend({ assignments }: { assignments: Assignment[] }) {
-    if (!assignments || assignments.length === 0) {
-        return (
-            <p style={{
-                fontFamily: "var(--font-body)",
-                fontSize: "0.85rem",
-                color: "var(--text-tertiary)",
-                fontStyle: "italic",
-                margin: 0,
-            }}>
-                No natal-planet assignments available for this destination.
-            </p>
-        );
-    }
-    // Group planets by geodetic house, sorted by house number.
-    const byHouse = new Map<number, string[]>();
-    for (const a of assignments) {
-        const list = byHouse.get(a.house) ?? [];
-        list.push(capitalizePlanet(a.planet));
-        byHouse.set(a.house, list);
-    }
-    const rows = [...byHouse.entries()].sort((a, b) => a[0] - b[0]);
-
-    return (
-        <div>
-            <div style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "0.55rem",
-                letterSpacing: "0.2em",
-                textTransform: "uppercase",
-                color: "var(--text-tertiary)",
-                fontWeight: 600,
-                marginBottom: "0.5rem",
-            }}>
-                What lights up in which life area
-            </div>
-            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                {rows.map(([house, planets]) => (
-                    <li
-                        key={`hd-${house}`}
-                        style={{
-                            display: "grid",
-                            gridTemplateColumns: "minmax(2.4rem, auto) minmax(70px, auto) 1fr",
-                            gap: "0.85rem",
-                            alignItems: "baseline",
-                            padding: "0.55rem 0",
-                            borderBottom: "1px solid var(--surface-border)",
-                        }}
-                    >
-                        <span style={{
-                            fontFamily: "var(--font-mono)",
-                            fontSize: "0.62rem",
-                            letterSpacing: "0.14em",
-                            color: "var(--text-tertiary)",
-                            fontWeight: 700,
-                        }}>
-                            H{house}
-                        </span>
-                        <span style={{
-                            fontFamily: "var(--font-mono)",
-                            fontSize: "0.7rem",
-                            letterSpacing: "0.12em",
-                            textTransform: "uppercase",
-                            color: "var(--gold)",
-                            fontWeight: 700,
-                        }}>
-                            {HOUSE_DOMAIN_SHORT[house] ?? "—"}
-                        </span>
-                        <span style={{
-                            fontFamily: "var(--font-body)",
-                            fontSize: "0.88rem",
-                            lineHeight: 1.5,
-                            color: "var(--text-primary)",
-                        }}>
-                            {planets.join(", ")}
-                            <span style={{
-                                color: "var(--text-tertiary)",
-                                marginLeft: "0.6rem",
-                                fontSize: "0.78rem",
-                            }}>
-                                · {HOUSE_THEMES[house] ?? `House ${house}`}
-                            </span>
-                        </span>
-                    </li>
-                ))}
-            </ul>
-        </div>
-    );
-}
-
-function capitalizePlanet(s: string): string {
-    return s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : s;
 }

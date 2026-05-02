@@ -10,6 +10,7 @@ import ReadingGeodeticMap from "../parts/ReadingGeodeticMap";
 import { acgLineRawScore } from "@/app/lib/house-matrix";
 import { geodeticASCLongitude, geodeticMCLongitude, signFromLongitude } from "@/app/lib/geodetic";
 import { geodeticPlanetMeaning } from "@/app/lib/geodetic/planet-meanings";
+import { HOUSE_THEMES, HOUSE_DOMAIN_SHORT } from "@/app/lib/astro-constants";
 import type { PersonalGeodeticHit } from "@/app/lib/reading-tabs";
 import type { V4EclipseHit, V4GeoTransit, V4LunationHit, V4Paran, V4ProgressedBand } from "@/app/lib/reading-viewmodel";
 import type { V4VM } from "./types";
@@ -283,6 +284,10 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
         hasProgressedBand: vm.progressions?.bands.some((b) => b.destinationInBand) ?? false,
     };
     const opener = buildOpener({ city, cornerRows, timing });
+    const interpretations = buildGeodeticInterpretations(
+        vm.geodeticHouseFrame.natalAssignments,
+        reading?.natalPlanets ?? [],
+    );
 
     return (
         <div style={{ paddingTop: "var(--space-2xl)", paddingBottom: "var(--space-3xl)" }}>
@@ -406,8 +411,92 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
                 </>
             )}
 
-            {/* ── §04 Where the city sits in the zodiac ────────────────── */}
-            <SectionHead index="04" title={`Where ${city} sits in the zodiac`} />
+            {/* ── §04 Life areas through the city's geodetic frame ─────── */}
+            {interpretations.length > 0 && (
+                <>
+                    <SectionHead index="04" title={`Life areas through ${city}'s geodetic frame`} />
+                    <p style={BODY}>
+                        Re-domained by longitude — which house each natal planet lands in when{" "}
+                        {city}&rsquo;s coordinates set the clock. A <em>≠ natal H{"{n}"}</em> chip
+                        means the planet sits in a different domain in your birth chart than it does
+                        in {city}&rsquo;s geodetic frame.
+                    </p>
+                    <ul style={{ listStyle: "none", padding: 0, margin: "var(--space-md) 0 0 0" }}>
+                        {interpretations.map((it) => (
+                            <li
+                                key={`gi-${it.house}`}
+                                style={{
+                                    padding: "0.95rem 0",
+                                    borderBottom: "1px solid var(--surface-border)",
+                                }}
+                            >
+                                <div style={{
+                                    display: "flex",
+                                    alignItems: "baseline",
+                                    gap: "0.85rem",
+                                    flexWrap: "wrap",
+                                }}>
+                                    <span style={{ ...MONO_SM, color: "var(--text-tertiary)", minWidth: "2.4rem" }}>
+                                        H{it.house}
+                                    </span>
+                                    <span style={{
+                                        fontFamily: "var(--font-mono)",
+                                        fontSize: "0.7rem",
+                                        letterSpacing: "0.16em",
+                                        textTransform: "uppercase",
+                                        color: "var(--gold)",
+                                        fontWeight: 700,
+                                    }}>
+                                        {it.domainShort}
+                                    </span>
+                                    <span style={{ ...BODY_CAPTION, color: "var(--text-tertiary)" }}>
+                                        · {it.domainFull}
+                                    </span>
+                                    {it.planets.map((p, i) => (
+                                        <span
+                                            key={`gp-${it.house}-${i}`}
+                                            style={{
+                                                display: "inline-flex",
+                                                alignItems: "baseline",
+                                                gap: "0.35rem",
+                                                fontFamily: "var(--font-mono)",
+                                                fontSize: "0.78rem",
+                                                color: "var(--text-primary)",
+                                                fontWeight: 600,
+                                            }}
+                                        >
+                                            {capitalize(p.name)}
+                                            {p.differs && (
+                                                <span style={{
+                                                    fontFamily: "var(--font-mono)",
+                                                    fontSize: "0.58rem",
+                                                    letterSpacing: "0.12em",
+                                                    textTransform: "uppercase",
+                                                    color: "var(--color-spiced-life)",
+                                                    border: "1px solid var(--color-spiced-life)",
+                                                    borderRadius: "999px",
+                                                    padding: "0.1rem 0.4rem",
+                                                    fontWeight: 700,
+                                                    background: "color-mix(in oklab, var(--color-spiced-life) 8%, transparent)",
+                                                }}>
+                                                    ≠ natal H{p.natalHouse}
+                                                </span>
+                                            )}
+                                        </span>
+                                    ))}
+                                </div>
+                                <p style={{ ...BODY, fontSize: "0.95rem", margin: "0.4rem 0 0 3.25rem", maxWidth: "640px" }}>
+                                    {it.sentence}
+                                </p>
+                            </li>
+                        ))}
+                    </ul>
+                    <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
+                </>
+            )}
+
+            {/* ── §05 Where the city sits in the zodiac ────────────────── */}
+            <SectionHead index="05" title={`Where ${city} sits in the zodiac`} />
             <p style={BODY}>
                 {city} sits where {signFromLongitude(geoMC)} runs overhead and{" "}
                 {signFromLongitude(geoASC)} rises on the horizon. The shaded band is the slice of
@@ -430,11 +519,11 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
                 />
             </div>
 
-            {/* ── §05 Latitude crossings (only when present) ───────────── */}
+            {/* ── §06 Latitude crossings (only when present) ───────────── */}
             {vm.parans.length > 0 && (
                 <>
                     <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
-                    <SectionHead index="05" title="Latitude crossings" />
+                    <SectionHead index="06" title="Latitude crossings" />
                     <p style={BODY_MUTED}>
                         Pairs of your natal planets that cross the horizon together at a latitude
                         near {city}&rsquo;s. Tight benefic pairs lift the field; tight malefic pairs
@@ -656,6 +745,83 @@ function composeTimingTail(hitCount: number, t: TimingState): string {
     return hitCount === 1
         ? "The sky overhead is quiet right now; the place's tone is the whole story."
         : `${hitCount === 3 ? "Three" : "Two"} of your planets are inside the city's corners with a quiet sky overhead — the natal compatibility runs the show.`;
+}
+
+// ── Geodetic-frame house interpretations ─────────────────────────────────
+//
+// The framework's "Interpret the Houses" item asks: which life domains are
+// activated when the city's coordinates set the clock, vs the client's natal
+// chart? This composer groups the geodetic-frame natal-planet assignments
+// by house, looks up each planet's natal house for the diff chip, and
+// produces a magazine sentence per loaded house using the same PLANET_LEX
+// vocabulary the opener already uses.
+
+interface InterpretationPlanet {
+    name: string;            // canonical lower-case
+    natalHouse: number | null;
+    differs: boolean;        // true when natal house != geodetic house
+}
+
+interface GeodeticInterpretation {
+    house: number;
+    domainShort: string;     // "Career"
+    domainFull: string;      // "Career & Reputation"
+    planets: InterpretationPlanet[];
+    sentence: string;        // composed
+}
+
+function buildGeodeticInterpretations(
+    assignments: ReadonlyArray<{ planet: string; house: number }>,
+    natalPlanets: ReadonlyArray<{ name?: string; planet?: string; house?: number }>,
+): GeodeticInterpretation[] {
+    const natalHouseMap = new Map<string, number>();
+    for (const np of natalPlanets) {
+        const name = String((np as any).name ?? (np as any).planet ?? "").toLowerCase();
+        const house = typeof np.house === "number" ? np.house : null;
+        if (name && house !== null) natalHouseMap.set(name, house);
+    }
+
+    const byHouse = new Map<number, InterpretationPlanet[]>();
+    for (const a of assignments) {
+        const name = a.planet.toLowerCase();
+        const natalHouse = natalHouseMap.get(name) ?? null;
+        const list = byHouse.get(a.house) ?? [];
+        list.push({
+            name,
+            natalHouse,
+            differs: natalHouse !== null && natalHouse !== a.house,
+        });
+        byHouse.set(a.house, list);
+    }
+
+    return [...byHouse.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([house, planets]) => ({
+            house,
+            domainShort: HOUSE_DOMAIN_SHORT[house] ?? `H${house}`,
+            domainFull: HOUSE_THEMES[house] ?? `House ${house}`,
+            planets,
+            sentence: composeInterpretationSentence(house, planets.map((p) => p.name)),
+        }));
+}
+
+function composeInterpretationSentence(house: number, planetNames: string[]): string {
+    const domain = HOUSE_DOMAIN_SHORT[house] ?? `House ${house}`;
+    const lex0 = PLANET_LEX[planetNames[0]];
+    const f0 = lex0?.shortFlavour ?? "a quiet signal";
+    const cap = (s: string) => s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : s;
+
+    if (planetNames.length === 1) {
+        return `${cap(domain)} here: ${cap(planetNames[0])}-coded — ${f0}.`;
+    }
+    if (planetNames.length === 2) {
+        const lex1 = PLANET_LEX[planetNames[1]];
+        const f1 = lex1?.shortFlavour ?? "weight";
+        return `${cap(domain)} here: ${cap(planetNames[0])}-coded with ${cap(planetNames[1])}'s ${f1} folded in — ${f0} meeting ${f1}.`;
+    }
+    // 3+ planets: list them, lead with the dominant flavour.
+    const allCaps = planetNames.map(cap);
+    return `${cap(domain)} here: ${allCaps.slice(0, -1).join(", ")}, and ${allCaps[allCaps.length - 1]} all loaded — ${f0} setting the tone.`;
 }
 
 function Opener({ data }: { data: OpenerData }) {
