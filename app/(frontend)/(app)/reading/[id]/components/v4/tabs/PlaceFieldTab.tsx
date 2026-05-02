@@ -378,9 +378,14 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
             )}
             {liveItems.length > 0 ? (
                 <LiveNowTable items={liveItems} />
-            ) : (
+            ) : reading?.geodeticEngineVersion ? (
                 <p style={BODY_MUTED}>
                     The sky over {city} is quiet right now &mdash; nothing transiting close to its corners.
+                </p>
+            ) : (
+                <p style={BODY_MUTED}>
+                    Live transit data wasn&rsquo;t computed for this reading. Generate a fresh
+                    reading to see what&rsquo;s lighting {city}&rsquo;s corners now.
                 </p>
             )}
 
