@@ -15,7 +15,7 @@ export const READING_TABS = [
     },
     {
         id: "place-field",
-        label: "Place Field",
+        label: "Geography",
         question: "What does the place itself add?",
     },
     {

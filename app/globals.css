@@ -238,6 +238,14 @@ body {
   transition: background var(--duration) var(--ease), color var(--duration) var(--ease);
 }
 
+/* Reserve scrollbar gutter so the layout width is identical whether the
+   active tab/page needs vertical scroll or not. Without this, switching
+   between a tall tab (vertical scrollbar visible) and a short tab (no
+   scrollbar) shifts the content area by ~15px on Chrome/Edge. */
+html {
+  scrollbar-gutter: stable;
+}
+
 img, table, svg, canvas {
   max-width: 100%;
 }

@@ -13,6 +13,8 @@ import { geodeticPlanetMeaning } from "@/app/lib/geodetic/planet-meanings";
 import { HOUSE_THEMES, HOUSE_DOMAIN_SHORT } from "@/app/lib/astro-constants";
 import type { PersonalGeodeticHit } from "@/app/lib/reading-tabs";
 import type { V4EclipseHit, V4GeoTransit, V4LunationHit, V4Paran, V4ProgressedBand } from "@/app/lib/reading-viewmodel";
+import SectionHead from "./SectionHead";
+import TabSection from "./TabSection";
 import type { V4VM } from "./types";
 
 interface Props {
@@ -290,26 +292,12 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
     );
 
     return (
-        <div style={{ paddingTop: "var(--space-2xl)", paddingBottom: "var(--space-3xl)" }}>
-
-            {/* ── Header ───────────────────────────────────────────────── */}
-            <div style={{ marginBottom: "var(--space-md)" }}>
-                <h1 style={{
-                    fontFamily:    "var(--font-primary)",
-                    fontSize:      "clamp(2rem, 4vw, 3.5rem)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.02em",
-                    margin:        "0 0 0.6rem 0",
-                    lineHeight:    1.1,
-                    color:         "var(--text-primary)",
-                }}>
-                    {city.toUpperCase()} · Geodetic Field
-                </h1>
-                <div style={DATELINE}>
-                    <span>{lat.toFixed(2)}°, {lon.toFixed(2)}°</span>
-                    <span>{vm.travelDateISO ? vm.travelDateISO.slice(0, 10) : "any time"}</span>
-                    <span>geo-ASC {signFromLongitude(geoASC)} · geo-MC {signFromLongitude(geoMC)}</span>
-                </div>
+        <TabSection kicker="Geography" title={`${city} · Geodetic field`}>
+            {/* Dateline — coordinates, travel date, derived geodetic angles. */}
+            <div style={{ ...DATELINE, marginBottom: "var(--space-md)" }}>
+                <span>{lat.toFixed(2)}°, {lon.toFixed(2)}°</span>
+                <span>{vm.travelDateISO ? vm.travelDateISO.slice(0, 10) : "any time"}</span>
+                <span>geo-ASC {signFromLongitude(geoASC)} · geo-MC {signFromLongitude(geoMC)}</span>
             </div>
 
             {/* ── Personalised opener (replaces verdict + how-to-read) ── */}
@@ -318,7 +306,7 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
             <div style={{ ...DIVIDER, margin: "var(--space-lg) 0" }} />
 
             {/* ── §01 What this place activates ────────────────────────── */}
-            <SectionHead index="01" title={`What ${city} activates in your chart`} />
+            <SectionHead index="01" title={`What ${city} activates in your chart`}  flush />
             <div className="chart-overview-grid" style={{ marginBottom: "var(--space-md)" }}>
                 <div>
                     <div style={KICKER}>The four corners</div>
@@ -372,7 +360,7 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
             <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
 
             {/* ── §02 What's live now (promoted out of details) ───────── */}
-            <SectionHead index="02" title={`What's live in ${city} now`} />
+            <SectionHead index="02" title={`What's live in ${city} now`}  flush />
             {vm.progressions && (
                 <ProgressionsLine bands={vm.progressions.bands} />
             )}
@@ -394,7 +382,7 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
             {/* ── §03 The frame (geodetic house wheel) ─────────────────── */}
             {vm.geodeticHouseFrame.cusps.length === 12 && (
                 <>
-                    <SectionHead index="03" title="Where your chart lands on this longitude" />
+                    <SectionHead index="03" title="Where your chart lands on this longitude"  flush />
                     <p style={BODY}>
                         If you swapped your birthplace&rsquo;s clock for {city}&rsquo;s, your natal
                         planets would re-house themselves like this. House 1 starts at the sign of
@@ -419,7 +407,7 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
             {/* ── §04 Life areas through the city's geodetic frame ─────── */}
             {interpretations.length > 0 && (
                 <>
-                    <SectionHead index="04" title={`Life areas through ${city}'s geodetic frame`} />
+                    <SectionHead index="04" title={`Life areas through ${city}'s geodetic frame`}  flush />
                     <p style={BODY}>
                         Re-domained by longitude — which house each natal planet lands in when{" "}
                         {city}&rsquo;s coordinates set the clock. A <em>≠ natal H{"{n}"}</em> chip
@@ -501,7 +489,7 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
             )}
 
             {/* ── §05 Where the city sits in the zodiac ────────────────── */}
-            <SectionHead index="05" title={`Where ${city} sits in the zodiac`} />
+            <SectionHead index="05" title={`Where ${city} sits in the zodiac`}  flush />
             <p style={BODY}>
                 {city} sits where {signFromLongitude(geoMC)} runs overhead and{" "}
                 {signFromLongitude(geoASC)} rises on the horizon. The shaded band is the slice of
@@ -528,7 +516,7 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
             {vm.parans.length > 0 && (
                 <>
                     <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
-                    <SectionHead index="06" title="Latitude crossings" />
+                    <SectionHead index="06" title="Latitude crossings"  flush />
                     <p style={BODY_MUTED}>
                         Pairs of your natal planets that cross the horizon together at a latitude
                         near {city}&rsquo;s. Tight benefic pairs lift the field; tight malefic pairs
@@ -611,43 +599,7 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
                     </p>
                 </DetailsBlock>
             </div>
-        </div>
-    );
-}
-
-// ── Section heading ───────────────────────────────────────────────────────
-
-function SectionHead({ index, title }: { index: string; title: string }) {
-    return (
-        <div style={{
-            display: "flex",
-            alignItems: "baseline",
-            gap: "0.85rem",
-            marginBottom: "var(--space-md)",
-            paddingBottom: "0.6rem",
-            borderBottom: "1px solid var(--surface-border)",
-        }}>
-            <span style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "0.62rem",
-                letterSpacing: "0.22em",
-                color: "var(--text-tertiary)",
-                fontWeight: 700,
-            }}>
-                §{index}
-            </span>
-            <h2 style={{
-                fontFamily: "var(--font-primary)",
-                fontSize: "clamp(1.1rem, 2vw, 1.4rem)",
-                margin: 0,
-                color: "var(--text-primary)",
-                lineHeight: 1.2,
-                fontWeight: 500,
-                letterSpacing: "-0.01em",
-            }}>
-                {title}
-            </h2>
-        </div>
+        </TabSection>
     );
 }
 

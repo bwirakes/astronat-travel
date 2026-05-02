@@ -15,6 +15,8 @@ import LifeThemesTab from "./tabs/LifeThemesTab";
 import PlaceFieldTab from "./tabs/PlaceFieldTab";
 import WhatShiftsTab from "./tabs/WhatShiftsTab";
 import TimingTab from "./tabs/TimingTab";
+import NextTabNav from "./NextTabNav";
+import LearnFooter from "./LearnFooter";
 import "./reading-shell.css";
 
 const FONT_PRIMARY = "var(--font-primary, serif)";
@@ -298,29 +300,40 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                             orientation="horizontal"
                             className="w-full min-w-0"
                         >
-                            <div className="flex flex-col gap-[34px] min-w-0">
-                                <TabsList variant="line" className="reading-tabs-list">
+                            <div
+                                className="flex flex-col gap-[14px]"
+                                style={{ width: "100%", minWidth: 0 }}
+                            >
+                                <TabsList
+                                    variant="line"
+                                    className="reading-tabs-list"
+                                    style={{
+                                        display: "flex",
+                                        width: "100%",
+                                        minWidth: 0,
+                                        flexDirection: "row",
+                                    }}
+                                >
                                     {vm.tabs.definitions.map((tab) => (
-                                        <TabsTrigger key={tab.id} value={tab.id} className="reading-tab-trigger">
+                                        <TabsTrigger
+                                            key={tab.id}
+                                            value={tab.id}
+                                            className="reading-tab-trigger"
+                                            style={{ flex: "1 1 0", minWidth: 0 }}
+                                        >
                                             <span
-                                                className="block text-[10.5px] tracking-[0.16em] uppercase"
+                                                className="text-[10px] sm:text-[11px] tracking-[0.08em] sm:tracking-[0.18em] uppercase"
                                                 style={{ fontFamily: FONT_MONO }}
                                             >
                                                 {tab.label}
-                                            </span>
-                                            <span
-                                                className="block text-[12px] leading-[1.35] font-light"
-                                                style={{ fontFamily: FONT_BODY, color: "var(--text-tertiary)" }}
-                                            >
-                                                {tab.question}
                                             </span>
                                         </TabsTrigger>
                                     ))}
                                 </TabsList>
 
-                                <div ref={panelsRef} className="flex-1 min-w-0">
+                                <div ref={panelsRef} className="flex-1" style={{ minWidth: 0, width: "100%" }}>
                                     {copiedTab?.lead && activeTab !== "overview" && (
-                                        <section className="pb-6 mb-2 bg-transparent">
+                                        <section className="pb-2 bg-transparent">
                                             <p
                                                 className="leading-[1.1] m-0 mb-[10px] [text-wrap:balance]"
                                                 style={{
@@ -372,7 +385,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
 
                                     {copiedTab?.evidenceCaption && (
                                         <section
-                                            className="mt-3 py-4 border-t text-[14px]"
+                                            className="mt-3 py-4 border-t text-[14px] mx-[clamp(16px,3vw,28px)]"
                                             style={{
                                                 borderColor: "var(--surface-border)",
                                                 fontFamily: FONT_BODY,
@@ -383,23 +396,19 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                                         </section>
                                     )}
 
-                                    {copiedTab?.nextTabBridge && (
-                                        <section
-                                            className="mt-3 py-[18px] px-4 border-t text-[14px]"
-                                            style={{
-                                                borderColor: "var(--surface-border)",
-                                                background: "color-mix(in oklab, var(--text-primary) 5%, transparent)",
-                                                borderRadius: "var(--shape-asymmetric-sm, var(--radius-md, 10px))",
-                                                fontFamily: FONT_BODY,
-                                                color: "var(--text-primary)",
-                                            }}
-                                        >
-                                            {copiedTab.nextTabBridge}
-                                        </section>
-                                    )}
+                                    <NextTabNav 
+                                        activeTab={activeTab} 
+                                        selectTab={selectTab} 
+                                        bridgeText={copiedTab?.nextTabBridge} 
+                                    />
+                                    
                                 </div>
                             </div>
                         </Tabs>
+                        
+                        <div className="w-full mt-12">
+                            <LearnFooter />
+                        </div>
                     </div>
                 </section>
 

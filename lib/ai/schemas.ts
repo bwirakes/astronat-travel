@@ -197,7 +197,13 @@ export const TeacherReadingSchema = z.object({
   // be tightened to z.array(...).min(...).
   chrome: ChromeSchema.optional(),
   editorialSpine: EditorialSpineSchema.optional(),
-  tabs: z.record(ReadingTabIdSchema, TabEditorialSchema).optional(),
+  tabs: z.object({
+    "overview": TabEditorialSchema.optional(),
+    "life-themes": TabEditorialSchema.optional(),
+    "place-field": TabEditorialSchema.optional(),
+    "what-shifts": TabEditorialSchema.optional(),
+    "timing": TabEditorialSchema.optional(),
+  }).optional(),
   overview: OverviewEditorialSchema.optional(),
   timing: TimingEditorialSchema.optional(),
   hero: HeroSchema.optional(),

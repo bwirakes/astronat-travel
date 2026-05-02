@@ -4,6 +4,7 @@
 
 import HouseMatrixCard from "@/app/components/HouseMatrixCard";
 import type { HouseMatrixResult } from "@/app/lib/house-matrix";
+import SectionHead from "./SectionHead";
 import TabSection from "./TabSection";
 import type { V4VM } from "./types";
 
@@ -79,12 +80,7 @@ export default function LifeThemesTab({ vm, reading }: Props) {
             )}
 
             {/* Full theme bars */}
-            <div
-                className="text-[0.55rem] tracking-[0.2em] uppercase font-semibold mb-3"
-                style={{ color: "var(--text-tertiary)", fontFamily: "var(--font-mono)" }}
-            >
-                All themes, ranked
-            </div>
+            <SectionHead title="All themes, ranked" />
             <div className="flex flex-col gap-4 mb-8">
                 {themeBars.map((theme) => {
                     const isGoal = !!(theme.goalId && vm.goalIds.includes(theme.goalId));

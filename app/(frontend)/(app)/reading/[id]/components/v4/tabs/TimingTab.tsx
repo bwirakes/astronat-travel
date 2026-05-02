@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import SectionHead from "./SectionHead";
 import TabSection from "./TabSection";
 import type { V4VM } from "./types";
 import { transitOneLiner } from "@/app/lib/transit-copy";
 import type { TransitSpan } from "@/app/lib/window-scoring";
 import { PLANET_GLYPH } from "@/app/lib/geodetic-weather-types";
+import { WINDOW_LABELS, WINDOW_RATIONALES, verdictBand, verdictTone } from "@/app/lib/verdict";
 
 interface Props {
     vm: V4VM;
@@ -45,11 +47,11 @@ const GOAL_LABEL_SHORT: Record<string, string> = {
 };
 
 function verdictForScore(score: number): { label: string; tone: "good" | "mixed" | "hard"; rationale: string } {
-    if (score >= 70) return { label: "Strong window",      tone: "good",  rationale: "the sky is broadly supportive of what you're going there to do" };
-    if (score >= 55) return { label: "Open window",        tone: "good",  rationale: "more support than friction across this stretch" };
-    if (score >= 45) return { label: "Mixed window",       tone: "mixed", rationale: "real potential, but it'll need some care to land cleanly" };
-    if (score >= 30) return { label: "Tight window",       tone: "hard",  rationale: "more friction than support — bring patience and right-size your asks" };
-    return                { label: "Challenging window",   tone: "hard",  rationale: "the sky is pressing hard against this date — better windows exist nearby" };
+    const band = verdictBand(score);
+    const tone = verdictTone(band);
+    const toneTag: "good" | "mixed" | "hard" =
+        tone === "lift" ? "good" : tone === "neutral" ? "mixed" : "hard";
+    return { label: WINDOW_LABELS[band], tone: toneTag, rationale: WINDOW_RATIONALES[band] };
 }
 
 function VerdictHeadline({ vm }: { vm: V4VM }) {
@@ -66,17 +68,17 @@ function VerdictHeadline({ vm }: { vm: V4VM }) {
                              "var(--color-spiced-life)";
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             <div style={{ fontFamily: FM, fontSize: "0.65rem", letterSpacing: "0.22em", textTransform: "uppercase", color: accent, fontWeight: 700 }}>
                 {v.label} · {score}/100
             </div>
             <p style={{
-                fontFamily: "var(--font-secondary, var(--font-primary))",
-                fontSize: "clamp(1.15rem, 1.9vw, 1.4rem)",
-                lineHeight: 1.3,
-                color: "var(--text-primary)",
+                fontFamily: FB,
+                fontSize: "17px",
+                lineHeight: 1.6,
+                fontWeight: 300,
+                color: "var(--text-secondary)",
                 margin: 0,
-                letterSpacing: "-0.01em",
                 maxWidth: "62ch",
             }}>
                 {goalLabel && goal !== "timing"
@@ -543,55 +545,6 @@ function TransitGantt({ vm }: { vm: V4VM }) {
     );
 }
 
-// ─── Section kicker ──────────────────────────────────────────────────────────
-
-function StoryHeading({ n, title, tooltip }: { n: string; title: string; tooltip?: string }) {
-    return (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", marginTop: "calc(var(--space-xl) + 0.5rem)", marginBottom: "var(--space-sm)" }}>
-            <div style={{ fontFamily: FM, fontSize: "0.6rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)", fontWeight: 600 }}>
-                §{n}
-            </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: "0.6rem" }}>
-                <h3 style={{
-                    fontFamily: "var(--font-secondary, var(--font-primary))",
-                    fontSize: "clamp(1.1rem, 1.8vw, 1.3rem)",
-                    margin: 0,
-                    color: "var(--text-primary)",
-                    letterSpacing: "-0.005em",
-                    lineHeight: 1.2,
-                    flex: 1,
-                }}>
-                    {title}
-                </h3>
-                {tooltip && (
-                    <span
-                        title={tooltip}
-                        aria-label={tooltip}
-                        style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            width: 16,
-                            height: 16,
-                            borderRadius: "50%",
-                            border: "1px solid var(--surface-border)",
-                            fontFamily: FM,
-                            fontSize: "0.6rem",
-                            color: "var(--text-tertiary)",
-                            cursor: "help",
-                            flexShrink: 0,
-                            alignSelf: "center",
-                            transform: "translateY(1px)",
-                        }}
-                    >
-                        i
-                    </span>
-                )}
-            </div>
-        </div>
-    );
-}
-
 // ─── Compact alternates list ─────────────────────────────────────────────────
 
 // ─── Top travel windows ──────────────────────────────────────────────────────
@@ -662,7 +615,6 @@ function WindowsList({ vm }: { vm: V4VM }) {
                             columnGap: "var(--space-lg)",
                             alignItems: "baseline",
                             padding: "1rem 0",
-                            borderTop: i === 0 ? "1px solid var(--surface-border)" : undefined,
                             borderBottom: "1px solid var(--surface-border)",
                         }}
                     >
@@ -707,8 +659,8 @@ export default function TimingTab({ vm }: Props) {
             {/* §1 — Top travel windows (alternates), trip only */}
             {showAlternates && (
                 <>
-                    <StoryHeading
-                        n="01"
+                    <SectionHead
+                        index="01"
                         title="Top travel windows"
                         tooltip="Comparable nearby windows ranked by score. Use these if your dates are flexible. ↑Δ marks how much each beats your selected window."
                     />
@@ -717,16 +669,16 @@ export default function TimingTab({ vm }: Props) {
             )}
 
             {/* §2 — Transit Gantt */}
-            <StoryHeading
-                n={showAlternates ? "02" : "01"}
+            <SectionHead
+                index={showAlternates ? "02" : "01"}
                 title="What's pressing on you during the window"
                 tooltip="Slow-moving transits that actually shape this stretch. Hover any bar for the lived-experience reading and what to do with it."
             />
             <TransitGantt vm={vm} />
 
             {/* §3 — 90-day field */}
-            <StoryHeading
-                n={showAlternates ? "03" : "02"}
+            <SectionHead
+                index={showAlternates ? "03" : "02"}
                 title="The 90-day field around your trip"
                 tooltip="Each bar is one day. Taller, sage and gold = more support. Red = friction. Blue is your trip; green ▼ marks open stretches, red ▼ marks rougher ones."
             />
