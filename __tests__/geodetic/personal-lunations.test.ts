@@ -73,9 +73,9 @@ describe("scorePersonalLunations", () => {
         expect(Math.abs(r1.aggregate)).toBeGreaterThanOrEqual(Math.abs(r2.aggregate));
     });
 
-    it("caps aggregate to ±10", () => {
+    it("caps aggregate to ±12 (= 2× per-house cap)", () => {
         // Five hits all on geo-MC + natal Sun, all new moons. Even with
-        // heavy stacking the aggregate must clamp to +10.
+        // heavy stacking the aggregate must clamp to +12.
         const lunations: LunationEvent[] = Array.from({ length: 5 }).map((_, i) => ({
             kind: "new-moon" as const,
             dateUtc: new Date(REF.getTime() + i * 86400000).toISOString(),
@@ -87,7 +87,7 @@ describe("scorePersonalLunations", () => {
             natalPlanets: [{ name: "Sun", longitude: 139.7 }],
             lunations,
         });
-        expect(r.aggregate).toBeLessThanOrEqual(10);
+        expect(r.aggregate).toBeLessThanOrEqual(12);
         expect(r.aggregate).toBeGreaterThan(0);
     });
 

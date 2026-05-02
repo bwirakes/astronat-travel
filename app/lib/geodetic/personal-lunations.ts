@@ -13,9 +13,12 @@
  *   - new-moon  → soft positive (beginnings, fresh-start signature)
  *   - full-moon → soft negative (exposure, completion friction)
  *
- * Magnitudes are deliberately small (±5 cap per hit, ±10 cap on aggregate)
+ * Magnitudes are deliberately small (±5 base per hit, ±12 cap on aggregate)
  * so lunations inform narrative copy without dominating the transit bucket
- * the way eclipses do.
+ * the way eclipses do. Aggregate cap = 2× the engine's per-house cap (±6),
+ * mirroring the eclipse pattern (±20 aggregate vs ±10 per-house) so the
+ * informational aggregate stays consistent with the maximum signal that can
+ * land in the score across the four geo-angles.
  */
 import { lunationsInWindow, type LunationEvent } from "./geodetic-events";
 import { geodeticMCLongitude, geodeticASCLongitude } from "@/app/lib/geodetic";
@@ -42,7 +45,7 @@ export interface PersonalLunationHit {
 }
 
 export interface PersonalLunationsResult {
-    /** Sum of severities across all hits, capped ±10. */
+    /** Sum of severities across all hits, capped ±12 (= 2× per-house cap). */
     aggregate: number;
     hits: PersonalLunationHit[];
 }
@@ -126,6 +129,6 @@ export function scorePersonalLunations(params: {
 
     hits.sort((a, b) => Math.abs(b.severity) - Math.abs(a.severity));
     const rawAgg = hits.reduce((s, h) => s + h.severity, 0);
-    const aggregate = Math.max(-10, Math.min(10, rawAgg));
+    const aggregate = Math.max(-12, Math.min(12, rawAgg));
     return { aggregate, hits };
 }

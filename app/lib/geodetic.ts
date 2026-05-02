@@ -93,12 +93,17 @@ export function geodeticHouseCusps(lat: number, lon: number): number[] {
 }
 
 /** Geodetic house number (1-12) for a natal planet's ecliptic longitude
- *  at a given destination. Whole-sign convention. */
+ *  at a given destination. Whole-sign convention — the entire sign holding
+ *  geo-ASC is house 1, regardless of the ASC degree within that sign. Must
+ *  stay consistent with `geodeticHouseCusps`, which anchors cusp 1 to the
+ *  same sign-start; assignments here drive the per-planet UI wheel that
+ *  renders those cusps. */
 export function geodeticHouseFromLongitude(
     planetLon: number,
     destLat: number,
     destLon: number,
 ): number {
     const ascLon = geodeticASCLongitude(destLon, destLat);
-    return houseFromLongitude(planetLon, ascLon);
+    const ascSignStart = Math.floor(ascLon / 30) * 30;
+    return houseFromLongitude(planetLon, ascSignStart);
 }
