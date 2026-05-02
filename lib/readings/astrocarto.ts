@@ -127,7 +127,7 @@ async function loadOrComputePartnerNatal(
 }
 
 /** Compute relocated house cusps at a destination using Swiss Ephemeris. */
-async function relocatedCuspsAt(
+export async function relocatedCuspsAt(
   dtUtc: Date,
   targetLat: number,
   targetLon: number,
@@ -249,7 +249,7 @@ function deriveScoreBreakdown(matrixResult: any, acgLines: any[], rawTransits: T
   return { place, timing, sky };
 }
 
-function buildAIInput(args: {
+export function buildAIInput(args: {
   destination: string;
   destinationLat: number;
   destinationLon: number;
