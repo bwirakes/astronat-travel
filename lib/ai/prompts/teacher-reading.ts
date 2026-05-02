@@ -166,12 +166,19 @@ Use \`editorialEvidence.tabs\` for the exact tab IDs, labels, questions, and ord
 **tabs** — One entry per \`editorialEvidence.tabs[].id\`. Each entry should feel like the next part of one guided commentary:
 - \`lead\`: outcome-first opener for that tab.
 - \`plainEnglishSummary\`: beginner-friendly "what this means for me" copy.
+  - For \`life-themes\`: The summary MUST evaluate the strongest themes through the lens of the user's primary goal FIRST. Frame the loud themes as either supporting the goal or pulling focus away from it. (e.g., "While you came looking for love, this place pulls you toward work...")
+  - For \`place-field\`: The core question is "How do I fit in?". The summary must mention how the user's specific core placements (e.g., Moon, Sun) interact with the geography and change their physical perception or experience of the environment.
+  - For \`what-shifts\`: The core question is "How am I perceived here?". You MUST lead the summary with the user's new relocated Rising sign, its ruling planet, and how that shifts their public perception. Mention activating specific relocated placements.
 - \`evidenceCaption\`: short chart receipt that cites the evidence without internal engine terms.
 - \`nextTabBridge\`: why the next tab matters. Omit only for the final tab.
 
-**overview** — Outcome-first copy for the answer page. \`scoreExplanation\` explains the visible score without saying macro, matrix, bucket, W_EVENTS, S_global, or selectedGoals. \`goalExplanation\` names the user's selected goal outcome if present. \`leanInto\` and \`watchOut\` must be based only on \`editorialEvidence.scoreDrivers\`.
+**overview** — Outcome-first copy for the answer page.
+- \`scoreExplanation\`: MUST combine the destination, the user's \`goalIds\` (primary goal), and the \`dateRange\` into the very first sentence. Explain the \`overallScore\` by explicitly citing the \`topTransits\` and \`nearbyLines\` that drive it. Example: "Hong Kong is a great place for your career goals during May 12-22 because Mars squares Uranus, giving you the friction needed to push a project forward."
+- \`goalExplanation\`: Name the user's selected goal outcome and explain how the chart specifically supports it.
+- \`leanInto\`: Do not write generic bullets. Write 1-2 detailed paragraphs explaining the positive drivers of the \`overallScore\`. Synthesize the \`scoreBreakdown\`, \`activeHouses\`, and \`nearbyLines\` to explain exactly *why* the score is high and what specific energy to use.
+- \`watchOut\`: Write 1-2 detailed paragraphs explaining the negative drivers or friction points based on \`topTransits\` or \`lessEmphasized\` themes.
 
-**timing** — Activation copy. Explain when to use the place, not just which transits exist. If timing is weaker than the place fit, say the place may still be useful but needs care around the dates.
+**timing** — Activation copy. Explain when to use the place, not just which transits exist. If timing is weaker than the place fit, say the place may still be useful but needs care around the dates. Give strategic activation advice (e.g. "Use this window to push through stalled projects").
 
 **windows[3]** — Only when \`travelType === "trip"\`. Three travel windows, ordered best → alternate → alternate. Write \`flavorTitle\` (≤ 4 words) and \`note\` (1–2 sentences) only — leave \`score\` at 0 and \`dates\`/\`nights\` empty. The engine owns the numbers and overwrites yours; you only write the prose.
 

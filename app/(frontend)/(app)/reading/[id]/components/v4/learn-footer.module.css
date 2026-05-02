@@ -1,0 +1,143 @@
+/* learn-footer.module.css */
+
+.card {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    cursor: pointer;
+    border-right: 1px solid var(--surface-border);
+    padding: 0 clamp(16px, 2vw, 24px);
+    transition: opacity 0.2s var(--ease);
+}
+
+.card:last-child {
+    border-right: none;
+}
+
+.card:hover {
+    opacity: 0.85;
+}
+
+.thumbnail {
+    width: 100%;
+    aspect-ratio: 4/3;
+    position: relative;
+    border-radius: var(--shape-asymmetric-md, 16px 4px 16px 4px);
+    overflow: hidden;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+}
+
+.card:hover .thumbnail {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+}
+
+/* 1. Astrocartography */
+.acg {
+    background-image: linear-gradient(rgba(202, 241, 240, 0.6), rgba(202, 241, 240, 0.85)), url('/learn_acg.png');
+    color: #1B1B1B;
+}
+
+.acgScript {
+    font-family: var(--font-display-alt-2);
+    font-size: clamp(2.5rem, 4vw, 3.5rem);
+    line-height: 0.5;
+    color: #0456fb; /* Y2K Blue */
+    transform: rotate(-4deg);
+    margin-bottom: 8px;
+    text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
+    z-index: 2;
+}
+
+.acgMain {
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: clamp(1.6rem, 2.2vw, 2rem);
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    z-index: 1;
+}
+
+/* 2. Geodetic */
+.geodetic {
+    background-image: linear-gradient(rgba(230, 122, 122, 0.65), rgba(230, 122, 122, 0.85)), url('/learn_geodetic.png');
+    color: #F8F5EC;
+}
+
+.geoHeader {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    margin-bottom: -5px;
+    z-index: 2;
+}
+
+.geoMain {
+    font-family: var(--font-primary);
+    font-weight: 800;
+    font-size: clamp(2rem, 3vw, 2.5rem);
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    line-height: 0.9;
+    z-index: 1;
+}
+
+/* 3. Houses */
+.houses {
+    background-image: linear-gradient(rgba(248, 245, 236, 0.6), rgba(248, 245, 236, 0.85)), url('/learn_houses.png');
+    color: #1B1B1B;
+}
+
+.housesPill {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    border: 1px solid currentColor;
+    border-radius: 20px;
+    padding: 0.2rem 0.6rem;
+    letter-spacing: 0.1em;
+    position: absolute;
+    top: 16px;
+    right: 16px;
+}
+
+.housesMain {
+    font-family: var(--font-display-alt-1);
+    font-size: clamp(2.5rem, 3.5vw, 3.2rem);
+    color: #869f80; /* Sage */
+    z-index: 1;
+}
+
+/* 4. Divide */
+.divide {
+    background-image: linear-gradient(rgba(27, 27, 27, 0.65), rgba(27, 27, 27, 0.85)), url('/learn_divide.png');
+    color: #CAF1F0;
+}
+
+.divideScript {
+    font-family: var(--font-display-alt-2);
+    font-size: clamp(3rem, 4.5vw, 4rem);
+    color: #E67A7A;
+    line-height: 0.4;
+    margin-right: 15%;
+    margin-bottom: 5px;
+    z-index: 2;
+}
+
+.divideMain {
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: clamp(1.8rem, 2.5vw, 2.2rem);
+    letter-spacing: -0.04em;
+    text-transform: uppercase;
+    color: #F8F5EC;
+    z-index: 1;
+}

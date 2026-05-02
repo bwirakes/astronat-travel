@@ -15,6 +15,8 @@ import LifeThemesTab from "./tabs/LifeThemesTab";
 import PlaceFieldTab from "./tabs/PlaceFieldTab";
 import WhatShiftsTab from "./tabs/WhatShiftsTab";
 import TimingTab from "./tabs/TimingTab";
+import NextTabNav from "./NextTabNav";
+import LearnFooter from "./LearnFooter";
 import "./reading-shell.css";
 
 const FONT_PRIMARY = "var(--font-primary, serif)";
@@ -383,7 +385,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
 
                                     {copiedTab?.evidenceCaption && (
                                         <section
-                                            className="mt-3 py-4 border-t text-[14px]"
+                                            className="mt-3 py-4 border-t text-[14px] mx-[clamp(16px,3vw,28px)]"
                                             style={{
                                                 borderColor: "var(--surface-border)",
                                                 fontFamily: FONT_BODY,
@@ -394,23 +396,19 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                                         </section>
                                     )}
 
-                                    {copiedTab?.nextTabBridge && (
-                                        <section
-                                            className="mt-3 py-[18px] px-4 border-t text-[14px]"
-                                            style={{
-                                                borderColor: "var(--surface-border)",
-                                                background: "color-mix(in oklab, var(--text-primary) 5%, transparent)",
-                                                borderRadius: "var(--shape-asymmetric-sm, var(--radius-md, 10px))",
-                                                fontFamily: FONT_BODY,
-                                                color: "var(--text-primary)",
-                                            }}
-                                        >
-                                            {copiedTab.nextTabBridge}
-                                        </section>
-                                    )}
+                                    <NextTabNav 
+                                        activeTab={activeTab} 
+                                        selectTab={selectTab} 
+                                        bridgeText={copiedTab?.nextTabBridge} 
+                                    />
+                                    
                                 </div>
                             </div>
                         </Tabs>
+                        
+                        <div className="w-full mt-12">
+                            <LearnFooter />
+                        </div>
                     </div>
                 </section>
 
