@@ -348,7 +348,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                                         </TabsContent>
 
                                         <TabsContent value="life-themes" className="mt-0 outline-none data-[state=inactive]:hidden">
-                                            <LifeThemesTab vm={vm} />
+                                            <LifeThemesTab vm={vm} reading={reading} />
                                         </TabsContent>
 
                                         <TabsContent value="place-field" className="mt-0 outline-none data-[state=inactive]:hidden">

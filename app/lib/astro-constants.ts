@@ -103,6 +103,14 @@ export const HOUSE_THEMES: Record<number, string> = {
     12: "Solitude & Spirituality",
 };
 
+// Compact one-word labels used where space is tight (wheel captions, chips).
+// Same H-number semantics as HOUSE_THEMES — keep these in sync.
+export const HOUSE_DOMAIN_SHORT: Record<number, string> = {
+    1: "Self",     2: "Money",   3: "Voice",   4: "Home",
+    5: "Play",     6: "Work",    7: "Partners", 8: "Depth",
+    9: "Travel",   10: "Career", 11: "Friends", 12: "Inner",
+};
+
 // ── A3: Chart-ruler relocation tracking ────────────────────────────────────
 //
 // Geodetic 101 PDF p.7: "You're Taurus rising in Jakarta (Venus chart-ruler

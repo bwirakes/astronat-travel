@@ -4,14 +4,14 @@
 
 import { useState } from "react";
 import AcgLinesCard from "@/app/components/AcgLinesCard";
-import ActiveTransitsCard from "@/app/components/ActiveTransitsCard";
-import HouseMatrixCard from "@/app/components/HouseMatrixCard";
 import NatalWithGeodeticOverlay from "@/app/components/NatalWithGeodeticOverlay";
+import GeodeticHouseWheel from "../wheels/GeodeticHouseWheel";
 import ReadingGeodeticMap from "../parts/ReadingGeodeticMap";
-import { acgLineRawScore, type HouseMatrixResult } from "@/app/lib/house-matrix";
+import { acgLineRawScore } from "@/app/lib/house-matrix";
 import { geodeticASCLongitude, geodeticMCLongitude, signFromLongitude } from "@/app/lib/geodetic";
+import { geodeticPlanetMeaning } from "@/app/lib/geodetic/planet-meanings";
 import type { PersonalGeodeticHit } from "@/app/lib/reading-tabs";
-import type { V4EclipseHit, V4GeoTransit, V4ProgressedBand } from "@/app/lib/reading-viewmodel";
+import type { V4EclipseHit, V4GeoTransit, V4LunationHit, V4Paran, V4ProgressedBand } from "@/app/lib/reading-viewmodel";
 import type { V4VM } from "./types";
 
 interface Props {
@@ -70,6 +70,166 @@ const DIVIDER: React.CSSProperties = {
     background: "var(--surface-border)",
 };
 
+// Three normalized body sizes used across the tab
+const BODY: React.CSSProperties = {
+    fontFamily: "var(--font-body)",
+    fontSize: "0.95rem",
+    lineHeight: 1.6,
+    color: "var(--text-secondary)",
+    fontWeight: 400,
+};
+
+const BODY_MUTED: React.CSSProperties = {
+    ...BODY,
+    color: "var(--text-tertiary)",
+    margin: "0 0 var(--space-md) 0",
+    maxWidth: "640px",
+};
+
+const BODY_CAPTION: React.CSSProperties = {
+    fontFamily: "var(--font-body)",
+    fontSize: "0.82rem",
+    lineHeight: 1.55,
+    color: "var(--text-tertiary)",
+};
+
+const MONO_SM: React.CSSProperties = {
+    fontFamily: "var(--font-mono)",
+    fontSize: "0.6rem",
+    letterSpacing: "0.14em",
+    textTransform: "uppercase",
+    fontWeight: 600,
+};
+
+const DATELINE: React.CSSProperties = {
+    fontFamily: "var(--font-mono)",
+    fontSize: "0.7rem",
+    color: "var(--text-tertiary)",
+    display: "flex",
+    gap: "1.25rem",
+    flexWrap: "wrap",
+    opacity: 0.85,
+};
+
+// ─── Sign-aware angle copy ───────────────────────────────────────────────
+
+const ANGLE_FRAME: Record<Anchor, { topic: string; verb: string }> = {
+    ASC: { topic: "the way the city reads you",      verb: "filters how you land" },
+    MC:  { topic: "the public face",                 verb: "shapes what you become known for" },
+    DSC: { topic: "the partners this place brings",  verb: "sets who you mirror" },
+    IC:  { topic: "the foundation",                  verb: "anchors what stays hidden" },
+};
+
+// Short labels used as a prose prefix in the four-corner block copy.
+const ANCHOR_LABEL: Record<Anchor, string> = {
+    ASC: "Arrival",
+    MC:  "Public face",
+    DSC: "Partners",
+    IC:  "Foundation",
+};
+
+// Magazine-voice planet lexicon. Place-tab-only — does not propagate to the
+// AI prompt or other tabs. Four slots per planet:
+//   verb         — used in four-corner inline copy ("Saturn weighs it.")
+//   tail         — sensory tail used as the loudest planet's flavour
+//   cityCharacter — what the city BECOMES when this planet is loudest;
+//                   used in the synthesis sentence of the opener lede
+//   shortFlavour — folded into the lede when this planet is secondary
+const PLANET_LEX: Record<string, {
+    verb: string;
+    tail: string;
+    cityCharacter: string;
+    shortFlavour: string;
+}> = {
+    sun: {
+        verb: "lights up",
+        tail: "leadership lands on you whether you wanted the spotlight or not",
+        cityCharacter: "a leadership-coded, performative stage",
+        shortFlavour: "leadership pressure",
+    },
+    moon: {
+        verb: "tunes",
+        tail: "the city's daily rhythm runs through you here",
+        cityCharacter: "a rhythmic, mood-driven, neighbourhood-coded place",
+        shortFlavour: "everyday rhythm",
+    },
+    mercury: {
+        verb: "quickens",
+        tail: "you talk, deal, and move before you've fully arrived",
+        cityCharacter: "a fast-talking, exchange-driven hub",
+        shortFlavour: "voice in motion",
+    },
+    venus: {
+        verb: "sweetens",
+        tail: "money, art, and ease show up in the small encounters",
+        cityCharacter: "an easy, beautiful, money-touched ground",
+        shortFlavour: "ease and money",
+    },
+    mars: {
+        verb: "sharpens",
+        tail: "fast moves, friction, the kind of presence that gets to the point",
+        cityCharacter: "a fast, contested, urgent compound",
+        shortFlavour: "edge and urgency",
+    },
+    jupiter: {
+        verb: "widens",
+        tail: "money flows, doctrines form, an embassy quality settles in",
+        cityCharacter: "a wide, doctrinal, embassy-flavoured field",
+        shortFlavour: "expansive flow",
+    },
+    saturn: {
+        verb: "weighs",
+        tail: "the city's bones come up — old, slow, hard to dismiss",
+        cityCharacter: "a weighted, structured, slow-moving ground",
+        shortFlavour: "old gravity",
+    },
+    uranus: {
+        verb: "jolts",
+        tail: "sudden, tech-edged, a little contentious",
+        cityCharacter: "an unstable, tech-edged, sudden ground",
+        shortFlavour: "sudden rupture",
+    },
+    neptune: {
+        verb: "dissolves",
+        tail: "the edges blur — devotion, art, fog, sometimes deception",
+        cityCharacter: "a permeable, devotional, foggy field",
+        shortFlavour: "blurred edges",
+    },
+    pluto: {
+        verb: "concentrates",
+        tail: "high-stakes, underground signal, the kind of current that transforms what it touches",
+        cityCharacter: "a high-stakes, underground-coded compound",
+        shortFlavour: "concentrated stakes",
+    },
+};
+
+// Short anchor phrases used in the opener's "anchor map" sentence.
+const ANCHOR_SHORT: Record<Anchor, string> = {
+    ASC: "the arrival",
+    MC:  "the public face",
+    DSC: "the partners",
+    IC:  "the foundation",
+};
+
+// Life-domain words for each anchor — surface the H1/H10/H7/H4 themes the
+// framework's "Interpret the Houses" step asks for. Single-word forms; the
+// opener concatenates these into a "X, Y, and Z all light up here" sentence.
+const ANCHOR_DOMAIN: Record<Anchor, string> = {
+    ASC: "identity",
+    MC:  "career",
+    DSC: "partnerships",
+    IC:  "home base",
+};
+
+const SIGN_FLAVOR: Record<string, string> = {
+    Aries: "direct, edge-first", Taurus: "slow, sensory, grounded",
+    Gemini: "talky, exchange-driven", Cancer: "tender, family-coloured",
+    Leo: "dramatic, performative", Virgo: "precise, fix-it",
+    Libra: "relational, design-led", Scorpio: "intense, depth-seeking",
+    Sagittarius: "expansive, philosophical", Capricorn: "structured, ambitious",
+    Aquarius: "experimental, network-driven", Pisces: "permeable, dreamy",
+};
+
 export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines }: Props) {
     const { lat, lon, city } = vm.location;
     const geoMC  = geodeticMCLongitude(lon);
@@ -108,39 +268,8 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
         ? reading.relocatedCusps
         : new Array(12).fill(0).map((_, i) => i * 30);
 
-    const verdict = vm.chrome.step4GeodeticBridge || buildFallbackVerdict(city, hits);
-
-    const summary = deriveSummary({
-        hits,
-        activeTransits:  vm.geodetic?.activeTransits ?? [],
-        eclipses:        vm.eclipses?.hits ?? [],
-        progressedBands: vm.progressions?.bands ?? [],
-    });
-
-    const activeTransitRows = buildActiveTransitRows(
-        vm.geodetic?.activeTransits ?? [],
-        reading?.transitWindows ?? [],
-    );
-
-    const matrix: HouseMatrixResult | null =
-        reading?.houses && Array.isArray(reading.houses) && reading.houses.length > 0
-            ? {
-                houses:      reading.houses,
-                macroScore:  reading.macroScore ?? 0,
-                macroVerdict: reading.macroVerdict ?? "Neutral",
-                houseSystem: reading.houseSystem ?? "placidus",
-                ...(reading.lotOfFortune ? { lotOfFortune: reading.lotOfFortune } : {}),
-                ...(reading.lotOfSpirit  ? { lotOfSpirit:  reading.lotOfSpirit  } : {}),
-            }
-            : null;
-
-    const hasTemporalLayer =
-        activeTransitRows.length > 0 ||
-        (vm.eclipses?.hits.length ?? 0) > 0 ||
-        !!vm.progressions;
-
-    // 4-corner summary rows
-    const cornerRows = (["ASC", "IC", "DSC", "MC"] as const).map((anchor) => {
+    // 4-corner summary rows (sign-aware copy + tightest hit per anchor)
+    const cornerRows = (["ASC", "MC", "DSC", "IC"] as const).map((anchor) => {
         const lonAngle = angleLons[anchor];
         const sign = signFromLongitude(lonAngle);
         const deg  = Math.floor(((lonAngle % 30) + 30) % 30);
@@ -148,125 +277,81 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
         return { anchor, sign, deg, hit };
     });
 
+    const liveItems = buildLiveItems(vm);
+    const timing: TimingState = {
+        skyHasContent: liveItems.length > 0,
+        hasProgressedBand: vm.progressions?.bands.some((b) => b.destinationInBand) ?? false,
+    };
+    const opener = buildOpener({ city, cornerRows, timing });
+
     return (
         <div style={{ paddingTop: "var(--space-2xl)", paddingBottom: "var(--space-3xl)" }}>
 
             {/* ── Header ───────────────────────────────────────────────── */}
-            <div style={{ marginBottom: "var(--space-lg)" }}>
+            <div style={{ marginBottom: "var(--space-md)" }}>
                 <h1 style={{
                     fontFamily:    "var(--font-primary)",
                     fontSize:      "clamp(2rem, 4vw, 3.5rem)",
                     textTransform: "uppercase",
                     letterSpacing: "0.02em",
-                    margin:        "0 0 0.75rem 0",
+                    margin:        "0 0 0.6rem 0",
                     lineHeight:    1.1,
                     color:         "var(--text-primary)",
                 }}>
                     {city.toUpperCase()} · Geodetic Field
                 </h1>
-                <div style={{
-                    fontFamily:  "var(--font-mono)",
-                    fontSize:    "0.7rem",
-                    color:       "var(--text-tertiary)",
-                    display:     "flex",
-                    gap:         "1.25rem",
-                    flexWrap:    "wrap",
-                    opacity:     0.8,
-                }}>
+                <div style={DATELINE}>
                     <span>{lat.toFixed(2)}°, {lon.toFixed(2)}°</span>
                     <span>{vm.travelDateISO ? vm.travelDateISO.slice(0, 10) : "any time"}</span>
-                    <span>{summary.highlights.length} lifts · {summary.lowlights.length} presses</span>
+                    <span>geo-ASC {signFromLongitude(geoASC)} · geo-MC {signFromLongitude(geoMC)}</span>
                 </div>
             </div>
 
-            {/* Verdict */}
-            {verdict && (
-                <p style={{
-                    fontFamily:  "var(--font-body)",
-                    fontSize:    "1.05rem",
-                    lineHeight:  1.65,
-                    color:       "var(--text-secondary)",
-                    margin:      "0 0 var(--space-lg) 0",
-                    fontStyle:   "italic",
-                    fontWeight:  300,
-                    maxWidth:    "680px",
-                }}>
-                    {verdict}
-                </p>
-            )}
+            {/* ── Personalised opener (replaces verdict + how-to-read) ── */}
+            <Opener data={opener} />
 
-            <div style={{ ...DIVIDER, marginBottom: "var(--space-lg)" }} />
+            <div style={{ ...DIVIDER, margin: "var(--space-lg) 0" }} />
 
-            {/* ── Overview grid — corners left, wheel right ─────────────── */}
-            <div className="chart-overview-grid" style={{ marginBottom: "var(--space-xl)" }}>
-
-                {/* LEFT — four corners at a glance */}
+            {/* ── §01 What this place activates ────────────────────────── */}
+            <SectionHead index="01" title={`What ${city} activates in your chart`} />
+            <div className="chart-overview-grid" style={{ marginBottom: "var(--space-md)" }}>
                 <div>
-                    <div style={KICKER}>Four corners of this city</div>
+                    <div style={KICKER}>The four corners</div>
                     <div style={{ display: "flex", flexDirection: "column" }}>
-                        {cornerRows.map(({ anchor, sign, deg, hit }) => (
-                            <div key={anchor} style={{ borderBottom: "1px solid var(--surface-border)", padding: "0.85rem 0" }}>
-                                <div style={{ display: "flex", alignItems: "baseline", gap: "0.75rem" }}>
-                                    <span style={{
-                                        fontFamily: "var(--font-mono)",
-                                        fontSize:   "0.6rem",
-                                        letterSpacing: "0.14em",
-                                        color:      "var(--text-tertiary)",
-                                        textTransform: "uppercase",
-                                        minWidth:   "2.8rem",
-                                    }}>
-                                        {anchor}
-                                    </span>
-                                    <span style={{
-                                        fontFamily: "var(--font-mono)",
-                                        fontSize:   "0.85rem",
-                                        fontWeight: 600,
-                                        color:      "var(--text-primary)",
-                                    }}>
-                                        {sign} {deg}°
-                                    </span>
-                                    {hit && (
-                                        <span style={{
-                                            fontFamily: "var(--font-mono)",
-                                            fontSize:   "0.62rem",
-                                            color:      familyAccent(hit.family),
-                                            letterSpacing: "0.08em",
-                                        }}>
-                                            {capitalize(hit.planet)} · {hit.orbDeg}° {hit.closeness === "very close" ? "tight" : "close"}
-                                        </span>
-                                    )}
-                                </div>
-                                <div style={{
-                                    fontFamily: "var(--font-body)",
-                                    fontSize:   "0.82rem",
-                                    color:      "var(--text-tertiary)",
-                                    marginTop:  "0.2rem",
-                                    paddingLeft: "3.55rem",
+                        {cornerRows.map(({ anchor, sign, deg, hit }) => {
+                            const tight = hit && hit.orbDeg <= 3;
+                            const accent = hit ? familyAccent(hit.family) : "var(--text-tertiary)";
+                            return (
+                                <div key={anchor} style={{
+                                    borderBottom: "1px solid var(--surface-border)",
+                                    padding: "0.85rem 0",
+                                    background: tight ? "color-mix(in oklab, var(--gold) 5%, transparent)" : "transparent",
                                 }}>
-                                    {ANGLE_DESC[anchor]}
+                                    <div style={{ display: "flex", alignItems: "baseline", gap: "0.75rem", flexWrap: "wrap" }}>
+                                        <span style={{ ...MONO_SM, color: "var(--text-tertiary)", minWidth: "2.4rem" }}>
+                                            {anchor}
+                                        </span>
+                                        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.85rem", fontWeight: 600, color: "var(--text-primary)" }}>
+                                            {sign} {deg}°
+                                        </span>
+                                        {hit && (
+                                            <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", color: accent, letterSpacing: "0.08em", fontWeight: tight ? 700 : 500 }}>
+                                                {capitalize(hit.planet)} · {hit.orbDeg}° {tight ? "TIGHT" : "close"}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div style={{ ...BODY_CAPTION, marginTop: "0.25rem", paddingLeft: "3.15rem" }}>
+                                        {anchorCopy(anchor, sign, hit)}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
-
-                    <p style={{
-                        fontFamily: "var(--font-body)",
-                        fontSize:   "0.82rem",
-                        lineHeight: 1.55,
-                        color:      "var(--text-tertiary)",
-                        margin:     "var(--space-md) 0 0 0",
-                        fontStyle:  "italic",
-                    }}>
-                        Every place has four directions in its sky — rising, overhead, setting,
-                        underneath. When a natal planet sits within 5° of one, that corner is
-                        activated for you.
-                    </p>
                 </div>
 
-                {/* RIGHT — wheel, sticky */}
                 <div style={{ position: "sticky", top: "var(--space-md)" }}>
-                    <div style={KICKER}>Natal Geometry · Geodetic Overlay</div>
-                    <div style={{ width: "100%", maxWidth: "520px", margin: "0 auto", position: "relative" }}>
+                    <div style={KICKER}>Natal × geodetic overlay</div>
+                    <div style={{ width: "100%", maxWidth: "440px", margin: "0 auto", position: "relative" }}>
                         <NatalWithGeodeticOverlay
                             isDark
                             planets={natalPlanetsForWheel}
@@ -279,77 +364,135 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
                 </div>
             </div>
 
-            {/* ── Contact table — full-width ────────────────────────────── */}
-            {flatHits.length > 0 && (
-                <div style={{ marginBottom: "var(--space-xl)" }}>
-                    <div style={{
-                        ...KICKER,
-                        paddingBottom: "0.75rem",
-                        borderBottom:  "1px solid var(--surface-border)",
-                    }}>
-                        Planetary contacts · {flatHits.length} within 5°
-                    </div>
-                    <ContactTable rows={flatHits} notes={hitNotes} />
-                </div>
+            <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
+
+            {/* ── §02 What's live now (promoted out of details) ───────── */}
+            <SectionHead index="02" title={`What's live in ${city} now`} />
+            {vm.progressions && (
+                <ProgressionsLine bands={vm.progressions.bands} />
+            )}
+            {liveItems.length > 0 ? (
+                <LiveNowTable items={liveItems} />
+            ) : (
+                <p style={BODY_MUTED}>
+                    The sky over {city} is quiet right now &mdash; nothing transiting close to its corners.
+                </p>
             )}
 
-            {/* ── Geodetic map ─────────────────────────────────────────── */}
-            <div style={{ marginBottom: "var(--space-xl)" }}>
-                <div style={KICKER}>Geodetic position</div>
-                <ReadingGeodeticMap lat={lat} lon={lon} city={city} />
-                <p style={{
-                    fontFamily: "var(--font-body)",
-                    fontSize:   "0.82rem",
-                    lineHeight: 1.5,
-                    color:      "var(--text-tertiary)",
-                    margin:     "0.75rem 0 0 0",
-                    fontStyle:  "italic",
-                }}>
-                    The dashed red line is {city}&rsquo;s Midheaven meridian. Gold curves are
-                    Ascendant boundaries. The shaded block is the rising-zone this city falls into.
-                </p>
+            <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
+
+            {/* ── §03 The frame (geodetic house wheel) ─────────────────── */}
+            {vm.geodeticHouseFrame.cusps.length === 12 && (
+                <>
+                    <SectionHead index="03" title="Where your chart lands on this longitude" />
+                    <p style={BODY}>
+                        If you swapped your birthplace&rsquo;s clock for {city}&rsquo;s, your natal
+                        planets would re-house themselves like this. House 1 starts at the sign of
+                        the geodetic Ascendant.
+                    </p>
+                    <div style={{ width: "100%", maxWidth: "440px", margin: "var(--space-md) auto 0" }}>
+                        <GeodeticHouseWheel
+                            isDark
+                            cusps={vm.geodeticHouseFrame.cusps}
+                            natalAssignments={vm.geodeticHouseFrame.natalAssignments}
+                            geoASC={geoASC}
+                            geoMC={geoMC}
+                            lat={lat}
+                            lon={lon}
+                            city={city}
+                        />
+                    </div>
+                    <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
+                </>
+            )}
+
+            {/* ── §04 Where the city sits in the zodiac ────────────────── */}
+            <SectionHead index="04" title={`Where ${city} sits in the zodiac`} />
+            <p style={BODY}>
+                {city} sits where {signFromLongitude(geoMC)} runs overhead and{" "}
+                {signFromLongitude(geoASC)} rises on the horizon. The shaded band is the slice of
+                sky this longitude owns.
+                {vm.parans.length > 0 && " Horizontal lines mark paran latitudes from your chart."}
+            </p>
+            <div style={{ maxWidth: "min(100%, 540px)", marginTop: "var(--space-md)" }}>
+                <ReadingGeodeticMap
+                    lat={lat}
+                    lon={lon}
+                    city={city}
+                    parans={vm.parans
+                        .filter((p) => Math.abs(p.latOffset) <= 28)
+                        .map((p) => ({
+                            p1: p.p1, p2: p.p2,
+                            aspect: p.aspect || undefined,
+                            lat: p.lat,
+                            contribution: p.contribution,
+                        }))}
+                />
             </div>
 
-            <div style={{ ...DIVIDER, marginBottom: "var(--space-lg)" }} />
+            {/* ── §05 Latitude crossings (only when present) ───────────── */}
+            {vm.parans.length > 0 && (
+                <>
+                    <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
+                    <SectionHead index="05" title="Latitude crossings" />
+                    <p style={BODY_MUTED}>
+                        Pairs of your natal planets that cross the horizon together at a latitude
+                        near {city}&rsquo;s. Tight benefic pairs lift the field; tight malefic pairs
+                        press it.
+                    </p>
+                    <ParanList parans={vm.parans} city={city} />
+                </>
+            )}
 
-            {/* ── Drill-downs ───────────────────────────────────────────── */}
+            <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
+
+            {/* ── Receipts (collapsed) ─────────────────────────────────── */}
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
-                {matrix && (
-                    <DetailsBlock title="Life areas, ranked">
-                        <HouseMatrixCard matrix={matrix} />
+                {flatHits.length > 0 && (
+                    <DetailsBlock title={`All planetary contacts within 5° (${flatHits.length})`}>
+                        <ContactTable rows={flatHits} notes={hitNotes} />
                     </DetailsBlock>
                 )}
 
-                {hasTemporalLayer && (
-                    <DetailsBlock title="What&rsquo;s live right now">
-                        {(vm.eclipses?.hits ?? []).length > 0 && (
-                            <div style={{ marginBottom: "var(--space-md)", display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-                                {(vm.eclipses?.hits ?? []).map((e, i) => (
-                                    <EclipseChip key={`ec-${i}`} hit={e} />
-                                ))}
-                            </div>
-                        )}
-                        {activeTransitRows.length > 0 && (
-                            <ActiveTransitsCard transits={activeTransitRows} travelDate={vm.travelDateISO ?? ""} />
-                        )}
-                        {vm.progressions && (
-                            <ProgressionLine bands={vm.progressions.bands} />
-                        )}
-                    </DetailsBlock>
-                )}
+                <DetailsBlock title="Astrocartography lines (reference)">
+                    <AcgLinesCard
+                        planetLines={relocatedAcgLines.map((l: any) => {
+                            const angleStr = String(l.angle ?? l.line ?? "");
+                            const km = typeof l.distance_km === "number"
+                                ? l.distance_km
+                                : Number(String(l.distance ?? "").match(/\d+/)?.[0] ?? 0);
+                            return {
+                                planet: String(l.planet ?? ""),
+                                angle: angleStr,
+                                distance_km: km,
+                                orb: typeof l.orb === "number" ? l.orb : undefined,
+                                is_paran: !!l.is_paran,
+                                contribution: acgLineRawScore({
+                                    planet: String(l.planet ?? ""),
+                                    angle: angleStr.toUpperCase(),
+                                    distance_km: km,
+                                }),
+                            };
+                        })}
+                        natalPlanets={(reading?.natalPlanets || []).map((p: any) => ({
+                            planet: String(p.name ?? p.planet ?? ""),
+                            sign: String(p.sign ?? ""),
+                            degree: typeof p.longitude === "number" ? Math.floor(p.longitude % 30) : 0,
+                            longitude: typeof p.longitude === "number" ? p.longitude : 0,
+                            retrograde: !!p.retrograde,
+                            house: typeof p.house === "number" ? p.house : 0,
+                            dignity: p.dignity,
+                        }))}
+                        birthCity={reading?.birth?.city || "—"}
+                        destination={vm.location.city}
+                    />
+                </DetailsBlock>
 
-                <DetailsBlock title="The method">
+                <DetailsBlock title="The method · how this is computed">
                     <ol style={{
-                        margin:      0,
-                        paddingLeft: "1.25rem",
-                        display:     "flex",
-                        flexDirection: "column",
-                        gap:         "0.75rem",
-                        fontFamily:  "var(--font-body)",
-                        fontSize:    "0.9rem",
-                        lineHeight:  1.6,
-                        color:       "var(--text-secondary)",
-                        maxWidth:    "680px",
+                        margin: 0, paddingLeft: "1.25rem",
+                        display: "flex", flexDirection: "column", gap: "0.75rem",
+                        ...BODY,
                     }}>
                         {FRAMEWORK_STEPS.map(([title, body], i) => (
                             <li key={`step-${i}`}>
@@ -359,64 +502,437 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
                         ))}
                     </ol>
                     {vm.chrome.step4GeodeticMethod && (
-                        <p style={{
-                            fontFamily: "var(--font-body)",
-                            fontSize:   "0.85rem",
-                            lineHeight: 1.6,
-                            color:      "var(--text-tertiary)",
-                            fontStyle:  "italic",
-                            margin:     "var(--space-md) 0 0 0",
-                            maxWidth:   "680px",
-                        }}>
+                        <p style={{ ...BODY_MUTED, margin: "var(--space-md) 0 0 0", maxWidth: "680px" }}>
                             {vm.chrome.step4GeodeticMethod}
                         </p>
                     )}
                     <p style={{
-                        fontFamily:    "var(--font-mono)",
-                        fontSize:      "0.6rem",
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "0.6rem",
                         letterSpacing: "0.08em",
-                        color:         "var(--text-tertiary)",
-                        margin:        "var(--space-md) 0 var(--space-lg) 0",
+                        color: "var(--text-tertiary)",
+                        margin: "var(--space-md) 0 0 0",
                     }}>
                         Birth: {birthIso?.slice(0, 10) ?? "—"} · Destination: {city} ({lat.toFixed(2)}°, {lon.toFixed(2)}°)
                     </p>
-                    <div style={{ borderTop: "1px solid var(--surface-border)", paddingTop: "var(--space-md)" }}>
-                        <div style={{ ...KICKER, marginBottom: "var(--space-sm)" }}>Astrocartography lines (reference)</div>
-                        <AcgLinesCard
-                            planetLines={relocatedAcgLines.map((l: any) => {
-                                const angleStr = String(l.angle ?? l.line ?? "");
-                                const km = typeof l.distance_km === "number"
-                                    ? l.distance_km
-                                    : Number(String(l.distance ?? "").match(/\d+/)?.[0] ?? 0);
-                                return {
-                                    planet:       String(l.planet ?? ""),
-                                    angle:        angleStr,
-                                    distance_km:  km,
-                                    orb:          typeof l.orb === "number" ? l.orb : undefined,
-                                    is_paran:     !!l.is_paran,
-                                    contribution: acgLineRawScore({
-                                        planet:      String(l.planet ?? ""),
-                                        angle:       angleStr.toUpperCase(),
-                                        distance_km: km,
-                                    }),
-                                };
-                            })}
-                            natalPlanets={(reading?.natalPlanets || []).map((p: any) => ({
-                                planet:     String(p.name ?? p.planet ?? ""),
-                                sign:       String(p.sign ?? ""),
-                                degree:     typeof p.longitude === "number" ? Math.floor(p.longitude % 30) : 0,
-                                longitude:  typeof p.longitude === "number" ? p.longitude : 0,
-                                retrograde: !!p.retrograde,
-                                house:      typeof p.house === "number" ? p.house : 0,
-                                dignity:    p.dignity,
-                            }))}
-                            birthCity={reading?.birth?.city || "—"}
-                            destination={vm.location.city}
-                        />
-                    </div>
                 </DetailsBlock>
             </div>
         </div>
+    );
+}
+
+// ── Section heading ───────────────────────────────────────────────────────
+
+function SectionHead({ index, title }: { index: string; title: string }) {
+    return (
+        <div style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: "0.85rem",
+            marginBottom: "var(--space-md)",
+            paddingBottom: "0.6rem",
+            borderBottom: "1px solid var(--surface-border)",
+        }}>
+            <span style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "0.62rem",
+                letterSpacing: "0.22em",
+                color: "var(--text-tertiary)",
+                fontWeight: 700,
+            }}>
+                §{index}
+            </span>
+            <h2 style={{
+                fontFamily: "var(--font-primary)",
+                fontSize: "clamp(1.1rem, 2vw, 1.4rem)",
+                margin: 0,
+                color: "var(--text-primary)",
+                lineHeight: 1.2,
+                fontWeight: 500,
+                letterSpacing: "-0.01em",
+            }}>
+                {title}
+            </h2>
+        </div>
+    );
+}
+
+// ── Personalised opener (editorial drop-cap lede) ────────────────────────
+
+interface TimingState {
+    skyHasContent: boolean;     // active transits OR eclipses OR lunations within orb
+    hasProgressedBand: boolean; // a progressed Sun/Moon band brackets this longitude
+}
+
+interface OpenerData {
+    lede: string;       // single drop-cap paragraph; never empty
+    extraCount: number; // 0..N — how many close hits we didn't narrate
+}
+
+function buildOpener({
+    city, cornerRows, timing,
+}: {
+    city: string;
+    cornerRows: Array<{ anchor: Anchor; sign: string; deg: number; hit: PersonalGeodeticHit | undefined }>;
+    timing: TimingState;
+}): OpenerData {
+    const hits = cornerRows
+        .filter((r) => r.hit)
+        .map((r) => ({
+            anchor: r.anchor,
+            hit: r.hit as PersonalGeodeticHit,
+            weight: familyStoryWeight(r.hit!.family) - r.hit!.orbDeg,
+        }))
+        .sort((a, b) => b.weight - a.weight);
+
+    if (hits.length === 0) {
+        const skyClause = timing.skyHasContent
+            ? "Whatever's live in the sky right now passes through unattached."
+            : "";
+        return {
+            lede: `${city} sits as open ground for you. None of your natal planets sit close to its geodetic corners, so no specific life domains get pre-coded by the place. ${skyClause} Bring what you want here — the city won't fight you for the steering wheel.`.replace(/  +/g, " ").trim(),
+            extraCount: 0,
+        };
+    }
+
+    const top = hits.slice(0, 3);
+    const lead = top[0];
+    const leadLex = PLANET_LEX[lead.hit.planet.toLowerCase()];
+    const character = leadLex?.cityCharacter ?? "a quietly distinct field";
+
+    // Timing tail — varies by 1 vs 2-3 hits and by sky state.
+    const timingTail = composeTimingTail(top.length, timing);
+
+    // Life-domain summary — names the H1/H10/H7/H4 themes activated.
+    const domains = top.map((h) => ANCHOR_DOMAIN[h.anchor]);
+    const domainSentence = domainSummary(domains);
+
+    if (top.length === 1) {
+        const tail = leadLex?.tail ?? "a single signal at the corners";
+        const lede = `${city} runs on your ${capitalize(lead.hit.planet)}. The city becomes ${character} for you — ${tail}. ${domainSentence} ${timingTail}`.trim();
+        return { lede, extraCount: Math.max(0, hits.length - 3) };
+    }
+
+    // 2 or 3 hits — anchor map + character synthesis + secondary fold-in.
+    const anchorMap = top.length === 2
+        ? top.map((h) => `${capitalize(h.hit.planet)} on ${ANCHOR_SHORT[h.anchor]}`).join(" and ")
+        : top.map((h) => `${capitalize(h.hit.planet)} on ${ANCHOR_SHORT[h.anchor]}`).join(", ");
+
+    const secondaries = top.slice(1).map((h) => {
+        const sLex = PLANET_LEX[h.hit.planet.toLowerCase()];
+        return `${sLex?.shortFlavour ?? "a secondary current"} at ${ANCHOR_SHORT[h.anchor]}`;
+    });
+    const folded = secondaries.length === 1
+        ? `${secondaries[0]} pressing in`
+        : `${secondaries.slice(0, -1).join(", ")} and ${secondaries[secondaries.length - 1]} folding in`;
+
+    const lede = `${anchorMap} — ${city} sets up as ${character} for you, with ${folded}. ${domainSentence} ${timingTail}`.trim();
+    return { lede, extraCount: Math.max(0, hits.length - 3) };
+}
+
+// Domain-summary helper. dedupes (no anchor repeats but defensive).
+function domainSummary(domainsRaw: string[]): string {
+    const domains = Array.from(new Set(domainsRaw));
+    if (domains.length === 1) return `${capitalize(domains[0])} lights up here.`;
+    if (domains.length === 2) return `${capitalize(domains[0])} and ${domains[1]} both light up here.`;
+    const head = capitalize(domains[0]);
+    const tail = domains[domains.length - 1];
+    const middle = domains.slice(1, -1).join(", ");
+    return `${head}, ${middle}, and ${tail} all light up here.`;
+}
+
+function composeTimingTail(hitCount: number, t: TimingState): string {
+    if (t.hasProgressedBand) {
+        return hitCount === 1
+            ? "A multi-year progression band also runs through this longitude — the alignment is structural, not just a moment."
+            : "A multi-year progression band also runs through this longitude on top — the alignment is structural.";
+    }
+    if (t.skyHasContent) {
+        return hitCount === 1
+            ? "And the sky's pressing on this corner right now — the place is at full volume."
+            : "With the sky also pressing on these corners right now, the place runs hot for you.";
+    }
+    // Quiet sky.
+    return hitCount === 1
+        ? "The sky overhead is quiet right now; the place's tone is the whole story."
+        : `${hitCount === 3 ? "Three" : "Two"} of your planets are inside the city's corners with a quiet sky overhead — the natal compatibility runs the show.`;
+}
+
+function Opener({ data }: { data: OpenerData }) {
+    const FONT_PRIMARY = "var(--font-primary, serif)";
+    const FONT_BODY = "var(--font-body, system-ui)";
+    const ledeFirst = data.lede.charAt(0);
+    const ledeRest = data.lede.slice(1);
+
+    return (
+        <section className="m-0 mb-[clamp(20px,2.5vw,32px)] p-0 bg-transparent">
+            {/* Drop-cap lede — mirrors OverviewTab editorial paragraph */}
+            <div className="relative isolate flex items-start gap-[clamp(14px,2vw,28px)]">
+                <span
+                    aria-hidden
+                    className="shrink-0 leading-[0.85] select-none"
+                    style={{
+                        fontFamily: FONT_PRIMARY,
+                        fontSize: "clamp(72px, 8vw, 112px)",
+                        color: "var(--color-y2k-blue)",
+                        marginTop: "-0.06em",
+                    }}
+                >
+                    {ledeFirst}
+                </span>
+                <p
+                    className="m-0 max-w-[60ch] [text-wrap:pretty]"
+                    style={{
+                        fontFamily: FONT_BODY,
+                        fontSize: "clamp(17px, 1.4vw, 19px)",
+                        lineHeight: 1.7,
+                        color: "var(--text-secondary)",
+                        fontWeight: 400,
+                    }}
+                >
+                    {ledeRest}
+                </p>
+            </div>
+
+            {data.extraCount > 0 && (
+                <p
+                    className="m-0 mt-4 max-w-[60ch]"
+                    style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "0.7rem",
+                        letterSpacing: "0.12em",
+                        color: "var(--text-tertiary)",
+                    }}
+                >
+                    {data.extraCount === 1
+                        ? "One more planet sits close to a corner — see it in the four corners below."
+                        : `${data.extraCount} more planets sit close to the corners — see them in the four corners below.`}
+                </p>
+            )}
+        </section>
+    );
+}
+
+function familyStoryWeight(family: PersonalGeodeticHit["family"]): number {
+    // Gives loud "rough" or "bright" a slight edge over "gentle" when picking
+    // the lead planet — strong signals make for stronger ledes.
+    switch (family) {
+        case "rough":   return 6;
+        case "bright":  return 5;
+        case "gentle":  return 4;
+        default:        return 3;
+    }
+}
+
+// ── Four-corner inline copy (magazine voice, no parentheticals) ──────────
+
+function anchorCopy(anchor: Anchor, sign: string, hit: PersonalGeodeticHit | undefined): string {
+    const flavor = SIGN_FLAVOR[sign] ?? "neutral";
+    const label = ANCHOR_LABEL[anchor];
+    if (!hit) {
+        return `${label}: ${flavor}. Nothing close enough to push it further.`;
+    }
+    const planet = capitalize(hit.planet);
+    const verb = PLANET_LEX[hit.planet.toLowerCase()]?.verb ?? "colours";
+    return `${label}: ${flavor}. ${planet} ${verb} it.`;
+}
+
+// ── What's live now: combine geo-transits + eclipses + lunations ──────────
+
+interface LiveItem {
+    kind: "transit" | "eclipse" | "lunation";
+    sortKey: number;            // smaller = sooner / more urgent
+    when: string;               // "Now" | "Apr 12" | "May 03"
+    body: string;               // "Mars" | "Solar eclipse"
+    glyph: string;
+    aspect: string;             // "conj geo-MC" | "eclipse"
+    natalContact: string;       // "natal Sun" or ""
+    tone: "lift" | "press" | "push" | "neutral";
+    why: string;                // 1-line plain-English read
+}
+
+function buildLiveItems(vm: V4VM): LiveItem[] {
+    const out: LiveItem[] = [];
+
+    for (const t of vm.geodetic?.activeTransits ?? []) {
+        out.push({
+            kind: "transit",
+            sortKey: t.orb,
+            when: "Now",
+            body: capitalize(t.planet),
+            glyph: planetGlyph(t.planet),
+            aspect: `conj geo-${t.angle}`,
+            natalContact: t.personalActivation && t.natalContact ? `natal ${capitalize(t.natalContact)}` : "",
+            tone: directionToTone(t.direction, t.severity),
+            why: liveWhy("transit", t.planet, t.angle, t.natalContact, t.direction),
+        });
+    }
+    for (const e of vm.eclipses?.hits ?? []) {
+        out.push({
+            kind: "eclipse",
+            sortKey: 1000 + e.daysFromTarget,
+            when: shortDate(e.dateUtc),
+            body: e.kind === "solar" ? "Solar eclipse" : "Lunar eclipse",
+            glyph: e.kind === "solar" ? "☉" : "☽",
+            aspect: `on geo-${anglePart(e.activatedAngle)}`,
+            natalContact: e.natalContact ? `natal ${capitalize(e.natalContact)}` : "",
+            tone: "press",
+            why: `Eclipses around this longitude tend to expose what's already shaky on your ${anglePart(e.activatedAngle)} corner.`,
+        });
+    }
+    for (const l of vm.lunations?.hits ?? []) {
+        out.push({
+            kind: "lunation",
+            sortKey: 2000 + l.daysFromTarget,
+            when: shortDate(l.dateUtc),
+            body: l.kind === "new-moon" ? "New moon" : "Full moon",
+            glyph: l.kind === "new-moon" ? "🌑" : "🌕",
+            aspect: `on geo-${anglePart(l.activatedAngle)}`,
+            natalContact: l.natalContact ? `natal ${capitalize(l.natalContact)}` : "",
+            tone: l.kind === "new-moon" ? "lift" : "press",
+            why: l.kind === "new-moon"
+                ? `A fresh-start signature on this longitude — a small opening for your ${anglePart(l.activatedAngle)} corner.`
+                : `An exposure signature on this longitude — your ${anglePart(l.activatedAngle)} corner gets honest.`,
+        });
+    }
+    return out.sort((a, b) => a.sortKey - b.sortKey);
+}
+
+function shortDate(iso: string): string {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso.slice(0, 10);
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function anglePart(a: V4EclipseHit["activatedAngle"] | V4LunationHit["activatedAngle"]): string {
+    return ({ geoMC: "MC", geoIC: "IC", geoASC: "ASC", geoDSC: "DSC" } as const)[a];
+}
+
+function directionToTone(direction: V4GeoTransit["direction"], severity: number): LiveItem["tone"] {
+    if (direction === "benefic" || direction === "luminary") return "lift";
+    if (direction === "malefic") return severity < -10 ? "press" : "push";
+    return "neutral";
+}
+
+function liveWhy(_kind: "transit", planet: string, angle: V4GeoTransit["angle"], natalContact: string | undefined, direction: V4GeoTransit["direction"]): string {
+    const pm = geodeticPlanetMeaning(capitalize(planet));
+    const themeBit = pm ? ` brings ${pm.theme}` : "";
+    const angleBit = ANGLE_FRAME[angle].verb;
+    const personalBit = natalContact ? ` It also touches your natal ${capitalize(natalContact)} — that doubles the personal weight.` : "";
+    const lead = direction === "malefic"
+        ? `${capitalize(planet)}${themeBit}, but on this corner it ${angleBit}.`
+        : `${capitalize(planet)}${themeBit} and ${angleBit}.`;
+    return lead + personalBit;
+}
+
+function LiveNowTable({ items }: { items: LiveItem[] }) {
+    return (
+        <div style={{ borderTop: "1px solid var(--surface-border)" }}>
+            <div role="row" style={{
+                display: "grid",
+                gridTemplateColumns: "minmax(56px, auto) minmax(56px, auto) minmax(140px, 1.5fr) minmax(140px, 1fr) minmax(70px, auto)",
+                gap: "0.85rem",
+                padding: "0.5rem 0",
+                borderBottom: "1px solid var(--surface-border)",
+                fontFamily: "var(--font-mono)",
+                fontSize: "0.55rem",
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                color: "var(--text-tertiary)",
+                fontWeight: 700,
+            }}>
+                <span>When</span><span>Body</span><span>What it does</span><span>Natal contact</span><span style={{ textAlign: "right" }}>Tone</span>
+            </div>
+            {items.map((item, i) => (
+                <LiveRow key={`live-${i}`} item={item} />
+            ))}
+        </div>
+    );
+}
+
+function LiveRow({ item }: { item: LiveItem }) {
+    const [open, setOpen] = useState(false);
+    const tone = toneAccent(item.tone);
+    return (
+        <div style={{ borderBottom: "1px solid var(--surface-border)" }}>
+            <button
+                onClick={() => setOpen(!open)}
+                style={{
+                    width: "100%",
+                    background: "transparent",
+                    border: "none",
+                    padding: "0.85rem 0",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    color: "var(--text-primary)",
+                    display: "grid",
+                    gridTemplateColumns: "minmax(56px, auto) minmax(56px, auto) minmax(140px, 1.5fr) minmax(140px, 1fr) minmax(70px, auto)",
+                    gap: "0.85rem",
+                    alignItems: "baseline",
+                }}
+            >
+                <span style={{ ...MONO_SM, color: "var(--text-tertiary)" }}>{item.when}</span>
+                <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.1rem", color: "var(--text-primary)" }}>
+                    <span style={{ marginRight: "0.4rem" }}>{item.glyph}</span>
+                    <span style={{ fontFamily: "var(--font-body)", fontSize: "0.92rem" }}>{item.body}</span>
+                </span>
+                <span style={{ ...BODY, fontSize: "0.88rem", color: "var(--text-secondary)" }}>{item.aspect}</span>
+                <span style={{ ...BODY_CAPTION, color: item.natalContact ? "var(--text-secondary)" : "var(--text-tertiary)" }}>
+                    {item.natalContact || "—"}
+                </span>
+                <span style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "0.6rem",
+                    fontWeight: 700,
+                    color: tone.fg,
+                    border: `1px solid ${tone.fg}`,
+                    background: tone.bg,
+                    padding: "0.2rem 0.55rem",
+                    borderRadius: "999px",
+                    textAlign: "center",
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    justifySelf: "end",
+                }}>
+                    {item.tone}
+                </span>
+            </button>
+            {open && (
+                <p style={{ ...BODY, fontSize: "0.92rem", margin: "0 0 0.85rem 0", paddingLeft: "5rem", maxWidth: "640px" }}>
+                    {item.why}
+                </p>
+            )}
+        </div>
+    );
+}
+
+function toneAccent(tone: LiveItem["tone"]): { fg: string; bg: string } {
+    if (tone === "lift")    return { fg: "var(--sage, #4a8a6a)", bg: "color-mix(in oklab, var(--sage, #4a8a6a) 8%, transparent)" };
+    if (tone === "press")   return { fg: "var(--color-spiced-life)", bg: "color-mix(in oklab, var(--color-spiced-life) 8%, transparent)" };
+    if (tone === "push")    return { fg: "var(--gold)", bg: "color-mix(in oklab, var(--gold) 10%, transparent)" };
+    return { fg: "var(--text-tertiary)", bg: "transparent" };
+}
+
+// ── Progressions one-liner (promoted out of details) ─────────────────────
+
+function ProgressionsLine({ bands }: { bands: V4ProgressedBand[] }) {
+    const inBand = bands.find((b) => b.destinationInBand);
+    if (!inBand) return null;
+    return (
+        <p style={{
+            ...BODY,
+            fontSize: "0.92rem",
+            margin: "0 0 var(--space-md) 0",
+            padding: "0.65rem 0.9rem",
+            background: "color-mix(in oklab, var(--gold) 5%, transparent)",
+            border: "1px solid color-mix(in oklab, var(--gold) 30%, var(--surface-border))",
+            borderRadius: "var(--radius-sm)",
+            maxWidth: "640px",
+        }}>
+            <span style={{ ...MONO_SM, color: "var(--gold)", marginRight: "0.6rem" }}>Progression</span>
+            Your progressed {inBand.planet} sits in {inBand.sign} ({inBand.longitudeRange}). This longitude
+            falls inside that band — the alignment is multi-year, not just today.
+        </p>
     );
 }
 
@@ -532,6 +1048,96 @@ function ContactTable({
     );
 }
 
+// ── ParanList ─────────────────────────────────────────────────────────────
+
+function ParanList({ parans, city }: { parans: V4Paran[]; city: string }) {
+    return (
+        <div>
+            <p style={{
+                fontFamily: "var(--font-body)",
+                fontSize: "0.88rem",
+                lineHeight: 1.6,
+                color: "var(--text-secondary)",
+                margin: "0 0 var(--space-md) 0",
+                maxWidth: "640px",
+                fontWeight: 300,
+            }}>
+                These pairs cross the horizon together at a latitude near {city}&rsquo;s.
+                Tight benefic combinations lift the field; tight malefic combinations
+                press it.
+            </p>
+            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                {parans.map((p, i) => {
+                    const tone = p.contribution > 0
+                        ? "var(--sage, #4a8a6a)"
+                        : p.contribution < 0
+                            ? "var(--color-spiced-life)"
+                            : "var(--text-tertiary)";
+                    const offset = Math.abs(p.latOffset).toFixed(1);
+                    const direction = p.latOffset > 0 ? "north" : "south";
+                    return (
+                        <li
+                            key={`paran-${i}`}
+                            style={{
+                                display: "grid",
+                                gridTemplateColumns: "minmax(180px, 1fr) auto auto",
+                                gap: "1rem",
+                                alignItems: "baseline",
+                                padding: "0.85rem 0",
+                                borderBottom: "1px solid var(--surface-border)",
+                            }}
+                        >
+                            <div>
+                                <div style={{
+                                    fontFamily: "var(--font-mono)",
+                                    fontSize: "0.85rem",
+                                    fontWeight: 600,
+                                    color: "var(--text-primary)",
+                                }}>
+                                    {capitalize(p.p1)} {p.aspect ? `· ${p.aspect}` : ""} · {capitalize(p.p2)}
+                                </div>
+                                {p.type && (
+                                    <div style={{
+                                        fontFamily: "var(--font-mono)",
+                                        fontSize: "0.6rem",
+                                        letterSpacing: "0.12em",
+                                        textTransform: "uppercase",
+                                        color: "var(--text-tertiary)",
+                                        marginTop: "0.2rem",
+                                    }}>
+                                        {p.type}
+                                    </div>
+                                )}
+                            </div>
+                            <div style={{
+                                fontFamily: "var(--font-mono)",
+                                fontSize: "0.7rem",
+                                color: "var(--text-secondary)",
+                                whiteSpace: "nowrap",
+                            }}>
+                                {offset}° {direction} of you
+                            </div>
+                            <span style={{
+                                fontFamily: "var(--font-mono)",
+                                fontSize: "0.7rem",
+                                fontWeight: 700,
+                                color: tone,
+                                padding: "0.25rem 0.6rem",
+                                border: `1px solid ${tone}`,
+                                borderRadius: "999px",
+                                background: `color-mix(in oklab, ${tone} 8%, transparent)`,
+                                whiteSpace: "nowrap",
+                            }}>
+                                {p.contribution > 0 ? "+" : ""}{Math.round(p.contribution)}
+                            </span>
+                        </li>
+                    );
+                })}
+            </ul>
+        </div>
+    );
+}
+
 // ── CornerKey ─────────────────────────────────────────────────────────────
 
 function CornerKey() {
@@ -591,129 +1197,7 @@ function DetailsBlock({ title, children }: { title: string; children: React.Reac
     );
 }
 
-// ── EclipseChip ───────────────────────────────────────────────────────────
-
-function EclipseChip({ hit }: { hit: V4EclipseHit }) {
-    return (
-        <div style={{
-            display:      "inline-flex",
-            alignItems:   "baseline",
-            gap:          "0.5rem",
-            padding:      "0.35rem 0.85rem",
-            border:       "1px solid var(--color-spiced-life)",
-            borderRadius: "var(--radius-sm)",
-            background:   "color-mix(in oklab, var(--color-spiced-life) 8%, transparent)",
-            fontFamily:   "var(--font-mono)",
-            fontSize:     "0.65rem",
-        }}>
-            <span style={{ color: "var(--color-spiced-life)", letterSpacing: "0.12em", textTransform: "uppercase" }}>
-                {hit.kind === "solar" ? "Solar" : "Lunar"} eclipse
-            </span>
-            <span style={{ color: "var(--text-secondary)" }}>
-                {hit.dateUtc.slice(0, 10)} · {hit.sign} {hit.degree.toFixed(0)}° on {hit.activatedAngle} · hits your {capitalize(hit.natalContact)}
-            </span>
-        </div>
-    );
-}
-
-// ── ProgressionLine ───────────────────────────────────────────────────────
-
-function ProgressionLine({ bands }: { bands: V4ProgressedBand[] }) {
-    const inBand = bands.find((b) => b.destinationInBand);
-    if (!inBand) return null;
-    return (
-        <p style={{
-            fontFamily: "var(--font-body)",
-            fontSize:   "0.9rem",
-            lineHeight: 1.6,
-            color:      "var(--text-secondary)",
-            margin:     "var(--space-sm) 0 0 0",
-        }}>
-            <strong style={{ color: "var(--text-primary)" }}>Progressed {inBand.planet}</strong>
-            {" is in "}<em>{inBand.sign}</em>
-            {" — this longitude band ("}{inBand.longitudeRange}{") is currently activated for you."}
-        </p>
-    );
-}
-
 // ── Helpers ───────────────────────────────────────────────────────────────
-
-interface SummaryRow { glyph: string; kicker: string; impact: string; targetId: string; }
-
-function deriveSummary(args: {
-    hits: { anchor: Anchor; hits: PersonalGeodeticHit[] }[];
-    activeTransits: V4GeoTransit[];
-    eclipses: V4EclipseHit[];
-    progressedBands: V4ProgressedBand[];
-}): { highlights: SummaryRow[]; lowlights: SummaryRow[] } {
-    const highlights: SummaryRow[] = [];
-    const lowlights:  SummaryRow[] = [];
-
-    for (const row of args.hits) {
-        for (const hit of row.hits) {
-            const r: SummaryRow = {
-                glyph:    planetGlyph(hit.planet),
-                kicker:   row.anchor,
-                impact:   `${capitalize(hit.planet)} ${impactVerb(hit.family)} your ${ANGLE_TOPIC[row.anchor]} corner.`,
-                targetId: `contact-${hit.planet.toLowerCase()}-${row.anchor.toLowerCase()}`,
-            };
-            if (hit.family === "rough")  lowlights.push(r);
-            else if (hit.family === "gentle" || hit.family === "bright") highlights.push(r);
-        }
-    }
-    for (const t of args.activeTransits) {
-        const r: SummaryRow = {
-            glyph:    planetGlyph(t.planet),
-            kicker:   t.angle,
-            impact:   `Live ${capitalize(t.planet)} on the ${t.angle} corner.`,
-            targetId: "geodetic-contacts",
-        };
-        if (t.severity > 0) highlights.push(r);
-        else if (t.severity < 0) lowlights.push(r);
-    }
-    for (const e of args.eclipses) {
-        lowlights.push({ glyph: "🌒", kicker: e.activatedAngle, impact: `Eclipse on ${e.activatedAngle}`, targetId: "geodetic-contacts" });
-    }
-    const progSun = args.progressedBands.find((b) => b.planet === "Sun" && b.destinationInBand);
-    if (progSun) highlights.push({ glyph: "→", kicker: "PROG", impact: `Progressed Sun in ${progSun.sign}.`, targetId: "geodetic-contacts" });
-
-    return { highlights, lowlights };
-}
-
-function buildFallbackVerdict(city: string, hits: { anchor: Anchor; hits: PersonalGeodeticHit[] }[]): string {
-    const tightest = hits
-        .flatMap((r) => r.hits.map((h) => ({ anchor: r.anchor, hit: h })))
-        .sort((a, b) => a.hit.orbDeg - b.hit.orbDeg)[0] ?? null;
-    if (!tightest) return `${city} doesn't strongly activate any corner of your chart — a quiet, neutral place.`;
-    return `${city} ${impactVerb(tightest.hit.family)} your ${ANGLE_TOPIC[tightest.anchor]} corner via ${capitalize(tightest.hit.planet)} (${tightest.hit.orbDeg}° from the ${tightest.anchor}).`;
-}
-
-function buildActiveTransitRows(activeGeo: V4GeoTransit[], natalTransits: any[]) {
-    const out: Array<{ planets: string; type: string; aspect: string; system?: string; orb?: number }> = [];
-    for (const t of activeGeo) {
-        out.push({
-            planets: `${capitalize(t.planet)} - ${t.angle}`,
-            type:    `on geo-${t.angle}${t.personalActivation && t.natalContact ? ` · hits ${capitalize(t.natalContact)}` : ""}`,
-            aspect:  "conjunction",
-            system:  "geodetic",
-            orb:     Math.round(t.orb * 10) / 10,
-        });
-    }
-    for (const nt of (natalTransits ?? []).slice(0, 5)) {
-        const tName  = String(nt.transit_planet ?? nt.transitPlanet ?? "").trim();
-        const nName  = String(nt.natal_planet ?? nt.natalPlanet ?? "").trim();
-        const aspect = String(nt.aspect ?? "").toLowerCase();
-        if (!tName || !nName || !aspect) continue;
-        out.push({
-            planets: `${capitalize(tName)} - ${capitalize(nName)}`,
-            type:    aspect,
-            aspect,
-            system:  "natal",
-            orb:     typeof nt.orb === "number" ? Math.round(nt.orb * 10) / 10 : undefined,
-        });
-    }
-    return out;
-}
 
 function familyAccent(family: PersonalGeodeticHit["family"]): string {
     switch (family) {
@@ -721,15 +1205,6 @@ function familyAccent(family: PersonalGeodeticHit["family"]): string {
         case "rough":  return "var(--color-spiced-life)";
         case "bright": return "var(--gold)";
         default:       return "var(--text-tertiary)";
-    }
-}
-
-function impactVerb(family: PersonalGeodeticHit["family"]): string {
-    switch (family) {
-        case "gentle": return "warms";
-        case "rough":  return "presses";
-        case "bright": return "amplifies";
-        default:       return "tinges";
     }
 }
 

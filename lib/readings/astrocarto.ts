@@ -821,6 +821,15 @@ export async function runAstrocarto(
     ...(matrixResult.harmonic45Hits && matrixResult.harmonic45Hits.length > 0
       ? { harmonic45Hits: matrixResult.harmonic45Hits }
       : {}),
+    ...(matrixResult.geodeticHouseFrame && matrixResult.geodeticHouseFrame.cusps.length === 12
+      ? { geodeticHouseFrame: matrixResult.geodeticHouseFrame }
+      : {}),
+    ...(matrixResult.personalLunations && matrixResult.personalLunations.hits.length > 0
+      ? { personalLunations: matrixResult.personalLunations }
+      : {}),
+    ...(matrixResult.parans && matrixResult.parans.length > 0
+      ? { parans: matrixResult.parans }
+      : {}),
     ...(matrixResult.modalityCohorts && matrixResult.modalityCohorts.length > 0
       ? { modalityCohorts: matrixResult.modalityCohorts }
       : {}),
