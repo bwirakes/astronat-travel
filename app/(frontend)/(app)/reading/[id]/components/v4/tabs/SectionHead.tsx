@@ -12,6 +12,11 @@ interface Props {
      *  the title. Used by data-heavy sections (Gantt, score strip) to
      *  explain how the underlying chart should be read. */
     tooltip?: string;
+    /** When true, suppresses the default top margin. Use on the first
+     *  SectionHead in a tab where the TabSection chrome already supplies
+     *  the section break, or where a tab manages its own dividers (e.g.
+     *  PlaceFieldTab inserts an explicit DIVIDER before each section). */
+    flush?: boolean;
 }
 
 /**
@@ -23,9 +28,12 @@ interface Props {
  * within a feature. Keeping it consistent across tabs is what the
  * Monocle-direction design feedback was asking for.
  */
-export default function SectionHead({ index, title, sub, tooltip }: Props) {
+export default function SectionHead({ index, title, sub, tooltip, flush }: Props) {
     return (
-        <header style={{ marginBottom: "var(--space-md)" }}>
+        <header style={{
+            marginTop: flush ? 0 : "var(--space-xl)",
+            marginBottom: "var(--space-md)",
+        }}>
             <div style={{
                 display: "flex",
                 alignItems: "baseline",

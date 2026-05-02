@@ -306,7 +306,7 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
             <div style={{ ...DIVIDER, margin: "var(--space-lg) 0" }} />
 
             {/* ── §01 What this place activates ────────────────────────── */}
-            <SectionHead index="01" title={`What ${city} activates in your chart`} />
+            <SectionHead index="01" title={`What ${city} activates in your chart`}  flush />
             <div className="chart-overview-grid" style={{ marginBottom: "var(--space-md)" }}>
                 <div>
                     <div style={KICKER}>The four corners</div>
@@ -360,7 +360,7 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
             <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
 
             {/* ── §02 What's live now (promoted out of details) ───────── */}
-            <SectionHead index="02" title={`What's live in ${city} now`} />
+            <SectionHead index="02" title={`What's live in ${city} now`}  flush />
             {vm.progressions && (
                 <ProgressionsLine bands={vm.progressions.bands} />
             )}
@@ -382,7 +382,7 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
             {/* ── §03 The frame (geodetic house wheel) ─────────────────── */}
             {vm.geodeticHouseFrame.cusps.length === 12 && (
                 <>
-                    <SectionHead index="03" title="Where your chart lands on this longitude" />
+                    <SectionHead index="03" title="Where your chart lands on this longitude"  flush />
                     <p style={BODY}>
                         If you swapped your birthplace&rsquo;s clock for {city}&rsquo;s, your natal
                         planets would re-house themselves like this. House 1 starts at the sign of
@@ -407,7 +407,7 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
             {/* ── §04 Life areas through the city's geodetic frame ─────── */}
             {interpretations.length > 0 && (
                 <>
-                    <SectionHead index="04" title={`Life areas through ${city}'s geodetic frame`} />
+                    <SectionHead index="04" title={`Life areas through ${city}'s geodetic frame`}  flush />
                     <p style={BODY}>
                         Re-domained by longitude — which house each natal planet lands in when{" "}
                         {city}&rsquo;s coordinates set the clock. A <em>≠ natal H{"{n}"}</em> chip
@@ -489,7 +489,7 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
             )}
 
             {/* ── §05 Where the city sits in the zodiac ────────────────── */}
-            <SectionHead index="05" title={`Where ${city} sits in the zodiac`} />
+            <SectionHead index="05" title={`Where ${city} sits in the zodiac`}  flush />
             <p style={BODY}>
                 {city} sits where {signFromLongitude(geoMC)} runs overhead and{" "}
                 {signFromLongitude(geoASC)} rises on the horizon. The shaded band is the slice of
@@ -516,7 +516,7 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
             {vm.parans.length > 0 && (
                 <>
                     <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
-                    <SectionHead index="06" title="Latitude crossings" />
+                    <SectionHead index="06" title="Latitude crossings"  flush />
                     <p style={BODY_MUTED}>
                         Pairs of your natal planets that cross the horizon together at a latitude
                         near {city}&rsquo;s. Tight benefic pairs lift the field; tight malefic pairs

@@ -68,17 +68,17 @@ function VerdictHeadline({ vm }: { vm: V4VM }) {
                              "var(--color-spiced-life)";
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             <div style={{ fontFamily: FM, fontSize: "0.65rem", letterSpacing: "0.22em", textTransform: "uppercase", color: accent, fontWeight: 700 }}>
                 {v.label} · {score}/100
             </div>
             <p style={{
-                fontFamily: "var(--font-secondary, var(--font-primary))",
-                fontSize: "clamp(1.15rem, 1.9vw, 1.4rem)",
-                lineHeight: 1.3,
-                color: "var(--text-primary)",
+                fontFamily: FB,
+                fontSize: "17px",
+                lineHeight: 1.6,
+                fontWeight: 300,
+                color: "var(--text-secondary)",
                 margin: 0,
-                letterSpacing: "-0.01em",
                 maxWidth: "62ch",
             }}>
                 {goalLabel && goal !== "timing"
@@ -615,7 +615,6 @@ function WindowsList({ vm }: { vm: V4VM }) {
                             columnGap: "var(--space-lg)",
                             alignItems: "baseline",
                             padding: "1rem 0",
-                            borderTop: i === 0 ? "1px solid var(--surface-border)" : undefined,
                             borderBottom: "1px solid var(--surface-border)",
                         }}
                     >
