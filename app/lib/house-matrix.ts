@@ -236,6 +236,24 @@ export interface HouseMatrixResult {
         cusps: number[]; // 12 cusps in ecliptic-longitude order
         natalAssignments: Array<{ planet: string; longitude: number; house: number }>;
     };
+    /** A11: deduped paran lines that cross within a meaningful band of the
+     *  destination's latitude, with each paran's aspect/dignity-aware score.
+     *  Sorted by |contribution| desc. Same scoring lives in the per-house
+     *  loop; this exposes the underlying rows for the UI without changing
+     *  the score. Empty array when no parans were passed in. */
+    parans?: ParanRow[];
+}
+
+/** Public row used by the Place Field tab to render a paran list + map.
+ *  `latOffset = par.lat - destLat` (positive = paran is north of you). */
+export interface ParanRow {
+    p1: string;
+    p2: string;
+    lat: number;
+    type?: string;
+    aspect?: string;
+    latOffset: number;
+    contribution: number;
 }
 
 // ── Hoisted Matrix Constants ──────────────────────────────────────────────
@@ -1125,6 +1143,29 @@ export function computeHouseMatrix(params: {
     else if (macroScore >= 35) macroVerdict = "Challenging";
     else macroVerdict = "Hostile";
 
+    // Build deduped paran rows for UI surfacing. Same `scoreParanNuanced`
+    // call the per-house loop uses, so the score the user sees is the per-
+    // paran contribution (not summed across houses). Dedupe by sorted
+    // [p1,p2]+aspect — parans are latitude-bound, not house-bound.
+    const paranSeen = new Set<string>();
+    const paranRows: ParanRow[] = [];
+    for (const par of parans) {
+        const key = [par.p1.toLowerCase(), par.p2.toLowerCase()].sort().join("|") +
+            "|" + (par.aspect ?? "").toLowerCase();
+        if (paranSeen.has(key)) continue;
+        paranSeen.add(key);
+        paranRows.push({
+            p1: par.p1,
+            p2: par.p2,
+            lat: par.lat,
+            type: par.type,
+            aspect: par.aspect,
+            latOffset: par.lat - destLat,
+            contribution: scoreParanNuanced(par, destLat, natalPlanets),
+        });
+    }
+    paranRows.sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
+
     const result: HouseMatrixResult = {
         houses, macroScore, macroVerdict,
         houseSystem,
@@ -1141,6 +1182,7 @@ export function computeHouseMatrix(params: {
             cusps: geodeticCusps,
             natalAssignments: geodeticAssignments,
         },
+        parans: paranRows,
     };
 
     // Add Lot positions to result if computed

@@ -229,6 +229,19 @@ export interface V4GeodeticHouseFrame {
     natalAssignments: V4GeodeticHouseAssignment[];
 }
 
+/** A11: a single paran line crossing within an actionable band of the
+ *  destination's latitude. Surfaced for the Place tab so the user sees
+ *  *which* parans are driving the bucketTransit contribution. */
+export interface V4Paran {
+    p1: string;
+    p2: string;
+    aspect: string;       // "" when the engine didn't classify
+    type: string;         // "" when not provided
+    lat: number;          // paran latitude
+    latOffset: number;    // par.lat - destLat (positive = north of you)
+    contribution: number; // scoreParanNuanced result (~ -25..+22)
+}
+
 /** A5: a single progressed-planet band. */
 export interface V4ProgressedBand {
     planet: "Sun" | "Moon";
@@ -409,6 +422,9 @@ export interface V4ReadingVM {
      *  per-natal-planet house assignments. Distinct from the relocated
      *  chart frame (which uses the relocated ASC, not geo-ASC). */
     geodeticHouseFrame: V4GeodeticHouseFrame;
+    /** A11: paran rows surfaced for the Place tab. Sorted by |contribution|
+     *  desc, capped at 8. Empty when nothing crosses your latitude. */
+    parans: V4Paran[];
     /** A5: progressed-Sun / progressed-Moon longitude bands. Null when
      *  birth date isn't available (e.g. cached readings missing it). */
     progressions: V4ProgressionsView | null;
@@ -1943,8 +1959,33 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
         eclipses: deriveEclipses(reading),
         lunations: deriveLunations(reading),
         geodeticHouseFrame: deriveGeodeticHouseFrame(reading),
+        parans: deriveParans(reading),
         progressions: deriveProgressions(reading),
     };
+}
+
+/** A11: coerce the persisted parans payload into V4Paran[]. Top-8 by
+ *  |contribution|. Returns [] when the payload is missing or malformed. */
+function deriveParans(reading: any): V4Paran[] {
+    const raw = reading?.parans;
+    if (!Array.isArray(raw)) return [];
+    const out: V4Paran[] = [];
+    for (const r of raw) {
+        if (!r || typeof r !== "object") continue;
+        const p1 = String((r as any).p1 ?? "").trim();
+        const p2 = String((r as any).p2 ?? "").trim();
+        const lat = Number((r as any).lat);
+        const latOffset = Number((r as any).latOffset);
+        const contribution = Number((r as any).contribution);
+        if (!p1 || !p2 || !Number.isFinite(lat) || !Number.isFinite(latOffset) || !Number.isFinite(contribution)) continue;
+        out.push({
+            p1, p2, lat, latOffset, contribution,
+            aspect: String((r as any).aspect ?? ""),
+            type: String((r as any).type ?? ""),
+        });
+    }
+    out.sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
+    return out.slice(0, 8);
 }
 
 /** A5: coerce the persisted progressedBands payload into V4ProgressionsView. */

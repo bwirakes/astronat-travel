@@ -64,6 +64,14 @@ export interface AstrocartoReadingResult {
    *  for vibe blurbs (summary.leanInto) and aspect explanations (signals.weather). */
   teacherReading?: TeacherReading;
 
+  /** Marker stamped onto every reading generated with the geodetic-extras
+   *  pipeline (activeGeoTransits, personalEclipses, personalLunations,
+   *  parans, geodeticHouseFrame). Used by PlaceFieldTab's §02 empty-state
+   *  to distinguish a truly quiet sky (marker present, all timing fields
+   *  empty) from an old reading whose engine outputs predate these fields
+   *  (marker missing). Datestamp form so future bumps are diffable. */
+  geodeticEngineVersion?: string;
+
   // Synastry add-ons (only present when readingCategory === "synastry")
   partnerNatalPlanets?: any[];
   synastryAspects?: any[];

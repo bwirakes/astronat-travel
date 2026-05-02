@@ -22,10 +22,21 @@ const SIGNS_ORDERED = [
     "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces",
 ];
 
+interface ParanOverlay {
+    p1: string;
+    p2: string;
+    aspect?: string;
+    lat: number;
+    contribution: number;
+}
+
 interface Props {
     lat: number;
     lon: number;
     city: string;
+    /** Optional paran latitudes to overlay as horizontal lines. Lines outside
+     *  the cropped viewport are clipped automatically. */
+    parans?: ParanOverlay[];
 }
 
 function shortestDelta(a: number, b: number): number {
@@ -71,9 +82,20 @@ function buildAscCurve(targetDeg: number, lonStart: number, lonEnd: number, step
 type HoveredAxis =
     | { kind: "MC"; westSign: string; eastSign: string; color: string }
     | { kind: "ASC"; southSign: string; northSign: string; color: string }
+    | { kind: "PARAN"; p1: string; p2: string; aspect?: string; lat: number; contribution: number; color: string }
     | null;
 
-export default function ReadingGeodeticMap({ lat, lon, city }: Props) {
+function paranTone(contribution: number): string {
+    if (contribution > 0) return "var(--sage, #4a8a6a)";
+    if (contribution < 0) return "var(--color-spiced-life)";
+    return "var(--text-tertiary)";
+}
+
+function capitalize(s: string): string {
+    return s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : s;
+}
+
+export default function ReadingGeodeticMap({ lat, lon, city, parans }: Props) {
     const [hovered, setHovered] = useState<HoveredAxis>(null);
     const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
     const handleMove = (e: React.MouseEvent) => setMousePos({ x: e.clientX, y: e.clientY });
@@ -256,6 +278,51 @@ export default function ReadingGeodeticMap({ lat, lon, city }: Props) {
                     vectorEffect="non-scaling-stroke"
                 />
 
+                {/* Paran latitudes — horizontal lines crossing your latitude band */}
+                {parans?.map((par, i) => {
+                    const py = projectLat(par.lat);
+                    const tone = paranTone(par.contribution);
+                    const xL = cx - vw / 2;
+                    const xR = cx + vw / 2;
+                    return (
+                        <g
+                            key={`paran-${i}`}
+                            style={{ cursor: "pointer" }}
+                            onMouseEnter={() => setHovered({ kind: "PARAN", p1: par.p1, p2: par.p2, aspect: par.aspect, lat: par.lat, contribution: par.contribution, color: tone })}
+                            onMouseMove={handleMove}
+                            onMouseLeave={() => setHovered(null)}
+                        >
+                            <line
+                                x1={xL} y1={py} x2={xR} y2={py}
+                                stroke="transparent"
+                                strokeWidth={5}
+                                pointerEvents="stroke"
+                            />
+                            <line
+                                x1={xL} y1={py} x2={xR} y2={py}
+                                stroke={tone}
+                                strokeWidth={1}
+                                strokeDasharray="4 3"
+                                opacity={0.65}
+                                vectorEffect="non-scaling-stroke"
+                                pointerEvents="none"
+                            />
+                            <text
+                                x={xR - 1}
+                                y={py - 2}
+                                fontSize={8}
+                                fill={tone}
+                                textAnchor="end"
+                                fontFamily={FONT_MONO}
+                                opacity={0.85}
+                                pointerEvents="none"
+                            >
+                                {capitalize(par.p1)}/{capitalize(par.p2)}
+                            </text>
+                        </g>
+                    );
+                })}
+
                 {/* City pin */}
                 <g>
                     <circle
@@ -318,9 +385,20 @@ export default function ReadingGeodeticMap({ lat, lon, city }: Props) {
                             textTransform: "uppercase",
                         }}
                     >
-                        {hovered.kind === "MC" ? "Midheaven boundary" : "Ascendant boundary"}
+                        {hovered.kind === "MC" ? "Midheaven boundary"
+                            : hovered.kind === "ASC" ? "Ascendant boundary"
+                            : "Paran line"}
                     </span>
-                    {hovered.kind === "MC" ? (
+                    {hovered.kind === "PARAN" ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                            <div style={{ fontFamily: FONT_PRIMARY, fontSize: "0.95rem", color: hovered.color }}>
+                                {capitalize(hovered.p1)} {hovered.aspect ? hovered.aspect : "—"} {capitalize(hovered.p2)}
+                            </div>
+                            <div style={{ fontFamily: FONT_MONO, fontSize: "0.7rem", color: "var(--text-secondary)" }}>
+                                {hovered.lat.toFixed(2)}° · {Math.abs(hovered.lat - lat).toFixed(1)}° {hovered.lat > lat ? "north" : "south"} of you · {hovered.contribution > 0 ? "+" : ""}{Math.round(hovered.contribution)}
+                            </div>
+                        </div>
+                    ) : hovered.kind === "MC" ? (
                         <div className="flex items-baseline gap-2" style={{ color: hovered.color }}>
                             <span style={{ fontFamily: FONT_PRIMARY, fontSize: "1rem", fontWeight: 500 }}>
                                 {hovered.westSign}
@@ -356,6 +434,9 @@ export default function ReadingGeodeticMap({ lat, lon, city }: Props) {
                 <LegendItem swatch="var(--color-spiced-life)" label={`${mcSign} MC overhead`} dashed />
                 <LegendItem swatch="var(--gold)" label={`${ascSign} ASC rising`} />
                 <LegendItem swatch={mcElem.stroke} label="Shared zone" filled fill={mcElem.fill} />
+                {parans && parans.length > 0 && (
+                    <LegendItem swatch="var(--text-tertiary)" label={`${parans.length} paran ${parans.length === 1 ? "line" : "lines"}`} dashed />
+                )}
             </div>
         </div>
     );

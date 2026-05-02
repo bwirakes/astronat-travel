@@ -23,7 +23,27 @@ const GOAL_TO_CHANNEL: Record<string, RiskChannel> = {
     civil: "civil",
     fires: "fire",
     fire: "fire",
+    // Socioeconomic goal aliases (audit gap fill)
+    political: "political",
+    politics: "political",
+    capital: "political",
+    career: "political",
+    financial: "financial",
+    finance: "financial",
+    wealth: "financial",
+    money: "financial",
+    religious: "religious",
+    spiritual: "religious",
+    devotion: "religious",
 };
+
+const PHYSICAL: readonly RiskChannel[] = ["seismic", "hydro", "atmospheric", "civil", "fire"];
+const SOCIOECONOMIC: readonly RiskChannel[] = ["political", "financial", "religious"];
+
+function withPreferred<T>(arr: readonly T[], preferred: T | null): T[] {
+    if (!preferred || !arr.includes(preferred)) return [...arr];
+    return [preferred, ...arr.filter((c) => c !== preferred)];
+}
 
 /**
  * Turns the computed events into a risk-profile readout, channel by channel.
@@ -39,11 +59,10 @@ export function RiskMatrix({ days, goalFilter }: Props) {
         })),
     );
 
-    const ordered: RiskChannel[] = ["seismic", "hydro", "atmospheric", "civil", "fire"];
-    const preferred = goalFilter ? GOAL_TO_CHANNEL[goalFilter] : null;
-    if (preferred) {
-        ordered.sort((a, b) => (a === preferred ? -1 : b === preferred ? 1 : 0));
-    }
+    const preferred: RiskChannel | null = goalFilter ? (GOAL_TO_CHANNEL[goalFilter] ?? null) : null;
+    const physicalRows = withPreferred(PHYSICAL, preferred).filter((ch) => risk[ch] > 0);
+    const socioRows = withPreferred(SOCIOECONOMIC, preferred).filter((ch) => risk[ch] > 0);
+    const allQuiet = physicalRows.length === 0 && socioRows.length === 0;
 
     return (
         <section
@@ -85,7 +104,7 @@ export function RiskMatrix({ days, goalFilter }: Props) {
                             textWrap: "balance",
                         }}
                     >
-                        Likely physical signatures.
+                        Likely signatures.
                     </h2>
                 </div>
                 <p
@@ -105,8 +124,66 @@ export function RiskMatrix({ days, goalFilter }: Props) {
                 </p>
             </div>
 
+            {allQuiet ? (
+                <p style={{
+                    fontFamily: "var(--font-body)",
+                    fontSize: "0.95rem",
+                    lineHeight: 1.55,
+                    color: "var(--text-tertiary)",
+                    margin: 0,
+                    fontStyle: "italic",
+                    maxWidth: "52ch",
+                }}>
+                    Quiet window — no planetary signature is dominant on either the physical
+                    or socioeconomic axis.
+                </p>
+            ) : (
+                <>
+                    {physicalRows.length > 0 && (
+                        <RiskGroup label="Physical" rows={physicalRows} risk={risk} preferred={preferred} />
+                    )}
+                    {physicalRows.length > 0 && socioRows.length > 0 && (
+                        <div style={{
+                            height: 1,
+                            background: "var(--surface-border)",
+                            margin: "0.5rem 0",
+                        }} />
+                    )}
+                    {socioRows.length > 0 && (
+                        <RiskGroup label="Socioeconomic" rows={socioRows} risk={risk} preferred={preferred} />
+                    )}
+                </>
+            )}
+        </section>
+    );
+}
+
+function RiskGroup({
+    label,
+    rows,
+    risk,
+    preferred,
+}: {
+    label: string;
+    rows: RiskChannel[];
+    risk: Record<RiskChannel, number>;
+    preferred: RiskChannel | null;
+}) {
+    return (
+        <div>
+            <div style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "0.62rem",
+                letterSpacing: "0.28em",
+                textTransform: "uppercase",
+                color: "var(--gold)",
+                fontWeight: 700,
+                marginBottom: "0.5rem",
+            }}>
+                {label}
+            </div>
             <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                {ordered.map((ch) => {
+                {rows.map((ch) => {
                     const value = risk[ch];
                     const isHighlighted = preferred === ch;
                     return (
@@ -123,30 +200,25 @@ export function RiskMatrix({ days, goalFilter }: Props) {
                             }}
                         >
                             <div>
-                                <div
-                                    style={{
-                                        fontFamily: "var(--font-primary)",
-                                        fontSize: "clamp(1.1rem, 2vw, 1.35rem)",
-                                        lineHeight: 1.2,
-                                        color: "var(--text-primary)",
-                                    }}
-                                >
+                                <div style={{
+                                    fontFamily: "var(--font-primary)",
+                                    fontSize: "clamp(1.1rem, 2vw, 1.35rem)",
+                                    lineHeight: 1.2,
+                                    color: "var(--text-primary)",
+                                }}>
                                     {RISK_LABELS[ch]}
                                 </div>
-                                <div
-                                    style={{
-                                        fontFamily: "var(--font-body)",
-                                        fontSize: "0.85rem",
-                                        lineHeight: 1.45,
-                                        color: "var(--text-secondary)",
-                                        marginTop: "0.2rem",
-                                        fontWeight: 300,
-                                    }}
-                                >
+                                <div style={{
+                                    fontFamily: "var(--font-body)",
+                                    fontSize: "0.85rem",
+                                    lineHeight: 1.45,
+                                    color: "var(--text-secondary)",
+                                    marginTop: "0.2rem",
+                                    fontWeight: 300,
+                                }}>
                                     {RISK_GLOSS[ch]}
                                 </div>
                             </div>
-                            {/* bar */}
                             <div style={{ display: "flex", gap: "3px" }}>
                                 {[0, 1, 2, 3, 4].map((i) => (
                                     <div
@@ -161,23 +233,21 @@ export function RiskMatrix({ days, goalFilter }: Props) {
                                     />
                                 ))}
                             </div>
-                            <span
-                                style={{
-                                    fontFamily: "var(--font-mono)",
-                                    fontSize: "0.58rem",
-                                    letterSpacing: "0.22em",
-                                    color: barColor(value),
-                                    textTransform: "uppercase",
-                                    fontWeight: 700,
-                                }}
-                            >
+                            <span style={{
+                                fontFamily: "var(--font-mono)",
+                                fontSize: "0.58rem",
+                                letterSpacing: "0.22em",
+                                color: barColor(value),
+                                textTransform: "uppercase",
+                                fontWeight: 700,
+                            }}>
                                 {["none", "low", "mod", "high", "sev", "ext"][value]}
                             </span>
                         </li>
                     );
                 })}
             </ul>
-        </section>
+        </div>
     );
 }
 
