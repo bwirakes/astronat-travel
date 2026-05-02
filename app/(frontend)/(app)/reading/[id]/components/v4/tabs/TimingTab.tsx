@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SectionHead from "./SectionHead";
 import TabSection from "./TabSection";
 import type { V4VM } from "./types";
 import { transitOneLiner } from "@/app/lib/transit-copy";
@@ -544,55 +545,6 @@ function TransitGantt({ vm }: { vm: V4VM }) {
     );
 }
 
-// ─── Section kicker ──────────────────────────────────────────────────────────
-
-function StoryHeading({ n, title, tooltip }: { n: string; title: string; tooltip?: string }) {
-    return (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", marginTop: "calc(var(--space-xl) + 0.5rem)", marginBottom: "var(--space-sm)" }}>
-            <div style={{ fontFamily: FM, fontSize: "0.6rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)", fontWeight: 600 }}>
-                §{n}
-            </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: "0.6rem" }}>
-                <h3 style={{
-                    fontFamily: "var(--font-secondary, var(--font-primary))",
-                    fontSize: "clamp(1.1rem, 1.8vw, 1.3rem)",
-                    margin: 0,
-                    color: "var(--text-primary)",
-                    letterSpacing: "-0.005em",
-                    lineHeight: 1.2,
-                    flex: 1,
-                }}>
-                    {title}
-                </h3>
-                {tooltip && (
-                    <span
-                        title={tooltip}
-                        aria-label={tooltip}
-                        style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            width: 16,
-                            height: 16,
-                            borderRadius: "50%",
-                            border: "1px solid var(--surface-border)",
-                            fontFamily: FM,
-                            fontSize: "0.6rem",
-                            color: "var(--text-tertiary)",
-                            cursor: "help",
-                            flexShrink: 0,
-                            alignSelf: "center",
-                            transform: "translateY(1px)",
-                        }}
-                    >
-                        i
-                    </span>
-                )}
-            </div>
-        </div>
-    );
-}
-
 // ─── Compact alternates list ─────────────────────────────────────────────────
 
 // ─── Top travel windows ──────────────────────────────────────────────────────
@@ -708,8 +660,8 @@ export default function TimingTab({ vm }: Props) {
             {/* §1 — Top travel windows (alternates), trip only */}
             {showAlternates && (
                 <>
-                    <StoryHeading
-                        n="01"
+                    <SectionHead
+                        index="01"
                         title="Top travel windows"
                         tooltip="Comparable nearby windows ranked by score. Use these if your dates are flexible. ↑Δ marks how much each beats your selected window."
                     />
@@ -718,16 +670,16 @@ export default function TimingTab({ vm }: Props) {
             )}
 
             {/* §2 — Transit Gantt */}
-            <StoryHeading
-                n={showAlternates ? "02" : "01"}
+            <SectionHead
+                index={showAlternates ? "02" : "01"}
                 title="What's pressing on you during the window"
                 tooltip="Slow-moving transits that actually shape this stretch. Hover any bar for the lived-experience reading and what to do with it."
             />
             <TransitGantt vm={vm} />
 
             {/* §3 — 90-day field */}
-            <StoryHeading
-                n={showAlternates ? "03" : "02"}
+            <SectionHead
+                index={showAlternates ? "03" : "02"}
                 title="The 90-day field around your trip"
                 tooltip="Each bar is one day. Taller, sage and gold = more support. Red = friction. Blue is your trip; green ▼ marks open stretches, red ▼ marks rougher ones."
             />

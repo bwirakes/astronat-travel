@@ -1,6 +1,7 @@
 "use client";
 
 import NatalMockupWheel, { type NatalPlanet } from "@/app/components/NatalMockupWheel";
+import SectionHead from "./SectionHead";
 import TabSection from "./TabSection";
 import type { V4VM } from "./types";
 import { geodeticPlanetMeaning } from "@/app/lib/geodetic/planet-meanings";
@@ -262,33 +263,6 @@ function formatDeg(deg: number): string {
 }
 
 // ─── Subcomponents ─────────────────────────────────────────────────────────
-
-function SectionHead({ index, title, sub }: { index: string; title: string; sub: string }) {
-    return (
-        <header className="mb-4">
-            <div className="flex items-baseline gap-3 mb-1">
-                <span
-                    className="text-[10px] tracking-[0.18em] uppercase"
-                    style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}
-                >
-                    §{index}
-                </span>
-                <h3
-                    className="text-[20px] leading-[1.15] tracking-[-0.005em] m-0"
-                    style={{ fontFamily: FONT_PRIMARY, color: "var(--text-primary)", fontWeight: 400 }}
-                >
-                    {title}
-                </h3>
-            </div>
-            <p
-                className="text-[13px] leading-[1.5] font-light m-0 max-w-[560px] [text-wrap:pretty]"
-                style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
-            >
-                {sub}
-            </p>
-        </header>
-    );
-}
 
 function AngleCard({ angle: a }: { angle: V4VM["relocated"]["angles"][number] }) {
     const moved = signOf(a.natal) !== signOf(a.relocated);

@@ -13,67 +13,66 @@
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
   height: auto !important;
   min-height: unset !important;
   width: 100% !important;
   max-width: 100% !important;
-  /* Critical: lets the list shrink below its 5×N intrinsic content width
-     so it doesn't push parent flex containers wider than the viewport.
-     overflow-x: auto then handles the actual horizontal scroll. */
+  /* All five tabs always visible — no horizontal scroll on any breakpoint. */
+  overflow: visible;
   min-width: 0 !important;
-  justify-content: flex-start !important;
+  justify-content: stretch !important;
   border-bottom: 1px solid var(--surface-border);
-  /* Mobile-only edge fade hints at horizontal scroll. Desktop has room
-     for all tabs and shouldn't fade content. */
-  mask-image: linear-gradient(to right, transparent 0, black 10px, black calc(100% - 10px), transparent 100%);
-}
-@media (min-width: 1024px) {
-  .reading-tabs-list {
-    justify-content: space-between !important;
-    overflow: visible;
-    mask-image: none;
-  }
 }
 
 .reading-tab-trigger {
   height: auto !important;
   min-height: 0;
-  flex: 1 0 min(150px, 60vw) !important;
+  flex: 1 1 0 !important;
+  min-width: 0;
   align-items: center;
-  justify-content: flex-start;
-  padding: 14px clamp(14px, 2vw, 22px);
-  white-space: nowrap;
-  text-align: left;
+  justify-content: center;
+  /* Tight padding lets all five labels fit on a 375px viewport. Long
+     two-word labels ("Life Themes", "What Shifts") wrap onto two lines;
+     short ones stay single-line. */
+  padding: 12px 6px;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.15;
   border: 0;
   border-radius: 0;
   background: transparent;
   color: var(--text-secondary);
-  scroll-snap-align: start;
   transition: color 120ms ease;
 }
 .reading-tab-trigger:hover {
   color: var(--text-primary);
 }
+/* Override shadcn's default focus ring — the boxy outline around the
+   selected tab reads "cheap form input" against the editorial register.
+   The active ::after underline + color shift carry the active state
+   on its own. Keyboard focus still gets a subtle ring via the inset
+   shadow below for a11y, but it sits inside the trigger and doesn't
+   visually box the text. */
 .reading-tab-trigger:focus-visible {
-  outline: 2px solid var(--text-primary);
-  outline-offset: -2px;
-}
-@media (min-width: 1024px) {
-  .reading-tab-trigger {
-    flex-basis: 0 !important;
-  }
+  outline: none !important;
+  box-shadow: inset 0 -3px 0 var(--text-primary) !important;
 }
 .reading-tab-trigger[data-active],
 .reading-tab-trigger[aria-selected="true"] {
   background: transparent;
   color: var(--text-primary);
+  box-shadow: none !important;
 }
 .reading-tab-trigger::after {
   background: var(--text-primary);
   bottom: -1px;
   height: 2px;
+}
+
+@media (min-width: 640px) {
+  .reading-tab-trigger {
+    padding: 14px clamp(14px, 2vw, 22px);
+    /* On larger viewports there's room to keep every label on one line. */
+    white-space: nowrap;
+  }
 }

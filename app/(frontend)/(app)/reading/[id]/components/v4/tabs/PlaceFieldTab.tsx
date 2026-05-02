@@ -13,6 +13,7 @@ import { geodeticPlanetMeaning } from "@/app/lib/geodetic/planet-meanings";
 import { HOUSE_THEMES, HOUSE_DOMAIN_SHORT } from "@/app/lib/astro-constants";
 import type { PersonalGeodeticHit } from "@/app/lib/reading-tabs";
 import type { V4EclipseHit, V4GeoTransit, V4LunationHit, V4Paran, V4ProgressedBand } from "@/app/lib/reading-viewmodel";
+import SectionHead from "./SectionHead";
 import TabSection from "./TabSection";
 import type { V4VM } from "./types";
 
@@ -599,42 +600,6 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
                 </DetailsBlock>
             </div>
         </TabSection>
-    );
-}
-
-// ── Section heading ───────────────────────────────────────────────────────
-
-function SectionHead({ index, title }: { index: string; title: string }) {
-    return (
-        <div style={{
-            display: "flex",
-            alignItems: "baseline",
-            gap: "0.85rem",
-            marginBottom: "var(--space-md)",
-            paddingBottom: "0.6rem",
-            borderBottom: "1px solid var(--surface-border)",
-        }}>
-            <span style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "0.62rem",
-                letterSpacing: "0.22em",
-                color: "var(--text-tertiary)",
-                fontWeight: 700,
-            }}>
-                §{index}
-            </span>
-            <h2 style={{
-                fontFamily: "var(--font-primary)",
-                fontSize: "clamp(1.1rem, 2vw, 1.4rem)",
-                margin: 0,
-                color: "var(--text-primary)",
-                lineHeight: 1.2,
-                fontWeight: 500,
-                letterSpacing: "-0.01em",
-            }}>
-                {title}
-            </h2>
-        </div>
     );
 }
 

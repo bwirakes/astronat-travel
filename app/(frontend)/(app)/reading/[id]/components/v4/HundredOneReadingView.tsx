@@ -303,7 +303,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                                     {vm.tabs.definitions.map((tab) => (
                                         <TabsTrigger key={tab.id} value={tab.id} className="reading-tab-trigger">
                                             <span
-                                                className="text-[11px] tracking-[0.18em] uppercase"
+                                                className="text-[10px] sm:text-[11px] tracking-[0.08em] sm:tracking-[0.18em] uppercase"
                                                 style={{ fontFamily: FONT_MONO }}
                                             >
                                                 {tab.label}
