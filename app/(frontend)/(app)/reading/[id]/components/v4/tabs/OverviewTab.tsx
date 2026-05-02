@@ -2,6 +2,7 @@
 
 import { AstronatCard } from "@/app/components/ui/astronat-card";
 import SignIcon from "@/app/components/SignIcon";
+import TabSection from "./TabSection";
 import type { V4VM } from "./types";
 
 interface Props {
@@ -29,37 +30,12 @@ export default function OverviewTab({ vm, copiedTab }: Props) {
         : null;
 
     return (
-        <section className="px-0 py-[clamp(28px,4vw,48px)]">
+        <TabSection
+            kicker="Overview"
+            title={copiedTab?.lead || "Your reading"}
+            intro={copiedTab?.plainEnglishSummary}
+        >
             <div className="w-full max-w-none">
-                {copiedTab?.lead && (
-                    <section className="m-0 mb-[34px] p-0 bg-transparent">
-                        <p
-                            className="leading-[1.1] m-0 mb-[10px] [text-wrap:balance]"
-                            style={{
-                                fontFamily: FONT_PRIMARY,
-                                fontSize: "clamp(25px, 3.4vw, 40px)",
-                                color: "var(--text-primary)",
-                            }}
-                        >
-                            {copiedTab.lead}
-                        </p>
-                        {copiedTab.plainEnglishSummary && (
-                            <p
-                                className="max-w-[620px] text-[15px] leading-[1.6] m-0"
-                                style={{ color: "var(--text-secondary)" }}
-                            >
-                                {copiedTab.plainEnglishSummary}
-                            </p>
-                        )}
-                    </section>
-                )}
-
-                <div
-                    className="text-[11px] tracking-[0.22em] uppercase mb-4"
-                    style={{ fontFamily: FONT_MONO, color: "var(--color-y2k-blue)" }}
-                >
-                    Overview
-                </div>
                 <div className="relative mb-[clamp(28px,3vw,40px)] isolate flex items-start gap-[clamp(14px,2vw,28px)]">
                     {watermarkSign && (
                         <div
@@ -191,7 +167,7 @@ export default function OverviewTab({ vm, copiedTab }: Props) {
                     </ul>
                 </div>
             </div>
-        </section>
+        </TabSection>
     );
 
     function ThemeListCard({

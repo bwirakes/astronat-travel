@@ -12,6 +12,7 @@ import { houseFromLongitude, signFromLongitude } from "./geodetic";
 import { acgLineRawScore } from "./house-matrix";
 import { buildScoredWindows, buildDailySeries, buildRangeHighlights, solveTransitSpans, fieldPercentile, type DailyScore, type RangeHighlights, type TransitSpan } from "./window-scoring";
 import { READING_TABS, READING_TAB_IDS, deriveScoreNarrative, type EvidencePoint, type ReadingTabDefinition, type ReadingTabId, type ScoreNarrative } from "./reading-tabs";
+import { HERO_BAND_LABEL, heroBand, type HeroBand } from "./verdict";
 
 // ─── Output shape ─────────────────────────────────────────────────────
 
@@ -312,7 +313,7 @@ export interface V4ReadingVM {
         baselineContext: string;
         /** Verdict band derived deterministically from the score. Drives the
          *  uppercase kicker and tone of the explainer. */
-        verdict: { band: "tough" | "mixed" | "solid" | "peak"; label: string };
+        verdict: { band: HeroBand; label: string };
         /** When a non-anchor window beats the user's dates by >=3 pts, this
          *  surfaces the better alternative inline so the hero can recommend
          *  shifting before the user scrolls. Null when no clearly-better
@@ -2181,11 +2182,9 @@ function heroBaselineContext(windowScore: number, baseline: number, travelType: 
     return `${Math.abs(delta)} ${Math.abs(delta) === 1 ? "point" : "points"} below your average for this place (${baseline}/100).`;
 }
 
-function heroVerdict(score: number): { band: "tough" | "mixed" | "solid" | "peak"; label: string } {
-    if (score < 50) return { band: "tough", label: "Tough match" };
-    if (score < 65) return { band: "mixed", label: "Mixed" };
-    if (score < 80) return { band: "solid", label: "Solid window" };
-    return { band: "peak", label: "Peak alignment" };
+function heroVerdict(score: number): { band: HeroBand; label: string } {
+    const band = heroBand(score);
+    return { band, label: HERO_BAND_LABEL[band] };
 }
 
 function heroBetterAlternate(windows: V4TravelWindow[]):
@@ -2204,7 +2203,7 @@ function heroBetterAlternate(windows: V4TravelWindow[]):
 }
 
 function heroMaximizeAdvice(
-    band: "tough" | "mixed" | "solid" | "peak",
+    band: HeroBand,
     travelType: V4TravelType,
     topVibeTitle: string | undefined,
     hasBetterAlternate: boolean,
@@ -2224,7 +2223,7 @@ function heroExplainer(
     w: V4TravelWindow | undefined,
     city: string,
     travelType: V4TravelType,
-    band: "tough" | "mixed" | "solid" | "peak",
+    band: HeroBand,
 ): string {
     if (!w) return "Your reading is being prepared.";
     if (travelType === "relocation") {

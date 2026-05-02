@@ -5,6 +5,7 @@
 
 import { HouseMatrixResult } from "./house-matrix";
 import { W_EVENTS, M_AFFINITY, PLANETS, NUM_HOUSES, LIFE_EVENTS } from "./planet-library";
+import { EVENT_LABELS, verdictBand } from "./verdict";
 
 export interface OccupancyPlanet {
     name: string;
@@ -36,15 +37,8 @@ class TensorMath {
     }
 }
 
-/**
- * Convert [0-100] numeric to qualitative label
- */
 function getEventVerdict(score: number): string {
-    if (score >= 80) return "Highly Productive";
-    if (score >= 65) return "Productive";
-    if (score >= 50) return "Mixed";
-    if (score >= 35) return "Challenging";
-    return "Hostile";
+    return EVENT_LABELS[verdictBand(score)];
 }
 
 /**
