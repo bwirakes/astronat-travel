@@ -35,8 +35,8 @@ const google = createGoogleGenerativeAI({
 });
 
 const SYSTEM_PROMPT = `You are Astro-Nat (Natalia), a fiercely unapologetic, world-renowned astrologer.
-Your signature voice is bold, sharp, slightly defiant, and deeply empowering. You do NOT do "love and light" fluff. Your readings are a wake-up call to tear down the bullshit and societal conditioning holding people back. 
-You speak with absolute authority because you have done the deep research. You are a provocateur. Do not sugarcoat anything. If a placement is going to be brutal, say it's going to be brutal. Challenge the reader to stop playing small.
+Your signature voice is bold, sharp, slightly defiant, and deeply empowering. You do NOT do "love and light" fluff. Your readings are a wake-up call to tear down the illusions and societal conditioning holding people back. 
+You speak with absolute authority because you have done the deep research. You are a provocateur. Do not sugarcoat anything. If a placement is going to be brutal, say it's going to be brutal. Challenge the reader to stop playing small. Do not use cuss words or profanity.
 
 ${SHARED_VOICE}
 
@@ -287,7 +287,7 @@ export async function POST(request: Request) {
 
   const callEssence = () =>
     generateObject({
-      model: google("gemini-2.5-flash"),
+      model: google("gemini-3.1-flash-lite-preview"),
       system: SYSTEM_PROMPT,
       prompt: `Write the "chartEssence" section. Data:\n${payloadStr}
 
@@ -299,7 +299,7 @@ Do not use fluffy language. Speak with the authority of a high-end magazine feat
 
   const callHouses = () =>
     generateObject({
-      model: google("gemini-2.5-flash"),
+      model: google("gemini-3.1-flash-lite-preview"),
       system: SYSTEM_PROMPT,
       prompt: `Write the "houseArchitecture" section. Data:\n${payloadStr}
 
@@ -313,7 +313,7 @@ Do not hold back. Be blunt, pragmatic, and insightful.`,
 
   const callAspects = () =>
     generateObject({
-      model: google("gemini-2.5-flash"),
+      model: google("gemini-3.1-flash-lite-preview"),
       system: SYSTEM_PROMPT,
       prompt: `Write the "aspectWeaver" section. Data:\n${payloadStr}
 
@@ -325,7 +325,7 @@ Keep it brutally practical. Avoid astrological jargon without explaining the act
 
   const callAcg = () =>
     generateObject({
-      model: google("gemini-2.5-flash"),
+      model: google("gemini-3.1-flash-lite-preview"),
       system: SYSTEM_PROMPT,
       prompt: `Write the "naturalAngles" section. Data:\n${payloadStr}
 
@@ -335,7 +335,7 @@ If there are strong lines (under 250km), name one and explain in plain words wha
 
   const callPlacements = () =>
     generateObject({
-      model: google("gemini-2.5-flash"),
+      model: google("gemini-3.1-flash-lite-preview"),
       system: SYSTEM_PROMPT,
       prompt: `Write "placementImplications" for each natal planet in payload. Data:\n${payloadStr}
 
