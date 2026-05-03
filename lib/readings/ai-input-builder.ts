@@ -5,6 +5,7 @@ import { signFromLongitude, houseFromLongitude } from "@/app/lib/geodetic";
 import { acgLineRawScore } from "@/app/lib/house-matrix";
 import { houseTopic, spellAngle, closenessBand, houseVibe } from "./house-topics";
 import { buildEditorialEvidence, deriveScoreNarrative } from "@/app/lib/reading-tabs";
+import { buildScoredWindows, buildRangeHighlights } from "@/app/lib/window-scoring";
 
 export interface TeacherReadingInput {
   macro: {
@@ -379,6 +380,26 @@ export function buildAIInput(args: {
     },
     editorialEvidence,
     sidebarsData: {
+      travelWindows: (() => {
+        if (travelType === "relocation" || !travelDate) return [];
+        const heroScored = buildScoredWindows(dateRange.start, rawTransits, matrixResult.macroScore, goalIds)[0];
+        const rangeHighlights = buildRangeHighlights(dateRange.start, rawTransits, matrixResult.macroScore, goalIds);
+        const tw = [];
+        const shortDate = (iso: string) => {
+          const d = new Date(iso);
+          return `${d.toLocaleString("en-US", { month: "short" })} ${d.getUTCDate()}`;
+        };
+        if (heroScored) {
+          tw.push({ rank: 1, dates: `${shortDate(heroScored.startISO)} — ${shortDate(heroScored.endISO)}`, score: heroScored.score, nights: "10" });
+        }
+        rangeHighlights.good.slice(0, 2).forEach(g => {
+          tw.push({ rank: tw.length + 1, dates: `${shortDate(g.startISO)} — ${shortDate(g.endISO)}`, score: g.score, nights: "5" });
+        });
+        if (rangeHighlights.bad[0]) {
+          tw.push({ rank: tw.length + 1, dates: `${shortDate(rangeHighlights.bad[0].startISO)} — ${shortDate(rangeHighlights.bad[0].endISO)}`, score: rangeHighlights.bad[0].score, nights: "5" });
+        }
+        return tw;
+      })(),
       ...(topLineDriver ? { topLineDriver } : {}),
       ...(geodeticBand ? { geodeticBand } : {}),
       natalSpotlight,

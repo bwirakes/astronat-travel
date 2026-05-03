@@ -11,6 +11,12 @@ import { WINDOW_LABELS, WINDOW_RATIONALES, verdictBand, verdictTone } from "@/ap
 
 interface Props {
     vm: V4VM;
+    copiedTab?: {
+        lead?: string;
+        plainEnglishSummary?: string;
+        evidenceCaption?: string;
+        nextTabBridge?: string;
+    };
 }
 
 const FM = "var(--font-mono)";
@@ -549,112 +555,61 @@ function TransitGantt({ vm }: { vm: V4VM }) {
 
 // ─── Top travel windows ──────────────────────────────────────────────────────
 
-interface WindowRow {
-    kind: "your" | "best" | "worst";
-    label: string;
-    dates: string;
-    score: number;
-    drivers: string;
-}
-
-function WindowsList({ vm }: { vm: V4VM }) {
-    if (vm.travelType !== "trip") return null;
-    const primary = vm.travelWindows[0];
-    if (!primary) return null;
-
-    const fmtRange = (startISO: string, endISO: string) =>
-        `${fmtMonthDay(startISO)} – ${fmtMonthDay(endISO)}`;
-    const driversFromHits = (hits: TransitSpan[] | { transit_planet: string; natal_planet: string; aspect: string; retrograde?: boolean }[]) =>
-        hits
-            .slice(0, 2)
-            .map(h => `${h.transit_planet}${"retrograde" in h && h.retrograde ? " ℞" : ""} ${h.aspect} ${h.natal_planet}`)
-            .join(" · ");
-
-    const rows: WindowRow[] = [];
-    rows.push({
-        kind: "your",
-        label: "Your dates",
-        dates: primary.dates,
-        score: primary.score,
-        drivers: primary.note,
-    });
-
-    for (const g of vm.rangeHighlights.good.slice(0, 2)) {
-        rows.push({
-            kind: "best",
-            label: rows.filter(r => r.kind === "best").length === 0 ? "Best window" : "2nd best",
-            dates: fmtRange(g.startISO, g.endISO),
-            score: g.score,
-            drivers: driversFromHits(g.topHits) || "—",
-        });
-    }
-    const worst = vm.rangeHighlights.bad[0];
-    if (worst) {
-        rows.push({
-            kind: "worst",
-            label: "Worst window",
-            dates: fmtRange(worst.startISO, worst.endISO),
-            score: worst.score,
-            drivers: driversFromHits(worst.topHits) || "—",
-        });
-    }
-
-    return (
-        <div style={{ display: "flex", flexDirection: "column" }}>
-            {rows.map((r, i) => {
-                const accent =
-                    r.kind === "your"  ? "var(--color-y2k-blue)" :
-                    r.kind === "best"  ? "var(--sage)" :
-                                         "var(--color-spiced-life)";
-                return (
-                    <div
-                        key={i}
-                        style={{
-                            display: "grid",
-                            gridTemplateColumns: "minmax(140px, 0.9fr) minmax(0, 2.4fr) auto",
-                            columnGap: "var(--space-lg)",
-                            alignItems: "baseline",
-                            padding: "1rem 0",
-                            borderBottom: "1px solid var(--surface-border)",
-                        }}
-                    >
-                        <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem" }}>
-                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: accent, display: "inline-block", flexShrink: 0, alignSelf: "center" }} />
-                            <span style={{ fontFamily: FM, fontSize: "0.65rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-tertiary)", fontWeight: 600 }}>
-                                {r.label}
-                            </span>
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", minWidth: 0 }}>
-                            <span style={{ fontFamily: "var(--font-secondary, var(--font-primary))", fontSize: "1.15rem", color: "var(--text-primary)", lineHeight: 1.2, letterSpacing: "-0.005em" }}>
-                                {r.dates}
-                            </span>
-                            <span style={{ fontFamily: FB, fontSize: "0.88rem", lineHeight: 1.5, color: "var(--text-secondary)" }}>
-                                {r.drivers}
-                            </span>
-                        </div>
-                        <span style={{ fontFamily: FM, fontSize: "0.95rem", color: "var(--text-primary)", fontWeight: 600, whiteSpace: "nowrap", letterSpacing: "0.02em" }}>
-                            {r.score}<span style={{ color: "var(--text-tertiary)", fontWeight: 400 }}>/100</span>
-                        </span>
-                    </div>
-                );
-            })}
-        </div>
-    );
-}
+import { WindowsList } from "../parts/WindowsList";
 
 // ─── Main tab ─────────────────────────────────────────────────────────────────
 
-export default function TimingTab({ vm }: Props) {
+export default function TimingTab({ vm, copiedTab }: Props) {
     const hasGoodOrBad = vm.rangeHighlights.good.length + vm.rangeHighlights.bad.length > 0;
     const showAlternates = vm.travelType === "trip" && hasGoodOrBad;
+
+    const tabTitle = copiedTab?.lead || "When to use what this place offers.";
+    const tabIntro = copiedTab?.plainEnglishSummary || undefined;
 
     return (
         <TabSection
             kicker="Timing"
-            title="When to use what this place offers."
+            title={tabTitle}
+            intro={tabIntro}
         >
             {/* Verdict — one deterministic sentence carries the intro role */}
             <VerdictHeadline vm={vm} />
+
+            {/* AI Activation Advice */}
+            {vm.tabs.timing?.activationAdvice && vm.tabs.timing.activationAdvice.length > 0 && (
+                <div 
+                    className="mt-[clamp(32px,4vw,48px)] mb-[clamp(48px,6vw,64px)] p-[clamp(24px,3vw,32px)] rounded-[var(--radius-lg)] border"
+                    style={{ 
+                        background: "var(--surface)", 
+                        borderColor: "var(--surface-border)" 
+                    }}
+                >
+                    <h4 
+                        className="m-0 mb-5 text-[11px] tracking-[0.2em] uppercase"
+                        style={{ fontFamily: FM, color: "var(--color-y2k-blue)" }}
+                    >
+                        Strategic Advice
+                    </h4>
+                    <ul className="flex flex-col gap-[16px] m-0 p-0 list-none">
+                        {vm.tabs.timing.activationAdvice.map((advice, i) => (
+                            <li key={i} className="flex items-start gap-[12px]">
+                                <span 
+                                    className="text-[14px] mt-[4px]"
+                                    style={{ color: "var(--color-y2k-blue)" }}
+                                >
+                                    ✦
+                                </span>
+                                <span 
+                                    className="m-0 text-[clamp(16px,1.5vw,18px)] leading-[1.6] [text-wrap:pretty]"
+                                    style={{ fontFamily: FB, color: "var(--text-primary)", fontWeight: 400 }}
+                                >
+                                    {advice}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
 
             {/* §1 — Top travel windows (alternates), trip only */}
             {showAlternates && (
@@ -683,6 +638,31 @@ export default function TimingTab({ vm }: Props) {
                 tooltip="Each bar is one day. Taller, sage and gold = more support. Red = friction. Blue is your trip; green ▼ marks open stretches, red ▼ marks rougher ones."
             />
             <FieldSummary vm={vm} />
+
+            {/* AI Closing Verdict */}
+            {vm.tabs.timing?.closingVerdict && (
+                <div 
+                    className="mt-[clamp(64px,8vw,96px)] pt-[clamp(48px,6vw,64px)] border-t"
+                    style={{ borderColor: "var(--surface-border)" }}
+                >
+                    <h4 
+                        className="m-0 mb-4 text-[11px] tracking-[0.2em] uppercase"
+                        style={{ fontFamily: FM, color: "var(--text-tertiary)" }}
+                    >
+                        Final Verdict
+                    </h4>
+                    <p 
+                        className="m-0 leading-[1.25] tracking-[-0.01em] [text-wrap:balance]"
+                        style={{ 
+                            fontFamily: FP, 
+                            fontSize: "clamp(26px, 3vw, 36px)",
+                            color: "var(--text-primary)" 
+                        }}
+                    >
+                        {vm.tabs.timing.closingVerdict}
+                    </p>
+                </div>
+            )}
 
         </TabSection>
     );
