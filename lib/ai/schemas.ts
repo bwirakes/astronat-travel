@@ -289,3 +289,44 @@ export const MundaneReadingSchema = z.object({
     .max(280),
 });
 export type MundaneReading = z.infer<typeof MundaneReadingSchema>;
+
+/**
+ * Output of the couples/synastry magazine reading prompt.
+ */
+const CouplesEventNoteSchema = z.object({
+  event: z.string(),
+  note: z.string(),
+});
+
+const CouplesWindowNoteSchema = z.object({
+  windowDate: z.string(),
+  note: z.string(),
+});
+
+const CouplesAspectMeaningSchema = z.object({
+  aspectKey: z.string(),
+  meaning: z.string(),
+});
+
+export const CouplesReadingSchema = z.object({
+  theRead: z.object({
+    lead: z.string(),
+  }),
+  goalScores: z.object({
+    eventNotes: z.array(CouplesEventNoteSchema),
+  }),
+  timings: z.object({
+    rationale: z.string(),
+    bestWindowNotes: z.array(CouplesWindowNoteSchema),
+  }),
+  deepDive: z.object({
+    youLead: z.string(),
+    partnerLead: z.string(),
+    synastryLead: z.string(),
+    aspectMeanings: z.array(CouplesAspectMeaningSchema),
+  }),
+  geodetic: z.object({
+    summary: z.string(),
+  }),
+});
+export type CouplesReading = z.infer<typeof CouplesReadingSchema>;

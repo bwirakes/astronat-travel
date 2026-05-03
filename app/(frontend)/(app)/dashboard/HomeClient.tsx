@@ -186,7 +186,7 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
 
             {/* Floating CTA */}
             <button
-                className={`${styles.fab} dashboard-fab`}
+                className="dashboard-fab"
                 style={{ opacity: 0 }}
                 onClick={() => router.push("/reading/new")}
             >
