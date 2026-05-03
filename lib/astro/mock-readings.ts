@@ -133,5 +133,85 @@ export const MOCK_READING_DETAILS: Record<string, any> = {
       { name: "Pluto", sign: "Scorpio", longitude: 216, house: 1 },
       { name: "Chiron", sign: "Gemini", longitude: 78, house: 8 }
     ]
-  }
+  },
+
+  // ─── Demo synastry reading — exercises the new CouplesReadingView ───────────
+  // Hit /reading/couples-demo?demo=true to preview the migrated /reading/[id]
+  // path without authenticating.
+  "couples-demo": {
+    category: "synastry",
+    destination: "Lisbon, Portugal",
+    destinationLat: 38.72,
+    destinationLon: -9.14,
+    travelDate: "2026-09-01",
+    travelType: "trip",
+    goals: ["love", "career"],
+    macroScore: 78,
+    macroVerdict: "Productive",
+    userMacroScore: 78,
+    userMacroVerdict: "Productive",
+    partnerMacroScore: 64,
+    partnerMacroVerdict: "Mixed",
+    partnerName: "Sam",
+    scoreDelta: 14,
+    natalPlanets: [
+      { name: "Sun",     longitude: 144.92 }, { name: "Moon",    longitude: 200.48 },
+      { name: "Mercury", longitude: 158.88 }, { name: "Venus",   longitude: 99.26  },
+      { name: "Mars",    longitude: 10.91  }, { name: "Jupiter", longitude: 63.85  },
+      { name: "Saturn",  longitude: 266.06 }, { name: "Uranus",  longitude: 267.19 },
+      { name: "Neptune", longitude: 277.69 }, { name: "Pluto",   longitude: 219.99 },
+    ],
+    partnerNatalPlanets: [
+      { name: "Sun",     longitude: 95.4  }, { name: "Moon",    longitude: 12.6  },
+      { name: "Mercury", longitude: 88.1  }, { name: "Venus",   longitude: 110.5 },
+      { name: "Mars",    longitude: 305.7 }, { name: "Jupiter", longitude: 178.2 },
+      { name: "Saturn",  longitude: 224.4 }, { name: "Uranus",  longitude: 245.0 },
+      { name: "Neptune", longitude: 290.1 }, { name: "Pluto",   longitude: 230.8 },
+    ],
+    relocatedCusps:        [104, 134, 164, 194, 224, 254, 284, 314, 344, 14, 44, 74],
+    userRelocatedCusps:    [104, 134, 164, 194, 224, 254, 284, 314, 344, 14, 44, 74],
+    partnerRelocatedCusps: [338, 8, 38, 68, 98, 128, 158, 188, 218, 248, 278, 308],
+    eventScores: [
+      { eventName: "Identity & Self-Discovery",   baseVolume: 65, affinityModifier: 6, finalScore: 71, verdict: "Productive" },
+      { eventName: "Wealth & Financial Growth",   baseVolume: 60, affinityModifier: 4, finalScore: 64, verdict: "Productive" },
+      { eventName: "Home, Family & Roots",        baseVolume: 50, affinityModifier: 2, finalScore: 52, verdict: "Mixed" },
+      { eventName: "Romance & Love",              baseVolume: 78, affinityModifier: 4, finalScore: 82, verdict: "Highly Productive" },
+      { eventName: "Health, Routine & Wellness",  baseVolume: 56, affinityModifier: 4, finalScore: 60, verdict: "Mixed" },
+      { eventName: "Partnerships & Marriage",     baseVolume: 74, affinityModifier: 5, finalScore: 79, verdict: "Productive" },
+      { eventName: "Career & Public Recognition", baseVolume: 80, affinityModifier: 6, finalScore: 86, verdict: "Highly Productive" },
+      { eventName: "Friendship & Networking",     baseVolume: 52, affinityModifier: 3, finalScore: 55, verdict: "Mixed" },
+      { eventName: "Spirituality & Inner Peace",  baseVolume: 45, affinityModifier: 3, finalScore: 48, verdict: "Challenging" },
+    ],
+    partnerEventScores: [
+      { eventName: "Identity & Self-Discovery",   baseVolume: 54, affinityModifier: 4, finalScore: 58, verdict: "Mixed" },
+      { eventName: "Wealth & Financial Growth",   baseVolume: 46, affinityModifier: 3, finalScore: 49, verdict: "Challenging" },
+      { eventName: "Home, Family & Roots",        baseVolume: 76, affinityModifier: 5, finalScore: 81, verdict: "Highly Productive" },
+      { eventName: "Romance & Love",              baseVolume: 72, affinityModifier: 4, finalScore: 76, verdict: "Productive" },
+      { eventName: "Health, Routine & Wellness",  baseVolume: 64, affinityModifier: 4, finalScore: 68, verdict: "Productive" },
+      { eventName: "Partnerships & Marriage",     baseVolume: 68, affinityModifier: 4, finalScore: 72, verdict: "Productive" },
+      { eventName: "Career & Public Recognition", baseVolume: 38, affinityModifier: 3, finalScore: 41, verdict: "Challenging" },
+      { eventName: "Friendship & Networking",     baseVolume: 60, affinityModifier: 3, finalScore: 63, verdict: "Mixed" },
+      { eventName: "Spirituality & Inner Peace",  baseVolume: 66, affinityModifier: 4, finalScore: 70, verdict: "Productive" },
+    ],
+    synastryAspects: [
+      { planet1: "venus", planet2: "sun",     aspect: "trine",      orb: 1.2, tone: "harmonious" },
+      { planet1: "moon",  planet2: "venus",   aspect: "sextile",    orb: 2.1, tone: "harmonious" },
+      { planet1: "sun",   planet2: "jupiter", aspect: "trine",      orb: 3.4, tone: "harmonious" },
+      { planet1: "mars",  planet2: "saturn",  aspect: "square",     orb: 0.8, tone: "tense" },
+      { planet1: "mercury", planet2: "mars",  aspect: "opposition", orb: 1.6, tone: "tense" },
+    ],
+    narrative: {
+      verdict: {
+        bestWindows: [
+          "Apr 12–28 2026 — Venus over Lisbon's geodetic ASC",
+          "May 9–22 2026 — Jupiter trine your composite Sun",
+          "Sep 4–17 2026 — New Moon on Sam's IC",
+        ],
+        avoidWindows: [
+          "Jul 18–25 2026 — Mars square composite Saturn (logistical friction)",
+        ],
+      },
+    },
+    birth: { city: "Los Angeles, CA", lat: 34.0522, lon: -118.2437, date: "1988-08-17", time: "07:34 AM" },
+  },
 };
