@@ -85,3 +85,21 @@ export const HERO_BAND_LABEL: Record<HeroBand, string> = {
     mixed: "Mixed",
     tough: "Tough match",
 };
+
+/**
+ * Couples coherence — single number expressing how aligned the two partners'
+ * macro scores are at this destination. Derived from the absolute delta:
+ *
+ *   delta = 0    → coherence = 100   (identical readings)
+ *   delta = 50   → coherence = 50    (one peak, one mid)
+ *   delta = 100  → coherence = 0     (one peak, one hostile)
+ *
+ * Floored at 0. Intentionally NOT a function of either partner's absolute
+ * score — two partners both at 30/100 is a *coherent* "tough match", not an
+ * incoherent one. The hero pill still surfaces the underlying band so the
+ * reader sees both signals.
+ */
+export function computeCoherence(userScore: number, partnerScore: number): number {
+    const delta = Math.abs(userScore - partnerScore);
+    return Math.max(0, Math.round(100 - delta));
+}
