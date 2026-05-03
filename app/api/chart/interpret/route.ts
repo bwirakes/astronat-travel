@@ -218,24 +218,23 @@ function scoreNatalHouses(planets: EphemerisPlanet[], cusps: number[], sect?: "d
   return houseScores;
 }
 
-export async function POST(req: Request) {
+export async function POST() {
   const supabase = await createClient();
   const admin = createAdminClient();
   const encoder = new TextEncoder();
   const emit = (c: ReadableStreamDefaultController, msg: unknown) =>
     c.enqueue(encoder.encode(JSON.stringify(msg) + "\n"));
 
-  // Auth
+  // Auth — session only. Never accept user identity from query params.
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  
-  const { searchParams } = new URL(req.url);
-  const userId = user?.id || searchParams.get("userId");
 
-  if (!userId) {
+  if (!user) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
+
+  const userId = user.id;
 
   // Load profile + natal chart
   const profile = await getProfile(userId);
@@ -469,6 +468,14 @@ async function buildPayload(userId: string, profile: ChartProfile, ephemeris: Ep
   const peakHouses = sorted.slice(0, 1).map(buildSummary);
   const shadowHouses = sorted.slice(-1).map(buildSummary);
 
+  const peakAvg = sorted.slice(0, 3).reduce((acc, h) => acc + h.score, 0) / 3;
+  const macroScore = Math.round(peakAvg);
+  const macroVerdict =
+    macroScore >= 70 ? "Powerfully concentrated"
+    : macroScore >= 60 ? "Above baseline"
+    : macroScore >= 50 ? "Natal Baseline"
+    : "Diffuse / under-supported";
+
   // 3. Top 5 aspects — prefer tighter orbs + Sun/Moon/ASC-ruler involvement
   const ascSign = signFromLongitude(ascLon);
   const chartRulerPlanet = SIGN_RULERS[ascSign];
@@ -553,7 +560,7 @@ async function buildPayload(userId: string, profile: ChartProfile, ephemeris: Ep
     topAspects: rankedAspects,
     closestAcg,
     placements,
-    macroScore: 100, // No longer using matrix macroScore
-    macroVerdict: "Natal Baseline",
+    macroScore,
+    macroVerdict,
   };
 }
