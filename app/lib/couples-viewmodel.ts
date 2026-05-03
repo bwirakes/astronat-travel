@@ -64,6 +64,10 @@ export interface ChartTabVM {
 export interface CouplesVM {
   hero: {
     destination: string;
+    /** Original unparsed destination ("Budapest, Hungary") so consumers
+     *  that need the country part (flag lookup, full label) can recover
+     *  it without re-reading the persisted reading. */
+    destinationFull: string;
     dateRange: string;
     partnerName: string;
     /** The headline "for both of you" score. Joint quality, not agreement. */
@@ -115,6 +119,7 @@ export interface CouplesVM {
     summary: string;
     partnerName: string;
   };
+  prose: import("@/lib/ai/schemas").CouplesReading | null;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -235,7 +240,8 @@ export function toCouplesViewModel(reading: any): CouplesVM {
   const ptnrBand  = verdictBand(partnerScore);
 
   const partnerName: string = reading.partnerName || "Partner";
-  const destination: string = String(reading.destination || "").split(",")[0] || "the destination";
+  const destinationFull: string = String(reading.destination || "");
+  const destination: string = destinationFull.split(",")[0] || "the destination";
   const dateRange: string = formatDateRange(reading.travelDate);
 
   // ── Goals + events ────────────────────────────────────────────
@@ -300,6 +306,7 @@ export function toCouplesViewModel(reading: any): CouplesVM {
   return {
     hero: {
       destination,
+      destinationFull,
       dateRange,
       partnerName,
       joint: {
@@ -358,6 +365,7 @@ export function toCouplesViewModel(reading: any): CouplesVM {
       summary: relocSummary(youAsc, ptnrAsc, youMc, ptnrMc),
       partnerName,
     },
+    prose: reading.couplesReading || null,
   };
 }
 
