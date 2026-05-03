@@ -701,17 +701,32 @@ function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateI
 
         if (isHitShape) {
             const baselineMacro = reading?.macroScore ?? 70;
-            const scored = buildScoredWindows(travelDateISO, tw, baselineMacro, goalIdsArg);
-            return scored.map((w, i) => {
-                const prose = promptWindows?.[i];
-                const detNote = w.drivers.length
-                    ? w.drivers.join(" · ")
-                    : "Quiet week — no major transits nearby. Score reflects the place itself.";
+            const hero = buildScoredWindows(travelDateISO, tw, baselineMacro, goalIdsArg)[0];
+            const highlights = buildRangeHighlights(travelDateISO, tw, baselineMacro, goalIdsArg);
+
+            const rawWindows: any[] = [];
+            if (hero) rawWindows.push({ ...hero, flavor: "Your dates", emoji: "✦", flavorTitle: "" });
+            highlights.good.slice(0, 2).forEach((g, i) => rawWindows.push({ ...g, flavor: i === 0 ? "Best window" : "2nd best", emoji: "→", flavorTitle: "" }));
+            if (highlights.bad[0]) rawWindows.push({ ...highlights.bad[0], flavor: "Worst window", emoji: "»", flavorTitle: "" });
+
+            const normalizeDates = (d: string) => d.replace(/[\s\-\–\—,]+/g, '').toLowerCase().replace(/\d{4}$/, '');
+
+            return rawWindows.map((w, i) => {
+                const datesNorm = normalizeDates(fmtRange(w.startISO, w.endISO));
+                const prose = promptWindows?.find((pw: any) => normalizeDates(pw.dates || "") === datesNorm) || promptWindows?.[i];
+                
+                let detNote = "Quiet week — no major transits nearby. Score reflects the place itself.";
+                if (w.topHits && w.topHits.length) {
+                    detNote = w.topHits.map((h: any) => `${h.transit_planet}${h.retrograde ? " ℞" : ""} ${h.aspect} natal ${h.natal_planet}`).join(" · ");
+                } else if (w.drivers && w.drivers.length) {
+                    detNote = w.drivers.join(" · ");
+                }
+
                 return {
                     rank: i + 1,
-                    flavor: i === 0 ? "Your dates" : "Alternate",
-                    flavorTitle: prose?.flavorTitle || w.label,
-                    emoji: i === 0 ? "✦" : (i === 1 ? "←" : i === 2 ? "→" : "»"),
+                    flavor: w.flavor,
+                    flavorTitle: prose?.flavorTitle || w.label || w.flavor,
+                    emoji: w.emoji,
                     dates: fmtRange(w.startISO, w.endISO),
                     nights: nightsBetween(w.startISO, w.endISO),
                     score: w.score,
@@ -1571,12 +1586,10 @@ function hasTextArray(value: unknown): value is string[] {
 export function hasV4TeacherReading(teacherReading: unknown): boolean {
     if (!isRecord(teacherReading)) return false;
 
-    const hero = teacherReading.hero;
     const tabs = teacherReading.tabs;
     const overview = teacherReading.overview;
     const timing = teacherReading.timing;
 
-    const hasHero = isRecord(hero) && hasText(hero.explainer);
     const hasTabs = isRecord(tabs) && READING_TAB_IDS.every((id) => {
         const tab = tabs[id];
         return isRecord(tab)
@@ -1590,7 +1603,7 @@ export function hasV4TeacherReading(teacherReading: unknown): boolean {
     const hasTiming = isRecord(timing)
         && (hasTextArray(timing.activationAdvice) || hasText(timing.closingVerdict));
 
-    return hasHero && hasTabs && hasOverview && hasTiming;
+    return hasTabs && hasOverview && hasTiming;
 }
 
 function evidenceSourceLabel(source: EvidencePoint["source"]): string {
@@ -1810,8 +1823,15 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
     const baselineScore = typeof reading?.macroScore === "number" ? Math.round(reading.macroScore) : 0;
     const overviewCopy = trustedTeacherReading?.overview
         || deterministicOverviewCopy(scoreNarrative, heroWindow, city, travelType, baselineScore);
-    const timingCopy = trustedTeacherReading?.timing
-        || deterministicTimingCopy(heroWindow, travelWindows);
+    const timingCopy = {
+        ...(trustedTeacherReading?.timing
+            || deterministicTimingCopy(heroWindow, travelWindows)),
+        // Surface AI window notes so WindowsList can use them instead of
+        // the deterministic driversFromHits aspect string.
+        aiWindows: Array.isArray(trustedTeacherReading?.windows)
+            ? (trustedTeacherReading.windows as Array<{ dates: string; note: string; score: number; flavorTitle?: string; nights?: string }>)
+            : [],
+    };
 
     const generated = (() => {
         const ts = reading?.generated || reading?.created_at;

@@ -3,6 +3,7 @@
 import SignIcon from "@/app/components/SignIcon";
 import PlanetIcon from "@/app/components/PlanetIcon";
 import TabSection from "./TabSection";
+import { WindowsList } from "../parts/WindowsList";
 import type { V4VM } from "./types";
 
 interface Props {
@@ -51,7 +52,6 @@ export default function OverviewTab({ vm, copiedTab }: Props) {
         <TabSection
             kicker="Overview"
             title={copiedTab?.lead || "Your reading"}
-            intro={copiedTab?.plainEnglishSummary}
         >
             <div className="w-full max-w-none">
                 <div className="relative mb-[clamp(40px,5vw,56px)] isolate flex items-start gap-[clamp(14px,2vw,28px)]">
@@ -119,25 +119,8 @@ export default function OverviewTab({ vm, copiedTab }: Props) {
                     </div>
                 )}
 
-                {/* Theme cards — side by side */}
-                <div className="mt-[clamp(40px,6vw,80px)] border-t pt-[clamp(32px,5vw,48px)]" style={{ borderColor: "var(--surface-border)" }}>
-                    <div className="grid gap-[clamp(24px,4vw,48px)] mb-[clamp(44px,5vw,68px)] grid-cols-1 md:grid-cols-[1fr_1px_1fr]">
-                        <ThemeListCard
-                            title="Strongest Themes"
-                            themes={vm.scoreNarrative.strongestThemes}
-                            scoreColor="var(--sage)"
-                        />
-                        <div className="hidden md:block bg-[var(--surface-border)] w-full h-full" />
-                        <ThemeListCard
-                            title="Less Emphasized"
-                            themes={vm.scoreNarrative.lessEmphasized}
-                            scoreColor="var(--color-spiced-life)"
-                        />
-                    </div>
-                </div>
-
                 {/* Lean Into / Watch Out — bold full-color blocks */}
-                <div className="border-t pt-[clamp(32px,5vw,48px)] mb-[clamp(44px,5vw,68px)]" style={{ borderColor: "var(--surface-border)" }}>
+                <div className="mt-[clamp(40px,6vw,80px)] border-t pt-[clamp(32px,5vw,48px)]" style={{ borderColor: "var(--surface-border)" }}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-[clamp(32px,5vw,64px)]">
                         <SupportBlock
                             title="Lean Into"
@@ -152,6 +135,23 @@ export default function OverviewTab({ vm, copiedTab }: Props) {
                     </div>
                 </div>
 
+                {/* Theme cards — side by side */}
+                <div className="mt-[clamp(44px,5vw,68px)] border-t pt-[clamp(32px,5vw,48px)] mb-[clamp(44px,5vw,68px)]" style={{ borderColor: "var(--surface-border)" }}>
+                    <div className="grid gap-[clamp(24px,4vw,48px)] grid-cols-1 md:grid-cols-[1fr_1px_1fr]">
+                        <ThemeListCard
+                            title="Strongest Themes"
+                            themes={vm.scoreNarrative.strongestThemes}
+                            scoreColor="var(--sage)"
+                        />
+                        <div className="hidden md:block bg-[var(--surface-border)] w-full h-full" />
+                        <ThemeListCard
+                            title="Less Emphasized"
+                            themes={vm.scoreNarrative.lessEmphasized}
+                            scoreColor="var(--color-spiced-life)"
+                        />
+                    </div>
+                </div>
+
                 {/* Travel windows summary */}
                 <div className="border-t pt-[clamp(32px,5vw,48px)] pb-[clamp(24px,3vw,32px)]" style={{ borderColor: "var(--surface-border)" }}>
                     <h3
@@ -160,41 +160,7 @@ export default function OverviewTab({ vm, copiedTab }: Props) {
                     >
                         Travel Windows
                     </h3>
-                    <ul
-                        className="list-none m-0 p-0 border-t border-b"
-                        style={{ borderColor: "var(--surface-border)" }}
-                    >
-                        {vm.travelWindows.slice(0, 3).map((w, i) => {
-                            const isPrimary = i === 0;
-                            return (
-                                <li
-                                    key={`${w.dates}-${i}`}
-                                    className="grid gap-[18px] py-6 border-b last:border-b-0 grid-cols-[8px_1fr] sm:grid-cols-[8px_minmax(180px,0.34fr)_1fr] items-start"
-                                    style={{ borderColor: "var(--surface-border)" }}
-                                >
-                                    <span
-                                        className="w-[7px] h-[7px] rounded-full mt-[0.55em]"
-                                        style={{
-                                            background: isPrimary ? "var(--color-spiced-life)" : "var(--text-tertiary)",
-                                        }}
-                                    />
-                                    <span
-                                        className="text-[12px] tracking-[0.1em] uppercase leading-[1.3] mt-[0.2em]"
-                                        style={{ fontFamily: FONT_MONO, color: "var(--text-primary)" }}
-                                    >
-                                        {w.dates}
-                                    </span>
-                                    <span
-                                        className="text-[15px] leading-[1.6] col-span-2 sm:col-span-1"
-                                        style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
-                                    >
-                                        <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>{w.flavorTitle}</strong><br className="sm:hidden" />
-                                        <span className="hidden sm:inline"> · </span>{w.note}
-                                    </span>
-                                </li>
-                            );
-                        })}
-                    </ul>
+                    <WindowsList vm={vm} limit={3} />
                 </div>
             </div>
         </TabSection>
