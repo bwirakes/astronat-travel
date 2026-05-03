@@ -86,6 +86,19 @@ export const HERO_BAND_LABEL: Record<HeroBand, string> = {
     tough: "Tough match",
 };
 
+/** Band → palette token. Single source of truth for verdict-coloured chrome
+ *  (hero pills, score numerals, ledger accents) across reading surfaces.
+ *  Keys cover every value of {@link VerdictBand} and {@link HeroBand} so a
+ *  caller can pass either without a remap. */
+export const VERDICT_COLORS: Record<string, string> = {
+    peak:  "var(--sage)",
+    solid: "var(--sage)",
+    mixed: "var(--gold)",
+    tight: "var(--color-spiced-life)",
+    hard:  "var(--color-spiced-life)",
+    tough: "var(--color-spiced-life)",
+};
+
 /**
  * Couples coherence — single number expressing how aligned the two partners'
  * macro scores are at this destination. Derived from the absolute delta:

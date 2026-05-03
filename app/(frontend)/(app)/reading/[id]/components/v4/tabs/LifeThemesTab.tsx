@@ -4,25 +4,34 @@
 
 import HouseMatrixCard from "@/app/components/HouseMatrixCard";
 import type { HouseMatrixResult } from "@/app/lib/house-matrix";
-import SectionHead from "./SectionHead";
-import TabSection from "./TabSection";
+import SectionHead from "../../shared/SectionHead";
+import TabSection from "../../shared/TabSection";
 import type { V4VM } from "./types";
 
 interface Props {
     vm: V4VM;
     reading: any;
+    copiedTab?: {
+        lead?: string;
+        plainEnglishSummary?: string;
+        evidenceCaption?: string;
+        nextTabBridge?: string;
+    };
 }
 
-export default function LifeThemesTab({ vm, reading }: Props) {
+export default function LifeThemesTab({ vm, reading, copiedTab }: Props) {
     const selectedGoal = vm.scoreNarrative.selectedGoals[0];
     const rawBars = vm.scoreNarrative.themes.length
         ? vm.scoreNarrative.themes
         : [...vm.scoreNarrative.strongestThemes, ...vm.scoreNarrative.lessEmphasized];
     const themeBars = [...rawBars].sort((a, b) => b.score - a.score);
 
-    const intro = selectedGoal
+    const fallbackIntro = selectedGoal
         ? `${selectedGoal.label} is the lens here. The chart ranks each life area by how useful this place is for that outcome.`
         : "The chart ranks where life gets louder, from strongest support to quieter background themes.";
+
+    const tabLead = copiedTab?.lead?.trim() || "";
+    const tabIntro = copiedTab?.plainEnglishSummary || fallbackIntro;
 
     const lifts = themeBars.slice(0, 3);
     const presses = themeBars.length >= 4
@@ -42,7 +51,12 @@ export default function LifeThemesTab({ vm, reading }: Props) {
             : null;
 
     return (
-        <TabSection kicker="Life Themes" title="Where life gets louder." intro={intro}>
+        <TabSection
+            kicker="Life Themes"
+            title="Where life gets louder."
+            lead={tabLead}
+            intro={tabIntro}
+        >
             {/* Tier 1: top 3 lifts / top 3 presses */}
             {(lifts.length > 0 || presses.length > 0) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">

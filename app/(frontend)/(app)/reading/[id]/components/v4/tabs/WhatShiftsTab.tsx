@@ -1,8 +1,8 @@
 "use client";
 
 import NatalMockupWheel, { type NatalPlanet } from "@/app/components/NatalMockupWheel";
-import SectionHead from "./SectionHead";
-import TabSection from "./TabSection";
+import SectionHead from "../../shared/SectionHead";
+import TabSection from "../../shared/TabSection";
 import type { V4VM } from "./types";
 import { geodeticPlanetMeaning } from "@/app/lib/geodetic/planet-meanings";
 
@@ -10,6 +10,12 @@ interface Props {
     vm: V4VM;
     isDark: boolean;
     relocatedWheel: { cusps: number[]; planets: NatalPlanet[] } | null;
+    copiedTab?: {
+        lead?: string;
+        plainEnglishSummary?: string;
+        evidenceCaption?: string;
+        nextTabBridge?: string;
+    };
 }
 
 const FONT_PRIMARY = "var(--font-primary, serif)";
@@ -21,23 +27,30 @@ const ASPECT_LEFT_BORDER: Record<string, string> = {
     "very-strong": "var(--gold)",
 };
 
-export default function WhatShiftsTab({ vm, isDark, relocatedWheel }: Props) {
+export default function WhatShiftsTab({ vm, isDark, relocatedWheel, copiedTab }: Props) {
     const lead = buildLead(vm);
     const seasonal = buildSeasonal(vm);
+
+    const tabLead = copiedTab?.lead?.trim() || "";
+    const tabIntro = copiedTab?.plainEnglishSummary || vm.chrome.step7Intro;
+    const hasAiCopy = tabLead.length > 0 || !!copiedTab?.plainEnglishSummary;
 
     return (
         <TabSection
             kicker="What Shifts"
             title="What changes when your chart moves here."
-            intro={vm.chrome.step7Intro}
+            lead={tabLead}
+            intro={tabIntro}
         >
-            {/* ─ LEAD ───────────────────────────────────────────────────── */}
-            <p
-                className="text-[16px] leading-[1.55] m-0 mb-2 max-w-[640px] [text-wrap:pretty]"
-                style={{ fontFamily: FONT_BODY, color: "var(--text-primary)", fontWeight: 400 }}
-            >
-                {lead}
-            </p>
+            {/* ─ Synthesized fallback lead — only shown when no AI copy ─ */}
+            {!hasAiCopy && (
+                <p
+                    className="text-[16px] leading-[1.55] m-0 mb-2 max-w-[640px] [text-wrap:pretty]"
+                    style={{ fontFamily: FONT_BODY, color: "var(--text-primary)", fontWeight: 400 }}
+                >
+                    {lead}
+                </p>
+            )}
             <p
                 className="text-[12px] tracking-[0.04em] m-0 mb-8 max-w-[560px]"
                 style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}

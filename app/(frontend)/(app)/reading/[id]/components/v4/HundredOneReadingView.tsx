@@ -16,19 +16,13 @@ import PlaceFieldTab from "./tabs/PlaceFieldTab";
 import WhatShiftsTab from "./tabs/WhatShiftsTab";
 import TimingTab from "./tabs/TimingTab";
 import NextTabNav from "./NextTabNav";
-import LearnFooter from "./LearnFooter";
+import LearnFooter from "../shared/LearnFooter";
+import { VERDICT_COLORS } from "@/app/lib/verdict";
 import "./reading-shell.css";
 
 const FONT_PRIMARY = "var(--font-primary, serif)";
 const FONT_BODY = "var(--font-body, system-ui)";
 const FONT_MONO = "var(--font-mono, monospace)";
-
-const VERDICT_COLORS: Record<string, string> = {
-    tough: "var(--color-spiced-life)",
-    mixed: "var(--gold)",
-    solid: "var(--sage)",
-    peak: "var(--sage)",
-};
 
 const MAP_PLANET_NAMES = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"] as const;
 
@@ -332,36 +326,13 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                                 </TabsList>
 
                                 <div ref={panelsRef} className="flex-1" style={{ minWidth: 0, width: "100%" }}>
-                                    {copiedTab?.lead && activeTab !== "overview" && (
-                                        <section className="pb-2 bg-transparent">
-                                            <p
-                                                className="leading-[1.1] m-0 mb-[10px] [text-wrap:balance]"
-                                                style={{
-                                                    fontFamily: FONT_PRIMARY,
-                                                    fontSize: "clamp(25px, 3.4vw, 40px)",
-                                                    color: "var(--text-primary)",
-                                                }}
-                                            >
-                                                {copiedTab.lead}
-                                            </p>
-                                            {copiedTab.plainEnglishSummary && (
-                                                <p
-                                                    className="max-w-[620px] text-[15px] leading-[1.6] m-0"
-                                                    style={{ color: "var(--text-secondary)" }}
-                                                >
-                                                    {copiedTab.plainEnglishSummary}
-                                                </p>
-                                            )}
-                                        </section>
-                                    )}
-
                                     <main className="min-w-0">
                                         <TabsContent value="overview" className="mt-0 outline-none data-[state=inactive]:hidden">
                                             <OverviewTab vm={vm} copiedTab={copiedTab} selectTab={selectTab} />
                                         </TabsContent>
 
                                         <TabsContent value="life-themes" className="mt-0 outline-none data-[state=inactive]:hidden">
-                                            <LifeThemesTab vm={vm} reading={reading} />
+                                            <LifeThemesTab vm={vm} reading={reading} copiedTab={copiedTab} />
                                         </TabsContent>
 
                                         <TabsContent value="place-field" className="mt-0 outline-none data-[state=inactive]:hidden">
@@ -371,30 +342,18 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                                                 birthIso={birthIso}
                                                 reading={reading}
                                                 relocatedAcgLines={relocatedAcgLines}
+                                                copiedTab={copiedTab}
                                             />
                                         </TabsContent>
 
                                         <TabsContent value="what-shifts" className="mt-0 outline-none data-[state=inactive]:hidden">
-                                            <WhatShiftsTab vm={vm} isDark={isDark} relocatedWheel={relocatedWheel} />
+                                            <WhatShiftsTab vm={vm} isDark={isDark} relocatedWheel={relocatedWheel} copiedTab={copiedTab} />
                                         </TabsContent>
 
                                         <TabsContent value="timing" className="mt-0 outline-none data-[state=inactive]:hidden">
-                                            <TimingTab vm={vm} />
+                                            <TimingTab vm={vm} copiedTab={copiedTab} />
                                         </TabsContent>
                                     </main>
-
-                                    {copiedTab?.evidenceCaption && (
-                                        <section
-                                            className="mt-3 py-4 border-t text-[14px] mx-[clamp(16px,3vw,28px)]"
-                                            style={{
-                                                borderColor: "var(--surface-border)",
-                                                fontFamily: FONT_BODY,
-                                                color: "var(--text-secondary)",
-                                            }}
-                                        >
-                                            {copiedTab.evidenceCaption}
-                                        </section>
-                                    )}
 
                                     <NextTabNav 
                                         activeTab={activeTab} 
