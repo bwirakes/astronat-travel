@@ -21,10 +21,10 @@ export async function GET(request: Request) {
           .maybeSingle()
 
         // Onboarding gate: anyone without birth data goes through /flow,
-        // regardless of any `next` param. This catches fresh signups and
-        // partially-onboarded users following deep links.
+        // regardless of any `next` param. Always clamp to step=1 so users
+        // can't skip data entry via a crafted URL.
         if (!profile?.birth_date) {
-          return NextResponse.redirect(`${origin}/flow`)
+          return NextResponse.redirect(`${origin}/flow?step=1`)
         }
 
         // Onboarded users honour `next` if provided, else land on /dashboard.
