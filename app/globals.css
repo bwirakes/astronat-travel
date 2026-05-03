@@ -107,6 +107,17 @@
   /* Motion */
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --duration: 0.3s;
+
+  /* ─── Academy / Lesson framework ───────────────────────────────────────── */
+  /* Per-lesson accent: set by LessonShell; consumed by every lesson primitive */
+  --lesson-accent: var(--color-y2k-blue);
+  --lesson-accent-soft: rgba(4, 86, 251, 0.12);
+
+  /* Tradition tags — visual chips for "where this claim comes from" */
+  --tradition-hellenistic: var(--gold);
+  --tradition-modern: var(--color-y2k-blue);
+  --tradition-mundane: var(--sage);
+  --tradition-astronomy: var(--text-primary);
 }
 
 /* Light Theme (Astro-Brand mappings) */
@@ -674,4 +685,36 @@ a {
 body[data-app-drawer-open="true"] .dashboard-fab,
 body[data-app-drawer-open="true"] .app-hide-when-drawer-open {
   display: none !important;
+}
+
+/* ── Floating "+ New Reading" Action Button ──────────────── */
+.dashboard-fab {
+  position: fixed;
+  bottom: var(--space-xl);
+  right: max(clamp(0.75rem, 2vw, 1.25rem), calc(50vw - 640px + clamp(0.75rem, 2vw, 1.25rem)));
+  margin: 0;
+  z-index: 100;
+  width: max-content;
+  background: var(--color-y2k-blue);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 0.7rem 1.5rem;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  transition: background 0.15s var(--ease), transform 0.15s var(--ease);
+}
+
+.dashboard-fab:hover {
+  background: #0340c5;
+  transform: translateY(-2px);
+}
+
+@media (min-width: 768px) {
+  .dashboard-fab {
+    right: max(clamp(1rem, 2vw, 2rem), calc(50vw - 640px + clamp(1rem, 2vw, 2rem)));
+  }
 }
