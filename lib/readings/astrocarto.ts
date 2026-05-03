@@ -315,12 +315,31 @@ export async function runAstrocarto(
       refDate,
     });
 
+    // Partner relocated planet states for the affinity matrix — same shape
+    // as the user's `relocatedPlanets` (lines 275–280) so the engine sees
+    // the partner's chart in the same frame.
+    const pAscLon = pRelocatedCusps[0] ?? 0;
+    const pActiveLinePlanets = new Set(
+      pAcgLines
+        .filter((line: any) => Number(line.distance_km ?? Infinity) <= 2000)
+        .map((line: any) => String(line.planet || "").toLowerCase())
+        .filter(Boolean),
+    );
+    const pRelocatedPlanetStates = partnerNatalPlanets.map((p: any) => ({
+      name: p.planet || p.name,
+      house: houseFromLongitude(p.longitude, pAscLon),
+      dignityStatus: p.dignityStatus || p.dignity || p.essentialDignity,
+      hasLine: pActiveLinePlanets.has(String(p.planet || p.name || "").toLowerCase()),
+    }));
+    const pEventScores = computeEventScores(pMatrixResult, pRelocatedPlanetStates);
+
     partnerMatrix = {
       macroScore: pMatrixResult.macroScore,
       macroVerdict: pMatrixResult.macroVerdict,
       houses: pMatrixResult.houses.map((h) => ({ house: h.house, score: h.score })),
       acgLines: pAcgLines,
       relocatedCusps: pRelocatedCusps,
+      eventScores: pEventScores,
     };
   }
 
@@ -463,6 +482,7 @@ export async function runAstrocarto(
           partnerHouses: partnerMatrix.houses,
           partnerPlanetaryLines: partnerMatrix.acgLines,
           partnerRelocatedCusps: partnerMatrix.relocatedCusps,
+          partnerEventScores: partnerMatrix.eventScores,
           partnerName: partnerProfile?.first_name ?? "Partner",
           scoreDelta: synastryDerived.scoreDelta,
           averageScore: synastryDerived.averageScore,
