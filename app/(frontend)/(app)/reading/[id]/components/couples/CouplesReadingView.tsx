@@ -15,20 +15,25 @@
  *   §05 Who You Are in <city> — relocated angles per partner
  */
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight } from "lucide-react";
 import NatalMockupWheel from "@/app/components/NatalMockupWheel";
-import { EVENT_LABELS, verdictBand, type VerdictBand } from "@/app/lib/verdict";
+import { PageHeader } from "@/components/app/page-header-context";
+import TabSection from "../shared/TabSection";
+import LearnFooter from "../shared/LearnFooter";
+import { EVENT_LABELS, VERDICT_COLORS, verdictBand, type VerdictBand } from "@/app/lib/verdict";
 import type { CouplesVM, PartnerEventScore, ChartTabVM, SynastryAspectVM } from "@/app/lib/couples-viewmodel";
 
 // ═══════════════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════════
 
-const SECTION_GAP = "clamp(56px, 8vw, 104px)";
-const PAGE_MAX = 1080;
+const SECTION_GAP = "clamp(32px, 4vw, 56px)";
+const PAGE_MAX = 1200;
 
+/** Per-event bar fill. Intentionally a 5-stop palette (vs. VERDICT_COLORS'
+ *  3 stops) — partner-vs-partner bars need more visible nuance, so peak/
+ *  solid/mixed/tight/hard each get a distinct colour. */
 const BAND_FILL: Record<VerdictBand, string> = {
   peak:  "var(--sage)",
   solid: "var(--color-y2k-blue)",
@@ -36,8 +41,6 @@ const BAND_FILL: Record<VerdictBand, string> = {
   tight: "var(--gold)",
   hard:  "var(--color-spiced-life)",
 };
-
-const ISSUE = "ASTRONAT · COUPLES";
 
 // ═══════════════════════════════════════════════════════════════
 // SHELL
@@ -48,45 +51,135 @@ interface Props {
   paramId?: string;
 }
 
-export default function CouplesReadingView({ vm }: Props) {
+export default function CouplesReadingView({ vm, paramId }: Props) {
   const [tab, setTab] = useState<"you" | "partner" | "synastry">("you");
 
   return (
-    <div
+    <>
+      <PageHeader title="Astronat · Couples" backTo="/readings" backLabel="All readings" />
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "var(--bg)",
+          color: "var(--text-primary)",
+          fontFamily: "var(--font-body)",
+        }}
+      >
+        <div style={{ maxWidth: PAGE_MAX, margin: "0 auto", padding: "0 clamp(16px, 4vw, 32px) clamp(80px, 8vw, 120px)" }}>
+          <Hero hero={vm.hero} />
+          <StatLedger ledger={vm.ledger} partnerName={vm.hero.partnerName} flush />
+
+          <ChapterSection index="01" title="The Read">
+            <MagazineIntro intro={vm.intro} destination={vm.hero.destination} />
+          </ChapterSection>
+
+          <ChapterSection
+            index="02"
+            title="Goal Scores"
+            sub={
+              <>
+                Top three goals from your selection — <strong style={{ color: "var(--text-primary)" }}>{vm.goals.selectedGoals.join(" and ")}</strong>.
+                Bars are coloured by each partner&apos;s individual verdict band.
+              </>
+            }
+          >
+            <GoalComparison goals={vm.goals} partnerName={vm.hero.partnerName} />
+          </ChapterSection>
+
+          <ChapterSection index="03" title="Timings">
+            <VerdictBlock timings={vm.timings} />
+          </ChapterSection>
+
+          <ChapterSection
+            index="04"
+            title={`How ${vm.hero.destination} Feels`}
+            sub={<>Two relocated charts and the cross-aspects between them. Each entry shows what the city activates.</>}
+          >
+            <DeepDive deepDive={vm.deepDive} tab={tab} onTab={setTab} destination={vm.hero.destination} />
+          </ChapterSection>
+
+          <ChapterSection
+            index="05"
+            title={`Who You Are in ${vm.hero.destination}`}
+            sub={<>{vm.geodetic.summary}</>}
+          >
+            <GeodeticSummary geodetic={vm.geodetic} youName="You" />
+          </ChapterSection>
+
+          <div style={{ marginTop: "clamp(80px, 10vw, 140px)" }}>
+            <LearnFooter />
+          </div>
+        </div>
+
+        <ClosingFooter
+          destination={vm.hero.destination}
+          partnerName={vm.hero.partnerName}
+          paramId={paramId}
+        />
+      </div>
+    </>
+  );
+}
+
+function ClosingFooter({
+  destination, partnerName, paramId,
+}: { destination: string; partnerName: string; paramId?: string }) {
+  return (
+    <footer
       style={{
-        minHeight: "100vh",
-        background: "var(--bg)",
-        color: "var(--text-primary)",
-        fontFamily: "var(--font-body)",
+        borderTop: "1px solid var(--surface-border)",
+        padding: "clamp(40px, 5vw, 56px) clamp(16px, 4vw, 32px) clamp(48px, 6vw, 64px)",
       }}
     >
-      <Colophon issue={ISSUE} />
-      <div style={{ maxWidth: PAGE_MAX, margin: "0 auto", padding: "0 clamp(20px, 4vw, 48px) clamp(80px, 8vw, 120px)" }}>
-        <Hero hero={vm.hero} />
-        <StatLedger ledger={vm.ledger} partnerName={vm.hero.partnerName} />
-
-        <Section index="01" title="The Read" gap={SECTION_GAP}>
-          <MagazineIntro intro={vm.intro} destination={vm.hero.destination} />
-        </Section>
-
-        <Section index="02" title="Goal Scores" gap={SECTION_GAP}>
-          <GoalComparison goals={vm.goals} destination={vm.hero.destination} partnerName={vm.hero.partnerName} />
-        </Section>
-
-        <Section index="03" title="Timings" gap={SECTION_GAP}>
-          <VerdictBlock timings={vm.timings} />
-        </Section>
-
-        <Section index="04" title={`How ${vm.hero.destination} Feels`} gap={SECTION_GAP}>
-          <DeepDive deepDive={vm.deepDive} tab={tab} onTab={setTab} destination={vm.hero.destination} />
-        </Section>
-
-        <Section index="05" title={`Who You Are in ${vm.hero.destination}`} gap={SECTION_GAP}>
-          <GeodeticSummary geodetic={vm.geodetic} youName="You" />
-        </Section>
-
-        <CouplesAcademy />
+      <div style={{ maxWidth: PAGE_MAX, margin: "0 auto" }}>
+        <p
+          style={{
+            margin: "0 auto clamp(12px, 1.5vw, 16px)",
+            maxWidth: 600,
+            fontFamily: "var(--font-body)",
+            fontSize: 14,
+            lineHeight: 1.6,
+            fontWeight: 300,
+            color: "var(--text-secondary)",
+            textAlign: "center",
+            textWrap: "pretty",
+          }}
+        >
+          Built from your two charts and how they meet at {destination}. Read it
+          together when plans are more concrete.
+        </p>
+        <div
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 10,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            color: "var(--text-tertiary)",
+            textAlign: "center",
+          }}
+        >
+          {destination} · with {partnerName}
+          {paramId ? ` · ${paramId.slice(0, 8)}` : ""}
+        </div>
       </div>
+    </footer>
+  );
+}
+
+/** Magazine chapter wrapper. Adopts the same `TabSection` chrome the v4
+ *  reading uses for its tab openers — kicker on top, big serif H2 below —
+ *  so couples and v4 share one chapter-header shape. The chapter index is
+ *  carried in the kicker (`§ 01`) to preserve the magazine signature. */
+function ChapterSection({
+  index, title, sub, children,
+}: {
+  index: string; title: string; sub?: React.ReactNode; children: React.ReactNode;
+}) {
+  return (
+    <div style={{ marginTop: SECTION_GAP }}>
+      <TabSection kicker={`§ ${index}`} title={title} intro={sub}>
+        {children}
+      </TabSection>
     </div>
   );
 }
@@ -95,102 +188,8 @@ export default function CouplesReadingView({ vm }: Props) {
 // PRIMITIVES
 // ═══════════════════════════════════════════════════════════════
 
-function Section({ index, title, gap, children }: { index: string; title: string; gap: string; children: ReactNode }) {
-  return (
-    <section style={{ marginTop: gap }}>
-      <header
-        style={{
-          display: "grid",
-          gridTemplateColumns: "auto 1fr",
-          alignItems: "baseline",
-          columnGap: "clamp(20px, 3vw, 40px)",
-          paddingBottom: "clamp(16px, 2vw, 24px)",
-          borderBottom: "1px solid var(--surface-border)",
-          marginBottom: "clamp(28px, 4vw, 48px)",
-        }}
-      >
-        <span
-          style={{
-            fontFamily: "var(--font-primary)",
-            fontSize: "clamp(40px, 6vw, 72px)",
-            lineHeight: 0.85,
-            color: "var(--color-y2k-blue)",
-            letterSpacing: "-0.02em",
-          }}
-        >
-          §{index}
-        </span>
-        <h2
-          style={{
-            margin: 0,
-            fontFamily: "var(--font-mono)",
-            fontSize: "clamp(0.7rem, 1.1vw, 0.85rem)",
-            letterSpacing: "0.32em",
-            textTransform: "uppercase",
-            color: "var(--text-secondary)",
-            fontWeight: 500,
-            alignSelf: "end",
-            paddingBottom: "0.4rem",
-          }}
-        >
-          {title}
-        </h2>
-      </header>
-      {children}
-    </section>
-  );
-}
-
 function Divider() {
   return <span aria-hidden style={{ background: "var(--surface-border)", width: 1, alignSelf: "stretch" }} />;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// COLOPHON
-// ═══════════════════════════════════════════════════════════════
-
-function Colophon({ issue }: { issue: string }) {
-  return (
-    <div
-      style={{
-        borderBottom: "1px solid var(--surface-border)",
-        padding: "var(--space-md) clamp(20px, 4vw, 48px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: "var(--space-md)",
-      }}
-    >
-      <a
-        href="/readings"
-        style={{
-          textDecoration: "none",
-          display: "flex",
-          alignItems: "center",
-          gap: "0.45rem",
-          fontFamily: "var(--font-mono)",
-          fontSize: "0.65rem",
-          letterSpacing: "0.22em",
-          textTransform: "uppercase",
-          color: "var(--text-secondary)",
-        }}
-      >
-        <ArrowLeft size={14} />
-        ALL READINGS
-      </a>
-      <span
-        style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: "0.62rem",
-          letterSpacing: "0.28em",
-          textTransform: "uppercase",
-          color: "var(--text-tertiary)",
-        }}
-      >
-        {issue}
-      </span>
-    </div>
-  );
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -206,8 +205,9 @@ function Hero({ hero }: { hero: CouplesVM["hero"] }) {
         flexWrap: "wrap",
         alignItems: "flex-end",
         justifyContent: "space-between",
-        gap: "clamp(20px, 3vw, 40px)",
-        padding: "clamp(40px, 6vw, 80px) 0 clamp(24px, 3vw, 36px) 0",
+        gap: "clamp(16px, 2.4vw, 28px)",
+        padding: "8px 0 clamp(16px, 2vw, 22px)",
+        borderBottom: "1px solid var(--surface-border)",
         isolation: "isolate",
       }}
     >
@@ -218,9 +218,9 @@ function Hero({ hero }: { hero: CouplesVM["hero"] }) {
           style={{
             fontFamily: "var(--font-mono)",
             fontSize: "0.7rem",
-            letterSpacing: "0.32em",
+            letterSpacing: "0.18em",
             textTransform: "uppercase",
-            color: "var(--text-tertiary)",
+            color: "var(--text-secondary)",
           }}
         >
           {hero.dateRange} · WITH {hero.partnerName.toUpperCase()}
@@ -228,9 +228,9 @@ function Hero({ hero }: { hero: CouplesVM["hero"] }) {
         <span
           style={{
             fontFamily: "var(--font-primary)",
-            fontSize: "clamp(56px, 8vw, 112px)",
-            lineHeight: 0.9,
-            letterSpacing: "-0.025em",
+            fontSize: "clamp(40px, 5.5vw, 72px)",
+            lineHeight: 0.95,
+            letterSpacing: "-0.02em",
             color: "var(--text-primary)",
           }}
         >
@@ -238,27 +238,32 @@ function Hero({ hero }: { hero: CouplesVM["hero"] }) {
         </span>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.75rem", position: "relative", zIndex: 1 }}>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.28em", color: "var(--text-tertiary)" }}>
-          COHERENCE
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "10px", position: "relative", zIndex: 1 }}>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", color: "var(--text-tertiary)" }}>
+          MATCH
         </span>
-        <div style={{ display: "flex", alignItems: "baseline", gap: "0.4rem", fontFamily: "var(--font-primary)" }}>
-          <span style={{ fontSize: "clamp(56px, 8vw, 96px)", lineHeight: 1, color: hero.coherence.accent, letterSpacing: "-0.02em" }}>
-            {hero.coherence.score}
+        <span style={{ display: "flex", alignItems: "baseline", gap: "6px", fontFamily: "var(--font-primary)" }}>
+          <span style={{ fontSize: "clamp(44px, 5.5vw, 72px)", lineHeight: 1, color: hero.joint.accent, letterSpacing: "-0.02em" }}>
+            {hero.joint.score}
           </span>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.85rem", color: "var(--text-tertiary)" }}>/100</span>
-        </div>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "13px", color: "var(--text-tertiary)" }}>/100</span>
+        </span>
         <span
+          className="inline-flex items-center"
           style={{
+            padding: "5px 12px",
+            borderRadius: 9999,
+            border: `1px solid ${hero.joint.accent}`,
+            background: `color-mix(in oklab, ${hero.joint.accent} 6%, transparent)`,
             fontFamily: "var(--font-mono)",
-            fontSize: "0.65rem",
-            letterSpacing: "0.24em",
+            fontSize: "10px",
+            letterSpacing: "0.2em",
             textTransform: "uppercase",
-            color: hero.coherence.accent,
-            fontWeight: 600,
+            color: hero.joint.accent,
+            fontWeight: 500,
           }}
         >
-          {hero.coherence.label}
+          {hero.joint.label}
         </span>
       </div>
     </section>
@@ -294,11 +299,18 @@ function SynastryWatermark() {
 // STAT LEDGER
 // ═══════════════════════════════════════════════════════════════
 
-function StatLedger({ ledger, partnerName }: { ledger: CouplesVM["ledger"]; partnerName: string }) {
+function StatLedger({
+  ledger, partnerName, flush,
+}: { ledger: CouplesVM["ledger"]; partnerName: string; flush?: boolean }) {
+  const youAccent = VERDICT_COLORS[ledger.you.band] ?? "var(--text-secondary)";
+  const partnerAccent = VERDICT_COLORS[ledger.partner.band] ?? "var(--text-secondary)";
+  // `flush` suppresses the top border when the section sits directly under
+  // a sibling that already provides one (the Hero's bottom border in this
+  // layout). Avoids the double-hairline.
   return (
     <section
       style={{
-        borderTop: "1px solid var(--surface-border)",
+        borderTop: flush ? "none" : "1px solid var(--surface-border)",
         borderBottom: "1px solid var(--surface-border)",
         padding: "clamp(24px, 3.5vw, 40px) 0",
         display: "grid",
@@ -307,11 +319,11 @@ function StatLedger({ ledger, partnerName }: { ledger: CouplesVM["ledger"]; part
         gap: "clamp(16px, 2.5vw, 32px)",
       }}
     >
-      <LedgerColumn name="YOU" score={ledger.you.score} label={ledger.you.label} accent={ledger.you.accent} />
+      <LedgerColumn name="YOU" score={ledger.you.score} label={ledger.you.label} accent={youAccent} />
       <Divider />
       <LedgerColumn name="Δ MACRO" score={ledger.delta} label="POINTS APART" accent="var(--text-tertiary)" suffix="pts" />
       <Divider />
-      <LedgerColumn name={partnerName.toUpperCase()} score={ledger.partner.score} label={ledger.partner.label} accent={ledger.partner.accent} align="right" />
+      <LedgerColumn name={partnerName.toUpperCase()} score={ledger.partner.score} label={ledger.partner.label} accent={partnerAccent} align="right" />
     </section>
   );
 }
@@ -323,7 +335,7 @@ function LedgerColumn({
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", alignItems: align === "right" ? "flex-end" : "flex-start" }}>
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.28em", color: "var(--text-tertiary)" }}>
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>
         {name}
       </span>
       <div style={{ display: "flex", alignItems: "baseline", gap: "0.35rem" }}>
@@ -332,7 +344,7 @@ function LedgerColumn({
         </span>
         <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--text-tertiary)" }}>{suffix}</span>
       </div>
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.22em", textTransform: "uppercase", color: accent }}>
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: accent }}>
         {label}
       </span>
     </div>
@@ -366,9 +378,9 @@ function MagazineIntro({ intro, destination }: { intro: CouplesVM["intro"]; dest
       </span>
       <p
         style={{
-          fontFamily: "var(--font-secondary)",
-          fontSize: "clamp(1.15rem, 1.8vw, 1.45rem)",
-          lineHeight: 1.55,
+          fontFamily: "var(--font-body)",
+          fontSize: "clamp(1rem, 1.4vw, 1.15rem)",
+          lineHeight: 1.6,
           color: "var(--text-secondary)",
           margin: 0,
           maxWidth: "60ch",
@@ -404,27 +416,13 @@ function MagazineIntro({ intro, destination }: { intro: CouplesVM["intro"]; dest
 // ═══════════════════════════════════════════════════════════════
 
 function GoalComparison({
-  goals, destination: _destination, partnerName,
-}: { goals: CouplesVM["goals"]; destination: string; partnerName: string }) {
-  void _destination;
+  goals, partnerName,
+}: { goals: CouplesVM["goals"]; partnerName: string }) {
   return (
     <>
-      <p
-        style={{
-          fontFamily: "var(--font-body)",
-          fontSize: "0.95rem",
-          lineHeight: 1.6,
-          color: "var(--text-secondary)",
-          margin: "0 0 clamp(20px, 3vw, 32px)",
-          maxWidth: "62ch",
-        }}
-      >
-        Top three goals from your selection — <strong style={{ color: "var(--text-primary)" }}>{goals.selectedGoals.join(" and ")}</strong>.
-        Bars are colored by each partner&apos;s individual verdict band.
-      </p>
-
       <div
         style={{
+          marginTop: "clamp(20px, 3vw, 32px)",
           display: "grid",
           gridTemplateColumns: "minmax(180px, 1.2fr) 1fr 1fr auto",
           alignItems: "center",
@@ -434,9 +432,9 @@ function GoalComparison({
         }}
       >
         <span />
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", letterSpacing: "0.22em", color: "var(--text-tertiary)" }}>YOU</span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", letterSpacing: "0.22em", color: "var(--text-tertiary)" }}>{partnerName.toUpperCase()}</span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", letterSpacing: "0.22em", color: "var(--text-tertiary)", minWidth: "2rem", textAlign: "right" }}>Δ</span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>YOU</span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>{partnerName.toUpperCase()}</span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", color: "var(--text-tertiary)", minWidth: "2rem", textAlign: "right" }}>Δ</span>
       </div>
 
       <ol style={{ listStyle: "none", padding: 0, margin: 0 }}>
@@ -470,10 +468,10 @@ function EventRow({ ev, pinned, divider }: { ev: PartnerEventScore; pinned: bool
           <span aria-hidden style={{ width: 3, height: 28, background: "var(--color-y2k-blue)", flexShrink: 0 }} />
         )}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem", minWidth: 0 }}>
-          <span style={{ fontFamily: "var(--font-secondary)", fontSize: "1rem", color: "var(--text-primary)", lineHeight: 1.2 }}>
+          <span style={{ fontFamily: "var(--font-body)", fontSize: "1rem", color: "var(--text-primary)", lineHeight: 1.2 }}>
             {ev.event}
           </span>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", letterSpacing: "0.18em", color: "var(--text-tertiary)" }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>
             {EVENT_LABELS[youBand]} · {EVENT_LABELS[partnerBand]}
           </span>
         </div>
@@ -483,8 +481,8 @@ function EventRow({ ev, pinned, divider }: { ev: PartnerEventScore; pinned: bool
       <span
         style={{
           fontFamily: "var(--font-mono)",
-          fontSize: "0.6rem",
-          letterSpacing: "0.18em",
+          fontSize: "0.62rem",
+          letterSpacing: "0.22em",
           color: showDelta ? "var(--gold)" : "var(--text-tertiary)",
           minWidth: "2.5rem",
           textAlign: "right",
@@ -502,7 +500,7 @@ function BarCell({ score, color }: { score: number; color: string }) {
       <div style={{ flex: 1, height: 6, background: "var(--bg)", borderTop: "1px solid var(--surface-border)", borderBottom: "1px solid var(--surface-border)", overflow: "hidden" }}>
         <div style={{ width: `${Math.max(0, Math.min(100, score))}%`, height: "100%", background: color, transition: "width 0.4s ease" }} />
       </div>
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.85rem", color: "var(--text-primary)", fontWeight: 600, minWidth: "1.8rem", textAlign: "right" }}>
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.95rem", color: "var(--text-primary)", fontWeight: 500, minWidth: "1.8rem", textAlign: "right" }}>
         {score}
       </span>
     </div>
@@ -521,23 +519,24 @@ function VerdictBlock({ timings }: { timings: CouplesVM["timings"] }) {
         <div
           style={{
             fontFamily: "var(--font-mono)",
-            fontSize: "0.7rem",
-            letterSpacing: "0.24em",
+            fontSize: "0.62rem",
+            letterSpacing: "0.22em",
             textTransform: "uppercase",
             color: timings.accent,
             fontWeight: 700,
           }}
         >
-          {timings.label} · {timings.coherenceScore}/100
+          {timings.label} · {timings.score}/100
         </div>
         <p
           style={{
             fontFamily: "var(--font-primary)",
-            fontSize: "clamp(1.4rem, 2.6vw, 2rem)",
-            lineHeight: 1.2,
+            fontSize: "clamp(1.1rem, 2vw, 1.4rem)",
+            lineHeight: 1.3,
             color: "var(--text-primary)",
             margin: 0,
-            letterSpacing: "-0.015em",
+            letterSpacing: "-0.01em",
+            fontWeight: 500,
             maxWidth: "60ch",
           }}
         >
@@ -564,7 +563,7 @@ function WindowList({ title, color, items }: { title: string; color: string; ite
   if (items.length === 0) {
     return (
       <div>
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.28em", color: "var(--text-tertiary)", marginBottom: "var(--space-md)", paddingBottom: "0.5rem", borderBottom: "1px solid var(--surface-border)" }}>
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)", marginBottom: "var(--space-md)", paddingBottom: "0.5rem", borderBottom: "1px solid var(--surface-border)" }}>
           {title}
         </div>
         <p style={{ margin: 0, fontFamily: "var(--font-mono)", fontSize: "0.8rem", color: "var(--text-tertiary)" }}>
@@ -576,7 +575,7 @@ function WindowList({ title, color, items }: { title: string; color: string; ite
 
   return (
     <div>
-      <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.28em", color: "var(--text-tertiary)", marginBottom: "var(--space-md)", paddingBottom: "0.5rem", borderBottom: "1px solid var(--surface-border)" }}>
+      <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)", marginBottom: "var(--space-md)", paddingBottom: "0.5rem", borderBottom: "1px solid var(--surface-border)" }}>
         {title}
       </div>
       <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column" }}>
@@ -587,8 +586,8 @@ function WindowList({ title, color, items }: { title: string; color: string; ite
               display: "flex",
               gap: "0.8rem",
               alignItems: "flex-start",
-              fontFamily: "var(--font-mono)",
-              fontSize: "0.85rem",
+              fontFamily: "var(--font-body)",
+              fontSize: "0.92rem",
               color: "var(--text-secondary)",
               padding: "0.7rem 0",
               borderBottom: i < items.length - 1 ? "1px solid var(--surface-border)" : "none",
@@ -624,22 +623,9 @@ function DeepDive({
 
   return (
     <>
-      <p
-        style={{
-          fontFamily: "var(--font-body)",
-          fontSize: "0.95rem",
-          lineHeight: 1.6,
-          color: "var(--text-secondary)",
-          margin: "0 0 clamp(28px, 4vw, 48px)",
-          maxWidth: "62ch",
-        }}
-      >
-        Two relocated charts and the cross-aspects between them. Each entry shows
-        what the city activates.
-      </p>
-
       <nav
         style={{
+          marginTop: "clamp(28px, 4vw, 48px)",
           display: "flex",
           flexWrap: "wrap",
           gap: "clamp(20px, 3vw, 36px)",
@@ -670,20 +656,19 @@ function DeepDive({
               <span
                 style={{
                   fontFamily: "var(--font-mono)",
-                  fontSize: "0.65rem",
+                  fontSize: "0.62rem",
                   letterSpacing: "0.22em",
                   color: active ? "var(--color-y2k-blue)" : "var(--text-tertiary)",
-                  fontWeight: active ? 700 : 400,
                 }}
               >
                 {num}
               </span>
               <span
                 style={{
-                  fontFamily: active ? "var(--font-primary)" : "var(--font-mono)",
-                  fontSize: active ? "1.05rem" : "0.7rem",
-                  letterSpacing: active ? "-0.01em" : "0.22em",
-                  textTransform: active ? "none" : "uppercase",
+                  fontFamily: "var(--font-body)",
+                  fontSize: "0.95rem",
+                  fontWeight: active ? 500 : 400,
+                  letterSpacing: "-0.005em",
                 }}
               >
                 {t.label}
@@ -715,9 +700,7 @@ function DeepDive({
 }
 
 function ChartTab({ tab, destination }: { tab: ChartTabVM; destination: string }) {
-  const accent =
-    tab.macroScore >= 65 ? "var(--sage)" :
-    tab.macroScore >= 50 ? "var(--gold)" : "var(--color-spiced-life)";
+  const accent = VERDICT_COLORS[verdictBand(tab.macroScore)] ?? "var(--text-secondary)";
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "clamp(32px, 4vw, 56px)" }} className="dd-grid">
@@ -743,7 +726,7 @@ function ChartTab({ tab, destination }: { tab: ChartTabVM; destination: string }
         </div>
 
         <div>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.28em", color: "var(--text-tertiary)", marginBottom: "var(--space-md)", paddingBottom: "0.5rem", borderBottom: "1px solid var(--surface-border)" }}>
+          <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)", marginBottom: "var(--space-md)", paddingBottom: "0.5rem", borderBottom: "1px solid var(--surface-border)" }}>
             STANDOUT PLACEMENTS AT {destination.toUpperCase()}
           </div>
           {tab.standout.length === 0 ? (
@@ -765,15 +748,15 @@ function ChartTab({ tab, destination }: { tab: ChartTabVM; destination: string }
                   }}
                 >
                   <div>
-                    <div style={{ fontFamily: "var(--font-secondary)", fontSize: "1.05rem", color: "var(--text-primary)" }}>
+                    <div style={{ fontFamily: "var(--font-primary)", fontSize: "1.05rem", color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
                       {p.planet}
                     </div>
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.18em", color: "var(--text-tertiary)" }}>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.18em", color: "var(--text-tertiary)" }}>
                       {p.sign} · {p.degree}
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.22em", color: "var(--color-y2k-blue)", marginBottom: "0.25rem" }}>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", color: "var(--color-y2k-blue)", marginBottom: "0.25rem" }}>
                       {p.house.toUpperCase()}
                     </div>
                     <div style={{ fontFamily: "var(--font-body)", fontSize: "0.92rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
@@ -799,7 +782,7 @@ function ChartTab({ tab, destination }: { tab: ChartTabVM; destination: string }
 function FlatStat({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-      <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", letterSpacing: "0.22em", color: "var(--text-tertiary)" }}>
+      <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>
         {label}
       </div>
       <div style={{ fontFamily: "var(--font-primary)", fontSize: "1.15rem", color: accent ?? "var(--text-primary)", lineHeight: 1, letterSpacing: "-0.01em" }}>
@@ -821,9 +804,9 @@ function SynastryTab({ synastry, partnerName }: { synastry: CouplesVM["deepDive"
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "clamp(24px, 3.5vw, 40px)" }}>
-      <p style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--text-secondary)", margin: 0, maxWidth: "62ch", lineHeight: 1.6 }}>
+      <p style={{ fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--text-secondary)", margin: 0, maxWidth: "62ch", lineHeight: 1.55, fontWeight: 300 }}>
         Where your charts meet directly. Harmonious aspects are baseline ease;
-        tense ones are productive friction if you know what they're about.
+        tense ones are productive friction if you know what they&apos;re about.
       </p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "clamp(28px, 4vw, 48px)" }} className="aspect-grid">
         <AspectColumn title="Harmonious" tone="lift"  items={synastry.harmonious} partnerName={partnerName} />
@@ -841,14 +824,15 @@ function SynastryTab({ synastry, partnerName }: { synastry: CouplesVM["deepDive"
 function AspectColumn({
   title, tone, items, partnerName,
 }: { title: string; tone: "lift" | "press"; items: SynastryAspectVM[]; partnerName: string }) {
-  const accent = tone === "lift" ? "var(--color-acqua)" : "var(--color-spiced-life)";
+  // Aligned with VERDICT_COLORS: lift = sage (good signal), press = spiced.
+  const accent = tone === "lift" ? "var(--sage)" : "var(--color-spiced-life)";
   return (
     <div>
       <div
         style={{
           fontFamily: "var(--font-mono)",
-          fontSize: "0.65rem",
-          letterSpacing: "0.28em",
+          fontSize: "0.62rem",
+          letterSpacing: "0.22em",
           color: accent,
           fontWeight: 700,
           marginBottom: "var(--space-md)",
@@ -874,10 +858,10 @@ function AspectColumn({
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "var(--space-md)" }}>
-                <span style={{ fontFamily: "var(--font-secondary)", fontSize: "0.95rem", color: "var(--text-primary)", fontWeight: 600 }}>
+                <span style={{ fontFamily: "var(--font-primary)", fontSize: "1rem", color: "var(--text-primary)", fontWeight: 500, letterSpacing: "-0.01em" }}>
                   {a.p1} {a.aspect} {partnerName}&apos;s {a.p2}
                 </span>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.15em", color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.18em", color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>
                   ORB {a.orb.toFixed(1)}°
                 </span>
               </div>
@@ -899,20 +883,7 @@ function AspectColumn({
 function GeodeticSummary({ geodetic, youName }: { geodetic: CouplesVM["geodetic"]; youName: string }) {
   return (
     <>
-      <p
-        style={{
-          fontFamily: "var(--font-secondary)",
-          fontSize: "clamp(1.05rem, 1.6vw, 1.25rem)",
-          lineHeight: 1.5,
-          color: "var(--text-secondary)",
-          margin: "0 0 clamp(28px, 4vw, 48px)",
-          maxWidth: "62ch",
-        }}
-      >
-        {geodetic.summary}
-      </p>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 0 }}>
+      <div style={{ marginTop: "clamp(28px, 4vw, 48px)", display: "grid", gridTemplateColumns: "1fr", gap: 0 }}>
         <GeoRow
           who={youName.toUpperCase()}
           ascSign={geodetic.you.ascSign} ascDeg={geodetic.you.ascDeg}
@@ -946,137 +917,27 @@ function GeoRow({ who, ascSign, ascDeg, mcSign, mcDeg, note, first }: {
         borderBottom: "1px solid var(--surface-border)",
       }}
     >
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.68rem", letterSpacing: "0.28em", color: "var(--text-tertiary)" }}>
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>
         {who}
       </span>
       <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: "0.6rem" }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", letterSpacing: "0.22em", color: "var(--text-tertiary)" }}>ASC</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", color: "var(--text-tertiary)" }}>ASC</span>
           <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.2rem", color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
             {ascSign} {ascDeg}°
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "baseline", gap: "0.6rem" }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", letterSpacing: "0.22em", color: "var(--text-tertiary)" }}>MC</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", color: "var(--text-tertiary)" }}>MC</span>
           <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.2rem", color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
             {mcSign} {mcDeg}°
           </span>
         </div>
       </div>
-      <p style={{ margin: 0, fontFamily: "var(--font-secondary)", fontSize: "1rem", color: "var(--text-secondary)", lineHeight: 1.5, maxWidth: "50ch" }}>
+      <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--text-secondary)", lineHeight: 1.6, maxWidth: "50ch" }}>
         {note}
       </p>
     </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════
-// COUPLES ACADEMY
-// ═══════════════════════════════════════════════════════════════
-
-const ACADEMY_ARTICLES = [
-  { id: "synastry",  kicker: "FOUNDATION", title: "Synastry, plainly",          time: "9 MIN" },
-  { id: "composite", kicker: "ADVANCED",   title: "The composite chart",        time: "12 MIN" },
-  { id: "seventh",   kicker: "HOUSES",     title: "What the 7th house wants",   time: "7 MIN" },
-  { id: "geo",       kicker: "PLACE",      title: "How a place reshapes you",   time: "10 MIN" },
-];
-
-function CouplesAcademy() {
-  return (
-    <section
-      style={{
-        marginTop: "clamp(80px, 10vw, 140px)",
-        borderTop: "3px solid var(--text-primary)",
-        paddingTop: "clamp(24px, 3vw, 36px)",
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "clamp(40px, 5vw, 64px)" }}>
-        <h2
-          style={{
-            margin: 0,
-            fontFamily: "var(--font-primary)",
-            fontSize: "clamp(28px, 4.5vw, 44px)",
-            lineHeight: 1,
-            letterSpacing: "-0.02em",
-            color: "var(--text-primary)",
-          }}
-        >
-          Academy
-        </h2>
-        <span
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: "0.7rem",
-            letterSpacing: "0.22em",
-            textTransform: "uppercase",
-            color: "var(--text-secondary)",
-          }}
-        >
-          See all →
-        </span>
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: 0,
-        }}
-      >
-        {ACADEMY_ARTICLES.map((a, i) => (
-          <article
-            key={a.id}
-            style={{
-              padding: "0 clamp(16px, 2vw, 24px)",
-              borderLeft: i === 0 ? "1px solid var(--surface-border)" : "none",
-              borderRight: "1px solid var(--surface-border)",
-              display: "flex",
-              flexDirection: "column",
-              gap: "14px",
-              minHeight: 200,
-            }}
-          >
-            <span
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "0.62rem",
-                letterSpacing: "0.22em",
-                color: "var(--text-tertiary)",
-                textTransform: "uppercase",
-              }}
-            >
-              {a.kicker}
-            </span>
-            <h3
-              style={{
-                margin: 0,
-                fontFamily: "var(--font-primary)",
-                fontSize: "clamp(20px, 1.8vw, 26px)",
-                color: "var(--text-primary)",
-                lineHeight: 1.25,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              {a.title}
-            </h3>
-            <div style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: "10px", paddingTop: "20px" }}>
-              <ArrowRight size={14} strokeWidth={1.25} style={{ color: "var(--text-tertiary)" }} />
-              <span
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "0.6rem",
-                  letterSpacing: "0.22em",
-                  color: "var(--text-tertiary)",
-                  textTransform: "uppercase",
-                }}
-              >
-                ASTRONAT · {a.time}
-              </span>
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
   );
 }
 
