@@ -64,6 +64,18 @@ function LoginForm() {
       setLoading(false)
       return
     }
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('birth_date')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (!profile?.birth_date) {
+        window.location.href = '/flow?step=1'
+        return
+      }
+    }
     window.location.href = next
   }
 
@@ -213,7 +225,7 @@ function LoginForm() {
         <div className="mt-8 pt-6 border-t text-center" style={{ borderColor: 'var(--surface-border)' }}>
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
             Don't have an account?{' '}
-            <Link href="/signup" className="underline hover:text-white transition-colors" style={{ color: 'var(--color-y2k-blue)' }}>
+            <Link href="/flow" className="underline hover:text-white transition-colors" style={{ color: 'var(--color-y2k-blue)' }}>
               Sign up
             </Link>
           </p>

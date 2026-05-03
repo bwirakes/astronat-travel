@@ -25,7 +25,9 @@ const nextConfig = {
         destination: '/admin/login',
         permanent: false,
       },
-      // Legacy auth redirects
+      // Signup lives at /flow step 0 — collapse all signup surfaces.
+      { source: '/signup', destination: '/flow', permanent: true },
+      { source: '/signup/', destination: '/flow', permanent: true },
       { source: '/auth/signup', destination: '/flow', permanent: true },
       { source: '/auth/signup/', destination: '/flow', permanent: true },
       // Old /home → new /dashboard
