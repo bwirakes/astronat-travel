@@ -201,7 +201,7 @@ function LoginForm() {
           }}
           disabled={loading}
         >
-          ⚡ ENTER DEMO MODE (BYPASS)
+          ⚡ LOGIN AS TEST USER
         </button>
 
         {message && (
