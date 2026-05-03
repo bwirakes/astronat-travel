@@ -13,8 +13,8 @@ import { geodeticPlanetMeaning } from "@/app/lib/geodetic/planet-meanings";
 import { HOUSE_THEMES, HOUSE_DOMAIN_SHORT } from "@/app/lib/astro-constants";
 import type { PersonalGeodeticHit } from "@/app/lib/reading-tabs";
 import type { V4EclipseHit, V4GeoTransit, V4LunationHit, V4Paran, V4ProgressedBand } from "@/app/lib/reading-viewmodel";
-import SectionHead from "./SectionHead";
-import TabSection from "./TabSection";
+import SectionHead from "../../shared/SectionHead";
+import TabSection from "../../shared/TabSection";
 import type { V4VM } from "./types";
 
 interface Props {
@@ -23,6 +23,12 @@ interface Props {
     reading: any;
     relocatedAcgLines: any[];
     natalForMap?: unknown;
+    copiedTab?: {
+        lead?: string;
+        plainEnglishSummary?: string;
+        evidenceCaption?: string;
+        nextTabBridge?: string;
+    };
 }
 
 type Anchor = "ASC" | "IC" | "DSC" | "MC";
@@ -233,7 +239,7 @@ const SIGN_FLAVOR: Record<string, string> = {
     Aquarius: "experimental, network-driven", Pisces: "permeable, dreamy",
 };
 
-export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines }: Props) {
+export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines, copiedTab }: Props) {
     const { lat, lon, city } = vm.location;
     const geoMC  = geodeticMCLongitude(lon);
     const geoASC = geodeticASCLongitude(lon, lat);
@@ -291,8 +297,17 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
         reading?.natalPlanets ?? [],
     );
 
+    const tabLead = copiedTab?.lead?.trim() || "";
+    const tabIntro = copiedTab?.plainEnglishSummary || undefined;
+    const hasAiCopy = tabLead.length > 0 || !!tabIntro;
+
     return (
-        <TabSection kicker="Geography" title={`${city} · Geodetic field`}>
+        <TabSection
+            kicker="Geography"
+            title={`${city} · Geodetic field`}
+            lead={tabLead}
+            intro={tabIntro}
+        >
             {/* Dateline — coordinates, travel date, derived geodetic angles. */}
             <div style={{ ...DATELINE, marginBottom: "var(--space-md)" }}>
                 <span>{lat.toFixed(2)}°, {lon.toFixed(2)}°</span>
@@ -300,10 +315,13 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
                 <span>geo-ASC {signFromLongitude(geoASC)} · geo-MC {signFromLongitude(geoMC)}</span>
             </div>
 
-            {/* ── Personalised opener (replaces verdict + how-to-read) ── */}
-            <Opener data={opener} />
-
-            <div style={{ ...DIVIDER, margin: "var(--space-lg) 0" }} />
+            {/* ── Personalised opener — only shown when no AI dek/intro exists ── */}
+            {!hasAiCopy && (
+                <>
+                    <Opener data={opener} />
+                    <div style={{ ...DIVIDER, margin: "var(--space-lg) 0" }} />
+                </>
+            )}
 
             {/* ── §01 What this place activates ────────────────────────── */}
             <SectionHead index="01" title={`What ${city} activates in your chart`}  flush />

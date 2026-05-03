@@ -2,7 +2,7 @@
 
 import SignIcon from "@/app/components/SignIcon";
 import PlanetIcon from "@/app/components/PlanetIcon";
-import TabSection from "./TabSection";
+import TabSection from "../../shared/TabSection";
 import { WindowsList } from "../parts/WindowsList";
 import type { V4VM } from "./types";
 
@@ -39,7 +39,18 @@ export default function OverviewTab({ vm, copiedTab }: Props) {
     const selectedGoal = vm.scoreNarrative.selectedGoals[0];
     const leanInto = vm.tabs.overview?.leanInto ?? [];
     const watchOut = vm.tabs.overview?.watchOut ?? [];
-    const ledeText = vm.tabs.overview?.scoreExplanation || vm.hero.explainer || "";
+    const scoreExplanation = vm.tabs.overview?.scoreExplanation || "";
+    const aiLead = copiedTab?.lead?.trim() || "";
+    const fallbackLede = aiLead || scoreExplanation || vm.hero.explainer || "";
+    // Prefer the AI lead in the dek slot; surface scoreExplanation as the
+    // body paragraph below it. If the two are identical (rare, but happens
+    // when the model uses scoreExplanation for both) collapse to one.
+    const summary =
+        scoreExplanation && scoreExplanation !== aiLead
+            ? scoreExplanation
+            : !aiLead
+                ? vm.hero.explainer || undefined
+                : undefined;
     const sunSign =
         vm.chart.natal.find((cp) => cp.p?.toLowerCase() === "sun")?.sign
         ?? vm.chart.natal.find((cp) => cp.p?.toLowerCase() === "moon")?.sign
@@ -51,53 +62,29 @@ export default function OverviewTab({ vm, copiedTab }: Props) {
     return (
         <TabSection
             kicker="Overview"
-            title={copiedTab?.lead || "Your reading"}
+            title="Your reading"
+            lead={fallbackLede}
+            intro={summary}
         >
-            <div className="w-full max-w-none">
-                <div className="relative mb-[clamp(40px,5vw,56px)] isolate flex items-start gap-[clamp(14px,2vw,28px)]">
-                    {/* Macro-Texture: Editorial Wireframe Globe */}
+            <div className="relative w-full max-w-none">
+                {/* Macro-Texture: Editorial Wireframe Globe */}
+                <div
+                    aria-hidden
+                    className="pointer-events-none absolute right-[0%] top-0 -z-10 w-[clamp(300px,40vw,500px)] h-[clamp(300px,40vw,500px)] opacity-[0.06]"
+                    style={{ color: "var(--text-primary)" }}
+                >
+                    <WireframeGlobe />
+                </div>
+                {/* Faint Sign Icon Layered with Globe */}
+                {watermarkSign && (
                     <div
                         aria-hidden
-                        className="pointer-events-none absolute right-[0%] top-[30%] -translate-y-1/2 -z-10 w-[clamp(300px,40vw,500px)] h-[clamp(300px,40vw,500px)] opacity-[0.06]"
+                        className="pointer-events-none absolute right-[10%] top-[10%] -z-10 hidden md:block opacity-[0.03]"
                         style={{ color: "var(--text-primary)" }}
                     >
-                        <WireframeGlobe />
+                        <SignIcon sign={watermarkSign} size={220} />
                     </div>
-                    {/* Faint Sign Icon Layered with Globe */}
-                    {watermarkSign && (
-                        <div
-                            aria-hidden
-                            className="pointer-events-none absolute right-[10%] top-[40%] -translate-y-1/2 -z-10 hidden md:block opacity-[0.03]"
-                            style={{ color: "var(--text-primary)" }}
-                        >
-                            <SignIcon sign={watermarkSign} size={220} />
-                        </div>
-                    )}
-                    <span
-                        aria-hidden
-                        className="shrink-0 leading-[0.85] select-none"
-                        style={{
-                            fontFamily: FONT_PRIMARY,
-                            fontSize: "clamp(72px, 8vw, 112px)",
-                            color: "var(--color-y2k-blue)",
-                            marginTop: "-0.06em",
-                        }}
-                    >
-                        {ledeText.charAt(0)}
-                    </span>
-                    <p
-                        className="m-0 max-w-[60ch] [text-wrap:pretty]"
-                        style={{
-                            fontFamily: FONT_BODY,
-                            fontSize: "clamp(17px, 1.4vw, 19px)",
-                            lineHeight: 1.7,
-                            color: "var(--text-secondary)",
-                            fontWeight: 400,
-                        }}
-                    >
-                        {ledeText.slice(1)}
-                    </p>
-                </div>
+                )}
 
                 {selectedGoal && (
                     <div 

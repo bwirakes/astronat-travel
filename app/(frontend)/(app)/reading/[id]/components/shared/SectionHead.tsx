@@ -27,8 +27,13 @@ interface Props {
  * subsections — magazines use the same beat to separate departments
  * within a feature. Keeping it consistent across tabs is what the
  * Monocle-direction design feedback was asking for.
+ *
+ * Use {@link TabSection} for top-level chapter/tab openers; this component
+ * is only for sub-sections inside them.
  */
-export default function SectionHead({ index, title, sub, tooltip, flush }: Props) {
+export default function SectionHead({
+    index, title, sub, tooltip, flush,
+}: Props) {
     return (
         <header style={{
             marginTop: flush ? 0 : "var(--space-xl)",

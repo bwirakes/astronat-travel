@@ -303,10 +303,77 @@ describe("toCouplesViewModel — integration", () => {
     expect(vm.hero.destination).toBe("Lisbon");
   });
 
-  it("computes coherence from the macro delta", () => {
+  // ─────────────────────────────────────────────────────────────
+  // Hero joint score — min-weighted mean (0.6·min + 0.4·max).
+  // The headline answers "is this a good place for the *pair*?",
+  // not "do you agree?". Two shitty scores must NOT read as 86.
+  // ─────────────────────────────────────────────────────────────
+  it("computes the joint score with a min-weighted mean", () => {
+    // 78 / 64 → 0.6·64 + 0.4·78 = 38.4 + 31.2 = 69.6 → 70
     const vm = toCouplesViewModel(makeReading());
-    // delta 14 → coherence 86
-    expect(vm.hero.coherence.score).toBe(86);
+    expect(vm.hero.joint.score).toBe(70);
+    expect(vm.hero.joint.band).toBe("solid");
+    expect(vm.hero.joint.label).toBe("Solid window");
+    expect(vm.hero.deltaPts).toBe(14);
+  });
+
+  it("does not give 'two shitty scores' an agreement bonus", () => {
+    // The bug from the screenshot: 46 / 60 used to read coherence 86.
+    // Joint score: 0.6·46 + 0.4·60 = 27.6 + 24 = 51.6 → 52 (Mixed).
+    const vm = toCouplesViewModel(makeReading({
+      userMacroScore:    46,
+      partnerMacroScore: 60,
+      scoreDelta:        14,
+    }));
+    expect(vm.hero.joint.score).toBe(52);
+    expect(vm.hero.joint.band).toBe("mixed");
+    expect(vm.hero.joint.label).toBe("Mixed");
+    expect(vm.hero.joint.accent).toBe("var(--gold)");
+  });
+
+  it("two equally-tough scores stay tough — no perfect-agreement boost", () => {
+    const vm = toCouplesViewModel(makeReading({
+      userMacroScore:    30,
+      partnerMacroScore: 30,
+      scoreDelta:         0,
+    }));
+    expect(vm.hero.joint.score).toBe(30);
+    expect(vm.hero.joint.band).toBe("hard");
+    expect(vm.hero.joint.label).toBe("Tough match");
+  });
+
+  it("polarised pair (one peak, one hostile) drags the high partner down", () => {
+    // 90/30: 0.6·30 + 0.4·90 = 18 + 36 = 54 (Mixed).
+    const vm = toCouplesViewModel(makeReading({
+      userMacroScore:    90,
+      partnerMacroScore: 30,
+      scoreDelta:        60,
+    }));
+    expect(vm.hero.joint.score).toBe(54);
+    expect(vm.hero.joint.band).toBe("mixed");
+    expect(vm.hero.deltaPts).toBe(60);
+  });
+
+  it("two strong scores read as a peak destination", () => {
+    // 80/85: 0.6·80 + 0.4·85 = 48 + 34 = 82 (Peak).
+    const vm = toCouplesViewModel(makeReading({
+      userMacroScore:    80,
+      partnerMacroScore: 85,
+      scoreDelta:         5,
+    }));
+    expect(vm.hero.joint.score).toBe(82);
+    expect(vm.hero.joint.band).toBe("peak");
+    expect(vm.hero.joint.accent).toBe("var(--sage)");
+  });
+
+  it("timings.score mirrors the joint score, not the macro delta", () => {
+    // 80/80 → joint 80 → 'peak' window.
+    const vm = toCouplesViewModel(makeReading({
+      userMacroScore:    80,
+      partnerMacroScore: 80,
+    }));
+    expect(vm.timings.score).toBe(80);
+    expect(vm.timings.label).toBe("Strong window");
   });
 
   it("produces a 9-row goal series and a top-3 priority list", () => {

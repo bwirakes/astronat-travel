@@ -86,6 +86,19 @@ export const HERO_BAND_LABEL: Record<HeroBand, string> = {
     tough: "Tough match",
 };
 
+/** Band → palette token. Single source of truth for verdict-coloured chrome
+ *  (hero pills, score numerals, ledger accents) across reading surfaces.
+ *  Keys cover every value of {@link VerdictBand} and {@link HeroBand} so a
+ *  caller can pass either without a remap. */
+export const VERDICT_COLORS: Record<string, string> = {
+    peak:  "var(--sage)",
+    solid: "var(--sage)",
+    mixed: "var(--gold)",
+    tight: "var(--color-spiced-life)",
+    hard:  "var(--color-spiced-life)",
+    tough: "var(--color-spiced-life)",
+};
+
 /**
  * Couples coherence — single number expressing how aligned the two partners'
  * macro scores are at this destination. Derived from the absolute delta:
@@ -102,4 +115,27 @@ export const HERO_BAND_LABEL: Record<HeroBand, string> = {
 export function computeCoherence(userScore: number, partnerScore: number): number {
     const delta = Math.abs(userScore - partnerScore);
     return Math.max(0, Math.round(100 - delta));
+}
+
+/**
+ * Joint score for couples — the single headline number for "is this a good
+ * destination for the two of you together?" Min-weighted mean: tilts toward
+ * the unhappier partner without ignoring the happier one.
+ *
+ *   joint = 0.6 · min(you, partner) + 0.4 · max(you, partner)
+ *
+ * Properties:
+ *   - 30/30 → 30   (two tough scores stay tough — no "agreement bonus")
+ *   - 46/60 → 52   (mixed; tilts toward the lower)
+ *   - 90/30 → 54   (polarisation drags the high partner down)
+ *   - 80/85 → 82   (a great trip for both reads as a great trip)
+ *
+ * Pairs with {@link verdictBand} and {@link HERO_LABELS} so the couples hero
+ * uses the same vocabulary as the solo reading hero. The macro delta is
+ * surfaced separately (Δ ledger column) for readers who want to see the gap.
+ */
+export function jointScore(userScore: number, partnerScore: number): number {
+    const lo = Math.min(userScore, partnerScore);
+    const hi = Math.max(userScore, partnerScore);
+    return Math.max(0, Math.min(100, Math.round(0.6 * lo + 0.4 * hi)));
 }

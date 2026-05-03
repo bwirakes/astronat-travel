@@ -13,7 +13,8 @@
 import {
   verdictBand,
   verdictTone,
-  computeCoherence,
+  jointScore,
+  VERDICT_COLORS,
   type VerdictBand,
   HERO_LABELS,
   EVENT_LABELS,
@@ -65,7 +66,12 @@ export interface CouplesVM {
     destination: string;
     dateRange: string;
     partnerName: string;
-    coherence: { score: number; band: VerdictBand; label: string; accent: string };
+    /** The headline "for both of you" score. Joint quality, not agreement. */
+    joint: { score: number; band: VerdictBand; label: string; accent: string };
+    /** Side stat — how far apart the partners' individual scores are.
+     *  Surfaced as the Δ MACRO column in the ledger; kept on hero in case
+     *  another surface wants the raw delta without re-deriving. */
+    deltaPts: number;
   };
   ledger: {
     you: { score: number; band: VerdictBand; label: string; accent: string };
@@ -86,7 +92,11 @@ export interface CouplesVM {
     topThree: PartnerEventScore[];
   };
   timings: {
-    coherenceScore: number;
+    /** Joint score (0–100) shown next to the verdict label.
+     *  Same number as `hero.joint.score` — kept here so the timings panel
+     *  can render its `{label} · {score}/100` subhead without reaching
+     *  back up into hero. */
+    score: number;
     label: string;
     rationale: string;
     accent: string;
@@ -214,11 +224,15 @@ export function toCouplesViewModel(reading: any): CouplesVM {
   const youScore     = numOr(reading.userMacroScore, reading.macroScore, 0);
   const partnerScore = numOr(reading.partnerMacroScore, 0);
   const delta        = numOr(reading.scoreDelta, Math.abs(youScore - partnerScore));
-  const coherenceScore = computeCoherence(youScore, partnerScore);
+  // Joint = the headline "for both of you" score. Drives both the hero pill
+  // and the timing-window verdict, since both surfaces are answering the
+  // same question: "is this place good for the pair?"
+  const joint     = jointScore(youScore, partnerScore);
+  const jointBand = verdictBand(joint);
 
-  const cohBand    = verdictBand(coherenceScore);
-  const youBand    = verdictBand(youScore);
-  const ptnrBand   = verdictBand(partnerScore);
+  // Per-partner bands still drive the ledger and per-event rows.
+  const youBand   = verdictBand(youScore);
+  const ptnrBand  = verdictBand(partnerScore);
 
   const partnerName: string = reading.partnerName || "Partner";
   const destination: string = String(reading.destination || "").split(",")[0] || "the destination";
@@ -288,12 +302,13 @@ export function toCouplesViewModel(reading: any): CouplesVM {
       destination,
       dateRange,
       partnerName,
-      coherence: {
-        score: coherenceScore,
-        band: cohBand,
-        label: HERO_LABELS[cohBand],
-        accent: TONE_ACCENT_MAP[verdictTone(cohBand)],
+      joint: {
+        score: joint,
+        band: jointBand,
+        label: HERO_LABELS[jointBand],
+        accent: VERDICT_COLORS[jointBand] ?? "var(--text-secondary)",
       },
+      deltaPts: delta,
     },
     ledger: {
       you: {
@@ -322,10 +337,10 @@ export function toCouplesViewModel(reading: any): CouplesVM {
       topThree,
     },
     timings: {
-      coherenceScore,
-      label: WINDOW_LABELS[cohBand],
-      rationale: WINDOW_RATIONALES[cohBand],
-      accent: TONE_ACCENT_MAP[verdictTone(cohBand)],
+      score: joint,
+      label: WINDOW_LABELS[jointBand],
+      rationale: WINDOW_RATIONALES[jointBand],
+      accent: VERDICT_COLORS[jointBand] ?? "var(--text-secondary)",
       bestWindows,
       avoidWindows,
     },

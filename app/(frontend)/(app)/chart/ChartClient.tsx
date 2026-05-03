@@ -9,6 +9,8 @@ import { AcgMap } from "@/app/components/AcgMap";
 import AcgLinesCard from "@/app/components/AcgLinesCard";
 import PlanetIcon from "@/app/components/PlanetIcon";
 import AspectIcon from "@/app/components/AspectIcon";
+import MonocleSectionHeader from "@/app/components/editorial/MonocleSectionHeader";
+import ThickRule from "@/app/components/editorial/ThickRule";
 import { essentialDignityLabel } from "@/app/lib/dignity";
 import { resolvePlacementImplication } from "@/app/lib/astro-wording";
 
@@ -52,21 +54,6 @@ function houseFromLongitude(longitude: number, cusps?: number[]) {
 function isNodePlacement(planetName: string) {
   const normalized = planetName.toLowerCase();
   return normalized.includes("node") || normalized === "true node";
-}
-
-function MonocleSectionHeader({ title }: { title: string }) {
-  return (
-    <div className="mb-6">
-      <div className="w-full h-[3px] bg-[var(--text-primary)] mb-[2px]" />
-      <div className="py-2 px-3 border-b border-[var(--text-primary)]" style={{ background: "color-mix(in srgb, var(--surface-border) 40%, transparent)" }}>
-        <h2 className="m-0" style={{ fontFamily: "var(--font-body)", fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "0.02em" }}>{title}</h2>
-      </div>
-    </div>
-  );
-}
-
-function ThickRule() {
-    return <div className="w-full h-[2px] bg-[var(--text-primary)] my-8" />;
 }
 
 // ── Main Page ─────────────────────────────────────────────────

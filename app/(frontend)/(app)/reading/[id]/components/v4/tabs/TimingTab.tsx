@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import SectionHead from "./SectionHead";
-import TabSection from "./TabSection";
+import SectionHead from "../../shared/SectionHead";
+import TabSection from "../../shared/TabSection";
 import type { V4VM } from "./types";
 import { transitOneLiner } from "@/app/lib/transit-copy";
 import type { TransitSpan } from "@/app/lib/window-scoring";
@@ -563,13 +563,14 @@ export default function TimingTab({ vm, copiedTab }: Props) {
     const hasGoodOrBad = vm.rangeHighlights.good.length + vm.rangeHighlights.bad.length > 0;
     const showAlternates = vm.travelType === "trip" && hasGoodOrBad;
 
-    const tabTitle = copiedTab?.lead || "When to use what this place offers.";
+    const tabLead = copiedTab?.lead?.trim() || "";
     const tabIntro = copiedTab?.plainEnglishSummary || undefined;
 
     return (
         <TabSection
             kicker="Timing"
-            title={tabTitle}
+            title="When to use what this place offers."
+            lead={tabLead}
             intro={tabIntro}
         >
             {/* Verdict — one deterministic sentence carries the intro role */}
