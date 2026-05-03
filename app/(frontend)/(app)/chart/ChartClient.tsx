@@ -26,62 +26,7 @@ import { PlanetPlacementHoverContent } from "@/app/components/ui/planet-placemen
 
 
 
-// ── Mock data for ?demo=true ───────────────────────────────────
 
-const DEMO_NATAL: NatalData = {
-  sun:     { longitude: 144.92 },
-  moon:    { longitude: 200.47 },
-  mercury: { longitude: 158.89 },
-  venus:   { longitude: 99.26 },
-  mars:    { longitude: 10.91 },
-  jupiter: { longitude: 63.85 },
-  saturn:  { longitude: 266.06 },
-  uranus:  { longitude: 267.19 },
-  neptune: { longitude: 277.69 },
-  pluto:   { longitude: 219.99 },
-  chiron:  { longitude: 101.45 },
-  houses: [32.64, 62.33, 90.84, 119.64, 150.15, 181.91, 212.64, 242.33, 270.84, 299.64, 330.15, 1.91],
-};
-
-const MOCK_PLANETS = [
-  { planet: "Ascendant",  sign: "Taurus",      house: 1,  degree: "2° 38′",  dignity: null, isAngle: true },
-  { planet: "Sun",        sign: "Leo",         house: 4,  degree: "24° 55′", dignity: "DOMICILE", isAngle: false },
-  { planet: "Moon",       sign: "Libra",       house: 6,  degree: "20° 28′", dignity: null, isAngle: false },
-  { planet: "Mercury",    sign: "Virgo",       house: 5,  degree: "8° 53′",  dignity: "DOMICILE", isAngle: false },
-  { planet: "Venus",      sign: "Cancer",      house: 3,  degree: "9° 15′",  dignity: null, isAngle: false },
-  { planet: "Mars",       sign: "Aries",       house: 12, degree: "10° 54′", dignity: "DOMICILE", isAngle: false },
-  { planet: "Jupiter",    sign: "Gemini",      house: 2,  degree: "3° 51′",  dignity: "DETRIMENT", isAngle: false },
-  { planet: "Saturn",     sign: "Sagittarius", house: 8,  degree: "26° 03′", dignity: null, isAngle: false },
-  { planet: "Uranus",     sign: "Sagittarius", house: 8,  degree: "27° 11′", dignity: null, isAngle: false },
-  { planet: "Neptune",    sign: "Capricorn",   house: 9,  degree: "7° 41′",  dignity: null, isAngle: false },
-  { planet: "Pluto",      sign: "Scorpio",     house: 7,  degree: "9° 59′",  dignity: "DOMICILE", isAngle: false },
-  { planet: "MC",         sign: "Capricorn",   house: 10, degree: "29° 38′", dignity: null, isAngle: true },
-];
-
-const MOCK_ASPECTS = [
-  { aspect: "Sun sextile Moon",       orb: "4° 27′", type: "Sextile",     verdict: 82 },
-  { aspect: "Sun trine Saturn",       orb: "1° 08′", type: "Trine",       verdict: 95 },
-  { aspect: "Sun trine Uranus",       orb: "2° 16′", type: "Trine",       verdict: 91 },
-  { aspect: "Mercury sextile Venus",   orb: "0° 23′", type: "Sextile",     verdict: 98 },
-  { aspect: "Mercury trine Neptune",   orb: "1° 12′", type: "Trine",       verdict: 95 },
-  { aspect: "Mercury sextile Pluto",   orb: "1° 06′", type: "Sextile",     verdict: 96 },
-  { aspect: "Venus square Mars",       orb: "1° 39′", type: "Square",      verdict: 43 },
-  { aspect: "Venus opposition Neptune",orb: "1° 34′", type: "Opposition",  verdict: 44 },
-  { aspect: "Venus trine Pluto",       orb: "0° 44′", type: "Trine",       verdict: 97 },
-  { aspect: "Mars square Neptune",     orb: "3° 13′", type: "Square",      verdict: 37 },
-  { aspect: "Saturn conjunction Uranus",orb: "1° 08′", type: "Conjunction",verdict: 85 },
-  { aspect: "Neptune sextile Pluto",   orb: "2° 18′", type: "Sextile",     verdict: 91 },
-];
-
-const ASPECT_COLORS: Record<string, string> = {
-  Trine:       "var(--sage)",
-  Sextile:     "var(--sage)",
-  Conjunction: "var(--color-y2k-blue)",
-  Opposition:  "var(--color-planet-mars)",
-  Square:      "var(--color-spiced-life)",
-};
-
-const DEMO_CITY = { lat: -6.2088, lon: 106.8456, name: "Jakarta" };
 
 type Tab = "overview" | "map" | "aspects";
 
@@ -196,6 +141,21 @@ function InterpretationBlock({
   );
 }
 
+function MonocleSectionHeader({ title }: { title: string }) {
+  return (
+    <div className="mb-6">
+      <div className="w-full h-[3px] bg-[var(--text-primary)] mb-[2px]" />
+      <div className="py-2 px-3 border-b border-[var(--text-primary)]" style={{ background: "color-mix(in srgb, var(--surface-border) 40%, transparent)" }}>
+        <h2 className="m-0" style={{ fontFamily: "var(--font-body)", fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "0.02em" }}>{title}</h2>
+      </div>
+    </div>
+  );
+}
+
+function ThickRule() {
+    return <div className="w-full h-[2px] bg-[var(--text-primary)] my-8" />;
+}
+
 // ── Main Page ─────────────────────────────────────────────────
 
 export default function ChartPage({ 
@@ -210,11 +170,10 @@ export default function ChartPage({
   initialNatalData?: any
 } = {}) {
   const searchParams = useSearchParams();
-  const isDemo = searchParams.get("demo") === "true";
   const [tab, setTab] = useState<Tab>("overview");
   const [computedLines, setComputedLines] = useState<{planet: string, angle: string, distance_km: number}[]>([]);
   const [isDark, setIsDark] = useState(true);
-  const [loading, setLoading] = useState(!isDemo && !initialNatalData && (!isMundane || !!countrySlug));
+  const [loading, setLoading] = useState(!initialNatalData && (!isMundane || !!countrySlug));
   const [error, setError] = useState<string | null>(null);
   
 
@@ -285,7 +244,7 @@ export default function ChartPage({
   };
 
   useEffect(() => {
-    if (!isDemo && !initialNatalData) {
+    if (!initialNatalData) {
       if (isMundane && !countrySlug) {
         setLoading(false);
         return;
@@ -295,12 +254,20 @@ export default function ChartPage({
       fetch(endpoint)
         .then(async r => {
           if (!r.ok) {
-            const err = await r.json();
-            throw new Error(err.error || "Failed to fetch natal data");
+            let err = { error: "Failed to fetch natal data" };
+            try { err = await r.json(); } catch(e) {}
+            return { __error: err.error || "Failed to fetch natal data", status: r.status };
           }
           return r.json();
         })
         .then(data => {
+            if (data && data.__error) {
+              setError(data.__error);
+              if (data.status === 401 && typeof window !== 'undefined') {
+                 window.location.href = '/login';
+              }
+              return;
+            }
             if (data && data.planets) {
                 const combined = [...data.planets, ...(data.angles || [])];
                 setRealPlanets(combined);
@@ -334,13 +301,12 @@ export default function ChartPage({
         })
         .finally(() => setLoading(false));
     }
-  }, [isDemo]);
+  }, []);
 
   // Fetch interpretation once natal data is available. Streams NDJSON; sections
   // render progressively as each Gemini call completes.
   useEffect(() => {
-    if (isDemo || isMundane || !realNatal) return;
-    // Never start a second fetch if one already ran this session
+    if (isMundane || !realNatal) return;
     if (interpretStartedRef.current) return;
     // If cached interpretation already covers all sections, skip
     if (interpretation?.placementImplications) return;
@@ -397,20 +363,20 @@ export default function ChartPage({
     return () => { cancelled = true; };
   // Only re-run when realNatal first becomes available — not on every stream tick
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [realNatal, isDemo, isMundane]);
+  }, [realNatal, isMundane]);
 
   // In real mode this would fetch from Supabase + /api/natal
-  const natal = isDemo ? DEMO_NATAL : realNatal;
-  const rawPlanets = (isDemo ? MOCK_PLANETS : realPlanets.map(p => ({
+  const natal = realNatal;
+  const rawPlanets = realPlanets.map(p => ({
      planet: p.name,
      sign: p.sign,
      house: p.house,
      degree: `${Math.floor(p.degree_in_sign)}° ${p.degree_minutes.toString().padStart(2, '0')}′`,
      dignity: p.dignity || (p.isAngle ? null : essentialDignityLabel(p.name, p.sign).toUpperCase()),
      isAngle: p.isAngle
-  }))).filter((p) => !isNodePlacement(p.planet));
+  })).filter((p) => !isNodePlacement(p.planet));
 
-  const aspectsToDisplay = isDemo ? MOCK_ASPECTS : realAspects;
+  const aspectsToDisplay = realAspects;
 
   // Sort them sequentially by House, matching the Chani editorial table grouping
   const displayPlanets = [...rawPlanets].sort((a, b) => (a.house || 1) - (b.house || 1));
@@ -431,10 +397,7 @@ export default function ChartPage({
     return m;
   }, [rawPlanets, placementImplications]);
 
-  const wheelPlanets: NatalPlanet[] = isDemo ? Object.keys(DEMO_NATAL).filter(k => k !== 'houses').map(k => ({
-     planet: k.charAt(0).toUpperCase() + k.slice(1), 
-     longitude: (DEMO_NATAL[k as keyof typeof DEMO_NATAL] as {longitude: number}).longitude
-  })) : realPlanets
+  const wheelPlanets: NatalPlanet[] = realPlanets
     .filter((p) => !isNodePlacement(p.name))
     .map(p => ({ planet: p.name, longitude: p.longitude, isAngle: p.isAngle }));
   const wheelPlanetsWithMetadata: NatalPlanet[] = wheelPlanets.map((p) => {
@@ -456,16 +419,12 @@ export default function ChartPage({
   const firstName = (realNatal?.first_name ?? "").trim();
   const profileName = isMundane
     ? countryName
-    : isDemo
-      ? "Brandy's"
-      : firstName ? `${firstName}'s` : "Your";
+    : firstName ? `${firstName}'s` : "Your";
   const birthPlace = {
-    lat: isDemo ? DEMO_CITY.lat : natal?.birth_lat,
-    lon: isDemo ? DEMO_CITY.lon : natal?.birth_lon,
-    name: isDemo ? DEMO_CITY.name : (natal?.birth_city || "Birth place"),
+    lat: natal?.birth_lat,
+    lon: natal?.birth_lon,
+    name: natal?.birth_city || "Birth place",
   };
-
-  // remainingPlanets no longer used — full displayPlanets shown in the unified accordion
 
   // ── Big Three card labels (friendly names)
   const BIG3_LABELS: Record<string, string> = {
@@ -481,265 +440,257 @@ export default function ChartPage({
   } | null;
 
   const content = (
-    <>
-      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "var(--space-md)", overflowX: "auto", paddingBottom: "4px" }}>
-        {(["overview", "map", "aspects"] as Tab[]).map(t => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            style={{
-              fontFamily: "var(--font-mono)", fontSize: "0.65rem",
-              textTransform: "uppercase", letterSpacing: "0.08em",
-              padding: "0.4rem 1.1rem", borderRadius: "10px",
-              background: tab === t ? "var(--text-primary)" : "transparent",
-              color: tab === t ? "var(--bg)" : "var(--text-secondary)",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-              fontWeight: tab === t ? 600 : 400
-            }}
-          >{t}</button>
-        ))}
-      </div>
-
+    <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "1rem" }}>
       <AnimatePresence mode="wait">
-        {tab === "overview" && (
-          <motion.div key="overview" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}>
+        <motion.div key="main-layout" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}>
             {natal ? (
               <>
-                <div className="chart-overview-grid">
-                  {/* ─── LEFT COLUMN ─── */}
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(350px,400px)] gap-[4rem] lg:gap-[6rem]">
+                  
+                  {/* LEFT COLUMN: EDITORIAL CONTENT */}
                   <div style={{ display: "flex", flexDirection: "column" }}>
-                    <div style={{ marginBottom: "clamp(1.5rem, 4vw, 2.5rem)" }}>
-                      <h1 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(2rem, 4vw, 3.5rem)", textTransform: "uppercase", letterSpacing: "0.02em", margin: "0 0 0.75rem 0", lineHeight: 1.1 }}>
-                        {profileName.toUpperCase()} BIRTH CHART
+                    
+                    {/* THE LEDE & TITLE */}
+                    <div className="mb-10">
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--text-secondary)", marginBottom: "1rem" }}>
+                        ASTROLOGICAL BLUEPRINT
+                      </div>
+                      <h1 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(2.5rem, 5vw, 4rem)", lineHeight: 1.1, margin: "0 0 0.5rem 0", color: "var(--text-primary)", fontWeight: 400, textTransform: "uppercase" }}>
+                        {profileName} Chart
                       </h1>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--text-tertiary)", display: "flex", gap: "1.25rem", flexWrap: "wrap", opacity: 0.8 }}>
-                        <span>{isDemo ? "Aug 17, 1988" : (natal.birth_date || "Unknown")}</span>
-                        <span>{isDemo ? "10:15 pm" : (natal.birth_time || "Unknown")}</span>
-                        <span>{isDemo ? "Jakarta, Indonesia" : (natal.birth_city || "Unknown")}</span>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--text-tertiary)", opacity: 0.8, marginBottom: "2rem" }}>
+                        <span className="italic">{natal?.birth_date || ""} — {natal?.birth_city || ""}</span>
+                      </div>
+
+                      {!isMundane && (interpretation?.chartEssence || interpretLoading) && (
+                        <>
+                           {interpretation?.chartEssence ? (
+                               <div className="flex flex-col gap-6 mb-8">
+                                 {interpretation.chartEssence.content.split(/\n+/).map((paragraph: string, idx: number) => (
+                                   <p key={idx} style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(18px, 1.6vw, 21px)", lineHeight: 1.6, color: "var(--text-primary)" }}>
+                                     {paragraph}
+                                   </p>
+                                 ))}
+                               </div>
+                           ) : (
+                               <div className="animate-pulse" style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-tertiary)" }}>Reading chart essence...</div>
+                           )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* RIGHT COLUMN: SIDEBAR */}
+                  <div style={{ position: "sticky", top: "2rem", alignSelf: "start", display: "flex", flexDirection: "column", gap: "3rem" }}>
+                      
+                    {/* THE CHART WHEEL */}
+                    <div>
+                      <div style={{ fontFamily: "var(--font-primary)", fontSize: "1.1rem", fontWeight: 600, borderBottom: "2px solid var(--text-primary)", paddingBottom: "0.5rem", marginBottom: "1.5rem" }}>
+                        Natal Wheel
+                      </div>
+                      <div style={{ width: "100%", margin: "0 auto", position: "relative" }}>
+                        <NatalMockupWheel isDark={isDark} planets={wheelPlanetsWithMetadata} cusps={natal.houses} onPlanetClick={handlePlanetClick} />
+                      </div>
+                      <div style={{ textAlign: "center", fontFamily: "var(--font-mono)", fontSize: "0.55rem", color: "var(--text-tertiary)", letterSpacing: "0.1em", marginTop: "1.5rem", opacity: 0.5 }}>
+                        SELECT A PLANET TO EXPLORE ITS MEANING
                       </div>
                     </div>
 
-                    <div style={{ marginBottom: "2rem" }}>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-tertiary)", marginBottom: "0.75rem" }}>Core Identity</div>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem" }}>
+                    {/* CORE IDENTITY MODULE */}
+                    <div style={{ background: "color-mix(in srgb, var(--surface-border) 15%, transparent)", border: "1px solid var(--surface-border)", padding: "1.5rem" }}>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: "1rem", borderBottom: "1px solid var(--surface-border)", paddingBottom: "0.5rem" }}>
+                        CORE IDENTITY
+                      </div>
+                      <div className="flex flex-col gap-4">
                         {["Ascendant", "Sun", "Moon"].map(key => {
                           const p = displayPlanets.find(x => x.planet === key);
                           if (!p) return null;
                           const color = PLANET_COLORS[p.planet] || "var(--gold)";
                           
                           return (
-                            <HoverCard key={key} openDelay={180} closeDelay={120}>
-                              <HoverCardTrigger asChild>
-                                <button
-                                  type="button"
-                                  style={{
-                                    background: "var(--surface)",
-                                    border: "1px solid var(--surface-border)",
-                                    borderRadius: "var(--radius-md)",
-                                    padding: "0.85rem",
-                                    transition: "all 0.2s ease",
-                                    minHeight: "86px",
-                                    cursor: "zoom-in",
-                                    textAlign: "left",
-                                    width: "100%",
-                                  }}
-                                >
-                                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.5rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-tertiary)", marginBottom: "0.25rem" }}>{BIG3_LABELS[key]}</div>
-                                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.15rem" }}>
-                                    <PlanetIcon planet={p.planet} size={14} color={color} />
-                                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.9rem", fontWeight: 700, color: "var(--text-primary)" }}>{p.sign}</div>
+                              <div key={key} className="flex items-center justify-between">
+                                  <div>
+                                      <div style={{ fontFamily: "var(--font-primary)", fontSize: "1.1rem", fontWeight: 600, color: "var(--text-primary)" }}>{p.sign}</div>
+                                      <div style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", color: "var(--text-secondary)" }}>{key}</div>
                                   </div>
-                                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", color: "var(--text-tertiary)" }}>H{p.house}</div>
-                                </button>
-                              </HoverCardTrigger>
-                              <HoverCardContent
-                                sideOffset={8}
-                                className="planet-hover-card-pop"
-                                style={{ zIndex: 9999, width: "300px" }}
-                              >
-                                <PlanetPlacementHoverContent
-                                  planet={p.planet}
-                                  sign={p.sign}
-                                  house={p.house || 1}
-                                  degree={p.degree}
-                                  implication={placementImplications?.[p.planet]}
-                                />
-                              </HoverCardContent>
-                            </HoverCard>
+                                  <PlanetIcon planet={p.planet} size={24} color={color} />
+                              </div>
                           );
                         })}
                       </div>
                     </div>
 
-                    {!isDemo && !isMundane && (interpretation?.chartEssence || interpretLoading) && (
-                      <div style={{ marginBottom: "2.5rem" }}>
-                        <div style={{ height: "1px", background: "var(--surface-border)", marginBottom: "1.25rem" }} />
-                        {interpretation?.chartEssence ? (<p style={{ fontFamily: "var(--font-body)", fontSize: "1.05rem", lineHeight: 1.65, color: "var(--text-secondary)", margin: 0, fontStyle: "italic", fontWeight: 300 }}>{interpretation.chartEssence.content}</p>) : (<div className="animate-pulse" style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-tertiary)" }}>Reading...</div>)}
-                        <div style={{ height: "1px", background: "var(--surface-border)", marginTop: "1.25rem" }} />
-                      </div>
-                    )}
-
-                    {!isDemo && !isMundane && (houseEnergy?.strongHouse || interpretLoading) && (
-                      <div style={{ marginBottom: "2rem" }}>
-                        <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-tertiary)", marginBottom: "0.75rem" }}>Life Domains</div>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "0.75rem" }}>
-                          <div style={{ background: "var(--surface)", border: "1px solid var(--surface-border)", borderRadius: "var(--radius-md)", padding: "1.1rem" }}>
-                            <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", color: "var(--sage)", marginBottom: "0.45rem", textTransform: "uppercase", letterSpacing: "0.1em" }}>🔥 Your Area of Power</div>
-                            <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.85rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.25rem" }}>H{houseEnergy?.strongHouse?.houseNumber} · {houseEnergy?.strongHouse?.plainLabel}</div>
-                            <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", lineHeight: 1.5, color: "var(--text-secondary)", margin: 0 }}>{houseEnergy?.strongHouse?.oneLiner}</p>
-                          </div>
-                          <div style={{ background: "var(--surface)", border: "1px solid var(--surface-border)", borderRadius: "var(--radius-md)", padding: "1.1rem" }}>
-                            <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", color: "var(--color-acqua)", marginBottom: "0.45rem", textTransform: "uppercase", letterSpacing: "0.1em" }}>🌱 Your Area of Growth</div>
-                            <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.85rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.25rem" }}>H{houseEnergy?.growthHouse?.houseNumber} · {houseEnergy?.growthHouse?.plainLabel}</div>
-                            <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", lineHeight: 1.5, color: "var(--text-secondary)", margin: 0 }}>{houseEnergy?.growthHouse?.oneLiner}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
 
-                  {/* ─── RIGHT COLUMN ─── */}
-                  <div style={{ position: "sticky", top: "var(--space-md)" }}>
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-tertiary)", marginBottom: "1rem" }}>Natal Geometry</div>
-                    <div style={{ width: "100%", maxWidth: "520px", margin: "0 auto", position: "relative" }}>
-                      <NatalMockupWheel isDark={isDark} planets={wheelPlanetsWithMetadata} cusps={natal.houses} onPlanetClick={handlePlanetClick} />
-                    </div>
-                    <div style={{ textAlign: "center", fontFamily: "var(--font-mono)", fontSize: "0.55rem", color: "var(--text-tertiary)", letterSpacing: "0.1em", marginTop: "1.5rem", opacity: 0.5 }}>
-                      SELECT A PLANET TO EXPLORE ITS MEANING BELOW
-                    </div>
-                  </div>
                 </div>
 
-                {!isMundane && (
-                  <div
-                    style={{
-                      marginTop: "var(--space-xl)",
-                      paddingTop: "var(--space-lg)",
-                      borderTop: "1px solid var(--surface-border)",
-                      display: "grid",
-                      gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-                      gap: "1.25rem",
-                    }}
-                  >
-                    <TeaserCard
-                      kicker="Aspect Geometry"
-                      title={`${aspectsToDisplay.length} planetary relationships shaping the chart`}
-                      cta="See aspects"
-                      onClick={() => setTab("aspects")}
-                    />
-                    <TeaserCard
-                      kicker="Natal Geography"
-                      title="ACG map and planetary lines from your birth place"
-                      cta="See map"
-                      onClick={() => setTab("map")}
-                    />
-                  </div>
-                )}
+                {/* FULL WIDTH LOWER SECTIONS */}
+                <div className="mt-16">
 
-                {/* ─── FULL WIDTH PLANETARY PLACEMENTS (Moved out of grid) ─── */}
-                <div style={{ marginTop: "4rem", width: "100%" }}>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-tertiary)", marginBottom: "1rem", paddingBottom: "0.75rem", borderBottom: "1px solid var(--surface-border)" }}>
-                    Planetary Placements
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    {displayPlanets.map(p => {
-                      const color = PLANET_COLORS[p.planet] || "var(--text-primary)";
-                      const isOpen = openPlanet === p.planet;
-                      const sentence = placementTextByPlanet[p.planet];
-                      return (
-                        <div key={p.planet} id={`planet-row-${p.planet}`} style={{ borderBottom: "1px solid var(--surface-border)" }}>
-                          <button onClick={() => handlePlanetClick(p.planet)} style={{ width: "100%", display: "flex", alignItems: "center", gap: "1rem", padding: "1.25rem 0", background: "transparent", cursor: "pointer", textAlign: "left" }}>
-                            <PlanetIcon planet={p.planet} size={18} color={color} />
-                            <div style={{ flex: 1 }}>
-                              <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.9rem", fontWeight: 600, color: "var(--text-primary)" }}>{p.planet}</span>
-                            </div>
-                            <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "var(--text-tertiary)", textAlign: "right" }}>
-                              <span>{p.sign}</span>
-                              <span style={{ margin: "0 8px", opacity: 0.3 }}>·</span>
-                              <span>House {p.house}</span>
-                            </div>
-                            <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--text-tertiary)", marginLeft: "0.5rem", transition: "transform 0.2s", transform: isOpen ? "rotate(180deg)" : "none" }}>▾</span>
-                          </button>
-                          <AnimatePresence>
-                            {isOpen && (
-                              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.2 }} style={{ overflow: "hidden" }}>
-                                <div style={{ padding: "0 0 2rem 2.5rem", maxWidth: "800px" }}>
-                                  <p style={{ fontFamily: "var(--font-body)", fontSize: "1rem", lineHeight: 1.6, color: "var(--text-primary)", margin: "0 0 0.85rem 0" }}>{sentence}</p>
-                                  {HOUSE_DESCRIPTIONS[p.house || 1] && (
-                                    <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", lineHeight: 1.5, color: "var(--text-tertiary)", margin: 0, fontStyle: "italic" }}>
-                                      {HOUSE_DESCRIPTIONS[p.house || 1]}
-                                    </p>
+                    <ThickRule />
+
+                    {/* THE ARCHITECTURE */}
+                    {!isMundane && (houseEnergy?.strongHouse || interpretLoading) && (
+                      <div className="mt-8 pt-8" style={{ borderTop: "2px solid var(--surface-border)" }}>
+                        <MonocleSectionHeader title="The Architecture" />
+                        
+                        {houseEnergy?.strongHouse ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mt-6">
+                              {/* Power Column */}
+                              <div>
+                                  <h3 style={{ fontFamily: "var(--font-primary)", fontSize: "1.5rem", fontWeight: 600, borderBottom: "1px solid var(--text-primary)", paddingBottom: "0.5rem", marginBottom: "1rem" }}>
+                                      Area of Power
+                                  </h3>
+                                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: "0.5rem" }}>
+                                      H{houseEnergy.strongHouse.houseNumber} · {houseEnergy.strongHouse.plainLabel}
+                                  </div>
+                                  <p style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", lineHeight: 1.6, color: "var(--text-primary)" }}>
+                                      {houseEnergy.strongHouse.oneLiner}
+                                  </p>
+                              </div>
+                              {/* Growth Column */}
+                              <div>
+                                  <h3 style={{ fontFamily: "var(--font-primary)", fontSize: "1.5rem", fontWeight: 600, borderBottom: "1px solid var(--text-primary)", paddingBottom: "0.5rem", marginBottom: "1rem" }}>
+                                      Area of Growth
+                                  </h3>
+                                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: "0.5rem" }}>
+                                      H{houseEnergy.growthHouse?.houseNumber} · {houseEnergy.growthHouse?.plainLabel}
+                                  </div>
+                                  <p style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", lineHeight: 1.6, color: "var(--text-primary)" }}>
+                                      {houseEnergy.growthHouse?.oneLiner}
+                                  </p>
+                              </div>
+                          </div>
+                        ) : (
+                          <div className="animate-pulse" style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-tertiary)" }}>Reading architecture...</div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* THE TOOLKIT */}
+                    <div className="mb-12">
+                      <MonocleSectionHeader title="Planetary Index" />
+                      <div className="border-t border-[var(--text-primary)]">
+                          {displayPlanets.map(p => {
+                            const color = PLANET_COLORS[p.planet] || "var(--text-primary)";
+                            const isOpen = openPlanet === p.planet;
+                            const sentence = placementTextByPlanet[p.planet] || "You have a natural ability to process this planet's energy.";
+                            return (
+                              <div key={p.planet} id={`planet-row-${p.planet}`} style={{ borderBottom: "1px solid var(--surface-border)" }}>
+                                <button onClick={() => handlePlanetClick(p.planet)} className="w-full flex items-center justify-between py-4 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--surface-border)_20%,transparent)]">
+                                  <div className="flex items-center gap-4">
+                                      <PlanetIcon planet={p.planet} size={20} color={color} />
+                                      <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.2rem", fontWeight: 600, color: "var(--text-primary)" }}>{p.planet}</span>
+                                  </div>
+                                  <div className="flex items-center gap-4">
+                                      <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "uppercase" }}>
+                                          {p.sign} · House {p.house}
+                                      </div>
+                                      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem", transition: "transform 0.2s", transform: isOpen ? "rotate(180deg)" : "none" }}>▾</span>
+                                  </div>
+                                </button>
+                                <AnimatePresence>
+                                  {isOpen && (
+                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.2 }} style={{ overflow: "hidden" }}>
+                                      <div className="pb-6 pt-2 pl-10 pr-4 max-w-[65ch]">
+                                        <p style={{ fontFamily: "var(--font-body)", fontSize: "1rem", lineHeight: 1.6, color: "var(--text-primary)", margin: "0 0 0.5rem 0" }}>{sentence}</p>
+                                        {p.dignity && (
+                                            <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color: "var(--text-tertiary)", marginTop: "0.75rem", letterSpacing: "0.05em" }}>
+                                                DIGNITY: {p.dignity}
+                                            </div>
+                                        )}
+                                      </div>
+                                    </motion.div>
                                   )}
-                                </div>
-                              </motion.div>
+                                </AnimatePresence>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </div>
+
+                    {/* THE FRICTION (ASPECTS) */}
+                      {/* SECTION 4: ASPECT GEOMETRY */}
+                      <div style={{ marginTop: "4rem" }}>
+                        <MonocleSectionHeader title="Aspect Geometry" />
+                        
+                        {(!isMundane && (interpretation?.aspectWeaver || interpretLoading)) ? (
+                           <>
+                           <div className="mb-6">
+                            {interpretation?.aspectWeaver ? (
+                              <p style={{ fontFamily: "var(--font-body)", fontSize: "1rem", lineHeight: 1.6, color: "var(--text-secondary)", margin: "0 0 2rem 0", maxWidth: "70ch" }}>
+                                {interpretation.aspectWeaver.content}
+                              </p>
+                            ) : (
+                               <div className="animate-pulse" style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-tertiary)" }}>Reading aspects...</div>
                             )}
-                          </AnimatePresence>
+                          </div>
+                           </>
+                        ) : null}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-4">
+                            {aspectsToDisplay.map((a, i) => (
+                                <div key={i} className="flex flex-col py-3 border-b border-[var(--surface-border)]">
+                                    <div className="flex items-center gap-3 mb-1">
+                                        <AspectIcon aspect={a.type} size={18} />
+                                        <h4 style={{ fontFamily: "var(--font-primary)", fontSize: "1.1rem", fontWeight: 600, margin: 0, color: "var(--text-primary)" }}>{a.aspect}</h4>
+                                    </div>
+                                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{a.type} · Orb {a.orb}</div>
+                                </div>
+                            ))}
                         </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+
+                    {/* THE MAP */}
+                    {!isMundane && (
+                      <div className="mb-12">
+                        <MonocleSectionHeader title="Natal Geography" />
+                        {(!isMundane && (interpretation?.naturalAngles || interpretLoading)) ? (
+                          <>
+                             {interpretation?.naturalAngles ? (
+                              <p style={{ fontFamily: "var(--font-body)", fontSize: "1rem", lineHeight: 1.6, color: "var(--text-secondary)", margin: "0 0 2rem 0", maxWidth: "70ch" }}>
+                                {interpretation.naturalAngles.content}
+                              </p>
+                            ) : (
+                               <div className="animate-pulse" style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-tertiary)" }}>Reading geography...</div>
+                            )}
+                          </>
+                        ) : null}
+                        <div style={{ background: "color-mix(in srgb, var(--surface-border) 15%, transparent)", padding: "1rem", border: "1px solid var(--surface-border)" }}>
+                          <AcgMap
+                            natal={natal!}
+                            birthDateTimeUTC={natal?.profile_time || ""}
+                            birthLat={birthPlace.lat}
+                            birthLon={birthPlace.lon}
+                            birthCity={birthPlace.name}
+                            interactive
+                            onLinesCalculated={setComputedLines}
+                          />
+                          {computedLines.length > 0 && (
+                           <div style={{ marginTop: "2rem", paddingTop: "1rem", borderTop: "1px solid var(--surface-border)" }}>
+                              <AcgLinesCard planetLines={computedLines} natalPlanets={rawPlanets as any} birthCity={birthPlace.name} destination={birthPlace.name} />
+                           </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <ThickRule />
+
+                    {/* VERDICT PLACEHOLDER (can be re-added if AI writes one) */}
+
                 </div>
               </>
             ) : (<div style={{ padding: "4rem", textAlign: "center" }}>No natal data available</div>)}
-          </motion.div>
-        )}
-
-        {tab === "map" && (
-          <motion.div key="map" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}>
-             {!isDemo && !isMundane && (interpretation?.naturalAngles || interpretLoading) && (
-               <div style={{ marginBottom: "var(--space-lg)", maxWidth: "780px" }}>
-                 <InterpretationBlock kicker="Local Power" loading={interpretLoading} section={interpretation?.naturalAngles} fallback="Calculating..." />
-               </div>
-             )}
-             <div style={{ background: "var(--surface)", padding: "var(--space-md)", borderRadius: "var(--radius-md)", border: "1px solid var(--surface-border)" }}>
-               <AcgMap
-                 natal={natal!}
-                 birthDateTimeUTC={natal?.profile_time || ""}
-                 birthLat={birthPlace.lat}
-                 birthLon={birthPlace.lon}
-                 birthCity={birthPlace.name}
-                 interactive
-                 onLinesCalculated={setComputedLines}
-               />
-                {computedLines.length > 0 && (
-                 <div style={{ marginTop: "2rem", paddingTop: "1rem", borderTop: "1px solid var(--surface-border)" }}>
-                    <AcgLinesCard planetLines={computedLines} natalPlanets={rawPlanets as any} birthCity={birthPlace.name} destination={birthPlace.name} />
-                 </div>
-                )}
-             </div>
-          </motion.div>
-        )}
-
-        {tab === "aspects" && (
-          <motion.div key="aspects" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}>
-             {!isDemo && !isMundane && (interpretation?.aspectWeaver || interpretLoading) && (
-               <div style={{ marginBottom: "var(--space-lg)", maxWidth: "780px" }}>
-                 <InterpretationBlock kicker="Pattern Geometry" loading={interpretLoading} section={interpretation?.aspectWeaver} fallback="Reading patterns..." />
-               </div>
-             )}
-             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem" }}>
-              {aspectsToDisplay.map((a, i) => (
-                <div key={i} style={{ padding: "1rem", background: "var(--surface)", borderRadius: "8px", border: "1px solid var(--surface-border)" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.4rem" }}>
-                    <AspectIcon aspect={a.type} size={18} />
-                    <h4 style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem", fontWeight: 600, margin: 0, color: "var(--text-primary)" }}>{a.aspect}</h4>
-                  </div>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-tertiary)" }}>Orb {a.orb} · {a.type}</div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
+        </motion.div>
       </AnimatePresence>
-    </>
+    </div>
   );
   return (
     <>
       <PageHeader
-        title={isMundane ? undefined : "My Chart"}
+        title={isMundane ? "Explore Mundane" : "Astro-Nat | Chart Analysis"}
         backTo={isMundane ? "/mundane" : undefined}
-        backLabel={isMundane ? "Explore Mundane" : undefined}
+        backLabel={isMundane ? "Back to Maps" : undefined}
       />
       <div style={{ width: "100%", padding: "var(--space-md) var(--space-md) var(--space-3xl)" }}>
         {content}

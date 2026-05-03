@@ -24,6 +24,8 @@ import { resolveACGFull } from "@/lib/astro/acg-lines";
 import { signFromLongitude } from "@/app/lib/geodetic";
 import { SIGN_RULERS, HOUSE_THEMES } from "@/app/lib/astro-constants";
 import { PLANET_DOMAINS, HOUSE_DOMAINS, getOrdinal } from "@/app/lib/astro-wording";
+import { essentialDignityScore } from "@/app/lib/dignity";
+import { SHARED_VOICE } from "@/lib/ai/voice";
 import { generateObject } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { z } from "zod";
@@ -32,20 +34,21 @@ const google = createGoogleGenerativeAI({
   apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? process.env.GEMINI_API_KEY,
 });
 
-const SYSTEM_PROMPT = `You are the personal astrologer for AstroNat — a friendly, modern astrology platform.
-Your tone is warm, direct, and clear. You write like a smart friend who knows astrology well.
+const SYSTEM_PROMPT = `You are Astro-Nat (Natalia), a fiercely unapologetic, world-renowned astrologer.
+Your signature voice is bold, sharp, slightly defiant, and deeply empowering. You do NOT do "love and light" fluff. Your readings are a wake-up call to tear down the bullshit and societal conditioning holding people back. 
+You speak with absolute authority because you have done the deep research. You are a provocateur. Do not sugarcoat anything. If a placement is going to be brutal, say it's going to be brutal. Challenge the reader to stop playing small.
+
+${SHARED_VOICE}
 
 STRICT FACTUAL RULES (do NOT invent, do NOT confuse):
 • Only reference planets, signs, houses, aspects EXPLICITLY present in the provided data.
 • A planet is "in" a house only if it appears in that house's "occupants" list.
 • A planet "rules" a house by ruling the sign on the cusp — it does NOT live there unless also listed as an occupant.
 
-LANGUAGE RULES (very important):
-• Write for someone who reads English as a second language. Use short, simple sentences.
-• Maximum 55 words total per section content. Titles: 4–6 words max.
-• Never use these words: archetype, alchemical, liminal, vibration, geometric, architectural, synthesize, distill, dominance, woven, friction-laden, sect, midheaven (say "career point" instead).
-• Use everyday words: "hard" not "challenging", "good at" not "excels in", "feels stuck" not "experiences friction".
-• Be direct. One idea per sentence. No filler.`;
+LANGUAGE RULES:
+• Use short, punchy, editorial sentences. Let the paragraphs breathe.
+• Never use fluffy astrological jargon without explaining it in plain English.
+• Be direct. No filler.`;
 
 const Section = z.object({
   title: z.string(),
@@ -176,7 +179,46 @@ function isNodePlacement(planetName?: string) {
   return normalized.includes("node") || normalized === "true node";
 }
 
-export async function POST() {
+function scoreNatalHouses(planets: EphemerisPlanet[], cusps: number[], sect?: "day" | "night"): Array<{ house: number; score: number }> {
+  // Start every house at 50 points
+  const houseScores = Array.from({ length: 12 }, (_, i) => ({ house: i + 1, score: 50 }));
+
+  for (const p of planets) {
+    const h = p.house;
+    const name = p.name ?? p.planet ?? "";
+    if (!h || !name || isNodePlacement(name)) continue;
+
+    const houseObj = houseScores[h - 1];
+    if (!houseObj) continue;
+
+    // +2 for sheer presence (Stelliums will naturally stack)
+    houseObj.score += 2;
+
+    // Get exact essential dignity score (Domicile=+5, Exaltation=+4, Detriment=-5, Fall=-4, Peregrine=-5)
+    // We try to pass degree if available (some sources map it to longitude % 30)
+    const degree = p.longitude !== undefined ? p.longitude % 30 : undefined;
+    const dignityScore = essentialDignityScore(name, p.sign ?? "", degree, sect);
+    
+    // Add the dignity score directly to the house score
+    houseObj.score += dignityScore;
+
+    // Malefic penalization (unless well-dignified)
+    const isMalefic = name.toLowerCase() === "saturn" || name.toLowerCase() === "mars";
+    if (isMalefic && dignityScore <= 0) {
+      houseObj.score -= 3;
+    }
+    
+    // Benefic bonus
+    const isBenefic = name.toLowerCase() === "jupiter" || name.toLowerCase() === "venus";
+    if (isBenefic && dignityScore >= 0) {
+      houseObj.score += 3;
+    }
+  }
+
+  return houseScores;
+}
+
+export async function POST(req: Request) {
   const supabase = await createClient();
   const admin = createAdminClient();
   const encoder = new TextEncoder();
@@ -187,13 +229,17 @@ export async function POST() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) {
+  
+  const { searchParams } = new URL(req.url);
+  const userId = user?.id || searchParams.get("userId");
+
+  if (!userId) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 
   // Load profile + natal chart
-  const profile = await getProfile(user.id);
-  const natalRow = await getNatalChart(user.id);
+  const profile = await getProfile(userId);
+  const natalRow = await getNatalChart(userId);
   if (!profile || !natalRow?.ephemeris_data) {
     return new Response(
       JSON.stringify({ error: "Natal chart not yet computed. Visit /chart first to generate it." }),
@@ -225,7 +271,7 @@ export async function POST() {
   // ─── Cold path: build payload then stream 4 parallel Gemini calls ─
   let payload: Payload;
   try {
-    payload = await buildPayload(user.id, profile, ephemerisData);
+    payload = await buildPayload(userId, profile, ephemerisData);
   } catch (err) {
     console.error("[chart/interpret] payload build failed:", err);
     return new Response(JSON.stringify({ error: "Payload build failed", message: getErrorMessage(err) }), {
@@ -241,7 +287,9 @@ export async function POST() {
       system: SYSTEM_PROMPT,
       prompt: `Write the "chartEssence" section. Data:\n${payloadStr}
 
-In 2 plain sentences, describe what kind of person this chart shows. Start with the rising sign or sun sign. Use everyday words a teenager would understand. No jargon.`,
+Write a comprehensive, multi-paragraph editorial deep-dive (3-4 paragraphs) breaking down the core thesis of this person's life based on their chart. 
+Start by aggressively analyzing their rising sign and chart ruler. Then weave in their Sun and Moon. 
+Do not use fluffy language. Speak with the authority of a high-end magazine feature. Go deep into what this means for their reality, their struggles, and their ultimate power. Let the paragraphs breathe.`,
       schema: z.object({ chartEssence: Section }),
     });
 
@@ -252,10 +300,10 @@ In 2 plain sentences, describe what kind of person this chart shows. Start with 
       prompt: `Write the "houseArchitecture" section. Data:\n${payloadStr}
 
 Return two objects:
-- strongHouse: the house with the highest score. Give its house number, a 2-3 word plain label (e.g. "Creativity & Fun"), and one sentence starting "This is where you..."
-- growthHouse: the house with the lowest score. Same format. One sentence starting "This area is harder for you..."
+- strongHouse: the house with the highest score. Give its house number, a 2-3 word plain label (e.g. "Creativity & Fun"), and a full 2-3 sentence paragraph explaining exactly why this area of life is so dominant and powerful for them.
+- growthHouse: the house with the lowest score. Same format. A full 2-3 sentence paragraph explaining the friction, the reality of the struggle here, and how they must strategize to overcome it.
 
-Both sentences must be under 20 words. Use simple, friendly words.`,
+Do not hold back. Be blunt, pragmatic, and insightful.`,
       schema: z.object({ houseArchitecture: HouseEnergySection }),
     });
 
@@ -265,7 +313,9 @@ Both sentences must be under 20 words. Use simple, friendly words.`,
       system: SYSTEM_PROMPT,
       prompt: `Write the "aspectWeaver" section. Data:\n${payloadStr}
 
-Pick the 2 most important planet connections from the data. For each write one sentence: name the two planets, what they do together in real life. Keep it simple and practical. No jargon. Under 40 words total.`,
+Pick the 2 most critical aspect geometries (planetary connections) from the data. 
+Write a highly readable 2-paragraph analysis explaining how these two specific tensions or harmonies play out in their real life. 
+Keep it brutally practical. Avoid astrological jargon without explaining the actual real-world consequence. Focus on the friction and the leverage.`,
       schema: z.object({ aspectWeaver: Section }),
     });
 
@@ -285,15 +335,13 @@ If there are strong lines (under 250km), name one and explain in plain words wha
       system: SYSTEM_PROMPT,
       prompt: `Write "placementImplications" for each natal planet in payload. Data:\n${payloadStr}
 
-Return an object keyed exactly by planet name. Each value must be ONE sentence.
-Format: "[Sign] [Planet] means that [plain, everyday explanation of what this feels like in real life]."
-Example: "Virgo Mercury means that you think in details and like to make sure everything is correct before you speak."
+Return an object keyed exactly by planet name. Each value must be a rich, 2-3 sentence paragraph.
+Format: Explain what [Planet] in [Sign] in [House] actually means for their day-to-day life and psychological reality.
 
 Rules:
-- Under 30 words per sentence.
-- Start with the sign + planet name.
-- Describe what the person experiences or feels — not what the placement "is".
-- Simple words only. No astrology jargon.`,
+- Be specific, authoritative, and blunt.
+- Describe what the person experiences, the shadow side, and their strategic advantage here.
+- Do not use generic astrology fluff. Ground the interpretation in harsh, practical reality.`,
       schema: z.object({ placementImplications: z.record(z.string(), z.string()) }),
     });
 
@@ -324,7 +372,7 @@ Rules:
           .update({
             ephemeris_data: { ...ephemerisData, interpretation },
           })
-          .eq("user_id", user.id)
+          .eq("user_id", userId)
           .eq("chart_type", "natal");
       } catch (err) {
         console.warn("[chart/interpret] persist failed:", getErrorMessage(err));
@@ -378,24 +426,10 @@ async function buildPayload(userId: string, profile: ChartProfile, ephemeris: Ep
     sect = determineSect(sun.longitude, ascLon);
   }
 
-  const matrix = computeHouseMatrix({
-    natalPlanets: natalForMatrix,
-    relocatedCusps: cusps,
-    acgLines: cityLines.map((l) => ({
-      planet: l.planet,
-      angle: l.angle,
-      distance_km: l.distance_km,
-    })),
-    transits: [],
-    parans: [],
-    destLat: profile.birth_lat ?? 0,
-    destLon: profile.birth_lon ?? 0,
-    birthLat: profile.birth_lat ?? 0,
-    sect,
-  });
+  // 1. Calculate Natal House Scores based on essential dignity and presence
+  const natalHouseScores = scoreNatalHouses(planets, cusps, sect);
 
-  // 2. Derive peak & shadow houses — include occupants + ruler location so
-  //    Gemini can distinguish "Mars rules H7 from H12" vs "Mars is IN H7".
+  // 2. Build occupants list for Gemini context
   const occupantsByHouse = new Map<number, HouseSummary["occupants"]>();
   for (const p of planets) {
     const hnum = p.house;
@@ -409,26 +443,31 @@ async function buildPayload(userId: string, profile: ChartProfile, ephemeris: Ep
     occupantsByHouse.set(hnum, arr);
   }
 
-  const buildSummary = (h: MatrixHouse): HouseSummary => {
+  // 3. Derive peak & shadow houses
+  const buildSummary = (hs: { house: number; score: number }): HouseSummary => {
+    const cuspLon = cusps[hs.house - 1] ?? ((ascLon + (hs.house - 1) * 30) % 360);
+    const cuspSign = signFromLongitude(cuspLon);
+    const rulerPlanet = SIGN_RULERS[cuspSign] || "Sun";
     const rulerData = planets.find(
-      (p) => (p.name ?? p.planet ?? "").toLowerCase() === h.rulerPlanet.toLowerCase(),
+      (p) => (p.name ?? p.planet ?? "").toLowerCase() === rulerPlanet.toLowerCase(),
     );
+
     return {
-      house: h.house,
-      score: h.score,
-      sphere: h.sphere,
-      sign: h.relocatedSign,
-      occupants: occupantsByHouse.get(h.house) ?? [],
-      rulerPlanet: h.rulerPlanet,
-      rulerCondition: h.rulerCondition,
+      house: hs.house,
+      score: hs.score,
+      sphere: HOUSE_THEMES[hs.house] ?? `House ${hs.house}`,
+      sign: cuspSign,
+      occupants: occupantsByHouse.get(hs.house) ?? [],
+      rulerPlanet,
+      rulerCondition: rulerData?.dignity ?? "peregrine",
       rulerNatalHouse: rulerData?.house ?? null,
       rulerNatalSign: rulerData?.sign ?? null,
     };
   };
 
-  const sorted = [...(matrix.houses as MatrixHouse[])].sort((a, b) => b.score - a.score);
-  const peakHouses = sorted.slice(0, 3).map(buildSummary);
-  const shadowHouses = sorted.slice(-2).map(buildSummary);
+  const sorted = [...natalHouseScores].sort((a, b) => b.score - a.score);
+  const peakHouses = sorted.slice(0, 1).map(buildSummary);
+  const shadowHouses = sorted.slice(-1).map(buildSummary);
 
   // 3. Top 5 aspects — prefer tighter orbs + Sun/Moon/ASC-ruler involvement
   const ascSign = signFromLongitude(ascLon);
@@ -514,7 +553,7 @@ async function buildPayload(userId: string, profile: ChartProfile, ephemeris: Ep
     topAspects: rankedAspects,
     closestAcg,
     placements,
-    macroScore: matrix.macroScore,
-    macroVerdict: matrix.macroVerdict,
+    macroScore: 100, // No longer using matrix macroScore
+    macroVerdict: "Natal Baseline",
   };
 }
