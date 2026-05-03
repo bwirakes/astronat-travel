@@ -673,13 +673,16 @@ export function computeHouseMatrix(params: {
         relocatedCuspSigns,
     }) ?? undefined;
     const chartRulerHouse = chartRuler?.rulerRelocatedHouse;
-    const chartRulerBias = chartRuler?.rulerAngular ? 10 : -5;
-    // WIDE_SCORING_V1: chart ruler also acts as a global lift on every house's
-    // natal bucket (relocated ASC sign change recomputes ruler dignity for all
-    // 12 houses, not just one). This is the dominant place-driven signal.
-    const chartRulerGlobalLift = WIDE_SCORING_V1
-        ? (chartRuler?.rulerAngular ? 6 : -3)
-        : 0;
+    // Chart ruler is the strongest place-driven natal signal. The bias is
+    // applied to the house holding the ruler (full strength), to its two
+    // adjacent houses (half strength via chartRulerNeighborBias inside the
+    // per-house loop), and as a smaller global lift on every house. Together
+    // these widen the angular-vs-cadent macro gap from ~4 pts to ~12-15 pts.
+    const chartRulerBias = chartRuler?.rulerAngular ? 18 : -8;
+    // Always-on global lift (was previously gated on WIDE_SCORING_V1). Acts
+    // as the "this whole place feels lit up" baseline shift.
+    const chartRulerGlobalLift = chartRuler ? (chartRuler.rulerAngular ? 8 : -4) : 0;
+    const chartRulerNeighborStrength = chartRuler?.rulerAngular ? 9 : -4; // ~half of bias
 
     // ── A4 precompute: personal eclipse hits at the destination ──────────
     // PDF p.4: "Hold off when ... an eclipse is activating that zone,
@@ -771,9 +774,13 @@ export function computeHouseMatrix(params: {
         );
 
         // ── Step 1: Baseline by house type + global timing penalty ────
+        // Lifted +3 across the board (was 55/50/45) so the cadent floor
+        // sits above the "Severe Friction" band even with max penalty
+        // applied. Pairs with the lowered penalty cap (12 not 25) so the
+        // typical reading no longer starts ~25 pts in the hole.
         const angularHouses  = [1, 4, 7, 10];
         const succedentHouses = [2, 5, 8, 11];
-        const baseNatural = angularHouses.includes(h) ? 55 : succedentHouses.includes(h) ? 50 : 45;
+        const baseNatural = angularHouses.includes(h) ? 58 : succedentHouses.includes(h) ? 52 : 48;
         const base = Math.max(10, baseNatural - globalPenalty);
 
         // ── Step 2: Ruler Dignity × Lilly Accidental Points (Gap 3+P0-A) ────
@@ -816,7 +823,9 @@ export function computeHouseMatrix(params: {
                     sign:         signFromLongitude(p.longitude),
                     houseNum:     h,
                     longitude:    p.longitude,
-                    isRetrograde: p.retrograde,
+                    // Same dual-field read as Step 7 — tolerate snake_case
+                    // is_retrograde from the SwissEph helper output.
+                    isRetrograde: p.retrograde ?? (p as any).is_retrograde,
                     natalPlanets,
                     speed:        p.speed,
                 });
@@ -924,7 +933,19 @@ export function computeHouseMatrix(params: {
         const worldPoints = WORLD_POINTS_HOUSES.has(h) ? natalWorldPoints.aggregate : 0;
 
         // ── Step 5d: Chart-ruler relocation bias (A3) ────────────────────────
-        const chartRulerContribution = chartRulerHouse === h ? chartRulerBias : 0;
+        // Full bias on the ruler's own house, half-strength bias on its two
+        // adjacent houses (h±1, with 12↔1 wrap). Adjacent-house bleed is what
+        // lifts the macro signal even when the ruler lands outside the four
+        // angular houses (which already drive 80% of the macro weight).
+        let chartRulerContribution = 0;
+        if (chartRulerHouse !== undefined) {
+            const houseDelta = Math.min(
+                Math.abs(h - chartRulerHouse),
+                12 - Math.abs(h - chartRulerHouse),
+            );
+            if (houseDelta === 0) chartRulerContribution = chartRulerBias;
+            else if (houseDelta === 1) chartRulerContribution = chartRulerNeighborStrength;
+        }
 
         // ── Step 5e: Personal eclipse penalty (A4) ───────────────────────────
         const rawEclipsePenalty = eclipsePenaltyByHouse.get(h) ?? 0;
@@ -979,8 +1000,13 @@ export function computeHouseMatrix(params: {
         transitPts = Math.max(-45, Math.min(40, transitPts));
 
         // ── Step 7: Natal Rx (P1-A: inner vs outer retrograde logic) ─────────
+        // Tolerate both `retrograde` (matrix contract) and `is_retrograde`
+        // (the field name returned by computeRealtimePositions). Without this
+        // dual read the modifier never fires, since the route flow stores
+        // planets with `is_retrograde` only.
         let retrograde = 0;
-        if (rulerNatal?.retrograde) {
+        const rulerIsRx = rulerNatal?.retrograde ?? (rulerNatal as any)?.is_retrograde;
+        if (rulerIsRx) {
             const rulerNameLower = ruler.toLowerCase();
             if (isOuterPlanet(rulerNameLower)) {
                 // Outer planet Rx = closer to Earth = STRONGER ("Full" in spec)
@@ -1043,7 +1069,10 @@ export function computeHouseMatrix(params: {
         // outward, giving a true bottoms-up variance stretch without artificial macro multipliers.
         const bucketNatal     = normalizeBucket(rawNatal, 30, 70); // original: 10, 90
         const bucketOccupants = normalizeBucket(rawOccupants, 15, 85); // original: 5, 95
-        const bucketTransit   = normalizeBucket(rawTransit, 20, 80); // original: 0, 100
+        // Widened from 20-80 → 10-90 so the transit bucket has more upward
+        // headroom. Combined with the lower penalty cap, this lifts the
+        // bucketTransit mean from ~37 toward 50 (the neutral midline).
+        const bucketTransit   = normalizeBucket(rawTransit, 10, 90); // original: 0, 100
         const bucketGeodetic  = normalizeBucket(rawGeodetic, 15, 85); // original: -10, 110
 
         // WIDE_SCORING_V1: lift geodetic bucket weight 15% -> 22% so place
@@ -1318,11 +1347,15 @@ export function computeGlobalPenalty(transits: any[]): number {
         const orb = t.orb ?? 5;
 
         if (isHardTransit) {
-            if (orb <= 1 && isMalefic)      penalty += 14;
-            else if (orb <= 2 && isMalefic) penalty += 10;
-            else if (orb <= 3 && isMalefic) penalty += 6;
-            else if (orb <= 1)              penalty += 8;
-            else if (orb <= 3)              penalty += 4;
+            // Halved weights — the previous values saturated the cap on
+            // every reading because a 12-month transit window almost always
+            // contains a few malefic hard hits. After halving, the typical
+            // reading lands ~6-9 instead of pinned at the 12 cap.
+            if (orb <= 1 && isMalefic)      penalty += 7;
+            else if (orb <= 2 && isMalefic) penalty += 5;
+            else if (orb <= 3 && isMalefic) penalty += 3;
+            else if (orb <= 1)              penalty += 4;
+            else if (orb <= 3)              penalty += 2;
         } else if (WIDE_SCORING_V1 && isSoftTransit && isBenefic) {
             // Benefic soft transits lift the chart globally
             if (orb <= 1)      lift += 10;
@@ -1334,5 +1367,8 @@ export function computeGlobalPenalty(transits: any[]): number {
         const net = penalty - lift;
         return Math.max(-12, Math.min(12, net));
     }
-    return Math.min(25, penalty);
+    // Cap lowered from 25 → 12. The old cap was a permanent baseline drag
+    // (saturated in 100% of simulated readings). At 12 the penalty actually
+    // discriminates between calm and tense weather.
+    return Math.min(12, penalty);
 }
