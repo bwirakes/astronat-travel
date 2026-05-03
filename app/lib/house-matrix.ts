@@ -1159,10 +1159,13 @@ export function computeHouseMatrix(params: {
         rawMacro = (0.70 * intentScore) + (0.30 * scoreH1);
     }
 
-    // Variance Expander: We apply a tight 1.8x elasticity stretch over the organically
-    // widened Angular Dominant bottom-up scores, pushing authentic high scores into 
-    // the true 'Peak / Highly Productive' zone (85+) without distorting the math.
-    const stretchedMacro = 50 + (rawMacro - 50) * 1.8;
+    // Variance Expander: 1.4× elasticity stretch (was 1.8×, pre-Pass-2). The
+    // Pass-2 base lift + lower penalty cap raised raw macros enough that 1.8×
+    // was clipping anything above raw 78 to the 100 ceiling — 2.7% of readings
+    // were tying at exactly 100 in the 2400-reading sweep. 1.4× keeps the
+    // target mean near 55 while preserving upper-tail resolution so a 97
+    // genuinely means "extraordinary" rather than "happens 1 in 35 times."
+    const stretchedMacro = 50 + (rawMacro - 50) * 1.4;
     const macroScore = Math.max(0, Math.min(100, Math.round(stretchedMacro)));
 
     let macroVerdict: string;
