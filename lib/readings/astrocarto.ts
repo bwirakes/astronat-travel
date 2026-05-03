@@ -18,7 +18,7 @@ import { GOAL_DEFINITIONS, buildEditorialEvidence, deriveScoreNarrative } from "
 
 import { computeProgressedBands } from "@/app/lib/progressions";
 import { writeTeacherReading, type TeacherReadingInput } from "@/lib/ai/prompts/teacher-reading";
-import type { Tone } from "@/lib/ai/schemas";
+import { TeacherReadingSchema, type Tone } from "@/lib/ai/schemas";
 import { houseTopic, spellAngle, closenessBand, houseVibe } from "./house-topics";
 import { computeSynastryAspects, classifyHouseBucket, computeRecommendation } from "./synastry";
 import { buildAIInput } from "./ai-input-builder";
@@ -389,35 +389,33 @@ export async function runAstrocarto(
     teacherReading = await writeTeacherReading(aiInput);
   } catch (err: any) {
     console.warn("Teacher reading AI failed, persisting without it:", err?.message);
-    console.warn("err keys:", Object.keys(err ?? {}));
-    console.warn("err.name:", err?.name);
-    console.warn("err.cause keys:", Object.keys(err?.cause ?? {}));
-    const issues = err?.cause?.issues ?? err?.issues ?? err?.cause?.cause?.issues;
-    if (issues) {
-      console.warn("Zod issues:", JSON.stringify(issues, null, 2));
-    }
-    if (err?.text) {
-      console.warn(`Raw text length: ${err.text.length} chars`);
-      try {
-        const fs = require("node:fs");
-        fs.writeFileSync("/tmp/last-teacher-response.json", err.text);
-        console.warn("Full response written to /tmp/last-teacher-response.json");
-      } catch (e) {
-        console.warn("Could not write debug file:", e);
+    // Verbose diagnostics only outside production. Set DEBUG_TEACHER_READING=1
+    // locally to inspect the full raw response and every Zod issue.
+    if (process.env.NODE_ENV !== "production" || process.env.DEBUG_TEACHER_READING === "1") {
+      const issues = err?.cause?.issues ?? err?.issues ?? err?.cause?.cause?.issues;
+      if (issues) {
+        console.warn("Zod issues:", JSON.stringify(issues, null, 2));
       }
-      try {
-        const parsed = JSON.parse(err.text);
-        console.warn("Top-level keys present:", Object.keys(parsed));
-        // Run safeParse to capture ALL issues, not just the first one Zod
-        // stops at — the AI SDK throws on first issue.
-        const { TeacherReadingSchema } = await import("@/lib/ai/schemas");
-        const result = TeacherReadingSchema.safeParse(parsed);
-        if (!result.success) {
-          console.warn(`ALL Zod issues (${result.error.issues.length}):`,
-            JSON.stringify(result.error.issues, null, 2));
+      if (err?.text) {
+        console.warn(`Raw text length: ${err.text.length} chars`);
+        try {
+          const fs = await import("node:fs");
+          fs.writeFileSync("/tmp/last-teacher-response.json", err.text);
+          console.warn("Full response written to /tmp/last-teacher-response.json");
+        } catch (e) {
+          console.warn("Could not write debug file:", e);
         }
-      } catch (e: any) {
-        console.warn("Could not JSON.parse or safeParse:", e?.message);
+        try {
+          const parsed = JSON.parse(err.text);
+          console.warn("Top-level keys present:", Object.keys(parsed));
+          const result = TeacherReadingSchema.safeParse(parsed);
+          if (!result.success) {
+            console.warn(`ALL Zod issues (${result.error.issues.length}):`,
+              JSON.stringify(result.error.issues, null, 2));
+          }
+        } catch (e: any) {
+          console.warn("Could not JSON.parse or safeParse:", e?.message);
+        }
       }
     }
   }
