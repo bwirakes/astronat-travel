@@ -158,66 +158,77 @@ const TabEditorialSchema = z.object({
   nextTabBridge: z.string().optional(),
 });
 
+// Plain z.string() — .refine() doesn't translate into JSON Schema, so the AI
+// never sees the "≥ 2 sentences" rule; the constraint lives in the prompt
+// and we accept whatever shape the model returns.
+const ParagraphSchema = z.string().min(20);
+
 const OverviewEditorialSchema = z.object({
   scoreExplanation: z.string(),
   goalExplanation: z.string(),
-  leanInto: z.array(z.string()).max(5),
-  watchOut: z.array(z.string()).max(5),
+  // Prompt asks for 2 paragraphs; allow 1–3 so the parse doesn't reject
+  // when the model writes one denser paragraph or splits into three.
+  leanInto: z.array(ParagraphSchema).min(1).max(4),
+  watchOut: z.array(ParagraphSchema).min(1).max(4),
 });
 
 const TimingEditorialSchema = z.object({
-  activationAdvice: z.array(z.string()).max(5),
+  activationAdvice: z.array(z.string()).min(1).max(10),
   closingVerdict: z.string(),
 });
 
 export const TeacherReadingSchema = z.object({
-  // Legacy shape — kept for back-compat with cached readings.
+  // Legacy shape — kept for back-compat with cached readings written before
+  // the V4 split. Optional so the model isn't forced to generate ~15 extra
+  // nested fields the current UI doesn't read.
   summary: z.object({
     headline: z.string(),
     theRead: z.string(),
     leanInto: z.array(z.string()).max(5),
     goEasy: z.array(z.string()).max(5),
     whereYoullFeelIt: z.array(z.string()).max(5),
-  }),
+  }).optional(),
   signals: z.object({
     weather: z.array(z.object({ title: z.string(), body: z.string(), datesRange: z.string(), tone: ToneSchema })).max(3),
     moments: z.array(z.object({ title: z.string(), body: z.string(), tone: ToneSchema })).max(3),
     chart: z.array(z.object({ title: z.string(), body: z.string() })).max(3),
-  }),
+  }).optional(),
   longRead: z.object({
     thePlace: z.object({ title: z.string(), content: z.string() }),
     yourTiming: z.object({ title: z.string(), content: z.string() }),
     biggerPicture: z.object({ title: z.string(), content: z.string() }),
     howYouChangeHere: z.object({ title: z.string(), content: z.string() }),
     theCall: z.object({ title: z.string(), content: z.string() }),
-  }),
+  }).optional(),
 
-  // V4 fields — required for new readings, optional only because cached
-  // readings predate them. Once cached readings have rotated out, these can
-  // be tightened to z.array(...).min(...).
+  // V4 fields — required for new readings.
   chrome: ChromeSchema.optional(),
   editorialSpine: EditorialSpineSchema.optional(),
   tabs: z.object({
-    "overview": TabEditorialSchema.optional(),
-    "life-themes": TabEditorialSchema.optional(),
-    "place-field": TabEditorialSchema.optional(),
-    "what-shifts": TabEditorialSchema.optional(),
-    "timing": TabEditorialSchema.optional(),
-  }).optional(),
-  overview: OverviewEditorialSchema.optional(),
-  timing: TimingEditorialSchema.optional(),
+    "overview": TabEditorialSchema,
+    "life-themes": TabEditorialSchema,
+    "place-field": TabEditorialSchema,
+    "what-shifts": TabEditorialSchema,
+    "timing": TabEditorialSchema,
+  }),
+  overview: OverviewEditorialSchema,
+  timing: TimingEditorialSchema,
   hero: HeroSchema.optional(),
-  windows: z.array(WindowSchema).max(3).optional(),
-  vibes: z.array(VibeSchema).min(1).max(3).optional(),
-  monthAspects: z.array(MonthAspectSchema).max(12).optional(),
-  angleDeltas: z.array(AngleDeltaSchema).max(4).optional(),
-  planetShifts: z.array(PlanetShiftSchema).max(10).optional(),
-  aspectPlains: z.array(AspectPlainSchema).max(8).optional(),
-  weeks: z.array(WeekSchema).max(13).optional(),
-  todos: z.array(TodoSchema).min(2).max(4).optional(),
-  lineNotes: z.array(LineNoteSchema).max(8).optional(),
-  geodeticHits: z.array(GeodeticHitNoteSchema).max(8).optional(),
-  glossaryEntries: z.array(GlossaryEntrySchema).max(4).optional(),
+  // Optional sidebar arrays. Caps are loose because the prompt sets the
+  // intended count; tight caps just silently nuke the whole generation when
+  // the model goes one over. The prompt is the contract — schema is a
+  // permissive sanity check.
+  windows: z.array(WindowSchema).max(12).optional(),
+  vibes: z.array(VibeSchema).max(8).optional(),
+  monthAspects: z.array(MonthAspectSchema).max(24).optional(),
+  angleDeltas: z.array(AngleDeltaSchema).max(8).optional(),
+  planetShifts: z.array(PlanetShiftSchema).max(20).optional(),
+  aspectPlains: z.array(AspectPlainSchema).max(20).optional(),
+  weeks: z.array(WeekSchema).max(26).optional(),
+  todos: z.array(TodoSchema).max(10).optional(),
+  lineNotes: z.array(LineNoteSchema).max(20).optional(),
+  geodeticHits: z.array(GeodeticHitNoteSchema).max(20).optional(),
+  glossaryEntries: z.array(GlossaryEntrySchema).max(10).optional(),
 });
 export type TeacherReading = z.infer<typeof TeacherReadingSchema>;
 

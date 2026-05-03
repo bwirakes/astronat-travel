@@ -75,11 +75,31 @@ Fill \`summary\`, \`signals\`, and \`longRead\` as best as possible for backward
 export async function writeTeacherReading(
   input: TeacherReadingInput,
 ): Promise<TeacherReading> {
-  const { object } = await generateObject({
-    model: gemini(MODEL),
-    system: SYSTEM,
-    prompt: `${TASK_INSTRUCTIONS}\n\n<signal>\n${JSON.stringify(input, null, 2)}\n</signal>\n\nWrite the teacher reading JSON. Stay strictly inside the signal — do not invent.`,
-    schema: TeacherReadingSchema,
-  });
-  return object;
+  const inputJson = JSON.stringify(input, null, 2);
+  const t0 = Date.now();
+  console.log(`[teacher-reading] input ${inputJson.length} chars, calling ${MODEL}`);
+  try {
+    const { object, usage, finishReason } = await generateObject({
+      model: gemini(MODEL),
+      system: SYSTEM,
+      prompt: `${TASK_INSTRUCTIONS}\n\n<signal>\n${inputJson}\n</signal>\n\nWrite the teacher reading JSON. Stay strictly inside the signal — do not invent.`,
+      schema: TeacherReadingSchema,
+      // Gemini 3.x charges "thinking" tokens against maxOutputTokens. Without
+      // capping thinking, the model burns thousands of tokens reasoning and
+      // truncates the JSON mid-output. structuredOutputs forces server-side
+      // schema enforcement, which is more reliable than client-side parsing.
+      maxOutputTokens: 32768,
+      providerOptions: {
+        google: {
+          thinkingConfig: { thinkingLevel: "minimal" },
+          structuredOutputs: true,
+        },
+      },
+    });
+    console.log(`[teacher-reading] ok in ${Date.now() - t0}ms — finish=${finishReason}, usage=${JSON.stringify(usage)}`);
+    return object;
+  } catch (err: any) {
+    console.error(`[teacher-reading] failed after ${Date.now() - t0}ms — finish=${err?.finishReason ?? "?"}, textLen=${err?.text?.length ?? 0}, usage=${JSON.stringify(err?.usage ?? {})}`);
+    throw err;
+  }
 }

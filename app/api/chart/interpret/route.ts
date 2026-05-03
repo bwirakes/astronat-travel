@@ -282,7 +282,7 @@ export async function POST() {
 
   const callEssence = () =>
     generateObject({
-      model: google("gemini-2.0-flash-lite"),
+      model: google("gemini-3.1-flash-lite-preview"),
       system: SYSTEM_PROMPT,
       prompt: `Write the "chartEssence" section. Data:\n${payloadStr}
 
@@ -294,7 +294,7 @@ Do not use fluffy language. Speak with the authority of a high-end magazine feat
 
   const callHouses = () =>
     generateObject({
-      model: google("gemini-2.0-flash-lite"),
+      model: google("gemini-3.1-flash-lite-preview"),
       system: SYSTEM_PROMPT,
       prompt: `Write the "houseArchitecture" section. Data:\n${payloadStr}
 
@@ -308,7 +308,7 @@ Do not hold back. Be blunt, pragmatic, and insightful.`,
 
   const callAspects = () =>
     generateObject({
-      model: google("gemini-2.0-flash-lite"),
+      model: google("gemini-3.1-flash-lite-preview"),
       system: SYSTEM_PROMPT,
       prompt: `Write the "aspectWeaver" section. Data:\n${payloadStr}
 
@@ -320,7 +320,7 @@ Keep it brutally practical. Avoid astrological jargon without explaining the act
 
   const callAcg = () =>
     generateObject({
-      model: google("gemini-2.0-flash-lite"),
+      model: google("gemini-3.1-flash-lite-preview"),
       system: SYSTEM_PROMPT,
       prompt: `Write the "naturalAngles" section. Data:\n${payloadStr}
 
@@ -330,7 +330,7 @@ If there are strong lines (under 250km), name one and explain in plain words wha
 
   const callPlacements = () =>
     generateObject({
-      model: google("gemini-2.0-flash-lite"),
+      model: google("gemini-3.1-flash-lite-preview"),
       system: SYSTEM_PROMPT,
       prompt: `Write "placementImplications" for each natal planet in payload. Data:\n${payloadStr}
 

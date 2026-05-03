@@ -486,7 +486,7 @@ export default function ChartPage({
                     )}
 
                     {/* THE TOOLKIT */}
-                    <div className="mb-12">
+                    <div className="mt-16 mb-12">
                       <MonocleSectionHeader title="Planetary Index" />
                       <div className="border-t border-[var(--text-primary)]">
                           {displayPlanets.map(p => {
@@ -560,7 +560,7 @@ export default function ChartPage({
 
                     {/* THE MAP */}
                     {!isMundane && (
-                      <div className="mb-12">
+                      <div className="mt-16 mb-12">
                         <MonocleSectionHeader title="Natal Geography" />
                         {(!isMundane && (interpretation?.naturalAngles || interpretLoading)) ? (
                           <>
