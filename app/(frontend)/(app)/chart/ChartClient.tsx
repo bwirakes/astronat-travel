@@ -2,33 +2,16 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import ThemeToggle from "@/app/components/ThemeToggle";
 import { PageHeader } from "@/components/app/page-header-context";
-import type { NatalData } from "@/app/components/ChartWheel";
 import NatalMockupWheel, { type NatalPlanet } from "@/app/components/NatalMockupWheel";
-import { TeaserCard } from "./chart-aux-ui";
 import { PLANET_COLORS } from "@/app/lib/planet-data";
 import { AcgMap } from "@/app/components/AcgMap";
 import AcgLinesCard from "@/app/components/AcgLinesCard";
 import PlanetIcon from "@/app/components/PlanetIcon";
 import AspectIcon from "@/app/components/AspectIcon";
 import { essentialDignityLabel } from "@/app/lib/dignity";
-import { HOUSE_DOMAINS, HOUSE_DESCRIPTIONS, resolvePlacementImplication } from "@/app/lib/astro-wording";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/app/components/ui/hover-card";
-import { PlanetPlacementHoverContent } from "@/app/components/ui/planet-placement-hover-content";
+import { resolvePlacementImplication } from "@/app/lib/astro-wording";
 
-
-
-
-
-type Tab = "overview" | "map" | "aspects";
 
 const ZODIAC_SIGNS = [
   "Aries",
@@ -71,76 +54,6 @@ function isNodePlacement(planetName: string) {
   return normalized.includes("node") || normalized === "true node";
 }
 
-// ── Interpretation block (streaming-friendly) ─────────────────
-
-function InterpretationBlock({
-  section,
-  kicker,
-  loading,
-  fallback,
-  variant = "default",
-}: {
-  section?: { title: string; content: string } | null;
-  kicker: string;
-  loading?: boolean;
-  fallback?: string;
-  variant?: "default" | "hero" | "panel";
-}) {
-  if (!section) {
-    if (!loading) return null;
-    return (
-      <div style={{
-        fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--text-tertiary)",
-        padding: "1.5rem 0", letterSpacing: "0.1em", textTransform: "uppercase",
-      }} className="animate-pulse">
-        {fallback ?? "Synthesizing..."}
-      </div>
-    );
-  }
-
-  const titleSize =
-    variant === "hero" ? "clamp(1.25rem, 2.2vw, 1.6rem)"
-    : variant === "panel" ? "1.05rem"
-    : "clamp(1.1rem, 1.8vw, 1.3rem)";
-  const bodySize = "0.95rem";
-
-  const wrapperStyle: React.CSSProperties = variant === "panel"
-    ? {
-        display: "flex", flexDirection: "column", gap: "0.45rem",
-        background: "var(--surface)", border: "1px solid var(--surface-border)",
-        borderRadius: "var(--radius-md)", padding: "1rem 1.25rem",
-      }
-    : { display: "flex", flexDirection: "column", gap: "0.5rem" };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      style={wrapperStyle}
-    >
-      <div style={{
-        fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.2em",
-        color: "var(--text-tertiary)", textTransform: "uppercase", fontWeight: 600,
-      }}>
-        {kicker}
-      </div>
-      <h3 style={{
-        fontFamily: "var(--font-secondary, var(--font-primary))", fontSize: titleSize,
-        margin: 0, lineHeight: 1.2, color: "var(--text-primary)",
-      }}>
-        {section.title}
-      </h3>
-      <p style={{
-        fontFamily: "var(--font-body)", fontSize: bodySize, lineHeight: 1.55,
-        color: "var(--text-secondary)", margin: 0, whiteSpace: "pre-wrap",
-      }}>
-        {section.content}
-      </p>
-    </motion.div>
-  );
-}
-
 function MonocleSectionHeader({ title }: { title: string }) {
   return (
     <div className="mb-6">
@@ -169,8 +82,6 @@ export default function ChartPage({
   countryName?: string,
   initialNatalData?: any
 } = {}) {
-  const searchParams = useSearchParams();
-  const [tab, setTab] = useState<Tab>("overview");
   const [computedLines, setComputedLines] = useState<{planet: string, angle: string, distance_km: number}[]>([]);
   const [isDark, setIsDark] = useState(true);
   const [loading, setLoading] = useState(!initialNatalData && (!isMundane || !!countrySlug));
@@ -230,8 +141,6 @@ export default function ChartPage({
   // Guard: only ever kick off one interpret fetch per page load
   const interpretStartedRef = useRef(false);
 
-  // Which Big Three card is expanded ("Ascendant" | "Sun" | "Moon" | null)
-  const [expandedBig3, setExpandedBig3] = useState<string | null>(null);
   // Which planet accordion row is open (driven by wheel tap OR direct accordion tap)
   const [openPlanet, setOpenPlanet] = useState<string | null>(null);
 
@@ -244,93 +153,99 @@ export default function ChartPage({
   };
 
   useEffect(() => {
-    if (!initialNatalData) {
-      if (isMundane && !countrySlug) {
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      const endpoint = isMundane ? `/api/mundane-natal?slug=${countrySlug}` : "/api/natal";
-      fetch(endpoint)
-        .then(async r => {
-          if (!r.ok) {
-            let err = { error: "Failed to fetch natal data" };
-            try { err = await r.json(); } catch(e) {}
-            return { __error: err.error || "Failed to fetch natal data", status: r.status };
-          }
-          return r.json();
-        })
-        .then(data => {
-            if (data && data.__error) {
-              setError(data.__error);
-              if (data.status === 401 && typeof window !== 'undefined') {
-                 window.location.href = '/login';
-              }
-              return;
-            }
-            if (data && data.planets) {
-                const combined = [...data.planets, ...(data.angles || [])];
-                setRealPlanets(combined);
-                setRealAspects(data.aspects || []);
-                
-                const formatNatal: any = {
-                  houses: data.cusps,
-                  first_name: data.first_name,
-                  last_name: data.last_name,
-                  birth_city: data.birth_city,
-                  birth_date: data.birth_date,
-                  birth_time: data.birth_time,
-                  birth_lon: data.birth_lon,
-                  birth_lat: data.birth_lat,
-                  profile_time: data.profile_time,
-                  interpretation: data.interpretation ?? null,
-                };
-                if (data.interpretation) setInterpretation(data.interpretation);
-                combined.forEach((p: any) => { 
-                   formatNatal[p.name.toLowerCase()] = { 
-                     longitude: p.longitude,
-                     latitude: p.latitude
-                   }; 
-                });
-                setRealNatal(formatNatal);
-            }
-        })
-        .catch(err => {
-          console.error(err);
-          setError(err.message);
-        })
-        .finally(() => setLoading(false));
+    if (initialNatalData) return;
+    if (isMundane && !countrySlug) {
+      setLoading(false);
+      return;
     }
-  }, []);
+
+    const controller = new AbortController();
+    setLoading(true);
+    const endpoint = isMundane ? `/api/mundane-natal?slug=${countrySlug}` : "/api/natal";
+
+    (async () => {
+      try {
+        const r = await fetch(endpoint, { signal: controller.signal });
+        if (!r.ok) {
+          const errBody = await r.json().catch(() => ({}));
+          if (r.status === 401) {
+            // Component is still mounted (signal not aborted) — safe to redirect
+            window.location.href = "/login";
+            return;
+          }
+          throw new Error(errBody.error || `Failed to fetch natal data (HTTP ${r.status})`);
+        }
+
+        const data = await r.json();
+        if (controller.signal.aborted) return;
+        if (!data?.planets) return;
+
+        const combined = [...data.planets, ...(data.angles || [])];
+        setRealPlanets(combined);
+        setRealAspects(data.aspects || []);
+
+        const formatNatal: any = {
+          houses: data.cusps,
+          first_name: data.first_name,
+          last_name: data.last_name,
+          birth_city: data.birth_city,
+          birth_date: data.birth_date,
+          birth_time: data.birth_time,
+          birth_lon: data.birth_lon,
+          birth_lat: data.birth_lat,
+          profile_time: data.profile_time,
+          interpretation: data.interpretation ?? null,
+        };
+        if (data.interpretation) setInterpretation(data.interpretation);
+        combined.forEach((p: any) => {
+          formatNatal[p.name.toLowerCase()] = {
+            longitude: p.longitude,
+            latitude: p.latitude,
+          };
+        });
+        setRealNatal(formatNatal);
+      } catch (err: any) {
+        if (err?.name === "AbortError") return;
+        console.error(err);
+        setError(err?.message ?? "Failed to fetch natal data");
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    })();
+
+    return () => controller.abort();
+  }, [initialNatalData, isMundane, countrySlug]);
 
   // Fetch interpretation once natal data is available. Streams NDJSON; sections
   // render progressively as each Gemini call completes.
   useEffect(() => {
     if (isMundane || !realNatal) return;
     if (interpretStartedRef.current) return;
-    // If cached interpretation already covers all sections, skip
     if (interpretation?.placementImplications) return;
 
     interpretStartedRef.current = true;
-    let cancelled = false;
+    const controller = new AbortController();
     setInterpretLoading(true);
-    console.log("[interpret] fetching /api/chart/interpret...");
 
     (async () => {
+      let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
       try {
-        const res = await fetch("/api/chart/interpret", { method: "POST" });
-        console.log("[interpret] response status:", res.status);
+        const res = await fetch("/api/chart/interpret", {
+          method: "POST",
+          signal: controller.signal,
+        });
         if (!res.ok || !res.body) {
           const err = await res.json().catch(() => ({}));
           throw new Error(err.error || `HTTP ${res.status}`);
         }
 
-        const reader = res.body.getReader();
+        reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
         const acc: Record<string, any> = {};
 
-        while (!cancelled) {
+        while (true) {
+          if (controller.signal.aborted) break;
           const { done, value } = await reader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
@@ -353,15 +268,18 @@ export default function ChartPage({
             }
           }
         }
-      } catch (err) {
+      } catch (err: any) {
+        if (err?.name === "AbortError") return;
         console.error("[interpret] stream failed:", err);
       } finally {
-        if (!cancelled) setInterpretLoading(false);
+        if (!controller.signal.aborted) setInterpretLoading(false);
       }
     })();
 
-    return () => { cancelled = true; };
-  // Only re-run when realNatal first becomes available — not on every stream tick
+    return () => {
+      controller.abort();
+    };
+  // realNatal identity changes are the trigger; interpretStartedRef guards re-entry
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [realNatal, isMundane]);
 
