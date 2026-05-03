@@ -5,6 +5,7 @@ import {
     HERO_LABELS,
     WINDOW_LABELS,
     WINDOW_RATIONALES,
+    computeCoherence,
     heroBand,
     verdictBand,
     verdictTone,
@@ -90,6 +91,43 @@ describe("HERO_BAND_LABEL is exhaustive over HeroBand", () => {
     const heroBands: HeroBand[] = ["peak", "solid", "mixed", "tough"];
     it.each(heroBands.map((band) => [band]))("has %s", (band) => {
         expect(HERO_BAND_LABEL[band]).toBeTruthy();
+    });
+});
+
+describe("computeCoherence", () => {
+    it("returns 100 when both partners score identically", () => {
+        expect(computeCoherence(72, 72)).toBe(100);
+        expect(computeCoherence(30, 30)).toBe(100);
+        expect(computeCoherence(0, 0)).toBe(100);
+    });
+
+    it("treats two coherently-low scores as coherent (not incoherent)", () => {
+        // Two partners both at 30 is a coherent 'tough match', not an
+        // incoherent reading. The hero pill surfaces the underlying band
+        // separately; coherence isolates alignment from absolute score.
+        expect(computeCoherence(30, 30)).toBe(100);
+    });
+
+    it("scales linearly with the absolute delta", () => {
+        expect(computeCoherence(80, 70)).toBe(90);
+        expect(computeCoherence(80, 50)).toBe(70);
+        expect(computeCoherence(80, 20)).toBe(40);
+    });
+
+    it("is symmetric in its arguments", () => {
+        expect(computeCoherence(80, 50)).toBe(computeCoherence(50, 80));
+        expect(computeCoherence(95, 12)).toBe(computeCoherence(12, 95));
+    });
+
+    it("floors at 0 for the maximum delta", () => {
+        expect(computeCoherence(100, 0)).toBe(0);
+        expect(computeCoherence(0, 100)).toBe(0);
+    });
+
+    it("rounds the result to an integer", () => {
+        // delta 7.5 → coherence 92.5 → 93 (round-half-to-even gives 92, but
+        // Math.round in JS rounds half-to-positive-infinity so it's 93).
+        expect(Number.isInteger(computeCoherence(80, 72.5))).toBe(true);
     });
 });
 

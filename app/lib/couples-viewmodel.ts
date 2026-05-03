@@ -131,6 +131,19 @@ const ZODIAC = [
   "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces",
 ] as const;
 
+const ELEMENT_OF: Record<string, "Fire" | "Earth" | "Air" | "Water"> = {
+  Aries: "Fire",  Leo: "Fire",   Sagittarius: "Fire",
+  Taurus: "Earth", Virgo: "Earth", Capricorn: "Earth",
+  Gemini: "Air",  Libra: "Air",  Aquarius: "Air",
+  Cancer: "Water", Scorpio: "Water", Pisces: "Water",
+};
+
+const MODALITY_OF: Record<string, "Cardinal" | "Fixed" | "Mutable"> = {
+  Aries: "Cardinal", Cancer: "Cardinal", Libra: "Cardinal", Capricorn: "Cardinal",
+  Taurus: "Fixed",   Leo: "Fixed",       Scorpio: "Fixed",  Aquarius: "Fixed",
+  Gemini: "Mutable", Virgo: "Mutable",   Sagittarius: "Mutable", Pisces: "Mutable",
+};
+
 const HOUSE_LABEL: Record<number, string> = {
   1: "Identity",  2: "Resources", 3: "Voice",      4: "Home",
   5: "Romance",   6: "Routine",   7: "Partnership", 8: "Intimacy",
@@ -341,7 +354,7 @@ export function toCouplesViewModel(reading: any): CouplesVM {
  *  Fallback for old rows: build a degraded series from `houseComparison`
  *  if available, else map LIFE_EVENTS to user/partner macroScore (a flat
  *  approximation but an honest one — the page will still render). */
-function buildEventScores(reading: any): PartnerEventScore[] {
+export function buildEventScores(reading: any): PartnerEventScore[] {
   const userEvents: FinalEventScore[] = Array.isArray(reading.eventScores) ? reading.eventScores : [];
   const partnerEvents: FinalEventScore[] = Array.isArray(reading.partnerEventScores) ? reading.partnerEventScores : [];
 
@@ -360,7 +373,7 @@ function buildEventScores(reading: any): PartnerEventScore[] {
   return LIFE_EVENTS.map((name) => ({ event: name, you: youMacro, partner: partnerMacro }));
 }
 
-function sortEventsByGoals(events: PartnerEventScore[], goals: GoalId[]): PartnerEventScore[] {
+export function sortEventsByGoals(events: PartnerEventScore[], goals: GoalId[]): PartnerEventScore[] {
   const priority = goals.flatMap((g) => GOAL_TO_EVENTS[g]);
   const seen = new Set<string>();
   const head: PartnerEventScore[] = [];
@@ -375,13 +388,7 @@ function sortEventsByGoals(events: PartnerEventScore[], goals: GoalId[]): Partne
 
 /** Mode of element across the 10 bodies, weighted by luminaries 2x.
  *  Returns a friendly phrase like "Air-heavy" or "Water-anchored". */
-function dominantElement(planets: Array<{ planet: string; longitude: number }>): string {
-  const ELEMENT_OF: Record<string, string> = {
-    Aries: "Fire", Leo: "Fire", Sagittarius: "Fire",
-    Taurus: "Earth", Virgo: "Earth", Capricorn: "Earth",
-    Gemini: "Air", Libra: "Air", Aquarius: "Air",
-    Cancer: "Water", Scorpio: "Water", Pisces: "Water",
-  };
+export function dominantElement(planets: Array<{ planet: string; longitude: number }>): string {
   const tally: Record<string, number> = { Fire: 0, Earth: 0, Air: 0, Water: 0 };
   for (const p of planets) {
     const sign = signFromLon(p.longitude);
@@ -398,12 +405,7 @@ function dominantElement(planets: Array<{ planet: string; longitude: number }>):
        : "Mixed";
 }
 
-function dominantModality(planets: Array<{ planet: string; longitude: number }>): string {
-  const MODALITY_OF: Record<string, string> = {
-    Aries: "Cardinal", Cancer: "Cardinal", Libra: "Cardinal", Capricorn: "Cardinal",
-    Taurus: "Fixed",   Leo: "Fixed",       Scorpio: "Fixed",  Aquarius: "Fixed",
-    Gemini: "Mutable", Virgo: "Mutable",   Sagittarius: "Mutable", Pisces: "Mutable",
-  };
+export function dominantModality(planets: Array<{ planet: string; longitude: number }>): string {
   const tally: Record<string, number> = { Cardinal: 0, Fixed: 0, Mutable: 0 };
   for (const p of planets) {
     const sign = signFromLon(p.longitude);
@@ -418,7 +420,7 @@ function dominantModality(planets: Array<{ planet: string; longitude: number }>)
 
 /** Top 3 placements by editorial weight: angular planets first (within 8°
  *  of any angle), then luminaries by tightness, then dignified planets. */
-function topStandoutPlacements(
+export function topStandoutPlacements(
   planets: Array<{ planet: string; longitude: number }>,
   cusps: number[],
   _destination: string,
@@ -476,27 +478,28 @@ function relocNote(standout: StandoutPlacement[], _which: "you" | "partner", des
   return top.note;
 }
 
-function relocSummary(
+export function relocSummary(
   youAsc: { sign: string }, ptnrAsc: { sign: string },
   youMc: { sign: string },  ptnrMc: { sign: string },
 ): string {
-  const ELEMENT_OF: Record<string, string> = {
-    Aries: "fire", Leo: "fire", Sagittarius: "fire",
-    Taurus: "earth", Virgo: "earth", Capricorn: "earth",
-    Gemini: "air", Libra: "air", Aquarius: "air",
-    Cancer: "water", Scorpio: "water", Pisces: "water",
-  };
-  const ascSame = ELEMENT_OF[youAsc.sign] === ELEMENT_OF[ptnrAsc.sign];
-  const mcSame  = ELEMENT_OF[youMc.sign]  === ELEMENT_OF[ptnrMc.sign];
+  const youAscEl  = ELEMENT_OF[youAsc.sign];
+  const ptnrAscEl = ELEMENT_OF[ptnrAsc.sign];
+  const youMcEl   = ELEMENT_OF[youMc.sign];
+  const ptnrMcEl  = ELEMENT_OF[ptnrMc.sign];
+  const ascSame = !!youAscEl && youAscEl === ptnrAscEl;
+  const mcSame  = !!youMcEl  && youMcEl  === ptnrMcEl;
+
+  const ascLower = youAscEl?.toLowerCase() ?? "—";
+  const mcLower  = youMcEl?.toLowerCase()  ?? "—";
 
   if (ascSame && mcSame) {
-    return `Both ASCs land in ${ELEMENT_OF[youAsc.sign]}, both MCs in ${ELEMENT_OF[youMc.sign]}. The felt and public worlds are in tune here.`;
+    return `Both ASCs land in ${ascLower}, both MCs in ${mcLower}. The felt and public worlds are in tune here.`;
   }
   if (ascSame) {
-    return `Both ASCs land in ${ELEMENT_OF[youAsc.sign]} — the felt language of the place is shared. The MCs differ, so your public ambitions point in different directions here.`;
+    return `Both ASCs land in ${ascLower} — the felt language of the place is shared. The MCs differ, so your public ambitions point in different directions here.`;
   }
   if (mcSame) {
-    return `Both MCs land in ${ELEMENT_OF[youMc.sign]} — your public bearings point the same way here. The ASCs differ, so the felt experience varies between you.`;
+    return `Both MCs land in ${mcLower} — your public bearings point the same way here. The ASCs differ, so the felt experience varies between you.`;
   }
   return "Different elements on every angle — this place asks two different things from each of you.";
 }
@@ -603,11 +606,14 @@ function shortenWindow(s: string): string {
   return dash > 0 ? s.slice(0, dash) : s;
 }
 
+// TODO(couples): persist a real travel-date range on the synastry reading
+// record. Today the model has a single travelDate; we synthesise a ±5-day
+// window so the magazine layout has something to render. Replace once the
+// wizard captures a range.
 function formatDateRange(travelDate: unknown): string {
   if (typeof travelDate !== "string") return "DATES TBD";
   const d = new Date(travelDate);
   if (isNaN(d.getTime())) return "DATES TBD";
-  // Magazine layout shows a range — derive ±5 days from the anchor for v1.
   const start = new Date(d.getTime() - 5 * 86_400_000);
   const end   = new Date(d.getTime() + 5 * 86_400_000);
   const fmt = (x: Date) => x.toLocaleDateString("en-US", { month: "short", day: "numeric" }).toUpperCase();

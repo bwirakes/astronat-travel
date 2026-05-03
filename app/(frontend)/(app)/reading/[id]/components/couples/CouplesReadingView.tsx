@@ -19,7 +19,7 @@ import { useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import NatalMockupWheel from "@/app/components/NatalMockupWheel";
-import { EVENT_LABELS, type VerdictBand } from "@/app/lib/verdict";
+import { EVENT_LABELS, verdictBand, type VerdictBand } from "@/app/lib/verdict";
 import type { CouplesVM, PartnerEventScore, ChartTabVM, SynastryAspectVM } from "@/app/lib/couples-viewmodel";
 
 // ═══════════════════════════════════════════════════════════════
@@ -449,8 +449,8 @@ function GoalComparison({
 }
 
 function EventRow({ ev, pinned, divider }: { ev: PartnerEventScore; pinned: boolean; divider: boolean }) {
-  const youBand     = bandFor(ev.you);
-  const partnerBand = bandFor(ev.partner);
+  const youBand     = verdictBand(ev.you);
+  const partnerBand = verdictBand(ev.partner);
   const delta = Math.abs(ev.you - ev.partner);
   const showDelta = delta >= 15;
 
@@ -509,15 +509,6 @@ function BarCell({ score, color }: { score: number; color: string }) {
   );
 }
 
-// Local mirror of verdictBand to avoid importing the function inside a
-// presentational component file. Bands are stable and small.
-function bandFor(score: number): VerdictBand {
-  if (score >= 80) return "peak";
-  if (score >= 65) return "solid";
-  if (score >= 50) return "mixed";
-  if (score >= 35) return "tight";
-  return "hard";
-}
 
 // ═══════════════════════════════════════════════════════════════
 // §03 TIMINGS
