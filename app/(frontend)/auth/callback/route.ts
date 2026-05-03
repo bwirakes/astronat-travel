@@ -28,7 +28,12 @@ export async function GET(request: Request) {
         }
 
         // Onboarded users honour `next` if provided, else land on /dashboard.
-        const dest = next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard'
+        // Reject "/" so authenticated users don't end up on the public
+        // marketing root after sign-in.
+        const dest =
+          next && next.startsWith('/') && !next.startsWith('//') && next !== '/'
+            ? next
+            : '/dashboard'
         return NextResponse.redirect(`${origin}${dest}`)
       }
     }
