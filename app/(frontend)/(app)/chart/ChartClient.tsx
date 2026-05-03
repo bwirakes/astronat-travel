@@ -653,8 +653,8 @@ export default function ChartPage({
                             ) : (
                                <div className="animate-pulse" style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-tertiary)" }}>Reading geography...</div>
                             )}
-                          </div>
-                        )}
+                          </>
+                        ) : null}
                         <div style={{ background: "color-mix(in srgb, var(--surface-border) 15%, transparent)", padding: "1rem", border: "1px solid var(--surface-border)" }}>
                           <AcgMap
                             natal={natal!}
