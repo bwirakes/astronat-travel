@@ -19,7 +19,9 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
 
 function sanitizeNext(raw: string | null): string {
   // Only allow same-origin relative paths to avoid open-redirect.
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/dashboard"
+  // Reject "/" — that's the marketing root; authenticated users belong on
+  // /dashboard, not the public landing page.
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw === "/") return "/dashboard"
   return raw
 }
 
