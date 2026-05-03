@@ -340,6 +340,7 @@ export async function runAstrocarto(
       acgLines: pAcgLines,
       relocatedCusps: pRelocatedCusps,
       eventScores: pEventScores,
+      rawTransits: pRawTransits,
     };
   }
 
@@ -417,6 +418,65 @@ export async function runAstrocarto(
           console.warn("Could not JSON.parse or safeParse:", e?.message);
         }
       }
+    }
+  }
+
+  let couplesReading: any = undefined;
+  if (readingCategory === "synastry" && partnerMatrix && synastryDerived) {
+    try {
+      const { buildCouplesAIInput } = await import("./ai-couples-input-builder");
+      const { writeCouplesReading } = await import("@/lib/ai/prompts/couples-reading");
+      const { toCouplesViewModel } = await import("@/app/lib/couples-viewmodel");
+
+      const mockReading = {
+        destination,
+        travelDate,
+        goals: selectedGoals,
+        partnerName: partnerProfile?.first_name ?? "Partner",
+        
+        userMacroScore: matrixResult.macroScore,
+        userMacroVerdict: matrixResult.macroVerdict,
+        partnerMacroScore: partnerMatrix.macroScore,
+        partnerMacroVerdict: partnerMatrix.macroVerdict,
+        
+        scoreDelta: synastryDerived.scoreDelta,
+        averageScore: synastryDerived.averageScore,
+        recommendation: synastryDerived.recommendation,
+        
+        // Match the shape expected by toCouplesViewModel
+        userHouses: matrixResult.houses.map((h: any) => ({ house: h.house, score: h.score })),
+        userPlanetaryLines: acgLines,
+        userRelocatedCusps: relocatedCusps,
+        userEventScores: eventScores,
+        natalPlanets: natalPlanets,
+        
+        partnerHouses: partnerMatrix.houses,
+        partnerPlanetaryLines: partnerMatrix.acgLines,
+        partnerRelocatedCusps: partnerMatrix.relocatedCusps,
+        partnerEventScores: partnerMatrix.eventScores,
+        partnerNatalPlanets: partnerNatalPlanets,
+        
+        houseComparison: synastryDerived.houseComparison,
+        synastryAspects,
+        
+        details: {} // the viewmodel sometimes looks at reading.details
+      };
+
+      const vm = toCouplesViewModel(mockReading);
+      const couplesInput = buildCouplesAIInput({
+        viewmodel: vm,
+        travelDate: travelDate ?? null,
+        acgLinesYou: acgLines,
+        acgLinesPartner: partnerMatrix.acgLines,
+        rawTransitsYou: rawTransits,
+        rawTransitsPartner: partnerMatrix.rawTransits,
+        natalPlanetsYou: natalPlanets,
+        natalPlanetsPartner: partnerNatalPlanets ?? [],
+      });
+
+      couplesReading = await writeCouplesReading(couplesInput);
+    } catch (err: any) {
+      console.warn("Couples reading AI failed, persisting without it:", err?.message);
     }
   }
 
@@ -498,6 +558,7 @@ export async function runAstrocarto(
       ? { modalityCohorts: matrixResult.modalityCohorts }
       : {}),
     ...(teacherReading ? { teacherReading } : {}),
+    ...(couplesReading ? { couplesReading } : {}),
     ...(partnerNatalPlanets ? { partnerNatalPlanets, synastryAspects } : {}),
     ...(partnerMatrix && synastryDerived
       ? {
