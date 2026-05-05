@@ -660,11 +660,33 @@ export function buildArrivalScores(
     );
     if (months.length < 3) return [];
 
+    // Honesty cutoff: months past the last available transit hit get scored
+    // at baseline by buildMonthlySeries (no hits in range → no delta from
+    // baseline). Without filtering, every tail month would rank as a
+    // legitimate "steady" arrival — but it's not steady, it's unknown.
+    // Drop any candidate whose M+2 lookahead month extends past the data we
+    // actually have. Result: a legacy reading with 9 months of forward hits
+    // surfaces at most 7 candidates (M / M+1 / M+2 must all sit within the
+    // 9-month coverage), not 12 phantom ones.
+    const lastHitTime = transits.reduce((max, t) => {
+        const tT = new Date(t.date).getTime();
+        return isFinite(tT) && tT > max ? tT : max;
+    }, -Infinity);
+    const hasCoverage = (m2: MonthlyScore): boolean => {
+        if (!isFinite(lastHitTime)) return false;
+        // M+2 is fully covered iff its first day is at or before the last hit.
+        // Boundary case: a hit on the 1st of M+2 itself counts as coverage.
+        return new Date(m2.monthISO).getTime() <= lastHitTime;
+    };
+
     const out: ArrivalCandidate[] = [];
     for (let i = 0; i < candidateCount; i++) {
         const m0 = months[i];
         const m1 = months[i + 1];
         const m2 = months[i + 2];
+
+        if (!hasCoverage(m2)) break;
+
 
         const arcScore = Math.round(
             m0.score * ARRIVAL_ARC_WEIGHTS[0]

@@ -27,7 +27,7 @@ import {
     type ArrivalCandidate,
 } from "./window-scoring";
 import { READING_TABS, READING_TAB_IDS, deriveScoreNarrative, type EvidencePoint, type ReadingTabDefinition, type ReadingTabId, type ScoreNarrative } from "./reading-tabs";
-import { HERO_BAND_LABEL, heroBand, type HeroBand } from "./verdict";
+import { HERO_BAND_LABEL, heroBand, verdictBand, verdictTone, type HeroBand } from "./verdict";
 
 // ─── Output shape ─────────────────────────────────────────────────────
 
@@ -1914,14 +1914,16 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
         return buildArrivalScores(travelDateISO, _tw, _baseline, goalIds, 12);
     })();
 
-    // Floor check: when the strongest arrival arc still scores below the
-    // mixed/tough boundary (50, matching verdictBand), no calendar month
-    // opens this place easily. Surfaced for the future prompt change so the
-    // AI can write honest copy ("least rough door" rather than "peak").
+    // Floor check: when even the strongest arrival arc lands in the "press"
+    // tone (tight or hard), no calendar month opens this place easily.
+    // Reuses verdictBand so the threshold tracks the single source of truth
+    // — if the band cutlines move, this moves with them. Surfaced for the
+    // future prompt change so the AI can write honest copy ("least rough
+    // door" rather than "peak").
     const placeFloorTripped: boolean = (() => {
         if (travelType !== "relocation" || !arrivalCandidates.length) return false;
         const topArc = Math.max(...arrivalCandidates.map(c => c.arcScore));
-        return topArc < 50;
+        return verdictTone(verdictBand(topArc)) === "press";
     })();
 
     // Pin the hero window's headline score to the persisted `heroWindowScore`

@@ -40,6 +40,21 @@ function malefic(date: string, opts: Partial<TransitHit> = {}): TransitHit {
     };
 }
 
+/** Synthetic far-future hit. buildArrivalScores drops candidates whose M+2
+ *  lookahead extends past the last available transit hit (otherwise the tail
+ *  ranks as "steady" against missing data). Tests that exercise scoring math
+ *  with sparse hits append this so all candidates pass the coverage cutoff. */
+const HORIZON: TransitHit = {
+    date: "2027-12-31",
+    transit_planet: "Pluto",
+    natal_planet: "Mercury",
+    aspect: "Sextile",
+    orb: 2.9,
+    applying: false,
+    benefic: false,
+    retrograde: false,
+};
+
 const BASELINE = 60;
 
 describe("buildMonthlySeries", () => {
@@ -163,7 +178,7 @@ describe("buildMonthlyHighlights", () => {
 
 describe("buildArrivalScores", () => {
     it("returns one candidate per requested month, calendar-aligned", () => {
-        const candidates = buildArrivalScores("2026-05-15", [], BASELINE, [], 6);
+        const candidates = buildArrivalScores("2026-05-15", [HORIZON], BASELINE, [], 6);
         expect(candidates).toHaveLength(6);
         expect(candidates[0].monthISO).toBe("2026-05-01");
         expect(candidates[0].monthLabel).toBe("May 2026");
@@ -178,6 +193,7 @@ describe("buildArrivalScores", () => {
             benefic("2026-05-10"),
             benefic("2026-05-15", { transit_planet: "Venus", natal_planet: "Moon", aspect: "Sextile" }),
             benefic("2026-05-20", { transit_planet: "Sun", natal_planet: "Jupiter", aspect: "Trine" }),
+            HORIZON,
         ];
         const candidates = buildArrivalScores("2026-05-01", hits, BASELINE, [], 3);
         // May arrival: M lifted, M+1 and M+2 baseline → arc lifted but less
@@ -200,6 +216,7 @@ describe("buildArrivalScores", () => {
             benefic("2026-06-15", { transit_planet: "Venus", natal_planet: "Moon", aspect: "Sextile" }),
             malefic("2026-11-10"),
             malefic("2026-11-20", { transit_planet: "Mars", natal_planet: "Sun", aspect: "Opposition" }),
+            HORIZON,
         ];
         const candidates = buildArrivalScores("2026-05-01", hits, BASELINE, [], 12);
         // candidates[1] = June arrival (lifted M0, baseline M+1, M+2)
@@ -213,13 +230,15 @@ describe("buildArrivalScores", () => {
             benefic("2026-05-10"),
             benefic("2026-05-15", { transit_planet: "Venus", natal_planet: "Moon", aspect: "Sextile" }),
             benefic("2026-05-20", { transit_planet: "Mercury", natal_planet: "Mars", aspect: "Trine" }),
+            HORIZON,
         ];
         const c = buildArrivalScores("2026-05-01", front, BASELINE, [], 1);
         expect(c[0].settlingArcDescriptor).toBe("front-loaded");
         expect(c[0].hardestSubmonth).toBeDefined();
 
-        // Flat → steady, no hardestSubmonth
-        const flat = buildArrivalScores("2026-05-01", [], BASELINE, [], 1);
+        // Flat → steady, no hardestSubmonth. HORIZON-only contributes ~1 point
+        // to the December 2027 baseline; doesn't affect descriptor classification.
+        const flat = buildArrivalScores("2026-05-01", [HORIZON], BASELINE, [], 1);
         expect(flat[0].settlingArcDescriptor).toBe("steady");
         expect(flat[0].hardestSubmonth).toBeUndefined();
     });
@@ -230,6 +249,7 @@ describe("buildArrivalScores", () => {
             benefic("2026-07-10"),
             benefic("2026-07-15", { transit_planet: "Venus", natal_planet: "Moon", aspect: "Sextile" }),
             benefic("2026-07-20", { transit_planet: "Mercury", natal_planet: "Mars", aspect: "Trine" }),
+            HORIZON,
         ];
         const c = buildArrivalScores("2026-05-01", back, BASELINE, [], 1);
         expect(c[0].settlingArcDescriptor).toBe("back-loaded");
@@ -240,12 +260,31 @@ describe("buildArrivalScores", () => {
         expect(buildArrivalScores("2026-05-01", [], BASELINE, [], 0)).toEqual([]);
     });
 
+    it("drops candidates whose M+2 lookahead extends past the data range", () => {
+        // Hits only through July 2026. Anchor May 2026, asking for 12 candidates.
+        // Coverage rule: candidate i is kept iff its M+2 month start is at or
+        // before the last hit. With lastHit = July 2026:
+        //   i=0 (May): M+2=July → covered (Jul 1 ≤ Jul 31)
+        //   i=1 (Jun): M+2=Aug → not covered (Aug 1 > Jul 31)
+        // So only candidate 0 should survive. Without this filter, candidates
+        // 1-11 would all rank as "steady" against missing data, lying about
+        // months the engine has no hits for.
+        const hits = [
+            benefic("2026-05-10"),
+            benefic("2026-07-31"),
+        ];
+        const candidates = buildArrivalScores("2026-05-01", hits, BASELINE, [], 12);
+        expect(candidates).toHaveLength(1);
+        expect(candidates[0].monthLabel).toBe("May 2026");
+    });
+
     it("dedupes drivers across the 3 months of the arc", () => {
         // Same Saturn-Sun-Square hit appearing in M0 and M1 should not show up
         // twice in the candidate's drivers.
         const hits = [
             malefic("2026-05-10", { orb: 2.0 }),
             malefic("2026-06-10", { orb: 0.5 }),
+            HORIZON,
         ];
         const c = buildArrivalScores("2026-05-01", hits, BASELINE, [], 1);
         const occurrences = c[0].drivers.filter(d => d.includes("Saturn Square natal Moon")).length;

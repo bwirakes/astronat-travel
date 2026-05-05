@@ -139,13 +139,15 @@ export default function OverviewTab({ vm, copiedTab }: Props) {
                     </div>
                 </div>
 
-                {/* Travel windows summary */}
+                {/* Travel windows / arrival months summary — heading swaps by grain
+                    so the relocation rows ("Your move month / Strongest alternate / …")
+                    don't appear under a "Travel Windows" heading. */}
                 <div className="border-t pt-[clamp(32px,5vw,48px)] pb-[clamp(24px,3vw,32px)]" style={{ borderColor: "var(--surface-border)" }}>
                     <h3
                         className="tracking-[-0.01em] m-0 mb-[24px]"
                         style={{ fontFamily: FONT_PRIMARY, fontSize: "clamp(26px, 3.5vw, 32px)", color: "var(--text-primary)" }}
                     >
-                        Travel Windows
+                        {vm.timeline.grain === "month" ? "Best months to arrive" : "Travel Windows"}
                     </h3>
                     <WindowsList vm={vm} limit={3} />
                 </div>
