@@ -1920,6 +1920,12 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
     // — if the band cutlines move, this moves with them. Surfaced for the
     // future prompt change so the AI can write honest copy ("least rough
     // door" rather than "peak").
+    //
+    // Note: arc score is a weighted average of three monthly scores, so its
+    // distribution is tighter than a single-window score under the same
+    // band cutlines. The flag is therefore *more conservative* than a
+    // per-month tone check would be — that's deliberate ("no month opens
+    // this place easily" should be a strong claim, not a noisy one).
     const placeFloorTripped: boolean = (() => {
         if (travelType !== "relocation" || !arrivalCandidates.length) return false;
         const topArc = Math.max(...arrivalCandidates.map(c => c.arcScore));

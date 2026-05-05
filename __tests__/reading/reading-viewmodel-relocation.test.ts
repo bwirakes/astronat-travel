@@ -117,21 +117,51 @@ describe("toV4ViewModel · relocation grain", () => {
         expect(maxExitDay).toBeGreaterThan(90);
     });
 
-    it("trips placeFloorTripped when no arrival arc clears the press boundary", () => {
-        // Every month dragged by malefics → all arc scores in the press tone
-        // (tight or hard, score < 50). Floor flag must be true.
+    // Two cases that disambiguate baseline vs transit signal: the floor is
+    // computed from arrival-arc scores (baseline + transit delta), so a test
+    // that varies both at once can't prove the flag actually consumes the
+    // arc rather than the macro alone. Each baseline is parked just on the
+    // *opposite* side of the 50 (mixed/press) boundary from where the
+    // transit-modulated arc lands — so the flag's value is determined by
+    // the arc, not the baseline:
+    //
+    //   Case A: baseline 55 (mixed, neutral tone) + goal-malefic transits →
+    //     arc 47 (tight, press) → flag trips. Proves transits push it in.
+    //   Case B: baseline 49 (tight, press tone) + goal-benefic transits →
+    //     arc 57 (mixed, neutral) → flag doesn't trip. Proves transits
+    //     pull it out.
+    //
+    // (Goal mul: relocation goal targets natal Moon/IC; we use Saturn-Square-
+    //  Moon and Jupiter-Trine-Moon so the 1.6× boost applies.)
+    it("trips placeFloorTripped when transits push a mixed-baseline arc into press", () => {
         const allMalefic = Array.from({ length: 14 }, (_, i) => {
             const monthStart = new Date(Date.UTC(2026, 4 + i, 15));
             return malefic(monthStart.toISOString().slice(0, 10));
         });
         const vm = toV4ViewModel(relocationReading({
-            macroScore: 35,
+            macroScore: 55,
             transitWindows: allMalefic,
         }));
         expect(vm.placeFloorTripped).toBe(true);
     });
 
-    it("does not trip placeFloorTripped when at least one arrival clears the boundary", () => {
+    it("does not trip placeFloorTripped when transits pull a press-baseline arc out of press", () => {
+        const allBenefic = Array.from({ length: 14 }, (_, i) => {
+            const monthStart = new Date(Date.UTC(2026, 4 + i, 15));
+            return hit(monthStart.toISOString().slice(0, 10), {
+                transit_planet: "Jupiter",
+                natal_planet: "Moon",
+                aspect: "Trine",
+            });
+        });
+        const vm = toV4ViewModel(relocationReading({
+            macroScore: 49,
+            transitWindows: allBenefic,
+        }));
+        expect(vm.placeFloorTripped).toBe(false);
+    });
+
+    it("does not trip placeFloorTripped on a healthy place", () => {
         const vm = toV4ViewModel(relocationReading({ macroScore: 70 }));
         expect(vm.placeFloorTripped).toBe(false);
     });
@@ -179,5 +209,16 @@ describe("toV4ViewModel · trip grain (regression)", () => {
         // unaffected by the relocation branch.
         expect(vm.dailySeries.length).toBeGreaterThan(0);
         expect(vm.transitSpans.length).toBeGreaterThan(0);
+    });
+
+    it("pins hero.bestWindow.score to the persisted heroWindowScore for trips", () => {
+        // Hero-pin invariant: the relocation branch rewrites travelWindows
+        // before the hero-pin block runs (`reading-viewmodel.ts:1935-1940`),
+        // so a refactor that accidentally routes trips through the
+        // relocation branch — or moves the pin block earlier — would
+        // silently break the readings list ↔ detail page consistency
+        // (both surfaces read this score and have to agree).
+        const vm = toV4ViewModel({ ...tripReading(), heroWindowScore: 88 });
+        expect(vm.hero.bestWindow.score).toBe(88);
     });
 });
