@@ -50,6 +50,11 @@ export interface SynastryAspectVM {
   aspect: string;
   orb: number;
   meaning: string;
+  /** Canonical lookup key: `${p1}-${aspect}-${p2}` lowercased.
+   *  The AI prose pipeline uses this verbatim as the `aspectKey` in
+   *  `CouplesReading.deepDive.aspectMeanings[]` so the view can match
+   *  AI-authored meanings to rendered aspects without inventing IDs. */
+  key: string;
 }
 
 export interface ChartTabVM {
@@ -491,7 +496,7 @@ function decorateAspect(a: any): SynastryAspectVM {
   const meaning = ASPECT_MEANINGS[key] ??
     ASPECT_FALLBACK[aspect] ??
     "Energies meet here — read the band, not the headline.";
-  return { p1, p2, aspect, orb, meaning };
+  return { p1, p2, aspect, orb, meaning, key };
 }
 
 function relocNote(standout: StandoutPlacement[], _which: "you" | "partner", destination: string): string {

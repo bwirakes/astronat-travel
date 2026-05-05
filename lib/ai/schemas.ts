@@ -318,6 +318,7 @@ export const CouplesReadingSchema = z.object({
   timings: z.object({
     rationale: z.string(),
     bestWindowNotes: z.array(CouplesWindowNoteSchema),
+    avoidWindowNotes: z.array(CouplesWindowNoteSchema),
   }),
   deepDive: z.object({
     youLead: z.string(),

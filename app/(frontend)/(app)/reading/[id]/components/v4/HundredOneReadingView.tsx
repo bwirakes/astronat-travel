@@ -18,6 +18,7 @@ import TimingTab from "./tabs/TimingTab";
 import NextTabNav from "./NextTabNav";
 import LearnFooter from "../shared/LearnFooter";
 import { VERDICT_COLORS } from "@/app/lib/verdict";
+import { destinationFlag } from "@/app/lib/country-flag";
 import "./reading-shell.css";
 
 const FONT_PRIMARY = "var(--font-primary, serif)";
@@ -223,14 +224,29 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                             >
                                 <div className="flex flex-col gap-[6px] min-w-0">
                                     <span
-                                        className="leading-[0.95] tracking-[-0.02em]"
+                                        className="inline-flex items-baseline leading-[0.95] tracking-[-0.02em]"
                                         style={{
                                             fontFamily: FONT_PRIMARY,
                                             fontSize: "clamp(40px, 5.5vw, 72px)",
                                             color: "var(--text-primary)",
+                                            gap: "clamp(12px, 1.4vw, 20px)",
                                         }}
                                     >
                                         {vm.location.city}
+                                        {(() => {
+                                            const flag = destinationFlag(
+                                                [vm.location.city, vm.location.region].filter(Boolean).join(", "),
+                                            );
+                                            return flag ? (
+                                                <span
+                                                    role="img"
+                                                    aria-label={`Flag of ${flag.iso}`}
+                                                    style={{ fontSize: "0.7em", lineHeight: 1, letterSpacing: 0 }}
+                                                >
+                                                    {flag.emoji}
+                                                </span>
+                                            ) : null;
+                                        })()}
                                     </span>
                                     <span
                                         className="text-[12px] tracking-[0.18em] uppercase"

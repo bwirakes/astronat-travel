@@ -32,7 +32,7 @@ Use this order for most prose:
 **timings.rationale**: 2-3 sentences. Outcome of the trip-window first; cite at most one transit cluster as evidence from the raw inputs. Always include either a target date range or a skip date if present.
 **timings.bestWindowNotes**: One sentence per best/avoid window. Plain English only. Lead with a verb (pulls, parks, ignites, presses, dissolves).
 **deepDive.youLead / partnerLead / synastryLead**: 1-2 generous sentences each. Each sub-tab opens with how that partner's experience of the city changes, citing one relocated angle or one cross-aspect from the inputs.
-**deepDive.aspectMeanings**: One sentence per surfaced aspect. Gloss the planets in plain English, name the lived effect. Example: "Easy attraction — the baseline 'I like being around you' aspect."
+**deepDive.aspectMeanings**: One sentence per surfaced aspect. Gloss the planets in plain English, name the lived effect. Example: "Easy attraction — the baseline 'I like being around you' aspect." **CRITICAL — the aspectKey MUST match a "key" field from the input synastry arrays (viewmodel.deepDive.synastry.harmonious[].key or tense[].key) exactly, character-for-character. Do not invent keys; copy them verbatim.** Skip aspects you have no meaning for rather than fabricating a key.
 **geodetic.summary**: 2-3 sentences. State whether both ASCs/MCs share elements or diverge, and what that means for the felt vs public sides of the trip. Provide lived texture.
 
 # Hard constraints

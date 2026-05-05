@@ -192,6 +192,28 @@ function Divider() {
   return <span aria-hidden style={{ background: "var(--surface-border)", width: 1, alignSelf: "stretch" }} />;
 }
 
+/** AI-authored lead paragraph that opens a sub-section (used by ChartTab,
+ *  SynastryTab, GeodeticSummary). Same editorial signature as
+ *  `SectionHead.sub` — kept consistent so AI prose reads with one voice
+ *  regardless of which section it's in. */
+function AiLead({ children }: { children: React.ReactNode }) {
+  return (
+    <p
+      style={{
+        fontFamily: "var(--font-body)",
+        fontSize: "0.88rem",
+        lineHeight: 1.55,
+        fontWeight: 300,
+        color: "var(--text-secondary)",
+        margin: 0,
+        maxWidth: "62ch",
+      }}
+    >
+      {children}
+    </p>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════
 // HERO
 // ═══════════════════════════════════════════════════════════════
@@ -570,7 +592,7 @@ function VerdictBlock({ timings, prose }: { timings: CouplesVM["timings"]; prose
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "clamp(28px, 4vw, 48px)" }} className="windows-grid">
         <WindowList title="BEST WINDOWS" color="var(--color-planet-jupiter)" items={timings.bestWindows} notes={prose?.timings?.bestWindowNotes} />
         {timings.avoidWindows.length > 0 && (
-          <WindowList title="AVOID" color="var(--color-spiced-life)" items={timings.avoidWindows} notes={prose?.timings?.bestWindowNotes} />
+          <WindowList title="AVOID" color="var(--color-spiced-life)" items={timings.avoidWindows} notes={prose?.timings?.avoidWindowNotes} />
         )}
       </div>
       <style jsx>{`
@@ -739,11 +761,7 @@ function ChartTab({ tab, destination, lead }: { tab: ChartTabVM; destination: st
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "clamp(24px, 3vw, 36px)" }}>
-        {lead && (
-          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--text-secondary)", margin: 0, lineHeight: 1.55 }}>
-            {lead}
-          </p>
-        )}
+        {lead && <AiLead>{lead}</AiLead>}
         <div
           style={{
             display: "grid",
@@ -839,9 +857,9 @@ function SynastryTab({ synastry, partnerName, lead, aspectMeanings }: { synastry
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "clamp(24px, 3.5vw, 40px)" }}>
-      <p style={{ fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--text-secondary)", margin: 0, maxWidth: "62ch", lineHeight: 1.55, fontWeight: 300 }}>
+      <AiLead>
         {lead || `Where your charts meet directly. Harmonious aspects are baseline ease; tense ones are productive friction if you know what they're about.`}
-      </p>
+      </AiLead>
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "clamp(28px, 4vw, 48px)" }} className="aspect-grid">
         <AspectColumn title="Harmonious" tone="lift"  items={synastry.harmonious} partnerName={partnerName} aspectMeanings={aspectMeanings} />
         <AspectColumn title="Tense"      tone="press" items={synastry.tense}      partnerName={partnerName} aspectMeanings={aspectMeanings} />
@@ -900,15 +918,17 @@ function AspectColumn({
                 </span>
               </div>
               {(() => {
-                let displayMeaning = a.meaning;
-                if (aspectMeanings) {
-                  const match = aspectMeanings.find(m => 
-                    m.aspectKey.toLowerCase().includes(a.p1.toLowerCase()) && 
-                    m.aspectKey.toLowerCase().includes(a.p2.toLowerCase()) &&
-                    m.aspectKey.toLowerCase().includes(a.aspect.toLowerCase())
-                  );
-                  if (match) displayMeaning = match.meaning;
-                }
+                // Canonical key on the VM (`${p1}-${aspect}-${p2}` lowercased)
+                // is the contract: the AI is instructed to echo this exact
+                // value as `aspectKey`. Reverse-key fallback is defensive
+                // for older AI outputs authored before the contract was
+                // tightened — can be removed once those readings expire.
+                const reverse = `${a.p2}-${a.aspect}-${a.p1}`.toLowerCase();
+                const match = aspectMeanings?.find((m) => {
+                  const k = m.aspectKey.toLowerCase();
+                  return k === a.key || k === reverse;
+                });
+                const displayMeaning = match?.meaning ?? a.meaning;
                 return (
                   <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--text-secondary)", lineHeight: 1.55 }}>
                     {displayMeaning}
@@ -930,11 +950,7 @@ function AspectColumn({
 function GeodeticSummary({ geodetic, youName, lead }: { geodetic: CouplesVM["geodetic"]; youName: string; lead?: string }) {
   return (
     <>
-      {lead && (
-        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--text-secondary)", margin: 0, lineHeight: 1.55 }}>
-          {lead}
-        </p>
-      )}
+      {lead && <AiLead>{lead}</AiLead>}
       <div style={{ marginTop: "clamp(28px, 4vw, 48px)", display: "grid", gridTemplateColumns: "1fr", gap: 0 }}>
         <GeoRow
           who={youName.toUpperCase()}
