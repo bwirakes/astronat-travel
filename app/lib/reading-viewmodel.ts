@@ -10,7 +10,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { houseFromLongitude, signFromLongitude } from "./geodetic";
 import { acgLineRawScore } from "./house-matrix";
-import { buildScoredWindows, buildDailySeries, buildRangeHighlights, solveTransitSpans, fieldPercentile, type DailyScore, type RangeHighlights, type TransitSpan } from "./window-scoring";
+import {
+    buildScoredWindows,
+    buildDailySeries,
+    buildRangeHighlights,
+    solveTransitSpans,
+    fieldPercentile,
+    buildMonthlySeries,
+    buildMonthlyHighlights,
+    buildArrivalScores,
+    type DailyScore,
+    type RangeHighlights,
+    type TransitSpan,
+    type MonthlyScore,
+    type MonthlyHighlights,
+    type ArrivalCandidate,
+} from "./window-scoring";
 import { READING_TABS, READING_TAB_IDS, deriveScoreNarrative, type EvidencePoint, type ReadingTabDefinition, type ReadingTabId, type ScoreNarrative } from "./reading-tabs";
 import { HERO_BAND_LABEL, heroBand, type HeroBand } from "./verdict";
 
@@ -323,15 +338,43 @@ export interface V4ReadingVM {
          *  — practical advice for making locked dates work. Null for solid/peak. */
         maximizeAdvice: string | null;
     };
-    travelWindows: V4TravelWindow[];   // length 1–3, hero is index 0
-    /** Per-day score series across travelDate − 21d to travelDate + 79d (90-day view). */
+    travelWindows: V4TravelWindow[];   // length 1–4, hero is index 0
+    /** Per-day score series across travelDate − 21d to travelDate + 79d (90-day view).
+     *  Empty for relocation readings — see `monthlySeries` instead. */
     dailySeries: DailyScore[];
-    /** Transit spans derived from weekly samples — drives the Gantt in TimingTab. */
+    /** Transit spans for the Gantt. Trip readings populate over a 90-day window;
+     *  relocation readings populate over the 365-day window starting at the move
+     *  anchor. Consumers must read `timeline.grain` (or `travelType`) to know
+     *  which horizon to render against. */
     transitSpans: TransitSpan[];
-    /** Best 2 / worst 2 non-overlapping 5-day windows in the 90-day horizon. */
+    /** Best 2 / worst 2 non-overlapping 5-day windows in the 90-day horizon.
+     *  Empty for relocation readings — see `monthlyHighlights` instead. */
     rangeHighlights: RangeHighlights;
-    /** Percentile rank of the user's window score vs all 90 daily scores. */
+    /** Percentile rank of the user's window score vs all 90 daily scores.
+     *  Always 50 for relocation readings — there's no "your dates vs. nearby
+     *  alternatives" frame to take a percentile of. */
     timingPercentile: number;
+    /** Timing-tab grain discriminator. Trip readings are "week" (90 daily bars +
+     *  3-day windows); relocation readings are "month" (12 monthly bars + arrival
+     *  candidates). Components that render the Timing tab branch on this. */
+    timeline: {
+        grain: "week" | "month";
+    };
+    /** Per-calendar-month scores across the 12 months following the move anchor.
+     *  Empty for trip readings. */
+    monthlySeries: MonthlyScore[];
+    /** Strongest / hardest months across `monthlySeries`, with a spread guard
+     *  that suppresses "hardest" for steady years. Empty for trip readings. */
+    monthlyHighlights: MonthlyHighlights;
+    /** Ranked arrival-month candidates for relocations: each scored by its
+     *  forward-weighted 90-day settling arc. Drives the §1 "Best months to
+     *  arrive" list when present. Empty for trip readings. */
+    arrivalCandidates: ArrivalCandidate[];
+    /** True when the relocation's strongest arrival month still scores below
+     *  the "mixed" boundary — i.e., no calendar month opens this place easily.
+     *  Lets the prompt (and future UI) be honest rather than dressing up a
+     *  least-rough doorway as a peak. Always false for trip readings. */
+    placeFloorTripped: boolean;
 
     vibes: V4Vibe[];                    // exactly 3
 
@@ -658,18 +701,83 @@ function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateI
         ? reading.teacherReading.windows
         : undefined;
 
-    // Relocation readings have no 7-night frame to optimize. Single window
-    // anchored on the move date.
+    // Relocation readings answer two stacked questions on the same hit data:
+    // (1) "When should I move?" — ranked candidate arrival months by their
+    //     forward-weighted 90-day settling arc.
+    // (2) "What's the year ahead?" — handled by `monthlySeries` further below.
+    //
+    // Index 0 is always the user's tentative anchor month so the hero score
+    // pinning at line ~1790 keeps pinning the right window. Indices 1+ are
+    // the engine's strongest alternates, excluding the anchor month so it
+    // never appears twice.
     if (travelType === "relocation" && travelDateISO) {
+        const baseline = typeof reading?.macroScore === "number" ? reading.macroScore : 70;
+        const tw: any[] = Array.isArray(reading?.transitWindows) ? reading.transitWindows : [];
+        const isHitShape = tw[0] && "transit_planet" in tw[0];
+        const candidates = isHitShape
+            ? buildArrivalScores(travelDateISO, tw, baseline, goalIdsArg, 12)
+            : [];
+
+        const candidateToWindow = (c: ArrivalCandidate, kind: "anchor" | "strong" | "alt"): V4TravelWindow => {
+            const start = new Date(c.monthISO);
+            const monthEnd = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0));
+            const flavor =
+                kind === "anchor" ? "Your move month"
+                : kind === "strong" ? "Strongest alternate"
+                : "Strong alternate";
+            const flavorTitle =
+                c.settlingArcDescriptor === "front-loaded" ? "Strong start, softens"
+                : c.settlingArcDescriptor === "back-loaded" ? "Builds over time"
+                : "Steady arc";
+            return {
+                rank: 0, // assigned by caller
+                flavor,
+                flavorTitle,
+                emoji: kind === "anchor" ? "⌂" : kind === "strong" ? "✦" : "→",
+                dates: c.monthLabel,
+                nights: "first 90 days",
+                score: c.arcScore,
+                note: c.drivers.length
+                    ? c.drivers.join(" · ")
+                    : "No major slow transits in this arc — the place itself carries the score.",
+                startISO: start.toISOString(),
+                endISO: monthEnd.toISOString(),
+            };
+        };
+
+        if (candidates.length) {
+            const anchorYear = new Date(travelDateISO).getUTCFullYear();
+            const anchorMonth = new Date(travelDateISO).getUTCMonth();
+            const anchorMonthISO = new Date(Date.UTC(anchorYear, anchorMonth, 1)).toISOString().slice(0, 10);
+
+            const anchor = candidates.find(c => c.monthISO === anchorMonthISO) ?? candidates[0];
+            const alternates = candidates
+                .filter(c => c.monthISO !== anchor.monthISO)
+                .sort((a, b) => b.arcScore - a.arcScore)
+                .slice(0, 3);
+
+            const windows: V4TravelWindow[] = [
+                { ...candidateToWindow(anchor, "anchor"), rank: 1 },
+                ...alternates.map((c, i) => ({
+                    ...candidateToWindow(c, i === 0 ? "strong" : "alt"),
+                    rank: i + 2,
+                })),
+            ];
+            return windows;
+        }
+
+        // Fallback when the reading lacks the wider hit shape (legacy rows
+        // generated before PR 1's chronological policy). Single anchor window
+        // at the macro score — same as the original behavior.
         const start = new Date(travelDateISO);
         const end = new Date(start.getTime() + 30 * 86_400_000);
         return [{
             rank: 1,
-            flavor: "Move date", flavorTitle: "Your move starts here", emoji: "⌂",
+            flavor: "Move month", flavorTitle: "Your move starts here", emoji: "⌂",
             dates: shortDate(start.toISOString()) + ", " + start.getFullYear(),
             nights: "first month",
             score: reading?.macroScore || 80,
-            note: reading?.teacherReading?.hero?.explainer || reading?.teacherReading?.summary?.theRead || "Your relocated chart settles in over the first 30 days. The score is for the place itself, not a window inside it.",
+            note: "Your relocated chart settles in over the first 30 days. The score is for the place itself, not a window inside it.",
             startISO: start.toISOString(),
             endISO: end.toISOString(),
         }];
@@ -1763,19 +1871,57 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
     const _isHitShape = Array.isArray(_tw) && _tw[0] && "transit_planet" in _tw[0];
     const _baseline = typeof reading?.macroScore === "number" ? reading.macroScore : 70;
 
+    // Trip-grain (week) vs relocation-grain (month) timing series.
+    // Trip readings populate dailySeries / rangeHighlights and run the gantt
+    // over a 90-day horizon. Relocation readings leave those empty, populate
+    // monthlySeries / monthlyHighlights / arrivalCandidates instead, and run
+    // the gantt over a 365-day horizon. The Timing tab branches on
+    // `vm.timeline.grain` (or equivalently `vm.travelType`) at render time.
+
     const dailySeries: DailyScore[] = (() => {
         if (travelType === "relocation" || !_isHitShape) return [];
         return buildDailySeries(travelDateISO, _tw, _baseline, goalIds, 7, 90);
     })();
 
     const transitSpans: TransitSpan[] = (() => {
-        if (travelType === "relocation" || !_isHitShape || !travelDateISO) return [];
+        if (!_isHitShape || !travelDateISO) return [];
+        // Trip: ~14 weeks centered on anchor. Relocation: 12 months from anchor.
+        // The relocation gantt fits more rows (12 instead of 8) because slow
+        // outers run for many months and the row budget should reflect that.
+        if (travelType === "relocation") {
+            return solveTransitSpans(travelDateISO, _tw, 365, 12, goalIds);
+        }
         return solveTransitSpans(travelDateISO, _tw, 90, 8, goalIds);
     })();
 
     const rangeHighlights: RangeHighlights = (() => {
         if (travelType === "relocation" || !_isHitShape) return { good: [], bad: [] };
         return buildRangeHighlights(travelDateISO, _tw, _baseline, goalIds);
+    })();
+
+    const monthlySeries: MonthlyScore[] = (() => {
+        if (travelType !== "relocation" || !_isHitShape) return [];
+        return buildMonthlySeries(travelDateISO, _tw, _baseline, goalIds, 12);
+    })();
+
+    const monthlyHighlights: MonthlyHighlights = (() => {
+        if (!monthlySeries.length) return { strongest: [], hardest: [], spread: 0 };
+        return buildMonthlyHighlights(monthlySeries);
+    })();
+
+    const arrivalCandidates: ArrivalCandidate[] = (() => {
+        if (travelType !== "relocation" || !_isHitShape) return [];
+        return buildArrivalScores(travelDateISO, _tw, _baseline, goalIds, 12);
+    })();
+
+    // Floor check: when the strongest arrival arc still scores below the
+    // mixed/tough boundary (50, matching verdictBand), no calendar month
+    // opens this place easily. Surfaced for the future prompt change so the
+    // AI can write honest copy ("least rough door" rather than "peak").
+    const placeFloorTripped: boolean = (() => {
+        if (travelType !== "relocation" || !arrivalCandidates.length) return false;
+        const topArc = Math.max(...arrivalCandidates.map(c => c.arcScore));
+        return topArc < 50;
     })();
 
     // Pin the hero window's headline score to the persisted `heroWindowScore`
@@ -1893,6 +2039,11 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
         transitSpans,
         rangeHighlights,
         timingPercentile,
+        timeline: { grain: travelType === "relocation" ? "month" : "week" },
+        monthlySeries,
+        monthlyHighlights,
+        arrivalCandidates,
+        placeFloorTripped,
 
         vibes: deriveVibes(reading, goalIds),
 

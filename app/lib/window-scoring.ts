@@ -450,3 +450,261 @@ export function solveTransitSpans(
 
     return top;
 }
+
+// ─── Monthly grain (relocation timing) ────────────────────────────────────────
+//
+// Trip readings score days and weeks because the user is choosing when within
+// ±30 days of an anchor to leave for 7 nights. Relocation readings answer two
+// different questions on the same hit data:
+//
+//   1. "When should I move?"      → buildArrivalScores ranks candidate arrival
+//                                    months by their forward-weighted 90-day
+//                                    settling arc, because the first weeks at
+//                                    a new place dominate whether the move
+//                                    feels like it worked.
+//   2. "What's the year ahead?"   → buildMonthlySeries scores each calendar
+//                                    month in isolation; buildMonthlyHighlights
+//                                    surfaces the strongest 2 + hardest 1.
+//
+// Both reuse the same scoring math as scoreDate (TRANSIT_SCALE, MAX_DELTA,
+// GOAL_BOOST), but aggregate over a calendar month instead of a ±halfWidth
+// daily sample. Hits within a month are deduped by combo (transit_planet ×
+// natal_planet × aspect) keeping the tightest sample so the 4 weekly samples
+// of e.g. Saturn-Sun-square don't count 4× toward the month's score.
+
+/** Internal: score the unique transits whose dates fall in `[rangeStart, rangeEnd]`.
+ *  Dedupes by combo (tightest-orb wins) so monthly aggregations don't multi-count
+ *  weekly samples of the same slow transit. */
+function scoreHitsInRange(
+    hits: TransitHit[],
+    baselineMacro: number,
+    goalIds: string[],
+    rangeStartMs: number,
+    rangeEndMs: number,
+): { score: number; drivers: string[] } {
+    const tightestByCombo = new Map<string, TransitHit>();
+    for (const t of hits) {
+        const tTime = new Date(t.date).getTime();
+        if (!isFinite(tTime) || tTime < rangeStartMs || tTime > rangeEndMs) continue;
+        const key = `${t.transit_planet}|${t.natal_planet}|${t.aspect}`;
+        const existing = tightestByCombo.get(key);
+        if (!existing || (t.orb ?? 99) < (existing.orb ?? 99)) {
+            tightestByCombo.set(key, t);
+        }
+    }
+
+    const goalTargets = goalTargetSet(goalIds);
+    let benefic = 0;
+    let malefic = 0;
+    const driversTop: Array<{ note: string; weight: number }> = [];
+
+    for (const t of tightestByCombo.values()) {
+        const natalKey = (t.natal_planet || "").toLowerCase();
+        const goalHit = goalTargets ? goalTargets.has(natalKey) : false;
+        const goalMul = goalHit ? GOAL_BOOST : 1;
+        const retroMul = t.retrograde ? 0.7 : 1;
+        const tightness = Math.max(0.2, 1 - (t.orb ?? 3) / 3) * goalMul * retroMul;
+        if (t.benefic) benefic += tightness;
+        else            malefic += tightness;
+        driversTop.push({
+            note: `${t.transit_planet}${t.retrograde ? " ℞" : ""} ${t.aspect} natal ${t.natal_planet}${goalHit ? " ★" : ""}`,
+            weight: tightness * (t.benefic ? 1 : -1),
+        });
+    }
+
+    let delta = (benefic - malefic) * TRANSIT_SCALE;
+    if (delta >  MAX_DELTA) delta =  MAX_DELTA;
+    if (delta < -MAX_DELTA) delta = -MAX_DELTA;
+
+    const score = Math.max(0, Math.min(100, Math.round(baselineMacro + delta)));
+    const drivers = driversTop
+        .sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight))
+        .slice(0, 3)
+        .map(d => d.note);
+
+    return { score, drivers };
+}
+
+export interface MonthlyScore {
+    /** First day of the calendar month, YYYY-MM-DD. */
+    monthISO: string;
+    /** "May 2026" — UTC-anchored so server/client agree on month names. */
+    monthLabel: string;
+    score: number;
+    drivers: string[];
+}
+
+/** Build a per-calendar-month score series anchored on the month containing
+ *  `anchorISO`. Calendar-aligned to the first of the month so labels are
+ *  whole-month proper nouns ("September") rather than rolling 30-day spans. */
+export function buildMonthlySeries(
+    anchorISO: string | null,
+    transits: TransitHit[],
+    baselineMacro: number,
+    goalIds: string[] = [],
+    monthCount = 12,
+): MonthlyScore[] {
+    if (!anchorISO) return [];
+    const anchor = new Date(anchorISO);
+    if (isNaN(anchor.getTime())) return [];
+
+    const startYear = anchor.getUTCFullYear();
+    const startMonth = anchor.getUTCMonth();
+
+    const out: MonthlyScore[] = [];
+    for (let i = 0; i < monthCount; i++) {
+        const monthStart = new Date(Date.UTC(startYear, startMonth + i, 1));
+        const nextMonthStart = new Date(Date.UTC(startYear, startMonth + i + 1, 1));
+        const rangeStartMs = monthStart.getTime();
+        // Inclusive end-of-month: nextMonthStart - 1ms. A hit on the last day
+        // (any hour, UTC) is included; a hit on the 1st of the next month is not.
+        const rangeEndMs = nextMonthStart.getTime() - 1;
+
+        const { score, drivers } = scoreHitsInRange(
+            transits, baselineMacro, goalIds, rangeStartMs, rangeEndMs,
+        );
+
+        out.push({
+            monthISO: monthStart.toISOString().slice(0, 10),
+            monthLabel: monthStart.toLocaleDateString("en-US", {
+                month: "long", year: "numeric", timeZone: "UTC",
+            }),
+            score,
+            drivers,
+        });
+    }
+    return out;
+}
+
+/** Spread (top - bottom score) below which we don't surface a "hardest" month —
+ *  a year where every month scores 60-65 is "steady," not "Aug is rough." */
+const MONTHLY_HIGHLIGHT_SPREAD_THRESHOLD = 5;
+
+export interface MonthlyHighlights {
+    /** Up to 2 months, score-desc. Empty when the input has fewer than 2 months. */
+    strongest: MonthlyScore[];
+    /** 1 month or empty. Only surfaces when spread ≥ threshold; otherwise the
+     *  year is genuinely steady and naming a "hardest" month would mislead. */
+    hardest: MonthlyScore[];
+    /** Convenience: the spread between top and bottom across all months. */
+    spread: number;
+}
+
+/** Pick the strongest 2 and the hardest 1 calendar months from a monthly series.
+ *  Suppresses `hardest` when the year is too flat to justify naming one. */
+export function buildMonthlyHighlights(series: MonthlyScore[]): MonthlyHighlights {
+    if (series.length < 2) return { strongest: [], hardest: [], spread: 0 };
+
+    const sortedDesc = [...series].sort((a, b) => b.score - a.score);
+    const top = sortedDesc[0];
+    const bottom = sortedDesc[sortedDesc.length - 1];
+    const spread = top.score - bottom.score;
+
+    const strongest = sortedDesc.slice(0, 2);
+    const hardest = spread >= MONTHLY_HIGHLIGHT_SPREAD_THRESHOLD ? [bottom] : [];
+
+    return { strongest, hardest, spread };
+}
+
+/** Front-weighted kernel for the 90-day settling arc.
+ *  Month 0 (arrival) carries the heaviest weight because the first weeks
+ *  dominate whether a relocation feels like it worked. M+1 and M+2 still
+ *  matter — a strong arrival into a rough autumn is a different decision
+ *  than a strong arrival into a strong autumn. */
+const ARRIVAL_ARC_WEIGHTS = [0.5, 0.3, 0.2] as const;
+
+/** Spread between M, M+1, M+2 below which we describe the arc as "steady"
+ *  rather than front-/back-loaded. Same threshold as monthly highlights so
+ *  copy stays internally consistent. */
+const ARRIVAL_ARC_DESCRIPTOR_THRESHOLD = 5;
+
+export interface ArrivalCandidate {
+    /** First day of the candidate arrival month, YYYY-MM-DD. */
+    monthISO: string;
+    /** "October 2026" — UTC-anchored. */
+    monthLabel: string;
+    /** Forward-weighted score of months M, M+1, M+2 from this arrival. 0–100. */
+    arcScore: number;
+    /** Top drivers across the three months of the arc, deduped, weight-ordered. */
+    drivers: string[];
+    /** Label of the lowest-scoring of M / M+1 / M+2 if the spread within the arc
+     *  is meaningful. Lets prose say "October opens cleanly but November is the
+     *  test." Undefined when the arc is steady. */
+    hardestSubmonth?: string;
+    /** Shape of the score curve across M → M+2.
+     *  - "front-loaded": strongest at arrival, softens later
+     *  - "steady": flat within threshold
+     *  - "back-loaded": weakest at arrival, builds */
+    settlingArcDescriptor: "front-loaded" | "steady" | "back-loaded";
+}
+
+/** Score each of `candidateCount` calendar months as a possible arrival month
+ *  for a relocation. Each candidate's score is a front-weighted average of its
+ *  90-day settling arc — the months immediately following arrival are what the
+ *  move actually feels like.
+ *
+ *  Returns candidates in chronological order (the consumer ranks/filters).
+ *  Internally requests `candidateCount + 2` months from buildMonthlySeries so
+ *  every candidate has a full M+2 lookahead. */
+export function buildArrivalScores(
+    anchorISO: string | null,
+    transits: TransitHit[],
+    baselineMacro: number,
+    goalIds: string[] = [],
+    candidateCount = 12,
+): ArrivalCandidate[] {
+    if (!anchorISO || candidateCount < 1) return [];
+
+    const months = buildMonthlySeries(
+        anchorISO, transits, baselineMacro, goalIds, candidateCount + 2,
+    );
+    if (months.length < 3) return [];
+
+    const out: ArrivalCandidate[] = [];
+    for (let i = 0; i < candidateCount; i++) {
+        const m0 = months[i];
+        const m1 = months[i + 1];
+        const m2 = months[i + 2];
+
+        const arcScore = Math.round(
+            m0.score * ARRIVAL_ARC_WEIGHTS[0]
+            + m1.score * ARRIVAL_ARC_WEIGHTS[1]
+            + m2.score * ARRIVAL_ARC_WEIGHTS[2],
+        );
+
+        // Dedupe drivers across the three months. Each month's drivers are
+        // already weight-ordered, so we preserve M0 ordering then append
+        // anything new from M1, M2.
+        const seen = new Set<string>();
+        const drivers: string[] = [];
+        for (const d of [...m0.drivers, ...m1.drivers, ...m2.drivers]) {
+            if (seen.has(d)) continue;
+            seen.add(d);
+            drivers.push(d);
+            if (drivers.length >= 4) break;
+        }
+
+        const trend = m2.score - m0.score;
+        let descriptor: ArrivalCandidate["settlingArcDescriptor"];
+        if (trend < -ARRIVAL_ARC_DESCRIPTOR_THRESHOLD) descriptor = "front-loaded";
+        else if (trend > ARRIVAL_ARC_DESCRIPTOR_THRESHOLD) descriptor = "back-loaded";
+        else descriptor = "steady";
+
+        const subSorted = [m0, m1, m2].slice().sort((a, b) => a.score - b.score);
+        const subSpread = subSorted[2].score - subSorted[0].score;
+        const hardestSubmonth = subSpread >= ARRIVAL_ARC_DESCRIPTOR_THRESHOLD
+            ? subSorted[0].monthLabel
+            : undefined;
+
+        out.push({
+            monthISO: m0.monthISO,
+            monthLabel: m0.monthLabel,
+            arcScore,
+            drivers,
+            hardestSubmonth,
+            settlingArcDescriptor: descriptor,
+        });
+    }
+
+    return out;
+}

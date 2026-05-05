@@ -21,11 +21,23 @@ const SAMPLE_INTERVAL_DAYS = 7;
 /** Max orb to include a transit hit (degrees). */
 const MAX_ORB = 3.0;
 
-/** Max transit hits to return.
+/** Default max transit hits returned for trip-shaped readings.
  *  Sized for the V4 Timing tab: anchor-7 → anchor+90 day Gantt needs ~14 weeks
  *  of weekly samples × ~10 hits/week ≈ 140 hits. 200 gives headroom and still
- *  keeps the persisted reading payload small. */
+ *  keeps the persisted reading payload small.
+ *  Relocation readings override this via the `maxResults` option. */
 const MAX_RESULTS = 200;
+
+/**
+ * Result-selection policy.
+ *  - `proximity` (default): keep hits closest in time to `referenceDate`.
+ *    Right for trips — the Gantt and field views focus near the anchor.
+ *  - `chronological`: keep hits sorted by date and return the head of the
+ *    range up to `maxResults`. Right for relocations, which need even
+ *    coverage across the full 12 months because the user is making an
+ *    arrival-month decision, not a trip-week decision.
+ */
+export type SolvePolicy = "proximity" | "chronological";
 
 // ── In-process cache ─────────────────────────────────────────────────────────
 // Each reading fires ~52 SwissEph batches (7-day steps × 360-day window).
@@ -65,16 +77,34 @@ export interface TransitHit {
  *
  * @param natalPlanets  — natal chart planets (must have name/planet + longitude)
  * @param referenceDate — anchor date (travel date or today)
- * @param windowDaysBefore — days before reference to start scanning (default 90)
- * @param windowDaysAfter  — days after reference to stop scanning (default 270 = ~9mo)
+ * @param options       — windowing and result-selection options
+ *
+ * Defaults preserve trip-shaped behavior: 90 days before / 270 days after the
+ * reference, proximity-sorted, capped at MAX_RESULTS=200 hits clustered near
+ * the anchor. Relocation callers should pass `policy: "chronological"` and a
+ * larger `maxResults` to get even monthly coverage across the full window.
  */
 export async function solve12MonthTransits(
   natalPlanets: Array<{ name?: string; planet?: string; longitude: number }>,
   referenceDate: Date,
-  windowDaysBefore = 90,
-  windowDaysAfter = 270,
+  options: {
+    windowDaysBefore?: number;
+    windowDaysAfter?: number;
+    policy?: SolvePolicy;
+    maxResults?: number;
+  } = {},
 ): Promise<TransitHit[]> {
-  const cacheKey = `${_natalKey(natalPlanets)}:${_weekNum(referenceDate)}`;
+  const {
+    windowDaysBefore = 90,
+    windowDaysAfter = 270,
+    policy = "proximity",
+    maxResults = MAX_RESULTS,
+  } = options;
+
+  // Cache key includes window dimensions + policy + maxResults so a relocation
+  // request never gets served a previously-cached trip-shaped result (different
+  // window, different sort).
+  const cacheKey = `${_natalKey(natalPlanets)}:${_weekNum(referenceDate)}:${windowDaysBefore}:${windowDaysAfter}:${policy}:${maxResults}`;
   const cached = _transitCache.get(cacheKey);
   if (cached) return cached;
 
@@ -146,14 +176,24 @@ export async function solve12MonthTransits(
     for (const h of arr.slice(0, PER_COMBO_CAP)) balanced.push(h);
   }
 
-  const refTime = referenceDate.getTime();
-  balanced.sort((a, b) => {
-    const da = Math.abs(new Date(a.date).getTime() - refTime);
-    const db = Math.abs(new Date(b.date).getTime() - refTime);
-    return da !== db ? da - db : a.orb - b.orb;
-  });
+  if (policy === "proximity") {
+    const refTime = referenceDate.getTime();
+    balanced.sort((a, b) => {
+      const da = Math.abs(new Date(a.date).getTime() - refTime);
+      const db = Math.abs(new Date(b.date).getTime() - refTime);
+      return da !== db ? da - db : a.orb - b.orb;
+    });
+  } else {
+    // Chronological: even temporal coverage. Per-combo cap (above) already
+    // prevents fast bodies from drowning the outers. Tie-break tightest-first.
+    balanced.sort((a, b) => {
+      const ad = new Date(a.date).getTime();
+      const bd = new Date(b.date).getTime();
+      return ad !== bd ? ad - bd : a.orb - b.orb;
+    });
+  }
 
-  const hits = balanced.slice(0, MAX_RESULTS);
+  const hits = balanced.slice(0, maxResults);
 
   if (_transitCache.size >= _CACHE_MAX) {
     const oldest = _transitCache.keys().next().value;
