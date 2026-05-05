@@ -98,7 +98,235 @@ function VerdictHeadline({ vm }: { vm: V4VM }) {
 
 // ─── §1 Field Summary ────────────────────────────────────────────────────────
 
+/** Relocation-grain field summary: 12 monthly bars across the year ahead at
+ *  the new place. Mirrors the daily-grain renderer below in structure (lead +
+ *  bar strip + footer) but reads monthlySeries / monthlyHighlights and labels
+ *  things by month name. The user's anchor month is highlighted in y2k-blue
+ *  with a "Move" tag; strongest/hardest months get sage/coral peak markers. */
+function MonthlyFieldSummary({ vm }: { vm: V4VM }) {
+    const { monthlySeries, monthlyHighlights, travelDateISO } = vm;
+    const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+    if (!monthlySeries.length) return null;
+
+    const max = Math.max(...monthlySeries.map(m => m.score), 1);
+
+    // Anchor: the calendar month containing travelDateISO.
+    const anchorMonthISO = travelDateISO
+        ? new Date(Date.UTC(
+            new Date(travelDateISO).getUTCFullYear(),
+            new Date(travelDateISO).getUTCMonth(),
+            1,
+        )).toISOString().slice(0, 10)
+        : null;
+    const anchorIdx = anchorMonthISO
+        ? monthlySeries.findIndex(m => m.monthISO === anchorMonthISO)
+        : -1;
+    const anchorMonth = anchorIdx >= 0 ? monthlySeries[anchorIdx] : null;
+    const anchorPct = anchorIdx >= 0
+        ? (anchorIdx / Math.max(1, monthlySeries.length - 1)) * 100
+        : null;
+    const anchorNearLeft  = anchorPct !== null && anchorPct < 15;
+    const anchorNearRight = anchorPct !== null && anchorPct > 85;
+
+    const strongestSet = new Set(monthlyHighlights.strongest.map(m => m.monthISO));
+    const hardestSet   = new Set(monthlyHighlights.hardest.map(m => m.monthISO));
+
+    const top = monthlyHighlights.strongest[0];
+    const hard = monthlyHighlights.hardest[0];
+
+    const seriesStartT = new Date(monthlySeries[0].monthISO).getTime();
+    const seriesSpan = Math.max(
+        1,
+        new Date(monthlySeries[monthlySeries.length - 1].monthISO).getTime() - seriesStartT,
+    );
+    const markerPct = (monthISO: string): number | null => {
+        const t = new Date(monthISO).getTime();
+        if (!isFinite(t)) return null;
+        return Math.max(0, Math.min(100, ((t - seriesStartT) / seriesSpan) * 100));
+    };
+
+    const startLabel = monthlySeries[0].monthLabel.split(" ")[0];
+    const endLabel   = monthlySeries[monthlySeries.length - 1].monthLabel.split(" ")[0];
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
+            <p style={{ fontFamily: FB, fontSize: "0.95rem", color: "var(--text-secondary)", margin: 0, lineHeight: 1.55 }}>
+                {top
+                    ? <>The strongest month is <strong style={{ color: "var(--text-primary)", fontWeight: 700 }}>{top.monthLabel}</strong> at <strong style={{ color: "var(--text-primary)", fontWeight: 700 }}>{top.score}/100</strong>{hard
+                        ? <>; the hardest is <strong style={{ color: "var(--text-primary)", fontWeight: 700 }}>{hard.monthLabel}</strong> at <strong style={{ color: "var(--text-primary)", fontWeight: 700 }}>{hard.score}/100</strong>.</>
+                        : <>. The rest of the year holds steady around it.</>}</>
+                    : <>The next 12 months at this place.</>}
+            </p>
+
+            <div style={{ background: "var(--surface)", border: "1px solid var(--surface-border)", borderRadius: "var(--radius-md)", padding: "var(--space-md) var(--space-md) var(--space-sm)" }}>
+                {/* Top label — sits over the anchor month bar */}
+                {anchorMonth && anchorPct !== null && (
+                    <div style={{ position: "relative", height: 28, marginBottom: 4 }}>
+                        <div style={{
+                            position: "absolute",
+                            left: `${anchorPct}%`,
+                            top: 0,
+                            transform: "translateX(-50%)",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: "2px",
+                            whiteSpace: "nowrap",
+                        }}>
+                            <span style={{ fontFamily: FM, fontSize: "0.66rem", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--color-y2k-blue)", fontWeight: 700 }}>
+                                Move · {anchorMonth.monthLabel.split(" ")[0]}
+                            </span>
+                            <span style={{ fontSize: "0.6rem", color: "var(--color-y2k-blue)", lineHeight: 1 }}>▼</span>
+                        </div>
+                    </div>
+                )}
+
+                <div
+                    style={{ position: "relative", display: "flex", gap: "4px", alignItems: "flex-end", height: 56, width: "100%" }}
+                    role="img"
+                    aria-label="12-month score strip"
+                    onMouseLeave={() => setHoveredIdx(null)}
+                >
+                    {/* Floating hover tooltip */}
+                    {hoveredIdx !== null && monthlySeries[hoveredIdx] && (() => {
+                        const m = monthlySeries[hoveredIdx];
+                        const pct = (hoveredIdx / Math.max(1, monthlySeries.length - 1)) * 100;
+                        const tipColor =
+                            m.score >= 75 ? "var(--sage)" :
+                            m.score >= 55 ? "var(--gold)" :
+                                            "var(--color-spiced-life)";
+                        return (
+                            <div style={{
+                                position: "absolute",
+                                left: `${pct}%`,
+                                bottom: "calc(100% + 10px)",
+                                transform: `translateX(${pct < 15 ? "0" : pct > 85 ? "-100%" : "-50%"})`,
+                                zIndex: 30,
+                                background: "var(--color-charcoal)",
+                                color: "var(--color-eggshell)",
+                                borderRadius: "var(--radius-sm)",
+                                padding: "0.5rem 0.75rem",
+                                whiteSpace: "nowrap",
+                                boxShadow: "0 4px 16px rgba(0,0,0,0.25)",
+                                display: "flex",
+                                alignItems: "baseline",
+                                gap: "0.7rem",
+                                pointerEvents: "none",
+                            }}>
+                                <span style={{ fontFamily: FM, fontSize: "0.7rem", letterSpacing: "0.06em", color: "var(--color-eggshell)", fontWeight: 600 }}>
+                                    {m.monthLabel}
+                                </span>
+                                <span style={{ fontFamily: FM, fontSize: "0.78rem", color: tipColor, fontWeight: 700 }}>
+                                    {m.score}/100
+                                </span>
+                            </div>
+                        );
+                    })()}
+
+                    {/* Strongest month markers (sage triangles) */}
+                    {monthlyHighlights.strongest.map((m, i) => {
+                        const pct = markerPct(m.monthISO);
+                        if (pct === null) return null;
+                        return (
+                            <div
+                                key={`pk-${i}`}
+                                title={`Strong · ${m.monthLabel} · ${m.score}/100`}
+                                style={{
+                                    position: "absolute",
+                                    left: `${pct}%`,
+                                    top: -2,
+                                    transform: "translateX(-50%)",
+                                    width: 0,
+                                    height: 0,
+                                    borderLeft:  "5px solid transparent",
+                                    borderRight: "5px solid transparent",
+                                    borderTop:   "6px solid var(--sage)",
+                                    zIndex: 3,
+                                    pointerEvents: "auto",
+                                }}
+                            />
+                        );
+                    })}
+                    {/* Hardest month marker (coral triangle) — only when spread justifies one */}
+                    {monthlyHighlights.hardest.map((m, i) => {
+                        const pct = markerPct(m.monthISO);
+                        if (pct === null) return null;
+                        return (
+                            <div
+                                key={`vl-${i}`}
+                                title={`Watch · ${m.monthLabel} · ${m.score}/100`}
+                                style={{
+                                    position: "absolute",
+                                    left: `${pct}%`,
+                                    top: -2,
+                                    transform: "translateX(-50%)",
+                                    width: 0,
+                                    height: 0,
+                                    borderLeft:  "5px solid transparent",
+                                    borderRight: "5px solid transparent",
+                                    borderTop:   "6px solid var(--color-spiced-life)",
+                                    zIndex: 3,
+                                    pointerEvents: "auto",
+                                }}
+                            />
+                        );
+                    })}
+
+                    {monthlySeries.map((m, idx) => {
+                        const h = Math.max(6, (m.score / max) * 100);
+                        const isAnchor = m.monthISO === anchorMonthISO;
+                        const isStrongest = strongestSet.has(m.monthISO);
+                        const isHardest = hardestSet.has(m.monthISO);
+                        const isHovered = hoveredIdx === idx;
+                        const color = isAnchor
+                            ? "var(--color-y2k-blue)"
+                            : m.score >= 75
+                            ? "var(--sage)"
+                            : m.score >= 55
+                            ? "var(--gold)"
+                            : "var(--color-spiced-life)";
+                        return (
+                            <div
+                                key={m.monthISO}
+                                onMouseEnter={() => setHoveredIdx(idx)}
+                                style={{
+                                    flex: 1,
+                                    minWidth: 4,
+                                    height: `${h}%`,
+                                    background: color,
+                                    opacity: isAnchor ? 1 : isHovered ? 0.95 : isStrongest || isHardest ? 0.85 : 0.65,
+                                    borderRadius: 2,
+                                    outline: isAnchor ? "2px solid var(--color-y2k-blue)"
+                                        : isHovered ? "1px solid var(--text-primary)"
+                                        : undefined,
+                                    outlineOffset: isAnchor ? 1 : isHovered ? 1 : undefined,
+                                    position: isAnchor ? "relative" : undefined,
+                                    zIndex: isAnchor ? 1 : isHovered ? 2 : undefined,
+                                    cursor: "default",
+                                    transition: "opacity 100ms ease",
+                                }}
+                            />
+                        );
+                    })}
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "var(--space-xs)", fontFamily: FM, fontSize: "0.66rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>
+                    <span style={{ visibility: anchorNearLeft ? "hidden" : "visible" }}>{startLabel}</span>
+                    <span style={{ visibility: anchorNearRight ? "hidden" : "visible" }}>{endLabel}</span>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function FieldSummary({ vm }: { vm: V4VM }) {
+    // Relocation readings render a 12-month strip from monthlySeries instead
+    // of 90 daily bars from dailySeries. Same visual primitive — fewer, wider
+    // bars; month labels in the tooltip; "Move" anchor instead of "Trip."
+    if (vm.timeline.grain === "month") {
+        return <MonthlyFieldSummary vm={vm} />;
+    }
+
     const { dailySeries, timingPercentile, travelWindows, travelDateISO, rangeHighlights } = vm;
     const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
     if (!dailySeries.length || !travelWindows[0]) return null;
@@ -431,14 +659,36 @@ function GanttRow({
     );
 }
 
-const WINDOW_START = -7;
-const WINDOW_END   = 90;
-const WINDOW_RANGE = WINDOW_END - WINDOW_START;
-const DAY_MARKERS = [-7, 0, 15, 30, 45, 60, 75, 90];
+// Trip-grain (week) gantt: -7d → +90d centered loosely on the anchor.
+const TRIP_WINDOW_START = -7;
+const TRIP_WINDOW_END = 90;
+const TRIP_DAY_MARKERS = [-7, 0, 15, 30, 45, 60, 75, 90];
+
+// Relocation-grain (month) gantt: 0 → +365d (12 months from the move anchor).
+// Markers every 60 days = 7 ticks, which keeps the axis readable without
+// overlapping labels at typical container widths.
+const RELO_WINDOW_START = 0;
+const RELO_WINDOW_END = 365;
+const RELO_DAY_MARKERS = [0, 60, 120, 180, 240, 300, 360];
 
 function TransitGantt({ vm }: { vm: V4VM }) {
     const { transitSpans, travelDateISO } = vm;
     if (!transitSpans.length || !travelDateISO) return null;
+
+    const isRelocation = vm.timeline.grain === "month";
+    const WINDOW_START = isRelocation ? RELO_WINDOW_START : TRIP_WINDOW_START;
+    const WINDOW_END = isRelocation ? RELO_WINDOW_END : TRIP_WINDOW_END;
+    const WINDOW_RANGE = WINDOW_END - WINDOW_START;
+    const DAY_MARKERS = isRelocation ? RELO_DAY_MARKERS : TRIP_DAY_MARKERS;
+    const anchorLabel = isRelocation ? "MOVE" : "TRIP";
+    const formatTick = (d: number): string => {
+        if (d === 0) return anchorLabel;
+        if (isRelocation) {
+            const months = Math.round(d / 30);
+            return `+${months}mo`;
+        }
+        return d < 0 ? `${d}d` : `+${d}d`;
+    };
 
     const anchorTime = new Date(travelDateISO).getTime();
     const todayDay = isFinite(anchorTime)
@@ -497,7 +747,7 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                                             whiteSpace: "nowrap",
                                         }}
                                     >
-                                        {d === 0 ? "TRIP" : d < 0 ? `${d}d` : `+${d}d`}
+                                        {formatTick(d)}
                                     </span>
                                 </div>
                             );
@@ -560,8 +810,14 @@ import { WindowsList } from "../parts/WindowsList";
 // ─── Main tab ─────────────────────────────────────────────────────────────────
 
 export default function TimingTab({ vm, copiedTab }: Props) {
+    const isRelocation = vm.timeline.grain === "month";
     const hasGoodOrBad = vm.rangeHighlights.good.length + vm.rangeHighlights.bad.length > 0;
-    const showAlternates = vm.travelType === "trip" && hasGoodOrBad;
+    // Trip alternates appear when we have ranked nearby weeks. Relocation
+    // alternates appear when we have ranked arrival months — index 0 is the
+    // user's anchor month, so length > 1 means there are alternates to show.
+    const showAlternates = isRelocation
+        ? vm.travelWindows.length > 1
+        : vm.travelType === "trip" && hasGoodOrBad;
 
     const tabLead = copiedTab?.lead?.trim() || "";
     const tabIntro = copiedTab?.plainEnglishSummary || undefined;
@@ -612,13 +868,15 @@ export default function TimingTab({ vm, copiedTab }: Props) {
                 </div>
             )}
 
-            {/* §1 — Top travel windows (alternates), trip only */}
+            {/* §1 — Top travel windows (trip) / Best months to arrive (relocation) */}
             {showAlternates && (
                 <>
                     <SectionHead
                         index="01"
-                        title="Top travel windows"
-                        tooltip="Comparable nearby windows ranked by score. Use these if your dates are flexible. ↑Δ marks how much each beats your selected window."
+                        title={isRelocation ? "Best months to arrive" : "Top travel windows"}
+                        tooltip={isRelocation
+                            ? "Each candidate is scored by your first 90 days at the new place if you arrived then — front-weighted because the early weeks dominate whether the move sticks."
+                            : "Comparable nearby windows ranked by score. Use these if your dates are flexible. ↑Δ marks how much each beats your selected window."}
                     />
                     <WindowsList vm={vm} />
                 </>
@@ -627,16 +885,24 @@ export default function TimingTab({ vm, copiedTab }: Props) {
             {/* §2 — Transit Gantt */}
             <SectionHead
                 index={showAlternates ? "02" : "01"}
-                title="What's pressing on you during the window"
-                tooltip="Slow-moving transits that actually shape this stretch. Hover any bar for the lived-experience reading and what to do with it."
+                title={isRelocation
+                    ? "Slow transits across the year ahead"
+                    : "What's pressing on you during the window"}
+                tooltip={isRelocation
+                    ? "Outer-planet transits resolve over months, not days. Each bar is one transit's full active range; hover for the lived-experience reading."
+                    : "Slow-moving transits that actually shape this stretch. Hover any bar for the lived-experience reading and what to do with it."}
             />
             <TransitGantt vm={vm} />
 
-            {/* §3 — 90-day field */}
+            {/* §3 — 90-day field (trip) / 12-month forecast (relocation) */}
             <SectionHead
                 index={showAlternates ? "03" : "02"}
-                title="The 90-day field around your trip"
-                tooltip="Each bar is one day. Taller, sage and gold = more support. Red = friction. Blue is your trip; green ▼ marks open stretches, red ▼ marks rougher ones."
+                title={isRelocation
+                    ? "The next 12 months at this place"
+                    : "The 90-day field around your trip"}
+                tooltip={isRelocation
+                    ? "What each month at this place actually feels like, taken on its own. Sage = lift, gold = mixed, coral = friction. Blue is your move month."
+                    : "Each bar is one day. Taller, sage and gold = more support. Red = friction. Blue is your trip; green ▼ marks open stretches, red ▼ marks rougher ones."}
             />
             <FieldSummary vm={vm} />
 

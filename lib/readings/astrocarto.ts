@@ -212,7 +212,22 @@ export async function runAstrocarto(
   };
   const { cityLines: acgLines, allLines: acgAllLines } = await resolveACGFull(dtUtcBirth, targetLat, targetLon);
   const refDate = travelDate ? new Date(travelDate) : new Date();
-  const rawTransits = await solve12MonthTransits(natalPlanets, refDate);
+  // Relocation readings answer "when should I move?" + "what's the year ahead?"
+  // — both need even monthly coverage across 12 months from the anchor, not a
+  // proximity-clustered window. We need 14 months of forward coverage (450
+  // days) because buildArrivalScores extends 2 months past the 12-candidate
+  // horizon for the M+2 settling-arc lookahead. No pre-anchor coverage needed
+  // — the relocation UI starts at the move month and looks forward.
+  // Trip readings keep the default proximity window centered on the anchor.
+  const isRelocation = travelType === "relocation";
+  const rawTransits = await solve12MonthTransits(natalPlanets, refDate, {
+    policy: isRelocation ? "chronological" : "proximity",
+    ...(isRelocation ? {
+      maxResults: 400,
+      windowDaysBefore: 0,
+      windowDaysAfter: 450,
+    } : {}),
+  });
   const mappedTransits = mapTransitsToMatrix(rawTransits, natalPlanets, relocatedCusps, profile.birth_lat ?? undefined);
   const globalPenalty = computeGlobalPenalty(mappedTransits);
   // A1: raw transit positions at refDate — feed Step 5b (transit-on-geodetic-angle).
@@ -285,7 +300,16 @@ export async function runAstrocarto(
   if (readingCategory === "synastry" && partnerNatalPlanets && partnerProfile && dtUtcPartner) {
     const pRelocatedCusps = await relocatedCuspsAt(dtUtcPartner, targetLat, targetLon);
     const { cityLines: pAcgLines, allLines: pAcgAllLines } = await resolveACGFull(dtUtcPartner, targetLat, targetLon);
-    const pRawTransits = await solve12MonthTransits(partnerNatalPlanets, refDate);
+    // Partner mirrors the user's policy — both partners are evaluating the same
+    // trip-vs-relocation framing for the same destination on the same date.
+    const pRawTransits = await solve12MonthTransits(partnerNatalPlanets, refDate, {
+      policy: isRelocation ? "chronological" : "proximity",
+      ...(isRelocation ? {
+        maxResults: 400,
+        windowDaysBefore: 0,
+        windowDaysAfter: 450,
+      } : {}),
+    });
     const pMappedTransits = mapTransitsToMatrix(pRawTransits, partnerNatalPlanets, pRelocatedCusps, partnerProfile.birth_lat ?? undefined);
     const pGlobalPenalty = computeGlobalPenalty(pMappedTransits);
     const pParans = computeParans(pAcgAllLines, targetLat);

@@ -5,13 +5,15 @@ const FM = "var(--font-mono)";
 const FB = "var(--font-body)";
 
 export function WindowsList({ vm, limit }: { vm: V4VM, limit?: number }) {
-    if (vm.travelType !== "trip") return null;
     const primary = vm.travelWindows[0];
     if (!primary) return null;
 
     const normalizeDates = (d: string) => d.replace(/[\s\-\–\—,]+/g, '').toLowerCase().replace(/\d{4}$/, '');
-    
+
     // AI-written plain-English window notes, keyed by date range string.
+    // Trip readings get matches via the date-range key. Relocation readings
+    // use month labels ("October 2026") which won't match the trip-shaped AI
+    // notes — they fall through to the deterministic driver string instead.
     const aiWindows: { dates: string; note: string }[] =
         (vm.tabs.timing as any)?.aiWindows ?? [];
     const aiNoteForDates = (dates: string): string | undefined => {
@@ -20,6 +22,9 @@ export function WindowsList({ vm, limit }: { vm: V4VM, limit?: number }) {
     };
 
     let rows = vm.travelWindows.map((w, i) => {
+        // Index 0 is always the user's anchor (trip dates / move month).
+        // For trips, "Worst window" is a flavor sentinel from buildRangeHighlights.
+        // For relocations there's no "worst" — alternates are all strong-by-rank.
         let kind: "your" | "best" | "worst" = "best";
         if (i === 0) kind = "your";
         else if (w.flavor === "Worst window") kind = "worst";
