@@ -138,8 +138,8 @@ The geodetic tab answers ONE question: **how does this place make a person feel,
 Fill these top-level fields when the input contains the matching evidence. Omit any field whose source data is missing — never invent.
 
 **\`placeCharacter\`** — A single object describing the destination's geodetic identity:
-- \`angles\`: ONE entry per geodetic angle present in the input (\`geodeticBand\` gives the geo-MC sign; geo-ASC if available). Each entry: \`angle\` ("MC" | "ASC"), \`sign\`, \`headline\` (≤ 70 chars — the place's archetype, e.g. "Taurus MC — this place rewards patient builders"), \`body\` (1–3 sentences on what this longitude asks of *anyone* who visits — money, body, slow reveal of value for Taurus; visibility and performance for Leo; etc.).
-- \`parans\`: ONE entry per paran present in the input. \`paranKey\` matches \`<p1-lowercase>-<p2-lowercase>\` with the two planet names sorted alphabetically (e.g. "jupiter-mars"). Each entry: \`headline\`, \`body\`. Speak about the latitude band's character — what walking around this latitude tends to feel like for everyone.
+- \`angles\`: ONE entry per geodetic angle present in the input (\`sidebarsData.geodeticBand\` gives the geo-MC sign). Each entry: \`angle\` ("MC" | "ASC"), \`sign\`, \`headline\` (≤ 70 chars — the place's archetype, e.g. "Taurus MC — this place rewards patient builders"), \`body\` (1–3 sentences on what this longitude asks of *anyone* who visits — money, body, slow reveal of value for Taurus; visibility and performance for Leo; etc.).
+- \`parans\`: ONE entry per paran in \`sidebarsData.parans[]\` (skip if the array is missing or empty). \`paranKey\` matches \`<p1-lowercase>-<p2-lowercase>\` with the two planet names sorted alphabetically (e.g. "jupiter-mars"). Each entry: \`headline\`, \`body\`. Speak about the latitude band's character — what walking around this latitude tends to feel like for everyone.
 - \`summary\`: ONE paragraph stitching the geodetic angles + parans into "this is the kind of place [city] is."
 
 **\`geodeticLiveLines\`** — Array of currently-active geodetic transits whose sign-column passes through the destination longitude (e.g. Uranus in Taurus running down Dubai during the trip window). Use \`sidebarsData.geodeticBand\` and the active transits in \`sidebarsData\` to identify candidates. Required fields:
@@ -151,17 +151,17 @@ Fill these top-level fields when the input contains the matching evidence. Omit 
 const BLOCK_WHAT_SHIFTS_PERSONALISATION = `# What-Shifts Tab — Personal-Chart Relocation
 What-shifts is where personal-chart relocation lives. Fill these top-level fields when input data supports them.
 
-**\`chartRulerReframe\`** — How the user's chart ruler re-domains in the relocated chart. Single object:
-- \`relocatedRising\`: the relocated rising sign.
-- \`ruler\`: that sign's traditional ruler (e.g. Libra rising → Venus).
-- \`fromHouse\`: which house the ruler sits in natally.
-- \`toHouse\`: which house the ruler sits in relocated.
+**\`chartRulerReframe\`** — How the user's chart ruler re-domains in the relocated chart. Source data: \`sidebarsData.chartRuler\` (skip the field entirely if absent). Single object:
+- \`relocatedRising\`: copy from \`sidebarsData.chartRuler.relocatedAscSign\`.
+- \`ruler\`: copy from \`sidebarsData.chartRuler.chartRuler\`.
+- \`fromHouse\`: copy from \`sidebarsData.chartRuler.natalRulerHouse\`.
+- \`toHouse\`: copy from \`sidebarsData.chartRuler.relocatedRulerHouse\`.
 - \`headline\`: one line capturing the topic shift (e.g. "Your trip is about ideas and travel, not body and money").
-- \`body\`: 2–4 sentences on the lived theme change. This is the headline answer to "how will [city] feel for me." Only emit when relocated rising sign differs from natal rising OR the ruler changes house.
+- \`body\`: 2–4 sentences on the lived theme change. This is the headline answer to "how will [city] feel for me." Only emit when \`natalAscSign !== relocatedAscSign\` OR \`natalRulerHouse !== relocatedRulerHouse\`.
 
-**\`acgLineNotes\`** — Per-ACG-line teacher copy keyed \`<planet-lowercase>-<angle>\` (angle ∈ MC | IC | ASC | DSC), one entry per nearby ACG line in \`sidebarsData.acgLines\`. ACG lines are time-of-birth dependent and personal — different from geodetic lines. \`headline\` + \`body\` (2–3 sentences).
+**\`acgLineNotes\`** — Per-ACG-line teacher copy keyed \`<planet-lowercase>-<angle>\` (angle ∈ MC | IC | ASC | DSC), one entry per nearby ACG line in \`sidebarsData.nearbyLines\`. ACG lines are time-of-birth dependent and personal — different from geodetic lines. \`headline\` + \`body\` (2–3 sentences).
 
-**\`modalityHits\`** — Late-degree natal placements that get caught by a same-modality hard-aspect transit pair (e.g. Mars-Uranus square at 27° fixed catches every natal planet at 20–29° in any fixed sign). \`hitKey\` = \`<transitPair-lowercase>-<natalPlanet-lowercase>\` (e.g. "mars-uranus-venus"). Only emit when the input contains an active transit pair in hard aspect AND the user has natal planets in the matching modality at 20–29°. Skip otherwise.`;
+**\`modalityHits\`** — Late-degree natal placements caught by a same-modality hard-aspect transit pair. Source: \`sidebarsData.modalityHits[]\` (already pre-computed; skip the field if the array is missing or empty). For each entry, copy \`hitKey\` verbatim and write \`headline\` + \`body\` (2–3 sentences) explaining what this transit pair lights up in the user's chart given the natal planet's sign/degree. The body MUST name the transit pair in plain English (e.g. "Mars and Uranus collide in late Aquarius") and what part of the chart it's pressing on.`;
 
 const BLOCK_LEGACY_FIELDS = `# Legacy Fields
 Fill \`summary\`, \`signals\`, and \`longRead\` as best as possible for backwards compatibility, maintaining the same tone.`;

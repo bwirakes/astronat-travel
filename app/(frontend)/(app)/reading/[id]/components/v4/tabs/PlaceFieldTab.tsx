@@ -382,9 +382,12 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
             {vm.progressions && (
                 <ProgressionsLine bands={vm.progressions.bands} />
             )}
+            {(vm.geodetic?.liveLines.length ?? 0) > 0 && (
+                <LiveLinesList lines={vm.geodetic!.liveLines} />
+            )}
             {liveItems.length > 0 ? (
                 <LiveNowTable items={liveItems} />
-            ) : reading?.geodeticEngineVersion ? (
+            ) : (vm.geodetic?.liveLines.length ?? 0) > 0 ? null : reading?.geodeticEngineVersion ? (
                 <p style={BODY_MUTED}>
                     The sky over {city} is quiet right now &mdash; nothing transiting close to its corners.
                 </p>
@@ -514,6 +517,9 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
                 sky this longitude owns.
                 {vm.parans.length > 0 && " Horizontal lines mark paran latitudes from your chart."}
             </p>
+            {vm.geodetic?.placeCharacter && (
+                <PlaceCharacterBlock pc={vm.geodetic.placeCharacter} />
+            )}
             <div style={{ maxWidth: "min(100%, 540px)", marginTop: "var(--space-md)" }}>
                 <ReadingGeodeticMap
                     lat={lat}
@@ -1382,4 +1388,110 @@ function fallbackHitNote(hit: PersonalGeodeticHit, topic: string): string {
 
 function capitalize(s: string): string {
     return s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : s;
+}
+
+// ── Teacher-copy renderers (geodetic tab) ─────────────────────────────────
+
+function LiveLinesList({ lines }: { lines: V4VM["geodetic"] extends infer G
+    ? G extends { liveLines: infer L } ? L : never : never;
+}) {
+    if (!lines || lines.length === 0) return null;
+    return (
+        <ul style={{ listStyle: "none", padding: 0, margin: "var(--space-md) 0 0 0" }}>
+            {lines.map((l) => (
+                <li
+                    key={l.liveLineKey}
+                    style={{
+                        padding: "0.95rem 0",
+                        borderBottom: "1px solid var(--surface-border)",
+                    }}
+                >
+                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "0.85rem", flexWrap: "wrap" }}>
+                        <h3 style={{ ...BODY, fontSize: "1.05rem", fontWeight: 600, margin: 0 }}>
+                            {l.headline}
+                        </h3>
+                        {l.windowNote && (
+                            <span style={{ ...MONO_SM, color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>
+                                {l.windowNote}
+                            </span>
+                        )}
+                    </div>
+                    <p style={{ ...BODY, margin: "0.4rem 0 0 0", maxWidth: "640px" }}>
+                        {l.body}
+                    </p>
+                </li>
+            ))}
+        </ul>
+    );
+}
+
+function PlaceCharacterBlock({ pc }: { pc: NonNullable<V4VM["geodetic"]>["placeCharacter"]; }) {
+    if (!pc) return null;
+    const hasAngles = pc.angles.length > 0;
+    const hasParans = pc.parans.length > 0;
+    if (!hasAngles && !hasParans && !pc.summary) return null;
+    return (
+        <div style={{ marginTop: "var(--space-md)" }}>
+            {pc.summary && (
+                <p style={{ ...BODY, fontStyle: "italic", maxWidth: "640px" }}>
+                    {pc.summary}
+                </p>
+            )}
+            {hasAngles && (
+                <ul style={{ listStyle: "none", padding: 0, margin: "var(--space-md) 0 0 0" }}>
+                    {pc.angles.map((a) => (
+                        <li
+                            key={a.angle}
+                            style={{
+                                padding: "0.95rem 0",
+                                borderBottom: "1px solid var(--surface-border)",
+                            }}
+                        >
+                            <div style={{ display: "flex", alignItems: "baseline", gap: "0.85rem", flexWrap: "wrap" }}>
+                                <span style={{
+                                    fontFamily: "var(--font-mono)",
+                                    fontSize: "0.7rem",
+                                    letterSpacing: "0.16em",
+                                    textTransform: "uppercase",
+                                    color: "var(--gold)",
+                                    fontWeight: 700,
+                                }}>
+                                    GEO {a.angle} · {a.sign}
+                                </span>
+                            </div>
+                            <h3 style={{ ...BODY, fontSize: "1.05rem", fontWeight: 600, margin: "0.25rem 0 0 0" }}>
+                                {a.headline}
+                            </h3>
+                            <p style={{ ...BODY, margin: "0.4rem 0 0 0", maxWidth: "640px" }}>
+                                {a.body}
+                            </p>
+                        </li>
+                    ))}
+                </ul>
+            )}
+            {hasParans && (
+                <ul style={{ listStyle: "none", padding: 0, margin: "var(--space-md) 0 0 0" }}>
+                    {pc.parans.map((p) => (
+                        <li
+                            key={p.paranKey}
+                            style={{
+                                padding: "0.85rem 0",
+                                borderBottom: "1px solid var(--surface-border)",
+                            }}
+                        >
+                            <div style={{ ...MONO_SM, color: "var(--text-tertiary)" }}>
+                                {p.paranKey.replace("-", " · ")}
+                            </div>
+                            <h4 style={{ ...BODY, fontSize: "0.98rem", fontWeight: 600, margin: "0.2rem 0 0 0" }}>
+                                {p.headline}
+                            </h4>
+                            <p style={{ ...BODY, margin: "0.35rem 0 0 0", fontSize: "0.95rem", maxWidth: "640px" }}>
+                                {p.body}
+                            </p>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </div>
+    );
 }

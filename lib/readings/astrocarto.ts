@@ -413,6 +413,11 @@ export async function runAstrocarto(
     transitPositions: transitPositionsAtRef,
     progressedBands,
     birthDateUtc: dtUtcBirth,
+    // Geodetics PR — feed the place-character + chart-ruler-reframe blocks.
+    // `parans` is already computed at line 254 from the same ACG line set.
+    parans,
+    birthLat: profile.birth_lat ?? undefined,
+    birthLon: profile.birth_lon ?? undefined,
   });
 
   let teacherReading: any = undefined;

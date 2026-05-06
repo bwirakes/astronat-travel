@@ -260,6 +260,52 @@ export interface V4Paran {
 }
 
 /** A5: a single progressed-planet band. */
+/** Geodetic place-character — what the destination IS, regardless of viewer.
+ *  Sourced from `teacherReading.placeCharacter`. Empty/missing fields fall
+ *  back to the deterministic copy in PlaceFieldTab. */
+export interface V4PlaceCharacterAngle {
+    angle: "MC" | "ASC";
+    sign: string;
+    headline: string;
+    body: string;
+}
+export interface V4PlaceCharacterParanNote {
+    paranKey: string;       // "<p1>-<p2>" lowercase, alpha-sorted
+    headline: string;
+    body: string;
+}
+export interface V4PlaceCharacter {
+    angles: V4PlaceCharacterAngle[];
+    parans: V4PlaceCharacterParanNote[];
+    summary: string;
+}
+export interface V4GeodeticLiveLine {
+    liveLineKey: string;    // "<planet>-<sign>-<MC|ASC>" lowercase
+    headline: string;
+    body: string;
+    windowNote: string | null;
+}
+
+/** What-shifts personalisation — chart ruler reframe + per-ACG-line notes +
+ *  late-degree modality hits. Sourced from teacherReading. */
+export interface V4ChartRulerReframe {
+    relocatedRising: string;
+    ruler: string;
+    fromHouse: number;
+    toHouse: number;
+    headline: string;
+    body: string;
+}
+export interface V4AcgLineNote {
+    headline: string;
+    body: string;
+}
+export interface V4ModalityHit {
+    hitKey: string;         // "<transitPair>-<natalPlanet>" lowercase
+    headline: string;
+    body: string;
+}
+
 export interface V4ProgressedBand {
     planet: "Sun" | "Moon";
     longitude: number;
@@ -435,6 +481,13 @@ export interface V4ReadingVM {
          *  the reference date. Already filtered/sorted by Step 5b — sorted by
          *  |severity| desc. Empty array when nothing is in orb. */
         activeTransits: V4GeoTransit[];
+        /** Place character — geodetic angles + parans + summary, all teacher-
+         *  authored. Null when teacherReading.placeCharacter is missing. */
+        placeCharacter: V4PlaceCharacter | null;
+        /** Currently-active geodetic transits (planet sitting in the geo
+         *  sign column passing through the destination). Teacher copy only —
+         *  the structured transit hits live in `activeTransits` above. */
+        liveLines: V4GeodeticLiveLine[];
     } | null;
 
     relocated: {
@@ -453,6 +506,17 @@ export interface V4ReadingVM {
          *  new house at the destination. Null when the relocated ASC
          *  sign or its traditional ruler can't be resolved. */
         chartRuler: V4ChartRuler | null;
+        /** Teacher-authored chart-ruler reframe — the headline + body for
+         *  "how this place will feel for *you*". Null when the LLM didn't
+         *  emit one (e.g. relocated rising is the same as natal). */
+        chartRulerReframe: V4ChartRulerReframe | null;
+        /** Per-ACG-line teacher copy keyed by `<planet>-<angle>` lowercase.
+         *  ACG lines are time-of-birth dependent — distinct from geodetic. */
+        acgLineNotes: Record<string, V4AcgLineNote>;
+        /** Late-degree natal placements caught by a same-modality hard-aspect
+         *  transit pair (e.g. Mars-Uranus square at 27° fixed). Empty when
+         *  no active cohort hits the user's late-degree natal planets. */
+        modalityHits: V4ModalityHit[];
     };
     /** A2: natal planets at the 8 sensitive degrees (0° cardinal + 15°
      *  fixed). Public-visibility signal. Always present (may be empty). */
@@ -1574,6 +1638,8 @@ const GEODETIC_SIGN_FLAVOR: Record<string, string> = {
 function deriveGeodetic(reading: any): {
     sign: string; longitudeRange: string; flavor: string; note: string;
     activeTransits: V4GeoTransit[];
+    placeCharacter: V4PlaceCharacter | null;
+    liveLines: V4GeodeticLiveLine[];
 } | null {
     const band = reading?.geodeticBand;
     if (!band || !band.sign) return null;
@@ -1584,7 +1650,91 @@ function deriveGeodetic(reading: any): {
     const note = aiNote
         || `Every visitor to this longitude lands in ${sign}-flavored land — ${flavor}. This is a property of the place itself, not your chart.`;
     const activeTransits = normalizeActiveGeoTransits(reading?.activeGeoTransits);
-    return { sign, longitudeRange, flavor, note, activeTransits };
+    const placeCharacter = derivePlaceCharacter(reading);
+    const liveLines = deriveGeodeticLiveLines(reading);
+    return { sign, longitudeRange, flavor, note, activeTransits, placeCharacter, liveLines };
+}
+
+function derivePlaceCharacter(reading: any): V4PlaceCharacter | null {
+    const raw = reading?.teacherReading?.placeCharacter;
+    if (!raw || typeof raw !== "object") return null;
+    const angles: V4PlaceCharacterAngle[] = Array.isArray(raw.angles)
+        ? raw.angles
+            .filter((a: any) => a && (a.angle === "MC" || a.angle === "ASC"))
+            .map((a: any) => ({
+                angle: a.angle,
+                sign: String(a.sign ?? ""),
+                headline: String(a.headline ?? ""),
+                body: String(a.body ?? ""),
+            }))
+        : [];
+    const parans: V4PlaceCharacterParanNote[] = Array.isArray(raw.parans)
+        ? raw.parans
+            .filter((p: any) => p && typeof p.paranKey === "string")
+            .map((p: any) => ({
+                paranKey: p.paranKey,
+                headline: String(p.headline ?? ""),
+                body: String(p.body ?? ""),
+            }))
+        : [];
+    const summary = String(raw.summary ?? "");
+    if (!angles.length && !parans.length && !summary) return null;
+    return { angles, parans, summary };
+}
+
+function deriveGeodeticLiveLines(reading: any): V4GeodeticLiveLine[] {
+    const raw = reading?.teacherReading?.geodeticLiveLines;
+    if (!Array.isArray(raw)) return [];
+    return raw
+        .filter((l: any) => l && typeof l.liveLineKey === "string")
+        .map((l: any) => ({
+            liveLineKey: l.liveLineKey,
+            headline: String(l.headline ?? ""),
+            body: String(l.body ?? ""),
+            windowNote: typeof l.windowNote === "string" && l.windowNote.length > 0 ? l.windowNote : null,
+        }));
+}
+
+function deriveChartRulerReframe(reading: any): V4ChartRulerReframe | null {
+    const raw = reading?.teacherReading?.chartRulerReframe;
+    if (!raw || typeof raw !== "object") return null;
+    const fromHouse = Number(raw.fromHouse);
+    const toHouse = Number(raw.toHouse);
+    if (!Number.isFinite(fromHouse) || !Number.isFinite(toHouse)) return null;
+    return {
+        relocatedRising: String(raw.relocatedRising ?? ""),
+        ruler: String(raw.ruler ?? ""),
+        fromHouse,
+        toHouse,
+        headline: String(raw.headline ?? ""),
+        body: String(raw.body ?? ""),
+    };
+}
+
+function deriveAcgLineNotes(reading: any): Record<string, V4AcgLineNote> {
+    const raw = reading?.teacherReading?.acgLineNotes;
+    if (!Array.isArray(raw)) return {};
+    const out: Record<string, V4AcgLineNote> = {};
+    for (const n of raw) {
+        if (!n || typeof n.lineKey !== "string") continue;
+        out[n.lineKey.toLowerCase()] = {
+            headline: String(n.headline ?? ""),
+            body: String(n.body ?? ""),
+        };
+    }
+    return out;
+}
+
+function deriveModalityHits(reading: any): V4ModalityHit[] {
+    const raw = reading?.teacherReading?.modalityHits;
+    if (!Array.isArray(raw)) return [];
+    return raw
+        .filter((m: any) => m && typeof m.hitKey === "string")
+        .map((m: any) => ({
+            hitKey: m.hitKey,
+            headline: String(m.headline ?? ""),
+            body: String(m.body ?? ""),
+        }));
 }
 
 /** Coerce the persisted activeGeoTransits payload into V4GeoTransit shape.
@@ -2130,6 +2280,9 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
             natalCuspsDeg: deriveNatalCusps(reading),
             relocatedCuspsDeg: Array.isArray(reading?.relocatedCusps) && reading.relocatedCusps.length === 12 ? reading.relocatedCusps : [],
             chartRuler: deriveChartRuler(reading),
+            chartRulerReframe: deriveChartRulerReframe(reading),
+            acgLineNotes: deriveAcgLineNotes(reading),
+            modalityHits: deriveModalityHits(reading),
         },
         worldPoints: deriveWorldPoints(reading),
         eclipses: deriveEclipses(reading),
