@@ -538,19 +538,11 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
             )}
 
             {vm.parans.length > 0 && (
-                <div style={{ marginTop: "var(--space-xl)" }}>
-                    <SubHead title="Latitude crossings" />
-                    <p style={{ ...BODY_MUTED, margin: "var(--space-xs) 0 var(--space-md) 0" }}>
-                        Pairs of your natal planets that cross the horizon together at a latitude
-                        near {city}&rsquo;s. Tight benefic pairs lift the field; tight malefic pairs
-                        press it.
-                    </p>
-                    <ParanList
-                        parans={vm.parans}
-                        city={city}
-                        notes={paranNotesByKey(vm.geodetic?.placeCharacter?.parans)}
-                    />
-                </div>
+                <ParansDisclosure
+                    parans={vm.parans}
+                    city={city}
+                    notes={paranNotesByKey(vm.geodetic?.placeCharacter?.parans)}
+                />
             )}
 
             <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
@@ -1494,6 +1486,89 @@ function PlaceCharacterBlock({ pc, city }: { pc: NonNullable<V4VM["geodetic"]>["
                 </ul>
             )}
         </div>
+    );
+}
+
+function ParansDisclosure({ parans, city, notes }: {
+    parans: V4Paran[];
+    city: string;
+    notes: Map<string, { headline: string; body: string }>;
+}) {
+    const lifting = parans.filter((p) => p.contribution > 0).length;
+    const pressing = parans.filter((p) => p.contribution < 0).length;
+    const neutral = parans.length - lifting - pressing;
+    const closest = [...parans].sort((a, b) => Math.abs(a.latOffset) - Math.abs(b.latOffset))[0];
+    const closestKey = closest && (notes.get(`${closest.p1}-${closest.p2}`.toLowerCase())
+        ?? notes.get(`${closest.p2}-${closest.p1}`.toLowerCase()));
+    const summaryParts = [`${parans.length} crossing${parans.length === 1 ? "" : "s"}`];
+    if (lifting) summaryParts.push(`${lifting} lifting`);
+    if (pressing) summaryParts.push(`${pressing} pressing`);
+    if (neutral && !lifting && !pressing) summaryParts.push(`${neutral} neutral`);
+    const summaryLine = summaryParts.join(" · ");
+
+    return (
+        <details
+            className="parans-disclosure"
+            style={{
+                marginTop: "var(--space-xl)",
+                borderTop: "1px solid var(--surface-border)",
+                paddingTop: "var(--space-lg)",
+            }}
+        >
+            <style>{`
+                .parans-disclosure summary::-webkit-details-marker { display: none; }
+                .parans-disclosure[open] summary .parans-toggle::before { content: "Hide ↑"; }
+                .parans-disclosure:not([open]) summary .parans-toggle::before { content: "Show all ↓"; }
+            `}</style>
+            <summary
+                style={{
+                    listStyle: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "baseline",
+                    justifyContent: "space-between",
+                    gap: "1rem",
+                }}
+            >
+                <div style={{ flex: 1 }}>
+                    <SubHead title="Latitude crossings" />
+                    <div style={{
+                        ...MONO_SM,
+                        color: "var(--text-tertiary)",
+                        marginTop: "0.4rem",
+                        letterSpacing: "0.04em",
+                    }}>
+                        {summaryLine}
+                    </div>
+                    {closestKey?.headline && (
+                        <p style={{ ...BODY, margin: "0.6rem 0 0 0", maxWidth: "640px" }}>
+                            {closestKey.headline}
+                        </p>
+                    )}
+                </div>
+                <span
+                    aria-hidden="true"
+                    className="parans-toggle"
+                    style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "0.7rem",
+                        letterSpacing: "0.16em",
+                        textTransform: "uppercase",
+                        color: "var(--text-tertiary)",
+                        whiteSpace: "nowrap",
+                        paddingTop: "0.2rem",
+                    }}
+                />
+            </summary>
+            <div style={{ marginTop: "var(--space-md)" }}>
+                <p style={{ ...BODY_MUTED, margin: "0 0 var(--space-md) 0" }}>
+                    Pairs of your natal planets that cross the horizon together at a latitude
+                    near {city}&rsquo;s. Tight benefic pairs lift the field; tight malefic pairs
+                    press it.
+                </p>
+                <ParanList parans={parans} city={city} notes={notes} />
+            </div>
+        </details>
     );
 }
 
