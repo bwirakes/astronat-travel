@@ -3,6 +3,8 @@ import {
     buildArrivalScores,
     buildMonthlyHighlights,
     buildMonthlySeries,
+    pickArrivalWindowsToNarrate,
+    type ArrivalCandidate,
     type MonthlyScore,
 } from "@/app/lib/window-scoring";
 import type { TransitHit } from "@/lib/astro/transit-solver";
@@ -291,3 +293,145 @@ describe("buildArrivalScores", () => {
         expect(occurrences).toBe(1);
     });
 });
+
+// ─── pickArrivalWindowsToNarrate ────────────────────────────────────────────
+// The shortlist that pins VM and AI prompt to the same 4 arrival months.
+// Without this, the AI sometimes picks a different 4 (top by arcScore) than
+// the VM (anchor + top 3 alts), and UI entries fall back to raw drivers.
+
+function makeCandidate(monthISO: string, monthLabel: string, arcScore: number): ArrivalCandidate {
+    return {
+        monthISO,
+        monthLabel,
+        arcScore,
+        drivers: [`driver for ${monthLabel}`],
+        settlingArcDescriptor: "steady",
+    };
+}
+
+describe("pickArrivalWindowsToNarrate", () => {
+    it("returns [anchor, ...top-3-alts] when anchor's arcScore isn't in top 4", () => {
+        // The bug we're fixing: if the user picks a low-arcScore anchor, naive
+        // "top 4 by arcScore" silently drops the anchor, and the UI loses
+        // its AI-written note for the anchor row.
+        const candidates: ArrivalCandidate[] = [
+            makeCandidate("2026-05-01", "May 2026",       72), // anchor
+            makeCandidate("2026-06-01", "June 2026",      76),
+            makeCandidate("2026-07-01", "July 2026",      81),
+            makeCandidate("2026-08-01", "August 2026",    79),
+            makeCandidate("2026-09-01", "September 2026", 64),
+        ];
+        const result = pickArrivalWindowsToNarrate(candidates, "2026-05-15");
+        expect(result.map(c => c.monthLabel)).toEqual([
+            "May 2026",      // anchor (arcScore 72 — would NOT be in top-4 by arcScore alone)
+            "July 2026",     // 81
+            "August 2026",   // 79
+            "June 2026",     // 76
+        ]);
+    });
+
+    it("anchor is always first even when it's the lowest arcScore", () => {
+        const candidates: ArrivalCandidate[] = [
+            makeCandidate("2026-10-01", "October 2026",   53), // anchor — lowest
+            makeCandidate("2026-11-01", "November 2026",  60),
+            makeCandidate("2026-12-01", "December 2026",  68),
+            makeCandidate("2027-01-01", "January 2027",   68),
+            makeCandidate("2027-05-01", "May 2027",       66),
+        ];
+        const result = pickArrivalWindowsToNarrate(candidates, "2026-10-15");
+        expect(result[0].monthLabel).toBe("October 2026");
+        expect(result.length).toBe(4);
+    });
+
+    it("drops the anchor from alternates so it doesn't appear twice", () => {
+        const candidates: ArrivalCandidate[] = [
+            makeCandidate("2026-05-01", "May 2026",  90), // anchor — also highest
+            makeCandidate("2026-06-01", "June 2026", 80),
+            makeCandidate("2026-07-01", "July 2026", 75),
+            makeCandidate("2026-08-01", "August 2026", 70),
+        ];
+        const result = pickArrivalWindowsToNarrate(candidates, "2026-05-10");
+        const labels = result.map(c => c.monthLabel);
+        expect(labels.filter(l => l === "May 2026")).toHaveLength(1);
+        expect(labels).toEqual(["May 2026", "June 2026", "July 2026", "August 2026"]);
+    });
+
+    it("falls back to candidates[0] when no monthISO matches the anchor month", () => {
+        // The anchor is May 2026 but candidates start at June 2026 (defensive
+        // case — buildArrivalScores anchors at the user's month, but legacy
+        // rows or test fixtures may not).
+        const candidates: ArrivalCandidate[] = [
+            makeCandidate("2026-06-01", "June 2026", 70),
+            makeCandidate("2026-07-01", "July 2026", 80),
+            makeCandidate("2026-08-01", "August 2026", 75),
+            makeCandidate("2026-09-01", "September 2026", 65),
+        ];
+        const result = pickArrivalWindowsToNarrate(candidates, "2026-05-15");
+        expect(result[0].monthLabel).toBe("June 2026"); // fallback to first
+    });
+
+    it("returns first 4 when travelDateISO is null (no anchor concept)", () => {
+        const candidates: ArrivalCandidate[] = [
+            makeCandidate("2026-06-01", "June 2026",      50),
+            makeCandidate("2026-07-01", "July 2026",      90), // higher score, but no anchor
+            makeCandidate("2026-08-01", "August 2026",    60),
+            makeCandidate("2026-09-01", "September 2026", 55),
+            makeCandidate("2026-10-01", "October 2026",   45),
+        ];
+        const result = pickArrivalWindowsToNarrate(candidates, null);
+        // Without anchor logic, just take first 4 in chronological order
+        expect(result.map(c => c.monthLabel)).toEqual([
+            "June 2026", "July 2026", "August 2026", "September 2026",
+        ]);
+    });
+
+    it("returns first 4 in chronological order when travelDateISO is invalid", () => {
+        const candidates: ArrivalCandidate[] = [
+            makeCandidate("2026-06-01", "June 2026", 70),
+            makeCandidate("2026-07-01", "July 2026", 80),
+            makeCandidate("2026-08-01", "August 2026", 75),
+            makeCandidate("2026-09-01", "September 2026", 65),
+            makeCandidate("2026-10-01", "October 2026", 60),
+        ];
+        const result = pickArrivalWindowsToNarrate(candidates, "not-a-date");
+        expect(result).toHaveLength(4);
+        expect(result[0].monthLabel).toBe("June 2026");
+    });
+
+    it("returns empty when candidates is empty", () => {
+        expect(pickArrivalWindowsToNarrate([], "2026-05-01")).toEqual([]);
+    });
+
+    it("returns whatever's available when candidates has fewer than 4", () => {
+        // Legacy readings without enough hit coverage — VM and AI should
+        // both render whatever's there, no padding.
+        const candidates: ArrivalCandidate[] = [
+            makeCandidate("2026-05-01", "May 2026", 70),
+            makeCandidate("2026-06-01", "June 2026", 75),
+        ];
+        const result = pickArrivalWindowsToNarrate(candidates, "2026-05-10");
+        expect(result.map(c => c.monthLabel)).toEqual(["May 2026", "June 2026"]);
+    });
+
+    it("ties in arcScore are resolved by sort stability (chronological order)", () => {
+        // Three alternates all at score 70 — should pick the first 3 by sort
+        // stability (which for Array.sort comparing equal returns 0 = stable
+        // in V8/JSC). Document the behavior so future changes don't regress.
+        const candidates: ArrivalCandidate[] = [
+            makeCandidate("2026-05-01", "May 2026",       50), // anchor
+            makeCandidate("2026-06-01", "June 2026",      70),
+            makeCandidate("2026-07-01", "July 2026",      70),
+            makeCandidate("2026-08-01", "August 2026",    70),
+            makeCandidate("2026-09-01", "September 2026", 70),
+        ];
+        const result = pickArrivalWindowsToNarrate(candidates, "2026-05-10");
+        expect(result[0].monthLabel).toBe("May 2026");
+        expect(result).toHaveLength(4);
+        // The 3 alternates picked from the 4 tied 70s — stable sort keeps
+        // chronological order, so we get June/July/August (not Sep).
+        expect(result.slice(1).map(c => c.monthLabel)).toEqual([
+            "June 2026", "July 2026", "August 2026",
+        ]);
+    });
+});
+

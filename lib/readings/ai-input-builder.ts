@@ -11,6 +11,7 @@ import {
   buildMonthlySeries,
   buildMonthlyHighlights,
   buildArrivalScores,
+  pickArrivalWindowsToNarrate,
   type MonthlyScore,
   type MonthlyHighlights,
   type ArrivalCandidate,
@@ -63,6 +64,13 @@ export interface TeacherReadingInput {
     monthlySeries: MonthlyScore[];
     monthlyHighlights: MonthlyHighlights;
     arrivalCandidates: ArrivalCandidate[];
+    /** Curated 4-window shortlist (anchor + top 3 alternates by arcScore) the
+     *  AI MUST write `windows[]` notes for. This pins the AI's chosen set to
+     *  the SAME 4 the V4 viewmodel renders, so every UI entry has matching
+     *  AI prose instead of falling back to the raw drivers string. Always
+     *  exactly 4 entries when candidates are available; ≤4 only on legacy
+     *  readings without enough hit coverage. */
+    windowsToNarrate: ArrivalCandidate[];
     /** True when even the strongest arrival arc lands in the "press" tone —
      *  no calendar month opens this place easily. The prompt's hard rule:
      *  do not write a peak narrative; recommend "reconsider" in the closing
@@ -404,6 +412,9 @@ export function buildAIInput(args: {
         const monthlySeries = buildMonthlySeries(travelDate, rawTransits, macroScore, goalIds, 12);
         const monthlyHighlights = buildMonthlyHighlights(monthlySeries);
         const arrivalCandidates = buildArrivalScores(travelDate, rawTransits, macroScore, goalIds, 12);
+        // Same shortlist the V4 viewmodel renders — pinning the prompt to this
+        // exact set means every UI entry has matching AI prose.
+        const windowsToNarrate = pickArrivalWindowsToNarrate(arrivalCandidates, travelDate);
         const placeFloorTripped = arrivalCandidates.length > 0
           && verdictTone(verdictBand(Math.max(...arrivalCandidates.map((c) => c.arcScore)))) === "press";
 
@@ -424,7 +435,7 @@ export function buildAIInput(args: {
               summary: "",
             };
 
-        return { monthlySeries, monthlyHighlights, arrivalCandidates, placeFloorTripped, personalCycle };
+        return { monthlySeries, monthlyHighlights, arrivalCandidates, windowsToNarrate, placeFloorTripped, personalCycle };
       })()
     : undefined;
 

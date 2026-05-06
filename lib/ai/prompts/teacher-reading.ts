@@ -117,12 +117,12 @@ const BLOCK_WINDOWS_RULES = `**windows** — One \`windows\` array entry per can
   - \`flavorTitle\`: a punchy 3-5 word editorial title for this window.
   - \`nights\`: the number of nights as a string (copy from input).
   - \`note\`: ONE sentence on why this window scores this way.
-- **Relocation**: \`sidebarsData.travelWindows\` will be empty. Instead, output up to 4 entries sourced from \`relocation.arrivalCandidates\` (highest \`arcScore\` first):
-  - \`dates\`: the candidate's \`monthLabel\` (e.g. "October 2026").
+- **Relocation**: \`sidebarsData.travelWindows\` will be empty. Instead, output one \`windows\` entry for **EACH** entry in \`relocation.windowsToNarrate\`, **IN ORDER** (the array is already curated to the exact 4 the UI will render — anchor month first, then 3 strongest alternates by arcScore). Do NOT skip entries. Do NOT pick from \`relocation.arrivalCandidates\` directly — \`windowsToNarrate\` is the authoritative shortlist.
+  - \`dates\`: the candidate's \`monthLabel\` (e.g. "October 2026"). MUST match \`windowsToNarrate[i].monthLabel\` exactly so the UI lookup keys match.
   - \`score\`: the candidate's \`arcScore\` (copy as-is).
   - \`flavorTitle\`: a punchy 3-5 word editorial title for this arrival arc.
   - \`nights\`: \`"first 90 days"\`.
-  - \`note\`: ONE sentence on the lived outcome of arriving in this month, citing the \`settlingArcDescriptor\` ("front-loaded" / "steady" / "back-loaded") and \`hardestSubmonth\` if present (e.g. "October opens cleanly but November is the test as Saturn squares your relocated 4th").`;
+  - \`note\`: ONE sentence on the lived outcome of arriving in this month, citing the \`settlingArcDescriptor\` ("front-loaded" / "steady" / "back-loaded") and \`hardestSubmonth\` if present (e.g. "October opens cleanly but November is the test as Saturn squares your relocated 4th"). \`relocation.arrivalCandidates\` is still available for cross-referencing the broader 12-month context if useful, but the entries you write MUST be the ones in \`windowsToNarrate\`.`;
 
 const BLOCK_SIDEBARS = `# The Sidebars (Micro-text)
 
@@ -138,6 +138,7 @@ Fill \`summary\`, \`signals\`, and \`longRead\` as best as possible for backward
 const BLOCK_HARD_CONSTRAINTS = `# Hard constraints
 - Never invent transits, lines, or aspects that aren't in the input.
 - Never invent calendar months, arrival candidates, or arc scores that aren't in \`relocation.monthlySeries\` / \`relocation.monthlyHighlights\` / \`relocation.arrivalCandidates\`.
+- For relocation \`windows[]\`: write notes for EVERY entry in \`relocation.windowsToNarrate\` and ONLY those entries. The shortlist is what the UI renders; skipped entries fall back to a raw aspect-name string and break editorial quality.
 - Never invent personal cycles. If \`relocation.personalCycle.saturnReturn\` is absent, the user is NOT in Saturn return — do not mention it. Same for \`midlife\` and lunation phases other than the one in \`relocation.personalCycle.progressedLunation.phase\`.
 - Never blame the destination for life-stage friction. If a watch-out is rooted in \`relocation.personalCycle\` (Saturn return reckoning, midlife reconstruction, balsamic dissolution), name the CYCLE as the source — not the city. The place can support or strain the cycle, but cannot replace it.
 - Never use astrological jargon without glossing it FIRST in plain English.
