@@ -130,6 +130,78 @@ const GlossaryEntrySchema = z.object({
   def: z.string(),
 });
 
+// ── Geodetic (place-field) tab ─────────────────────────────────────────────
+// Per-angle place character — what this longitude IS, regardless of viewer.
+// Geodetic system anchors 0° Aries at Greenwich, so the destination's
+// geodetic MC sign and geodetic ASC sign are properties of the *place*,
+// shared by everyone who visits that longitude/latitude.
+const PlaceCharacterAngleSchema = z.object({
+  angle: z.enum(["MC", "ASC"]),
+  sign: z.string(),
+  headline: z.string(),     // ≤ 70 chars — the place's archetype in one line
+  body: z.string(),         // 1–3 sentences — what this place asks of anyone
+});
+
+// Per-paran teacher note. paranKey matches `${p1}-${p2}` (lowercase planet
+// names, alphabetically sorted) so the prompt can target a specific paran.
+const ParanNoteSchema = z.object({
+  paranKey: z.string(),
+  headline: z.string(),
+  body: z.string(),
+});
+
+const PlaceCharacterSchema = z.object({
+  angles: z.array(PlaceCharacterAngleSchema).max(4),
+  parans: z.array(ParanNoteSchema).max(8),
+  summary: z.string(),      // one paragraph stitching it together
+});
+
+// Live geodetic transit — a planet currently transiting through the
+// geodetic sign column the destination longitude sits in (e.g. Uranus in
+// Taurus running down Dubai). liveLineKey matches
+// `${planet-lowercase}-${signLowercase}-${geoLineType}` where geoLineType
+// is one of "MC" | "ASC".
+const GeodeticLiveLineSchema = z.object({
+  liveLineKey: z.string(),
+  headline: z.string(),     // ≤ 70 chars
+  body: z.string(),         // 2–4 sentences — what's loud here, why now
+  windowNote: z.string().optional(),  // e.g. "peaks Feb 27 – Mar 2"
+});
+
+// ── What-Shifts tab ────────────────────────────────────────────────────────
+// One-shot chart-ruler reframe — how the user's chart ruler re-domains in
+// the relocated chart. This is the headline for "how this place will feel
+// for *you*" and lives on what-shifts (not geodetic — it's a personal-chart
+// phenomenon, not a property of the place).
+const ChartRulerReframeSchema = z.object({
+  relocatedRising: z.string(),
+  ruler: z.string(),
+  fromHouse: z.number().int().min(1).max(12),
+  toHouse: z.number().int().min(1).max(12),
+  headline: z.string(),
+  body: z.string(),
+});
+
+// Per-ACG-line teacher note. ACG lines are time-of-birth dependent (unlike
+// geodetic lines which are fixed to the earth) so they live on what-shifts
+// alongside the relocated chart. lineKey matches
+// `${planet-lowercase}-${angle}` with angle ∈ "MC" | "IC" | "ASC" | "DSC".
+const AcgLineNoteSchema = z.object({
+  lineKey: z.string(),
+  headline: z.string(),
+  body: z.string(),
+});
+
+// Modality hit — late-degree (20–29°) natal planet getting struck by a
+// same-modality hard-aspect transit pair (e.g. Mars-Uranus square at 27°
+// fixed catches natal planets at 20–29° in any fixed sign). hitKey matches
+// `${transitPair-lowercase}-${natalPlanet-lowercase}` (e.g. "mars-uranus-venus").
+const ModalityHitSchema = z.object({
+  hitKey: z.string(),
+  headline: z.string(),
+  body: z.string(),
+});
+
 // V4 Step 1+2 — hero + alternate windows.
 const HeroSchema = z.object({
   explainer: z.string(),
@@ -229,6 +301,16 @@ export const TeacherReadingSchema = z.object({
   lineNotes: z.array(LineNoteSchema).max(20).optional(),
   geodeticHits: z.array(GeodeticHitNoteSchema).max(20).optional(),
   glossaryEntries: z.array(GlossaryEntrySchema).max(10).optional(),
+
+  // Geodetic (place-field) tab — place character + live geodetic transits.
+  // Parans live inside placeCharacter so there's one source of truth.
+  placeCharacter: PlaceCharacterSchema.optional(),
+  geodeticLiveLines: z.array(GeodeticLiveLineSchema).max(12).optional(),
+
+  // What-shifts tab — personal-chart relocation copy.
+  chartRulerReframe: ChartRulerReframeSchema.optional(),
+  acgLineNotes: z.array(AcgLineNoteSchema).max(20).optional(),
+  modalityHits: z.array(ModalityHitSchema).max(12).optional(),
 });
 export type TeacherReading = z.infer<typeof TeacherReadingSchema>;
 
