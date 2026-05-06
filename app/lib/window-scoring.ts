@@ -730,3 +730,44 @@ export function buildArrivalScores(
 
     return out;
 }
+
+/** Curated 4-window shortlist that pins VM and AI prompt to the SAME set of
+ *  arrival months. Returns `[anchor, ...top-3-alternates-by-arcScore]`.
+ *
+ *  Why this exists: `buildArrivalScores` returns up to 12 candidates in
+ *  chronological order. The V4 viewmodel renders the user's anchor month plus
+ *  its 3 strongest alternates by arcScore. If the AI is given the full 12 and
+ *  told "pick top 4 by arcScore," the AI sometimes picks a different set than
+ *  the VM (the anchor's arcScore may rank below the top 4) and the UI lookup
+ *  falls back to the deterministic driver string ("Pluto Sextile natal Pluto · …")
+ *  for the missing entries. One source of truth fixes that — the AI writes
+ *  notes for exactly the 4 the VM will render.
+ *
+ *  Anchor selection: the candidate whose `monthISO` matches the first-of-month
+ *  derived from `travelDateISO`. Falls back to `candidates[0]` if no exact
+ *  match (defensive — buildArrivalScores anchors at the same month so the
+ *  match should always succeed in practice).
+ *
+ *  When `candidates.length < 4`, returns whatever's available; callers handle
+ *  short arrays. When `travelDateISO` is null, returns the first 4 in input
+ *  order (no anchor concept). */
+export function pickArrivalWindowsToNarrate(
+    candidates: ArrivalCandidate[],
+    travelDateISO: string | null,
+): ArrivalCandidate[] {
+    if (!candidates.length) return [];
+    if (!travelDateISO) return candidates.slice(0, 4);
+
+    const ad = new Date(travelDateISO);
+    if (isNaN(ad.getTime())) return candidates.slice(0, 4);
+    const anchorMonthISO = new Date(Date.UTC(ad.getUTCFullYear(), ad.getUTCMonth(), 1))
+        .toISOString().slice(0, 10);
+
+    const anchor = candidates.find((c) => c.monthISO === anchorMonthISO) ?? candidates[0];
+    const alternates = candidates
+        .filter((c) => c.monthISO !== anchor.monthISO)
+        .sort((a, b) => b.arcScore - a.arcScore)
+        .slice(0, 3);
+
+    return [anchor, ...alternates];
+}

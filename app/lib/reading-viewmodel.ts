@@ -19,6 +19,7 @@ import {
     buildMonthlySeries,
     buildMonthlyHighlights,
     buildArrivalScores,
+    pickArrivalWindowsToNarrate,
     type DailyScore,
     type RangeHighlights,
     type TransitSpan,
@@ -746,15 +747,10 @@ function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateI
         };
 
         if (candidates.length) {
-            const anchorYear = new Date(travelDateISO).getUTCFullYear();
-            const anchorMonth = new Date(travelDateISO).getUTCMonth();
-            const anchorMonthISO = new Date(Date.UTC(anchorYear, anchorMonth, 1)).toISOString().slice(0, 10);
-
-            const anchor = candidates.find(c => c.monthISO === anchorMonthISO) ?? candidates[0];
-            const alternates = candidates
-                .filter(c => c.monthISO !== anchor.monthISO)
-                .sort((a, b) => b.arcScore - a.arcScore)
-                .slice(0, 3);
+            // Same shortlist the AI prompt sees, so the windows[] notes the AI
+            // writes will key-match every entry the VM renders.
+            const shortlist = pickArrivalWindowsToNarrate(candidates, travelDateISO);
+            const [anchor, ...alternates] = shortlist;
 
             const windows: V4TravelWindow[] = [
                 { ...candidateToWindow(anchor, "anchor"), rank: 1 },
