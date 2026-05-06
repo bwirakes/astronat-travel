@@ -17,6 +17,12 @@ import {
 } from "@/app/lib/window-scoring";
 import { verdictBand, verdictTone } from "@/app/lib/verdict";
 import { formatTransitDates, transitTone, aspectSentence } from "./ai-input-helpers";
+import {
+  computePersonalCycleContext,
+  type PersonalCycleContext,
+} from "@/app/lib/personal-cycles";
+import type { ComputedPosition } from "@/lib/astro/transits";
+import type { ProgressionsResult } from "@/app/lib/progressions";
 
 export interface TeacherReadingInput {
   macro: {
@@ -62,6 +68,13 @@ export interface TeacherReadingInput {
      *  do not write a peak narrative; recommend "reconsider" in the closing
      *  verdict and frame the strongest month as the least-rough door. */
     placeFloorTripped: boolean;
+    /** Life-stage cycles active for the user at refDate (Saturn return,
+     *  midlife band, progressed lunation phase). The prompt's banner rule:
+     *  if `personalCycle.gateActive === true`, lead the relocation overview
+     *  with the dominant cycle's framing before any place narrative. The
+     *  cycle is person-stable — it doesn't change with destination — but
+     *  reframes how the destination should be evaluated. */
+    personalCycle: PersonalCycleContext;
   };
 }
 
@@ -132,8 +145,15 @@ export function buildAIInput(args: {
   natalAngles?: { ASC: number; IC: number; DSC: number; MC: number };
   travelType: "trip" | "relocation";
   goalIds: string[];
+  /** Optional inputs for personal-cycle compute. All three must be provided
+   *  for `relocation.personalCycle` to populate. Trip readings ignore them.
+   *  Older callers can omit; the relocation block falls back to a neutral
+   *  PersonalCycleContext (dominant: "none", gateActive: false). */
+  transitPositions?: ComputedPosition[];
+  progressedBands?: ProgressionsResult;
+  birthDateUtc?: Date;
 }): TeacherReadingInput {
-  const { destination, destinationLat, destinationLon, travelDate, matrixResult, acgLines, rawTransits, eventScores, natalPlanets, relocatedCusps, natalAngles, travelType, goalIds } = args;
+  const { destination, destinationLat, destinationLon, travelDate, matrixResult, acgLines, rawTransits, eventScores, natalPlanets, relocatedCusps, natalAngles, travelType, goalIds, transitPositions, progressedBands, birthDateUtc } = args;
 
   const start = travelDate ? new Date(travelDate) : new Date();
   const end = new Date(start);
@@ -372,6 +392,12 @@ export function buildAIInput(args: {
   // `verdictTone(verdictBand(maxArc)) === "press"` — to keep prose and UI
   // honesty aligned. Skipped when no travelDate (no anchor → no monthly
   // series possible).
+  //
+  // PR-B addition: personal-cycle context (Saturn return / midlife /
+  // progressed lunation) computed from natal planets + transit positions
+  // + progressedBands. Falls back to a neutral context when birthDateUtc
+  // or transitPositions aren't supplied — older call sites continue to
+  // produce a valid relocation block, just without the cycle banner.
   const relocation = travelType === "relocation" && travelDate
     ? (() => {
         const macroScore = matrixResult.macroScore;
@@ -380,7 +406,25 @@ export function buildAIInput(args: {
         const arrivalCandidates = buildArrivalScores(travelDate, rawTransits, macroScore, goalIds, 12);
         const placeFloorTripped = arrivalCandidates.length > 0
           && verdictTone(verdictBand(Math.max(...arrivalCandidates.map((c) => c.arcScore)))) === "press";
-        return { monthlySeries, monthlyHighlights, arrivalCandidates, placeFloorTripped };
+
+        const refDate = new Date(travelDate);
+        const personalCycle: PersonalCycleContext = (transitPositions && birthDateUtc)
+          ? computePersonalCycleContext({
+              natalPlanets,
+              transitPositions,
+              progressedBands,
+              refDate,
+              birthDateUtc,
+            })
+          : {
+              progressedLunation: { phase: "gibbous", elongation: 0, valence: "transitional" },
+              dominant: "none",
+              gateActive: false,
+              upliftActive: false,
+              summary: "",
+            };
+
+        return { monthlySeries, monthlyHighlights, arrivalCandidates, placeFloorTripped, personalCycle };
       })()
     : undefined;
 
