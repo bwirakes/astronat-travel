@@ -76,6 +76,16 @@ docs/**/*.woff
 docs/**/*.woff2
 docs/**/uploads/
 
+# Video / reel artifacts — block instaloader/SnapInsta dumps and any large
+# raw video that gets dropped into the repo for reference. The 3 marketing
+# reel gifs in public/reels/ remain tracked (production assets referenced
+# by the marketing + blog pages); only video files and the instaloader dump
+# directory are blocked.
+reel_video/
+*.mp4
+*.mov
+*.m4v
+
 # Unused public assets
 public/test.gif
 public/file.svg
