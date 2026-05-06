@@ -99,12 +99,15 @@ export default function NatalWithGeodeticOverlay({
             >
                 {lit.map((a) => {
                     const dim = hovered !== null && hovered !== a.name;
+                    const baseOpacity = a.wide
+                        ? (hovered === a.name ? (isDark ? 0.45 : 0.2) : (isDark ? 0.32 : 0.12))
+                        : (isDark ? 0.1 : 0.035);
                     return (
                         <path
                             key={`wedge-${a.name}`}
                             d={arcBand(a.lon, 5, ORB_OUTER_R, ORB_INNER_R, natalAsc)}
                             fill={ANGLE_STYLE[a.name].tone}
-                            opacity={dim ? 0.04 : a.wide ? (hovered === a.name ? 0.45 : 0.32) : 0.10}
+                            opacity={dim ? (isDark ? 0.04 : 0.02) : baseOpacity}
                             style={{ transition: "opacity 220ms ease" }}
                         />
                     );
@@ -116,7 +119,7 @@ export default function NatalWithGeodeticOverlay({
                     const tone = ANGLE_STYLE[a.name].tone;
                     const dim = hovered !== null && hovered !== a.name;
                     return (
-                        <g key={`tick-${a.name}`} style={{ opacity: dim ? 0.25 : 1, transition: "opacity 220ms ease" }}>
+                        <g key={`tick-${a.name}`} style={{ opacity: dim ? (isDark ? 0.25 : 0.72) : 1, transition: "opacity 220ms ease" }}>
                             <line
                                 x1={inner.x} y1={inner.y}
                                 x2={outer.x} y2={outer.y}
@@ -140,7 +143,7 @@ export default function NatalWithGeodeticOverlay({
                             style={{
                                 pointerEvents: "auto",
                                 cursor: "pointer",
-                                opacity: dim ? 0.4 : 1,
+                                opacity: dim ? (isDark ? 0.4 : 0.82) : 1,
                                 transition: "opacity 220ms ease",
                             }}
                             onMouseEnter={() => setHovered(a.name)}
