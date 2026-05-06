@@ -5,7 +5,17 @@ import { signFromLongitude, houseFromLongitude } from "@/app/lib/geodetic";
 import { acgLineRawScore } from "@/app/lib/house-matrix";
 import { houseTopic, spellAngle, closenessBand, houseVibe } from "./house-topics";
 import { buildEditorialEvidence, deriveScoreNarrative } from "@/app/lib/reading-tabs";
-import { buildScoredWindows, buildRangeHighlights } from "@/app/lib/window-scoring";
+import {
+  buildScoredWindows,
+  buildRangeHighlights,
+  buildMonthlySeries,
+  buildMonthlyHighlights,
+  buildArrivalScores,
+  type MonthlyScore,
+  type MonthlyHighlights,
+  type ArrivalCandidate,
+} from "@/app/lib/window-scoring";
+import { verdictBand, verdictTone } from "@/app/lib/verdict";
 import { formatTransitDates, transitTone, aspectSentence } from "./ai-input-helpers";
 
 export interface TeacherReadingInput {
@@ -17,12 +27,15 @@ export interface TeacherReadingInput {
     goalIds: string[];
     scoreBreakdown?: { place: number; timing: number; sky: number };
   };
-  
+
   /** The core structured data for the AI to base its tabs on */
   editorialEvidence: EditorialEvidence;
 
   /** Extra raw data needed for generating specific sidebars and tooltips */
   sidebarsData: {
+    /** Trip-only candidate windows (top hero + range highlights). Empty array
+     *  for relocations — see top-level `relocation.arrivalCandidates` instead. */
+    travelWindows: Array<{ rank: number; dates: string; score: number; nights: string }>;
     topLineDriver?: string;
     geodeticBand?: { sign: string; longitudeRange: string };
     natalSpotlight: Array<{ planet: string; sign: string; role: string }>;
@@ -33,6 +46,22 @@ export interface TeacherReadingInput {
     planetHouseShifts?: Array<{ planet: string; natalHouse: number; relocatedHouse: number }>;
     aspectsToAngles?: Array<{ planet: string; angle: "ASC" | "IC" | "DSC" | "MC"; aspect: string; orb: number }>;
     personalGeodetic?: Array<{ planet: string; angle: string; angleTopic: string; closeness: string; family: string }>;
+  };
+
+  /** Relocation-only timing block. Present iff `macro.travelType === "relocation"`.
+   *  The prompt reads this to write copy in the relocation register (calendar
+   *  months, first-90-days arrival arc, "year ahead") instead of the trip
+   *  register (7-night windows, "during your stay"). Mirrors the four fields
+   *  PR #47 added to the V4 viewmodel so prompt and UI consume the same data. */
+  relocation?: {
+    monthlySeries: MonthlyScore[];
+    monthlyHighlights: MonthlyHighlights;
+    arrivalCandidates: ArrivalCandidate[];
+    /** True when even the strongest arrival arc lands in the "press" tone —
+     *  no calendar month opens this place easily. The prompt's hard rule:
+     *  do not write a peak narrative; recommend "reconsider" in the closing
+     *  verdict and frame the strongest month as the least-rough door. */
+    placeFloorTripped: boolean;
   };
 }
 
@@ -337,6 +366,24 @@ export function buildAIInput(args: {
     })),
   );
 
+  // Relocation-only timing block. Same builders the V4 viewmodel runs in
+  // reading-viewmodel.ts (PR #47), called here so the AI prompt sees the
+  // exact data the UI renders. Floor-flag mirrors the VM's check —
+  // `verdictTone(verdictBand(maxArc)) === "press"` — to keep prose and UI
+  // honesty aligned. Skipped when no travelDate (no anchor → no monthly
+  // series possible).
+  const relocation = travelType === "relocation" && travelDate
+    ? (() => {
+        const macroScore = matrixResult.macroScore;
+        const monthlySeries = buildMonthlySeries(travelDate, rawTransits, macroScore, goalIds, 12);
+        const monthlyHighlights = buildMonthlyHighlights(monthlySeries);
+        const arrivalCandidates = buildArrivalScores(travelDate, rawTransits, macroScore, goalIds, 12);
+        const placeFloorTripped = arrivalCandidates.length > 0
+          && verdictTone(verdictBand(Math.max(...arrivalCandidates.map((c) => c.arcScore)))) === "press";
+        return { monthlySeries, monthlyHighlights, arrivalCandidates, placeFloorTripped };
+      })()
+    : undefined;
+
   return {
     macro: {
       destination,
@@ -347,6 +394,7 @@ export function buildAIInput(args: {
       scoreBreakdown,
     },
     editorialEvidence,
+    ...(relocation ? { relocation } : {}),
     sidebarsData: {
       travelWindows: (() => {
         if (travelType === "relocation" || !travelDate) return [];
