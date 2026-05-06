@@ -240,6 +240,7 @@ const SIGN_FLAVOR: Record<string, string> = {
 };
 
 export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines, copiedTab }: Props) {
+    const [showParans, setShowParans] = useState(false);
     const { lat, lon, city } = vm.location;
     const geoMC  = geodeticMCLongitude(lon);
     const geoASC = geodeticASCLongitude(lon, lat);
@@ -509,41 +510,53 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
                 </>
             )}
 
-            {/* ── §05 Where [city] sits — consolidated map + character + parans ─ */}
+            {/* ── §05 Where [city] sits — two-column: sticky map + scrolling prose ─ */}
             <SectionHead index="05" title={`Where ${city} sits in the zodiac`} flush />
             <p style={BODY}>
                 {city} sits where {signFromLongitude(geoMC)} runs overhead and{" "}
                 {signFromLongitude(geoASC)} rises on the horizon. The shaded band is the slice of
                 sky this longitude owns.
-                {vm.parans.length > 0 && " Horizontal lines mark paran latitudes from your chart."}
             </p>
-            <div style={{ maxWidth: "min(100%, 540px)", marginTop: "var(--space-md)" }}>
-                <ReadingGeodeticMap
-                    lat={lat}
-                    lon={lon}
-                    city={city}
-                    parans={vm.parans
-                        .filter((p) => Math.abs(p.latOffset) <= 28)
-                        .map((p) => ({
-                            p1: p.p1, p2: p.p2,
-                            aspect: p.aspect || undefined,
-                            lat: p.lat,
-                            contribution: p.contribution,
-                        }))}
-                />
+
+            <div className="grid grid-cols-1 lg:grid-cols-[5fr_6fr] gap-8 lg:gap-10 mt-6">
+                <div className="lg:sticky lg:top-20 lg:self-start">
+                    <ReadingGeodeticMap
+                        lat={lat}
+                        lon={lon}
+                        city={city}
+                        showParans={showParans}
+                        showLegend={false}
+                        parans={vm.parans
+                            .filter((p) => Math.abs(p.latOffset) <= 28)
+                            .map((p) => ({
+                                p1: p.p1, p2: p.p2,
+                                aspect: p.aspect || undefined,
+                                lat: p.lat,
+                                contribution: p.contribution,
+                            }))}
+                    />
+                    <MapControls
+                        mcSign={signFromLongitude(geoMC)}
+                        ascSign={signFromLongitude(geoASC)}
+                        showParans={showParans}
+                        onTogglePaarans={() => setShowParans((v) => !v)}
+                        paransCount={vm.parans.length}
+                    />
+                </div>
+
+                <div>
+                    {vm.geodetic?.placeCharacter && (
+                        <PlaceCharacterBlock pc={vm.geodetic.placeCharacter} city={city} />
+                    )}
+                    {vm.parans.length > 0 && (
+                        <ParansDisclosure
+                            parans={vm.parans}
+                            city={city}
+                            notes={paranNotesByKey(vm.geodetic?.placeCharacter?.parans)}
+                        />
+                    )}
+                </div>
             </div>
-
-            {vm.geodetic?.placeCharacter && (
-                <PlaceCharacterBlock pc={vm.geodetic.placeCharacter} city={city} />
-            )}
-
-            {vm.parans.length > 0 && (
-                <ParansDisclosure
-                    parans={vm.parans}
-                    city={city}
-                    notes={paranNotesByKey(vm.geodetic?.placeCharacter?.parans)}
-                />
-            )}
 
             <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
 
@@ -1569,6 +1582,85 @@ function ParansDisclosure({ parans, city, notes }: {
                 <ParanList parans={parans} city={city} notes={notes} />
             </div>
         </details>
+    );
+}
+
+function MapControls({ mcSign, ascSign, showParans, onTogglePaarans, paransCount }: {
+    mcSign: string;
+    ascSign: string;
+    showParans: boolean;
+    onTogglePaarans: () => void;
+    paransCount: number;
+}) {
+    return (
+        <div style={{ marginTop: "var(--space-sm)" }}>
+            {/* Always-on legend */}
+            <div
+                style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "0.65rem",
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    color: "var(--text-tertiary)",
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "1.1rem",
+                    marginBottom: "var(--space-sm)",
+                }}
+            >
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+                    <span style={{
+                        display: "inline-block",
+                        width: 14,
+                        height: 2,
+                        background: "repeating-linear-gradient(90deg, var(--color-spiced-life) 0 4px, transparent 4px 7px)",
+                    }} />
+                    {mcSign} MC overhead
+                </span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+                    <span style={{ display: "inline-block", width: 14, height: 2, background: "var(--gold)" }} />
+                    {ascSign} ASC rising
+                </span>
+            </div>
+
+            {/* Layer toggle — paran latitudes default off; the prose row in
+             *  §Latitude crossings is the canonical reading surface. */}
+            {paransCount > 0 && (
+                <button
+                    type="button"
+                    onClick={onTogglePaarans}
+                    style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        background: "transparent",
+                        border: "1px solid var(--surface-border)",
+                        borderRadius: "999px",
+                        padding: "0.4rem 0.8rem",
+                        cursor: "pointer",
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "0.65rem",
+                        letterSpacing: "0.12em",
+                        textTransform: "uppercase",
+                        color: showParans ? "var(--text-primary)" : "var(--text-tertiary)",
+                    }}
+                    aria-pressed={showParans}
+                >
+                    <span
+                        aria-hidden="true"
+                        style={{
+                            display: "inline-block",
+                            width: 14,
+                            height: 2,
+                            background: showParans
+                                ? "repeating-linear-gradient(90deg, var(--text-secondary) 0 4px, transparent 4px 7px)"
+                                : "color-mix(in oklab, var(--text-tertiary) 40%, transparent)",
+                        }}
+                    />
+                    {showParans ? "Hide" : "Show"} {paransCount} paran {paransCount === 1 ? "line" : "lines"}
+                </button>
+            )}
+        </div>
     );
 }
 
