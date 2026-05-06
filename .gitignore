@@ -66,7 +66,6 @@ parse.mjs
 setup-dom.ts
 test-houses.ts
 *.pdf
-proxy.ts
 update-notion.mjs
 
 # Research binaries — keep source .md alongside code, not the rendered artifacts
