@@ -132,10 +132,15 @@ For all sidebars, tooltips, and micro-text (\`chrome\`, \`hero\`, \`vibes\`, \`m
 - For \`lineNotes\`, use \`<planet-lowercase>-<angle-shortcode>\`.
 - For \`geodeticHits\`, use \`<planet-lowercase>-<ASC|IC|DSC|MC>\`.`;
 
-const BLOCK_GEODETIC_PLACE_CHARACTER = `# Geodetic Tab — Place Character
+const BLOCK_GEODETIC_PLACE_CHARACTER = `# Geodetic Tab — Place Character (REQUIRED when source data present)
 The geodetic tab answers ONE question: **how does this place make a person feel, regardless of who they are?** Geodetic lines are fixed to the earth (0° Aries anchored at Greenwich), so they describe the *place itself*, not the user's personal chart. ACG lines and chart-ruler reframes do NOT belong here — they live on what-shifts.
 
-Fill these top-level fields when the input contains the matching evidence. Omit any field whose source data is missing — never invent.
+**MANDATORY OUTPUT RULES (do not skip):**
+- If \`sidebarsData.geodeticBand\` is present → you MUST emit \`placeCharacter\` with at least one entry in \`angles\` (the geodetic MC). This is non-negotiable. Skipping it leaves §05 of the geodetic tab blank.
+- If \`sidebarsData.parans\` is a non-empty array → \`placeCharacter.parans\` MUST contain one entry per paran in the input.
+- \`placeCharacter.summary\` is ALWAYS required when \`placeCharacter\` is emitted.
+
+For other fields below: omit only when the matching source data is missing — never invent.
 
 **\`placeCharacter\`** — A single object describing the destination's geodetic identity:
 - \`angles\`: ONE entry per geodetic angle present in the input (\`sidebarsData.geodeticBand\` gives the geo-MC sign). Each entry: \`angle\` ("MC" | "ASC"), \`sign\`, \`headline\` (≤ 70 chars — the place's archetype, e.g. "Taurus MC — this place rewards patient builders"), \`body\` (1–3 sentences on what this longitude asks of *anyone* who visits — money, body, slow reveal of value for Taurus; visibility and performance for Leo; etc.).
@@ -148,10 +153,12 @@ Fill these top-level fields when the input contains the matching evidence. Omit 
 - \`body\`: 2–4 sentences — what's amplified at this longitude during the trip window, plus why the user might feel it (NOT a deep personal-chart hit — that's what-shifts territory).
 - \`windowNote\` (optional): human window phrase, e.g. "peaks Feb 27 – Mar 2".`;
 
-const BLOCK_WHAT_SHIFTS_PERSONALISATION = `# What-Shifts Tab — Personal-Chart Relocation
-What-shifts is where personal-chart relocation lives. Fill these top-level fields when input data supports them.
+const BLOCK_WHAT_SHIFTS_PERSONALISATION = `# What-Shifts Tab — Personal-Chart Relocation (REQUIRED when source data present)
+What-shifts is where personal-chart relocation lives.
 
-**\`chartRulerReframe\`** — How the user's chart ruler re-domains in the relocated chart. Source data: \`sidebarsData.chartRuler\` (skip the field entirely if absent). Single object:
+**MANDATORY:** When \`sidebarsData.chartRuler\` is present, you MUST emit \`chartRulerReframe\`. The only exception is when \`natalAscSign === relocatedAscSign\` AND \`natalRulerHouse === relocatedRulerHouse\` (truly nothing shifts). When \`sidebarsData.nearbyLines\` has entries, you MUST emit \`acgLineNotes\` with one entry per line.
+
+**\`chartRulerReframe\`** — How the user's chart ruler re-domains in the relocated chart. Source data: \`sidebarsData.chartRuler\`. Single object:
 - \`relocatedRising\`: copy from \`sidebarsData.chartRuler.relocatedAscSign\`.
 - \`ruler\`: copy from \`sidebarsData.chartRuler.chartRuler\`.
 - \`fromHouse\`: copy from \`sidebarsData.chartRuler.natalRulerHouse\`.
@@ -225,6 +232,7 @@ export async function writeTeacherReading(
       },
     });
     console.log(`[teacher-reading] ok in ${Date.now() - t0}ms — finish=${finishReason}, usage=${JSON.stringify(usage)}`);
+    console.log(`[teacher-reading] geodetics fields — placeCharacter:${object.placeCharacter ? "✓" : "✗"} liveLines:${object.geodeticLiveLines?.length ?? 0} chartRulerReframe:${object.chartRulerReframe ? "✓" : "✗"} acgLineNotes:${object.acgLineNotes?.length ?? 0} modalityHits:${object.modalityHits?.length ?? 0}`);
     return object;
   } catch (err: any) {
     console.error(`[teacher-reading] failed after ${Date.now() - t0}ms — finish=${err?.finishReason ?? "?"}, textLen=${err?.text?.length ?? 0}, usage=${JSON.stringify(err?.usage ?? {})}`);
