@@ -509,17 +509,14 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
                 </>
             )}
 
-            {/* ── §05 Where the city sits in the zodiac ────────────────── */}
-            <SectionHead index="05" title={`Where ${city} sits in the zodiac`}  flush />
+            {/* ── §05 Where [city] sits — consolidated map + character + parans ─ */}
+            <SectionHead index="05" title={`Where ${city} sits in the zodiac`} flush />
             <p style={BODY}>
                 {city} sits where {signFromLongitude(geoMC)} runs overhead and{" "}
                 {signFromLongitude(geoASC)} rises on the horizon. The shaded band is the slice of
                 sky this longitude owns.
                 {vm.parans.length > 0 && " Horizontal lines mark paran latitudes from your chart."}
             </p>
-            {vm.geodetic?.placeCharacter && (
-                <PlaceCharacterBlock pc={vm.geodetic.placeCharacter} />
-            )}
             <div style={{ maxWidth: "min(100%, 540px)", marginTop: "var(--space-md)" }}>
                 <ReadingGeodeticMap
                     lat={lat}
@@ -536,18 +533,24 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
                 />
             </div>
 
-            {/* ── §06 Latitude crossings (only when present) ───────────── */}
+            {vm.geodetic?.placeCharacter && (
+                <PlaceCharacterBlock pc={vm.geodetic.placeCharacter} city={city} />
+            )}
+
             {vm.parans.length > 0 && (
-                <>
-                    <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
-                    <SectionHead index="06" title="Latitude crossings"  flush />
-                    <p style={BODY_MUTED}>
+                <div style={{ marginTop: "var(--space-xl)" }}>
+                    <SubHead title="Latitude crossings" />
+                    <p style={{ ...BODY_MUTED, margin: "var(--space-xs) 0 var(--space-md) 0" }}>
                         Pairs of your natal planets that cross the horizon together at a latitude
                         near {city}&rsquo;s. Tight benefic pairs lift the field; tight malefic pairs
                         press it.
                     </p>
-                    <ParanList parans={vm.parans} city={city} />
-                </>
+                    <ParanList
+                        parans={vm.parans}
+                        city={city}
+                        notes={paranNotesByKey(vm.geodetic?.placeCharacter?.parans)}
+                    />
+                </div>
             )}
 
             <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
@@ -1197,22 +1200,13 @@ function ContactTable({
 
 // ── ParanList ─────────────────────────────────────────────────────────────
 
-function ParanList({ parans, city }: { parans: V4Paran[]; city: string }) {
+function ParanList({ parans, city: _city, notes }: {
+    parans: V4Paran[];
+    city: string;
+    notes?: Map<string, { headline: string; body: string }>;
+}) {
     return (
         <div>
-            <p style={{
-                fontFamily: "var(--font-body)",
-                fontSize: "0.88rem",
-                lineHeight: 1.6,
-                color: "var(--text-secondary)",
-                margin: "0 0 var(--space-md) 0",
-                maxWidth: "640px",
-                fontWeight: 300,
-            }}>
-                These pairs cross the horizon together at a latitude near {city}&rsquo;s.
-                Tight benefic combinations lift the field; tight malefic combinations
-                press it.
-            </p>
             <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
                 {parans.map((p, i) => {
                     const tone = p.contribution > 0
@@ -1222,61 +1216,84 @@ function ParanList({ parans, city }: { parans: V4Paran[]; city: string }) {
                             : "var(--text-tertiary)";
                     const offset = Math.abs(p.latOffset).toFixed(1);
                     const direction = p.latOffset > 0 ? "north" : "south";
+                    const note = notes?.get(`${p.p1}-${p.p2}`.toLowerCase())
+                        ?? notes?.get(`${p.p2}-${p.p1}`.toLowerCase());
                     return (
                         <li
                             key={`paran-${i}`}
                             style={{
+                                padding: "var(--space-md) 0",
+                                borderBottom: "1px solid var(--surface-border)",
+                            }}
+                        >
+                            <div style={{
                                 display: "grid",
                                 gridTemplateColumns: "minmax(180px, 1fr) auto auto",
                                 gap: "1rem",
                                 alignItems: "baseline",
-                                padding: "0.85rem 0",
-                                borderBottom: "1px solid var(--surface-border)",
-                            }}
-                        >
-                            <div>
-                                <div style={{
-                                    fontFamily: "var(--font-mono)",
-                                    fontSize: "0.85rem",
-                                    fontWeight: 600,
-                                    color: "var(--text-primary)",
-                                }}>
-                                    {capitalize(p.p1)} {p.aspect ? `· ${p.aspect}` : ""} · {capitalize(p.p2)}
-                                </div>
-                                {p.type && (
+                            }}>
+                                <div>
                                     <div style={{
                                         fontFamily: "var(--font-mono)",
-                                        fontSize: "0.6rem",
-                                        letterSpacing: "0.12em",
-                                        textTransform: "uppercase",
-                                        color: "var(--text-tertiary)",
-                                        marginTop: "0.2rem",
+                                        fontSize: "0.8rem",
+                                        fontWeight: 500,
+                                        letterSpacing: "0.04em",
+                                        color: "var(--text-primary)",
                                     }}>
-                                        {p.type}
+                                        {capitalize(p.p1)} {p.aspect ? `· ${p.aspect}` : ""} · {capitalize(p.p2)}
                                     </div>
-                                )}
+                                    {p.type && (
+                                        <div style={{
+                                            fontFamily: "var(--font-mono)",
+                                            fontSize: "0.6rem",
+                                            letterSpacing: "0.12em",
+                                            textTransform: "uppercase",
+                                            color: "var(--text-tertiary)",
+                                            marginTop: "0.2rem",
+                                        }}>
+                                            {p.type}
+                                        </div>
+                                    )}
+                                </div>
+                                <div style={{
+                                    fontFamily: "var(--font-mono)",
+                                    fontSize: "0.7rem",
+                                    color: "var(--text-secondary)",
+                                    whiteSpace: "nowrap",
+                                }}>
+                                    {offset}° {direction} of you
+                                </div>
+                                <span style={{
+                                    fontFamily: "var(--font-mono)",
+                                    fontSize: "0.7rem",
+                                    fontWeight: 700,
+                                    color: tone,
+                                    padding: "0.25rem 0.6rem",
+                                    border: `1px solid ${tone}`,
+                                    borderRadius: "999px",
+                                    background: `color-mix(in oklab, ${tone} 8%, transparent)`,
+                                    whiteSpace: "nowrap",
+                                }}>
+                                    {p.contribution > 0 ? "+" : ""}{Math.round(p.contribution)}
+                                </span>
                             </div>
-                            <div style={{
-                                fontFamily: "var(--font-mono)",
-                                fontSize: "0.7rem",
-                                color: "var(--text-secondary)",
-                                whiteSpace: "nowrap",
-                            }}>
-                                {offset}° {direction} of you
-                            </div>
-                            <span style={{
-                                fontFamily: "var(--font-mono)",
-                                fontSize: "0.7rem",
-                                fontWeight: 700,
-                                color: tone,
-                                padding: "0.25rem 0.6rem",
-                                border: `1px solid ${tone}`,
-                                borderRadius: "999px",
-                                background: `color-mix(in oklab, ${tone} 8%, transparent)`,
-                                whiteSpace: "nowrap",
-                            }}>
-                                {p.contribution > 0 ? "+" : ""}{Math.round(p.contribution)}
-                            </span>
+                            {note && (
+                                <div style={{ marginTop: "0.6rem", paddingLeft: "0.1rem" }}>
+                                    <div style={{
+                                        fontFamily: "var(--font-primary, serif)",
+                                        fontSize: "1rem",
+                                        fontWeight: 600,
+                                        color: "var(--text-primary)",
+                                        margin: "0 0 0.25rem 0",
+                                        textTransform: "none",
+                                    }}>
+                                        {note.headline}
+                                    </div>
+                                    <p style={{ ...BODY, margin: 0, fontSize: "0.95rem", maxWidth: "640px" }}>
+                                        {note.body}
+                                    </p>
+                                </div>
+                            )}
                         </li>
                     );
                 })}
@@ -1425,68 +1442,52 @@ function LiveLinesList({ lines }: { lines: V4VM["geodetic"] extends infer G
     );
 }
 
-function PlaceCharacterBlock({ pc }: { pc: NonNullable<V4VM["geodetic"]>["placeCharacter"]; }) {
+function PlaceCharacterBlock({ pc, city }: { pc: NonNullable<V4VM["geodetic"]>["placeCharacter"]; city: string }) {
     if (!pc) return null;
     const hasAngles = pc.angles.length > 0;
-    const hasParans = pc.parans.length > 0;
-    if (!hasAngles && !hasParans && !pc.summary) return null;
+    if (!hasAngles && !pc.summary) return null;
     return (
-        <div style={{ marginTop: "var(--space-md)" }}>
+        <div style={{ marginTop: "var(--space-xl)" }}>
+            <SubHead title={`The character of ${city}`} />
             {pc.summary && (
-                <p style={{ ...BODY, fontStyle: "italic", maxWidth: "640px" }}>
+                <p style={{ ...BODY, margin: "var(--space-xs) 0 var(--space-md) 0", maxWidth: "640px" }}>
                     {pc.summary}
                 </p>
             )}
             {hasAngles && (
-                <ul style={{ listStyle: "none", padding: 0, margin: "var(--space-md) 0 0 0" }}>
+                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
                     {pc.angles.map((a) => (
                         <li
                             key={a.angle}
                             style={{
-                                padding: "0.95rem 0",
+                                padding: "var(--space-md) 0",
                                 borderBottom: "1px solid var(--surface-border)",
                             }}
                         >
-                            <div style={{ display: "flex", alignItems: "baseline", gap: "0.85rem", flexWrap: "wrap" }}>
-                                <span style={{
-                                    fontFamily: "var(--font-mono)",
-                                    fontSize: "0.7rem",
-                                    letterSpacing: "0.16em",
-                                    textTransform: "uppercase",
-                                    color: "var(--gold)",
-                                    fontWeight: 700,
-                                }}>
-                                    GEO {a.angle} · {a.sign}
-                                </span>
+                            <div style={{
+                                fontFamily: "var(--font-mono)",
+                                fontSize: "0.65rem",
+                                letterSpacing: "0.16em",
+                                textTransform: "uppercase",
+                                color: "var(--text-tertiary)",
+                                fontWeight: 500,
+                                marginBottom: "0.35rem",
+                            }}>
+                                Geodetic {a.angle} in {a.sign}
                             </div>
-                            <h3 style={{ ...BODY, fontSize: "1.05rem", fontWeight: 600, margin: "0.25rem 0 0 0" }}>
+                            <h4 style={{
+                                fontFamily: "var(--font-primary, serif)",
+                                fontSize: "1.1rem",
+                                fontWeight: 600,
+                                lineHeight: 1.35,
+                                color: "var(--text-primary)",
+                                margin: "0 0 0.5rem 0",
+                                textTransform: "none",
+                            }}>
                                 {a.headline}
-                            </h3>
-                            <p style={{ ...BODY, margin: "0.4rem 0 0 0", maxWidth: "640px" }}>
-                                {a.body}
-                            </p>
-                        </li>
-                    ))}
-                </ul>
-            )}
-            {hasParans && (
-                <ul style={{ listStyle: "none", padding: 0, margin: "var(--space-md) 0 0 0" }}>
-                    {pc.parans.map((p) => (
-                        <li
-                            key={p.paranKey}
-                            style={{
-                                padding: "0.85rem 0",
-                                borderBottom: "1px solid var(--surface-border)",
-                            }}
-                        >
-                            <div style={{ ...MONO_SM, color: "var(--text-tertiary)" }}>
-                                {p.paranKey.replace("-", " · ")}
-                            </div>
-                            <h4 style={{ ...BODY, fontSize: "0.98rem", fontWeight: 600, margin: "0.2rem 0 0 0" }}>
-                                {p.headline}
                             </h4>
-                            <p style={{ ...BODY, margin: "0.35rem 0 0 0", fontSize: "0.95rem", maxWidth: "640px" }}>
-                                {p.body}
+                            <p style={{ ...BODY, margin: 0, maxWidth: "640px" }}>
+                                {a.body}
                             </p>
                         </li>
                     ))}
@@ -1494,4 +1495,31 @@ function PlaceCharacterBlock({ pc }: { pc: NonNullable<V4VM["geodetic"]>["placeC
             )}
         </div>
     );
+}
+
+function SubHead({ title }: { title: string }) {
+    return (
+        <h3 style={{
+            fontFamily: "var(--font-primary, serif)",
+            fontSize: "1.25rem",
+            fontWeight: 500,
+            lineHeight: 1.3,
+            color: "var(--text-primary)",
+            margin: 0,
+            textTransform: "none",
+            letterSpacing: 0,
+        }}>
+            {title}
+        </h3>
+    );
+}
+
+function paranNotesByKey(notes: ReadonlyArray<{ paranKey: string; headline: string; body: string }> | undefined) {
+    const out = new Map<string, { headline: string; body: string }>();
+    if (!notes) return out;
+    for (const n of notes) {
+        if (!n?.paranKey) continue;
+        out.set(n.paranKey.toLowerCase(), { headline: n.headline, body: n.body });
+    }
+    return out;
 }
