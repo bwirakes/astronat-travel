@@ -28,7 +28,8 @@ const ZODIAC = [
  * in `degreeTheoryModifier` and applies a smaller numeric nudge.
  */
 export interface DegreeTheoryLabel {
-    degreeSign: string;
+    /** Null at 0° (rebirth has no archetype mapping); set for degrees 1-29. */
+    degreeSign: string | null;
     isAnaretic: boolean;
     isZeroDegree: boolean;
     resonance: "harmonious" | "neutral" | "tense";
@@ -37,29 +38,23 @@ export interface DegreeTheoryLabel {
 /**
  * Returns the degree-theory archetype label for an ecliptic longitude.
  * The "degree-sign" is the sign whose archetype colors this degree (1°=Aries,
- * 2°=Taurus, …).  The function is planet-agnostic; the resonance field is
- * always "neutral" — pair it with a planet via `degreeTheoryModifier` to
- * get the scored polarity.
+ * 2°=Taurus, …). Returns `degreeSign: null` at 0° (the rebirth degree has
+ * no sign archetype — callers should branch on `isZeroDegree` first).
+ * The resonance field is always "neutral" — pair with a planet via
+ * `degreeTheoryModifier` to get scored polarity.
  */
 export function degreeTheoryLabel(longitude: number): DegreeTheoryLabel {
     const norm = ((longitude % 360) + 360) % 360;
     const degInSign = norm % 30;
-    // Floor so 14.x → 14° (Pisces archetype), 0.x → 0° (rebirth).
+    // Floor so 14.x → 14° (Pisces archetype).
     const intDeg = Math.floor(degInSign);
 
     const isZeroDegree = intDeg === 0;
     const isAnaretic = intDeg === 29;
 
-    // Map degree N (1-29) → Nth sign in zodiac (1-indexed). Wrap above 12.
-    // 0° gets a sign too (we use Aries as a convenient default for display);
-    // the modifier treats 0° specially regardless of the mapped sign.
-    let degreeSignIdx: number;
-    if (intDeg === 0) {
-        degreeSignIdx = 0; // Aries placeholder
-    } else {
-        degreeSignIdx = (intDeg - 1) % 12;
-    }
-    const degreeSign = ZODIAC[degreeSignIdx];
+    // Map degree N (1-12 → Aries-Pisces, 13-24 → Aries-Pisces again,
+    // 25-29 → Aries-Leo). 0° has no archetype mapping.
+    const degreeSign = isZeroDegree ? null : ZODIAC[(intDeg - 1) % 12];
 
     return {
         degreeSign,

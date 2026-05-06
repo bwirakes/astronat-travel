@@ -12,9 +12,11 @@
  * DEGREE_THEORY_ENABLED — apply additive per-planet degree-theory nudge
  * (anaretic 29° = -3, 0° = +2, domicile-degree match = +2, detriment = -2).
  *
- * Read once at module load (from env vars), but exposed via mutable
- * accessors so eval / sweep scripts can flip them per pass without
- * spawning new processes.
+ * Read once at module load from env vars. WIDE_SCORING_V1 is exported as a
+ * read-only const (toggle requires server restart). The newer V2 flags are
+ * stored in module-level lets with getter/setter pairs so eval / sweep
+ * scripts can flip them per pass without spawning new processes; production
+ * code should treat them as read-once.
  */
 
 function readFlag(name: string, defaultValue: boolean = false): boolean {
@@ -52,12 +54,10 @@ export function setCurrentSkyPenaltyEnabled(v: boolean): void { _currentSkyPenal
 export function setSoftCapTopEnabled(v: boolean): void { _softCapTop = v; }
 
 /**
- * Soft-cap upper-tail compression for scores in [0, 100].
- *   raw ≤ 85          → unchanged
- *   85 < raw ≤ 105    → 85 + (raw - 85) * 0.4   (so 95→89, 100→91, 105→93)
- *   raw > 105         → linearly approaches the cap of 95
- * Also hard-clamped to [0, 95] when active. When the flag is off, the legacy
- * [0, 100] clamp is used.
+ * Soft-cap upper-tail compression for scores. Hard-clamped to [0, 95] when
+ * the flag is on, otherwise to [0, 100] (legacy).
+ *   raw ≤ 85   → unchanged
+ *   raw > 85   → 85 + (raw - 85) * 0.4   (so 95→89, 100→91, 110→95-clamped)
  */
 export function softCapScore(raw: number): number {
     if (!_softCapTop) {

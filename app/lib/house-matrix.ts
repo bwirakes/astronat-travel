@@ -1447,7 +1447,10 @@ export function computeCurrentSkyPenalty(
                     else if (orb <= 2) penalty += 3;
                     else if (orb <= 3) penalty += 2;
                 }
-                break; // only one aspect can match per planet pair
+                // Aspect angles are spaced ≥60° apart, so within a 3° orb at
+                // most one can match — the break is for early exit, not
+                // disambiguation.
+                break;
             }
         }
     }
