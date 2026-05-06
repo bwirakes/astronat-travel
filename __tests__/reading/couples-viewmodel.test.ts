@@ -4,7 +4,8 @@ import {
   sortEventsByGoals,
   dominantElement,
   dominantModality,
-  topStandoutPlacements,
+  buildAngles,
+  buildAngleLead,
   relocSummary,
   toCouplesViewModel,
   type GoalId,
@@ -186,48 +187,49 @@ describe("dominantModality", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════
-// topStandoutPlacements
+// buildAngles / buildAngleLead
 // ═══════════════════════════════════════════════════════════════
 
-describe("topStandoutPlacements", () => {
-  const cusps = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330]; // ASC=0, IC=90, DSC=180, MC=270
-
-  it("returns at most 3 placements", () => {
-    const planets = [
-      { planet: "Sun",     longitude: 270 },
-      { planet: "Moon",    longitude: 90  },
-      { planet: "Mercury", longitude: 95  },
-      { planet: "Venus",   longitude: 100 },
-      { planet: "Mars",    longitude: 250 },
-    ];
-    const result = topStandoutPlacements(planets, cusps, "Lisbon");
-    expect(result.length).toBeLessThanOrEqual(3);
+describe("buildAngles", () => {
+  it("returns four cards keyed ASC/IC/DSC/MC", () => {
+    const natal = [10, 40, 70, 100, 130, 160, 190, 220, 250, 280, 310, 340];
+    const relocated = [50, 80, 110, 140, 170, 200, 230, 260, 290, 320, 350, 20];
+    const angles = buildAngles(natal, relocated);
+    expect(angles).toHaveLength(4);
+    expect(angles.map((a) => a.name)).toEqual([
+      "Rising (ASC)", "Roots (IC)", "Partner (DSC)", "Calling (MC)",
+    ]);
   });
 
-  it("ranks angular planets above non-angular", () => {
-    const planets = [
-      { planet: "Saturn",  longitude: 45  }, // mid-2H, far from any angle
-      { planet: "Sun",     longitude: 270 }, // exact MC
-    ];
-    const result = topStandoutPlacements(planets, cusps, "Lisbon");
-    expect(result[0].planet).toBe("Sun");
+  it("renders '—' for natal when natal cusps are missing", () => {
+    const relocated = [50, 80, 110, 140, 170, 200, 230, 260, 290, 320, 350, 20];
+    const angles = buildAngles([], relocated);
+    expect(angles.every((a) => a.natal === "—")).toBe(true);
+    expect(angles.every((a) => a.relocated !== "—")).toBe(true);
   });
 
-  it("falls back to a templated note when no curated entry exists", () => {
-    // Mercury in some house with no STANDOUT_NOTES["Mercury-N"] entry.
-    // Mercury at 250° (Sagittarius) → houseFromLon with cusps starting at 0°
-    // → 250 falls between cusp index 8 (240) and 9 (270), so house 9. Note key
-    // "Mercury-9" is not in the curated table.
-    const planets = [{ planet: "Mercury", longitude: 250 }];
-    const result = topStandoutPlacements(planets, cusps, "Lisbon");
-    expect(result[0].note).toContain("Mercury");
-    expect(result[0].note).toContain("Sagittarius");
+  it("formats sign+degree as '<deg>° <Sign>'", () => {
+    const angles = buildAngles([24, 0, 0, 0], [11 + 90, 0, 0, 0]); // ASC: 24° Aries → 11° Cancer
+    expect(angles[0].natal).toBe("24° Aries");
+    expect(angles[0].relocated).toBe("11° Cancer");
+  });
+});
+
+describe("buildAngleLead", () => {
+  it("calls out the strongest sign-shift", () => {
+    const angles = buildAngles([24, 0, 0, 0], [24 + 90, 0, 0, 0]); // ASC moves Aries → Cancer
+    const lead = buildAngleLead(angles, "Lisbon");
+    expect(lead).toContain("Lisbon");
+    expect(lead).toContain("Aries");
+    expect(lead).toContain("Cancer");
   });
 
-  it("handles charts with too few planets", () => {
-    const result = topStandoutPlacements([{ planet: "Sun", longitude: 0 }], cusps, "Lisbon");
-    expect(result).toHaveLength(1);
-    expect(result[0].planet).toBe("Sun");
+  it("falls back to a generic line when natal is missing", () => {
+    const angles = buildAngles([], [50, 80, 110, 140]);
+    const lead = buildAngleLead(angles, "Lisbon");
+    expect(lead).toContain("Lisbon");
+    // Should not call out a sign-shift since we have no natal sign to compare.
+    expect(lead).not.toMatch(/from .+ into /);
   });
 });
 

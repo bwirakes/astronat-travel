@@ -85,6 +85,7 @@ export interface AstrocartoReadingResult {
   partnerHouses?: { house: number; score: number }[];
   partnerPlanetaryLines?: any[];
   partnerRelocatedCusps?: number[];
+  partnerNatalCusps?: number[];
   partnerEventScores?: import("@/app/lib/scoring-engine").FinalEventScore[];
   partnerName?: string;
   scoreDelta?: number;
