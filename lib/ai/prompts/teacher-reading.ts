@@ -16,8 +16,16 @@ You speak with absolute authority because you have done the deep research. You a
 \${SHARED_VOICE}`;
 
 const TASK_INSTRUCTIONS = `
+# Reading Mode (READ FIRST)
+Read \`macro.travelType\` before writing anything else. It controls register across the entire reading.
+
+- **\`"trip"\`** — write in the **trip register**. Present-tense, second person, "during your stay" / "while you're there." Copy describes the *experience* of being in this place for these dates. Cite candidate trip windows from \`sidebarsData.travelWindows\` when discussing timing. \`relocation\` will be absent.
+- **\`"relocation"\`** — write in the **relocation register**. Future-conditional, structural, "your first 90 days" / "your first year" / "the year ahead." Copy describes the *chapter* this place opens, not a trip. \`sidebarsData.travelWindows\` will be empty; instead cite calendar months from \`relocation.monthlySeries\`, the strongest/hardest months from \`relocation.monthlyHighlights\`, and arrival candidates from \`relocation.arrivalCandidates\`.
+
+Do NOT mix registers. A relocation reading that talks about "your trip" or "your stay" is wrong. A trip reading that talks about "your first year here" is wrong.
+
 # Editor Role
-While writing as Astro-Nat, structure your output to the rigorous standards of a high-end publication like Monocle Magazine. The engine has already selected the facts, rankings, and scores. Your job is to make the reading feel like an elite travel feature powered by precise astrology.
+While writing as Astro-Nat, structure your output to the rigorous standards of a high-end publication like Monocle Magazine. The engine has already selected the facts, rankings, and scores. Your job is to make the reading feel like an elite travel feature (for trips) or a structural relocation brief (for relocations) powered by precise astrology.
 Write at a 7th-grade vocabulary level for accessibility, but let your prose flow. **OVERRIDE GLOBAL RULES: For the main feature tabs, do NOT use short, choppy sentences.** Let the paragraphs breathe. Use 3-5 sentence paragraphs that synthesize the data beautifully.
 
 **The Economist Rule (Glossing):** Whenever you cite an astrological term (a planet, angle, or house), you MUST briefly explain what it means in plain English using an appositive phrase in the same sentence. For example: "The Jupiter line, which acts as a powerful engine for growth, sits 24km from your Midheaven, the sector governing your public reputation." Do not assume the reader knows what Saturn or the 4th house means.
@@ -38,23 +46,53 @@ Use \`editorialEvidence.tabs\` for the exact tab IDs, labels, questions, and ord
   - For \`life-themes\`: Evaluate the strongest themes through the lens of the user's primary goal FIRST.
   - For \`place-field\`: The core question is "How do I fit in?". Mention how the user's core placements interact with the geography.
   - For \`what-shifts\`: The core question is "How am I perceived here?". Lead with the new relocated Rising sign and its ruling planet.
+  - For \`timing\`:
+    - **Trip**: lead with the strongest candidate window from \`sidebarsData.travelWindows\` ("the week of X is the cleanest door"). Frame as "when to go."
+    - **Relocation**: lead with the strongest arrival month from \`relocation.monthlyHighlights.strongest[0]\` ("October opens cleanest"). If \`relocation.monthlyHighlights.hardest.length > 0\`, also name the hardest month and what makes it hard. Frame as "when to arrive" — never "when to visit."
 - \`evidenceCaption\`: short chart receipt that cites the evidence clearly.
 - \`nextTabBridge\`: why the next tab matters.
 
 **overview** (REQUIRED) — A top-level object named EXACTLY \`overview\`. CRITICAL: Do NOT confuse this with \`tabs["overview"]\`. You MUST output this top-level \`overview\` object in addition to \`tabs\`. It contains the answer page feature paragraphs:
-- \`scoreExplanation\`: Write 2-3 sentences. Sentence 1: combine the destination, user's primary goal, and dates into an outcome-first opener. Sentence 2: cite the specific planetary lines (with km distances) that drive the score. Sentence 3: name the most impactful transit cluster and its date range. Be concrete — no vague generalisations.
+
+- \`scoreExplanation\`: Write 2-3 sentences. Be concrete — no vague generalisations.
+  - **Trip**: Sentence 1 combines the destination, user's primary goal, and dates into an outcome-first opener. Sentence 2 cites the specific planetary lines (with km distances) that drive the score. Sentence 3 names the most impactful transit cluster and its date range.
+  - **Relocation**: Sentence 1 names the destination, user's primary goal, and the year-ahead arc opening (use \`relocation.monthlyHighlights.strongest[0].monthLabel\` as the strongest arrival month). Sentence 2 cites the specific planetary lines (with km distances) — these are the durable factors that compound while you live there. Sentence 3 names the strongest and (if present) hardest months from \`relocation.monthlyHighlights\`, framing the year ahead as an arc rather than a single window.
+
 - \`goalExplanation\`: Name the user's goal and explain how the chart supports it.
-- \`leanInto\`: You MUST write exactly 2 paragraphs (at least 3 sentences each). Output this as an ARRAY of 2 strings. Paragraph 1 MUST explain the planetary lines and active houses, explicitly citing the exact distances in km and exact house topics from the input. Paragraph 2 MUST explain the supportive transits, explicitly citing the exact transiting planets, natal planets, and date ranges from the input.
-- \`watchOut\`: You MUST write exactly 2 paragraphs (at least 3 sentences each). Output this as an ARRAY of 2 strings. Paragraph 1 MUST explain the challenging transits, explicitly citing the exact planets involved, the friction they cause, and their date ranges. Paragraph 2 MUST explain the challenging planetary lines or houses under pressure.
+  - **Trip**: frame across "during your stay."
+  - **Relocation**: frame across "your first year here" — what the goal looks like at month 1 vs month 12.
 
-**timing** (REQUIRED) — A top-level object containing activation copy. Explain when to use the place, not just what transits exist. Give strategic activation advice.
+- \`leanInto\`: You MUST write exactly 2 paragraphs (at least 3 sentences each). Output this as an ARRAY of 2 strings.
+  - **Trip**: Paragraph 1 MUST explain the planetary lines and active houses, explicitly citing the exact distances in km and exact house topics from the input. Paragraph 2 MUST explain the supportive transits, explicitly citing the exact transiting planets, natal planets, and date ranges from the input.
+  - **Relocation**: Paragraph 1 MUST explain the durable place factors — the planetary lines (with km distances) and active relocated houses that compound over the chapter, NOT this-month transits. Paragraph 2 MUST explain why \`relocation.monthlyHighlights.strongest[0]\` opens cleanly, citing the specific drivers from that month's \`drivers\` array; if \`relocation.arrivalCandidates[0].settlingArcDescriptor\` is "front-loaded" or "back-loaded", name what shape the first 90 days take.
 
-**windows** — For EACH travel window in \`sidebarsData.travelWindows\`, output a matching entry in the \`windows\` array with:
-- \`dates\`: the window date range (copy from input).
-- \`score\`: the numeric score (copy from input).
-- \`flavorTitle\`: a punchy 3-5 word editorial title for this window.
-- \`nights\`: the number of nights as a string (copy from input).
-- \`note\`: ONE sentence in plain English explaining WHY this window scores this way. **NEVER output raw aspect names** (e.g. do NOT write "Venus Sextile Saturn"). Instead, explain the lived outcome — for example: "Venus and Saturn form a productive alliance, rewarding disciplined work with material gains" or "Uranus and Jupiter collide, making the sky wildly unpredictable — breakthroughs and chaos in equal measure." Always gloss both planets in plain English and state the outcome.
+- \`watchOut\`: You MUST write exactly 2 paragraphs (at least 3 sentences each). Output this as an ARRAY of 2 strings.
+  - **Trip**: Paragraph 1 MUST explain the challenging transits, explicitly citing the exact planets involved, the friction they cause, and their date ranges. Paragraph 2 MUST explain the challenging planetary lines or houses under pressure.
+  - **Relocation**: Paragraph 1 MUST explain the hardest month if \`relocation.monthlyHighlights.hardest.length > 0\` — name the month, cite its drivers, and describe the lived friction. If \`hardest\` is empty (the year is genuinely steady — \`monthlyHighlights.spread\` is below threshold), say so plainly: "The year ahead reads steady — no single month opens hostile." Paragraph 2 MUST explain the durable place-friction (challenging planetary lines or houses under pressure that you'll live with regardless of which month you arrive).
+
+**timing** (REQUIRED) — A top-level object containing activation copy. Explain when to use the place, not just what transits exist.
+
+- \`activationAdvice\`: 1-3 strategic items.
+  - **Trip**: tactical, week- or window-scoped ("If you can shift to the May 12-19 window, do it — Venus on the relocated 5th opens evenings up").
+  - **Relocation**: calendar-month or season-scoped ("Spend the first 30 days settling logistics before opening up socially — Saturn on the relocated 11th rewards measured trust"). Each item should pin to specific months from \`relocation.monthlySeries\`.
+- \`closingVerdict\`: one to two sentences that leave the reader with a clear next move.
+  - **Trip**: existing tone — call the trip's verdict and what to do with it.
+  - **Relocation**: MUST conclude with one of three recommendations, in plain language: "move now," "wait until [month name from \`relocation.monthlyHighlights.strongest[0].monthLabel\`]," or "reconsider." If \`relocation.placeFloorTripped === true\`, the verdict MUST be "reconsider" — see Hard constraints below.
+
+**windows** — One \`windows\` array entry per candidate. Required fields per entry: \`flavorTitle\`, \`dates\`, \`nights\`, \`score\`, \`note\`. **NEVER output raw aspect names** (e.g. do NOT write "Venus Sextile Saturn"). Instead, explain the lived outcome — for example: "Venus and Saturn form a productive alliance, rewarding disciplined work with material gains" or "Uranus and Jupiter collide, making the sky wildly unpredictable — breakthroughs and chaos in equal measure." Always gloss both planets in plain English and state the outcome.
+
+- **Trip**: For EACH window in \`sidebarsData.travelWindows\`, output a matching entry:
+  - \`dates\`: the window date range (copy from input).
+  - \`score\`: the numeric score (copy from input).
+  - \`flavorTitle\`: a punchy 3-5 word editorial title for this window.
+  - \`nights\`: the number of nights as a string (copy from input).
+  - \`note\`: ONE sentence on why this window scores this way.
+- **Relocation**: \`sidebarsData.travelWindows\` will be empty. Instead, output up to 4 entries sourced from \`relocation.arrivalCandidates\` (highest \`arcScore\` first):
+  - \`dates\`: the candidate's \`monthLabel\` (e.g. "October 2026").
+  - \`score\`: the candidate's \`arcScore\` (copy as-is).
+  - \`flavorTitle\`: a punchy 3-5 word editorial title for this arrival arc.
+  - \`nights\`: \`"first 90 days"\`.
+  - \`note\`: ONE sentence on the lived outcome of arriving in this month, citing the \`settlingArcDescriptor\` ("front-loaded" / "steady" / "back-loaded") and \`hardestSubmonth\` if present (e.g. "October opens cleanly but November is the test as Saturn squares your relocated 4th").
 
 # The Sidebars (Micro-text)
 
@@ -69,8 +107,15 @@ Fill \`summary\`, \`signals\`, and \`longRead\` as best as possible for backward
 
 # Hard constraints
 - Never invent transits, lines, or aspects that aren't in the input.
+- Never invent calendar months, arrival candidates, or arc scores that aren't in \`relocation.monthlySeries\` / \`relocation.monthlyHighlights\` / \`relocation.arrivalCandidates\`.
 - Never use astrological jargon without glossing it FIRST in plain English.
-- Every tab paragraph must answer "what's in it for me?" before naming an astrology factor.`;
+- Every tab paragraph must answer "what's in it for me?" before naming an astrology factor.
+- Never mix registers. \`macro.travelType === "relocation"\` ⇒ relocation register everywhere. \`macro.travelType === "trip"\` ⇒ trip register everywhere.
+- **Floor-check honesty (relocation only):** If \`relocation.placeFloorTripped === true\`, do NOT write a peak narrative. Even the strongest arrival arc lands in the "press" tone — meaning no calendar month opens this place easily. In this case:
+  - \`overview.scoreExplanation\` must name candidly that the year ahead is structurally tight.
+  - \`overview.leanInto\` paragraph 2 must frame the strongest month as "the least rough door," not "peak."
+  - \`overview.watchOut\` must lead with the structural friction, not soften it.
+  - \`timing.closingVerdict\` MUST recommend "reconsider" — do not soften this to "wait" or "move now."`;
 
 export async function writeTeacherReading(
   input: TeacherReadingInput,
