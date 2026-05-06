@@ -37,6 +37,13 @@ interface Props {
     /** Optional paran latitudes to overlay as horizontal lines. Lines outside
      *  the cropped viewport are clipped automatically. */
     parans?: ParanOverlay[];
+    /** When false, paran latitude lines are hidden entirely. Lets the parent
+     *  expose a layer toggle without forking the parans prop. Defaults true
+     *  for backwards compatibility with existing call sites. */
+    showParans?: boolean;
+    /** Hide the legend strip below the map — useful when the parent already
+     *  renders its own legend (e.g. in a two-column sticky layout). */
+    showLegend?: boolean;
 }
 
 function shortestDelta(a: number, b: number): number {
@@ -95,7 +102,7 @@ function capitalize(s: string): string {
     return s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : s;
 }
 
-export default function ReadingGeodeticMap({ lat, lon, city, parans }: Props) {
+export default function ReadingGeodeticMap({ lat, lon, city, parans, showParans = true, showLegend = true }: Props) {
     const [hovered, setHovered] = useState<HoveredAxis>(null);
     const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
     const handleMove = (e: React.MouseEvent) => setMousePos({ x: e.clientX, y: e.clientY });
@@ -278,8 +285,12 @@ export default function ReadingGeodeticMap({ lat, lon, city, parans }: Props) {
                     vectorEffect="non-scaling-stroke"
                 />
 
-                {/* Paran latitudes — horizontal lines crossing your latitude band */}
-                {parans?.map((par, i) => {
+                {/* Paran latitudes — horizontal lines crossing your latitude band.
+                 *  Labels intentionally not rendered on the map — they collide
+                 *  when ≥2 parans land within ~3° of each other. The parent
+                 *  surfaces the labels in the latitude-crossings list, where
+                 *  the planet pair gets a full row of breathing room. */}
+                {showParans && parans?.map((par, i) => {
                     const py = projectLat(par.lat);
                     const tone = paranTone(par.contribution);
                     const xL = cx - vw / 2;
@@ -307,18 +318,6 @@ export default function ReadingGeodeticMap({ lat, lon, city, parans }: Props) {
                                 vectorEffect="non-scaling-stroke"
                                 pointerEvents="none"
                             />
-                            <text
-                                x={xR - 1}
-                                y={py - 2}
-                                fontSize={8}
-                                fill={tone}
-                                textAnchor="end"
-                                fontFamily={FONT_MONO}
-                                opacity={0.85}
-                                pointerEvents="none"
-                            >
-                                {capitalize(par.p1)}/{capitalize(par.p2)}
-                            </text>
                         </g>
                     );
                 })}
@@ -426,18 +425,21 @@ export default function ReadingGeodeticMap({ lat, lon, city, parans }: Props) {
                 </div>
             )}
 
-            {/* Legend strip */}
-            <div
-                className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[10.5px] tracking-[0.12em] uppercase"
-                style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}
-            >
-                <LegendItem swatch="var(--color-spiced-life)" label={`${mcSign} MC overhead`} dashed />
-                <LegendItem swatch="var(--gold)" label={`${ascSign} ASC rising`} />
-                <LegendItem swatch={mcElem.stroke} label="Shared zone" filled fill={mcElem.fill} />
-                {parans && parans.length > 0 && (
-                    <LegendItem swatch="var(--text-tertiary)" label={`${parans.length} paran ${parans.length === 1 ? "line" : "lines"}`} dashed />
-                )}
-            </div>
+            {/* Legend strip — hidden when the parent renders its own legend
+             *  (e.g. in a sticky sidebar layout where the toggle owns it). */}
+            {showLegend && (
+                <div
+                    className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[10.5px] tracking-[0.12em] uppercase"
+                    style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}
+                >
+                    <LegendItem swatch="var(--color-spiced-life)" label={`${mcSign} MC overhead`} dashed />
+                    <LegendItem swatch="var(--gold)" label={`${ascSign} ASC rising`} />
+                    <LegendItem swatch={mcElem.stroke} label="Shared zone" filled fill={mcElem.fill} />
+                    {showParans && parans && parans.length > 0 && (
+                        <LegendItem swatch="var(--text-tertiary)" label={`${parans.length} paran ${parans.length === 1 ? "line" : "lines"}`} dashed />
+                    )}
+                </div>
+            )}
         </div>
     );
 }

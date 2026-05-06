@@ -241,6 +241,7 @@ const SIGN_FLAVOR: Record<string, string> = {
 };
 
 export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocatedAcgLines, copiedTab }: Props) {
+    const [showParans, setShowParans] = useState(false);
     const { lat, lon, city } = vm.location;
     const geoMC  = geodeticMCLongitude(lon);
     const geoASC = geodeticASCLongitude(lon, lat);
@@ -380,12 +381,20 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
 
             {/* ── §02 What's live now (promoted out of details) ───────── */}
             <SectionHead index="02" title={`What's live in ${city} now`}  flush />
+            {vm.geodetic?.liveLinesLead && (
+                <p style={{ ...BODY, fontSize: "1.05rem", margin: "0 0 var(--space-md) 0", maxWidth: "640px" }}>
+                    {vm.geodetic.liveLinesLead}
+                </p>
+            )}
             {vm.progressions && (
                 <ProgressionsLine bands={vm.progressions.bands} />
             )}
+            {(vm.geodetic?.liveLines.length ?? 0) > 0 && (
+                <LiveLinesList lines={vm.geodetic!.liveLines} />
+            )}
             {liveItems.length > 0 ? (
                 <LiveNowTable items={liveItems} />
-            ) : reading?.geodeticEngineVersion ? (
+            ) : (vm.geodetic?.liveLines.length ?? 0) > 0 || vm.geodetic?.liveLinesLead ? null : reading?.geodeticEngineVersion ? (
                 <p style={BODY_MUTED}>
                     The sky over {city} is quiet right now &mdash; nothing transiting close to its corners.
                 </p>
@@ -507,41 +516,60 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
                 </>
             )}
 
-            {/* ── §05 Where the city sits in the zodiac ────────────────── */}
-            <SectionHead index="05" title={`Where ${city} sits in the zodiac`}  flush />
-            <p style={BODY}>
-                {city} sits where {signFromLongitude(geoMC)} runs overhead and{" "}
-                {signFromLongitude(geoASC)} rises on the horizon. The shaded band is the slice of
-                sky this longitude owns.
-                {vm.parans.length > 0 && " Horizontal lines mark paran latitudes from your chart."}
-            </p>
-            <div style={{ maxWidth: "min(100%, 540px)", marginTop: "var(--space-md)" }}>
-                <ReadingGeodeticMap
-                    lat={lat}
-                    lon={lon}
-                    city={city}
-                    parans={vm.parans
-                        .filter((p) => Math.abs(p.latOffset) <= 28)
-                        .map((p) => ({
-                            p1: p.p1, p2: p.p2,
-                            aspect: p.aspect || undefined,
-                            lat: p.lat,
-                            contribution: p.contribution,
-                        }))}
-                />
+            {/* ── §05 Where [city] sits — two-column: sticky map + scrolling prose ─ */}
+            <SectionHead index="05" title={`Where ${city} sits in the zodiac`} flush />
+
+            <div className="grid grid-cols-1 lg:grid-cols-[5fr_6fr] gap-8 lg:gap-10 mt-6">
+                <div className="lg:sticky lg:top-20 lg:self-start">
+                    <ReadingGeodeticMap
+                        lat={lat}
+                        lon={lon}
+                        city={city}
+                        showParans={showParans}
+                        showLegend={false}
+                        parans={vm.parans
+                            .filter((p) => Math.abs(p.latOffset) <= 28)
+                            .map((p) => ({
+                                p1: p.p1, p2: p.p2,
+                                aspect: p.aspect || undefined,
+                                lat: p.lat,
+                                contribution: p.contribution,
+                            }))}
+                    />
+                    <MapControls
+                        mcSign={signFromLongitude(geoMC)}
+                        ascSign={signFromLongitude(geoASC)}
+                        showParans={showParans}
+                        onTogglePaarans={() => setShowParans((v) => !v)}
+                        paransCount={vm.parans.length}
+                    />
+                </div>
+
+                <div>
+                    {vm.geodetic?.placeCharacter?.lead ? (
+                        <p style={{ ...BODY, fontSize: "1.05rem", margin: 0, maxWidth: "640px" }}>
+                            {vm.geodetic.placeCharacter.lead}
+                        </p>
+                    ) : (
+                        <p style={BODY}>
+                            {city} sits where {signFromLongitude(geoMC)} runs overhead and{" "}
+                            {signFromLongitude(geoASC)} rises on the horizon. The shaded band is the slice of
+                            sky this longitude owns.
+                        </p>
+                    )}
+                </div>
             </div>
 
-            {/* ── §06 Latitude crossings (only when present) ───────────── */}
             {vm.parans.length > 0 && (
                 <>
                     <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
-                    <SectionHead index="06" title="Latitude crossings"  flush />
-                    <p style={BODY_MUTED}>
-                        Pairs of your natal planets that cross the horizon together at a latitude
-                        near {city}&rsquo;s. Tight benefic pairs lift the field; tight malefic pairs
-                        press it.
-                    </p>
-                    <ParanList parans={vm.parans} city={city} />
+                    <SectionHead index="06" title="Latitude crossings" flush />
+                    <ParansDisclosure
+                        parans={vm.parans}
+                        city={city}
+                        notes={paranNotesByKey(vm.geodetic?.placeCharacter?.parans)}
+                        paransSummary={vm.geodetic?.placeCharacter?.paransSummary ?? ""}
+                    />
                 </>
             )}
 
@@ -1192,22 +1220,13 @@ function ContactTable({
 
 // ── ParanList ─────────────────────────────────────────────────────────────
 
-function ParanList({ parans, city }: { parans: V4Paran[]; city: string }) {
+function ParanList({ parans, city: _city, notes }: {
+    parans: V4Paran[];
+    city: string;
+    notes?: Map<string, { headline: string; body: string }>;
+}) {
     return (
         <div>
-            <p style={{
-                fontFamily: "var(--font-body)",
-                fontSize: "0.88rem",
-                lineHeight: 1.6,
-                color: "var(--text-secondary)",
-                margin: "0 0 var(--space-md) 0",
-                maxWidth: "640px",
-                fontWeight: 300,
-            }}>
-                These pairs cross the horizon together at a latitude near {city}&rsquo;s.
-                Tight benefic combinations lift the field; tight malefic combinations
-                press it.
-            </p>
             <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
                 {parans.map((p, i) => {
                     const tone = p.contribution > 0
@@ -1215,63 +1234,84 @@ function ParanList({ parans, city }: { parans: V4Paran[]; city: string }) {
                         : p.contribution < 0
                             ? "var(--color-spiced-life)"
                             : "var(--text-tertiary)";
-                    const offset = Math.abs(p.latOffset).toFixed(1);
-                    const direction = p.latOffset > 0 ? "north" : "south";
+                    const note = notes?.get(`${p.p1}-${p.p2}`.toLowerCase())
+                        ?? notes?.get(`${p.p2}-${p.p1}`.toLowerCase());
+                    // 1° latitude orb is the activation threshold — the
+                    // pair's combined energy lands at the destination
+                    // strongly enough to be felt, not just present.
+                    const isActivated = Math.abs(p.latOffset) <= 1;
                     return (
                         <li
                             key={`paran-${i}`}
                             style={{
-                                display: "grid",
-                                gridTemplateColumns: "minmax(180px, 1fr) auto auto",
-                                gap: "1rem",
-                                alignItems: "baseline",
-                                padding: "0.85rem 0",
+                                padding: "var(--space-md) 0",
                                 borderBottom: "1px solid var(--surface-border)",
                             }}
                         >
-                            <div>
-                                <div style={{
-                                    fontFamily: "var(--font-mono)",
-                                    fontSize: "0.85rem",
-                                    fontWeight: 600,
-                                    color: "var(--text-primary)",
-                                }}>
-                                    {capitalize(p.p1)} {p.aspect ? `· ${p.aspect}` : ""} · {capitalize(p.p2)}
-                                </div>
-                                {p.type && (
+                            <div style={{
+                                display: "grid",
+                                gridTemplateColumns: "minmax(180px, 1fr) auto",
+                                gap: "1rem",
+                                alignItems: "baseline",
+                            }}>
+                                <div>
                                     <div style={{
                                         fontFamily: "var(--font-mono)",
-                                        fontSize: "0.6rem",
-                                        letterSpacing: "0.12em",
-                                        textTransform: "uppercase",
-                                        color: "var(--text-tertiary)",
-                                        marginTop: "0.2rem",
+                                        fontSize: "0.8rem",
+                                        fontWeight: 500,
+                                        letterSpacing: "0.04em",
+                                        color: "var(--text-primary)",
                                     }}>
-                                        {p.type}
+                                        {capitalize(p.p1)} {p.aspect ? `· ${p.aspect}` : ""} · {capitalize(p.p2)}
                                     </div>
+                                    {p.type && (
+                                        <div style={{
+                                            fontFamily: "var(--font-mono)",
+                                            fontSize: "0.6rem",
+                                            letterSpacing: "0.12em",
+                                            textTransform: "uppercase",
+                                            color: "var(--text-tertiary)",
+                                            marginTop: "0.2rem",
+                                        }}>
+                                            {p.type}
+                                        </div>
+                                    )}
+                                </div>
+                                {isActivated && (
+                                    <span style={{
+                                        fontFamily: "var(--font-mono)",
+                                        fontSize: "0.65rem",
+                                        fontWeight: 700,
+                                        letterSpacing: "0.14em",
+                                        textTransform: "uppercase",
+                                        color: tone,
+                                        padding: "0.3rem 0.65rem",
+                                        border: `1px solid ${tone}`,
+                                        borderRadius: "999px",
+                                        background: `color-mix(in oklab, ${tone} 8%, transparent)`,
+                                        whiteSpace: "nowrap",
+                                    }}>
+                                        Paran activated
+                                    </span>
                                 )}
                             </div>
-                            <div style={{
-                                fontFamily: "var(--font-mono)",
-                                fontSize: "0.7rem",
-                                color: "var(--text-secondary)",
-                                whiteSpace: "nowrap",
-                            }}>
-                                {offset}° {direction} of you
-                            </div>
-                            <span style={{
-                                fontFamily: "var(--font-mono)",
-                                fontSize: "0.7rem",
-                                fontWeight: 700,
-                                color: tone,
-                                padding: "0.25rem 0.6rem",
-                                border: `1px solid ${tone}`,
-                                borderRadius: "999px",
-                                background: `color-mix(in oklab, ${tone} 8%, transparent)`,
-                                whiteSpace: "nowrap",
-                            }}>
-                                {p.contribution > 0 ? "+" : ""}{Math.round(p.contribution)}
-                            </span>
+                            {note && (
+                                <div style={{ marginTop: "0.6rem", paddingLeft: "0.1rem" }}>
+                                    <div style={{
+                                        fontFamily: "var(--font-primary, serif)",
+                                        fontSize: "1rem",
+                                        fontWeight: 600,
+                                        color: "var(--text-primary)",
+                                        margin: "0 0 0.25rem 0",
+                                        textTransform: "none",
+                                    }}>
+                                        {note.headline}
+                                    </div>
+                                    <p style={{ ...BODY, margin: 0, fontSize: "0.95rem", maxWidth: "640px" }}>
+                                        {note.body}
+                                    </p>
+                                </div>
+                            )}
                         </li>
                     );
                 })}
@@ -1383,4 +1423,240 @@ function fallbackHitNote(hit: PersonalGeodeticHit, topic: string): string {
 
 function capitalize(s: string): string {
     return s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : s;
+}
+
+// ── Teacher-copy renderers (geodetic tab) ─────────────────────────────────
+
+function LiveLinesList({ lines }: { lines: V4VM["geodetic"] extends infer G
+    ? G extends { liveLines: infer L } ? L : never : never;
+}) {
+    if (!lines || lines.length === 0) return null;
+    return (
+        <ul style={{ listStyle: "none", padding: 0, margin: "var(--space-md) 0 0 0" }}>
+            {lines.map((l) => (
+                <li
+                    key={l.liveLineKey}
+                    style={{
+                        padding: "0.95rem 0",
+                        borderBottom: "1px solid var(--surface-border)",
+                    }}
+                >
+                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "0.85rem", flexWrap: "wrap" }}>
+                        <h3 style={{ ...BODY, fontSize: "1.05rem", fontWeight: 600, margin: 0 }}>
+                            {l.headline}
+                        </h3>
+                        {l.windowNote && (
+                            <span style={{ ...MONO_SM, color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>
+                                {l.windowNote}
+                            </span>
+                        )}
+                    </div>
+                    <p style={{ ...BODY, margin: "0.4rem 0 0 0", maxWidth: "640px" }}>
+                        {l.body}
+                    </p>
+                </li>
+            ))}
+        </ul>
+    );
+}
+
+function ParansDisclosure({ parans, city, notes, paransSummary }: {
+    parans: V4Paran[];
+    city: string;
+    notes: Map<string, { headline: string; body: string }>;
+    paransSummary: string;
+}) {
+    // Top crossings only — sorted by archetype loading (|contribution|) so
+    // the strongest pair leads. Older display showed 8 rows, which crowded
+    // the page with neutral pairs the reader doesn't need.
+    const TOP_N = 3;
+    const topParans = [...parans]
+        .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
+        .slice(0, TOP_N);
+
+    const lifting = parans.filter((p) => p.contribution > 0).length;
+    const pressing = parans.filter((p) => p.contribution < 0).length;
+    const neutral = parans.length - lifting - pressing;
+    const lead = topParans[0] && (notes.get(`${topParans[0].p1}-${topParans[0].p2}`.toLowerCase())
+        ?? notes.get(`${topParans[0].p2}-${topParans[0].p1}`.toLowerCase()));
+    const summaryParts = [`${parans.length} crossing${parans.length === 1 ? "" : "s"}`];
+    if (lifting) summaryParts.push(`${lifting} lifting`);
+    if (pressing) summaryParts.push(`${pressing} pressing`);
+    if (neutral && !lifting && !pressing) summaryParts.push(`${neutral} neutral`);
+    const summaryLine = summaryParts.join(" · ");
+
+    return (
+        <details
+            className="parans-disclosure"
+            style={{ marginTop: 0 }}
+        >
+            <style>{`
+                .parans-disclosure summary::-webkit-details-marker { display: none; }
+                .parans-disclosure[open] summary .parans-toggle::before { content: "Hide ↑"; }
+                .parans-disclosure:not([open]) summary .parans-toggle::before { content: "Show all ↓"; }
+            `}</style>
+            <summary
+                style={{
+                    listStyle: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "baseline",
+                    justifyContent: "space-between",
+                    gap: "1rem",
+                }}
+            >
+                <div style={{ flex: 1 }}>
+                    {paransSummary ? (
+                        <p style={{ ...BODY, margin: 0, maxWidth: "640px" }}>
+                            {paransSummary}
+                        </p>
+                    ) : (
+                        <>
+                            <div style={{
+                                ...MONO_SM,
+                                color: "var(--text-tertiary)",
+                                letterSpacing: "0.04em",
+                            }}>
+                                {summaryLine}
+                            </div>
+                            {lead?.headline && (
+                                <p style={{ ...BODY, margin: "0.5rem 0 0 0", maxWidth: "640px" }}>
+                                    {lead.headline}
+                                </p>
+                            )}
+                        </>
+                    )}
+                </div>
+                <span
+                    aria-hidden="true"
+                    className="parans-toggle"
+                    style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "0.7rem",
+                        letterSpacing: "0.16em",
+                        textTransform: "uppercase",
+                        color: "var(--text-tertiary)",
+                        whiteSpace: "nowrap",
+                        paddingTop: "0.2rem",
+                    }}
+                />
+            </summary>
+            <div style={{ marginTop: "var(--space-md)" }}>
+                {!paransSummary && (
+                    <p style={{ ...BODY_MUTED, margin: "0 0 var(--space-md) 0" }}>
+                        Pairs of your natal planets that cross the horizon together at a latitude
+                        near {city}&rsquo;s. Showing the {topParans.length === 1 ? "strongest crossing" : `${topParans.length} strongest crossings`} —
+                        benefic pairs lift the field, malefic pairs press it.
+                    </p>
+                )}
+                <ParanList parans={topParans} city={city} notes={notes} />
+            </div>
+        </details>
+    );
+}
+
+function MapControls({ mcSign, ascSign, showParans, onTogglePaarans, paransCount }: {
+    mcSign: string;
+    ascSign: string;
+    showParans: boolean;
+    onTogglePaarans: () => void;
+    paransCount: number;
+}) {
+    return (
+        <div style={{ marginTop: "var(--space-sm)" }}>
+            {/* Always-on legend */}
+            <div
+                style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "0.65rem",
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    color: "var(--text-tertiary)",
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "1.1rem",
+                    marginBottom: "var(--space-sm)",
+                }}
+            >
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+                    <span style={{
+                        display: "inline-block",
+                        width: 14,
+                        height: 2,
+                        background: "repeating-linear-gradient(90deg, var(--color-spiced-life) 0 4px, transparent 4px 7px)",
+                    }} />
+                    {mcSign} MC overhead
+                </span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+                    <span style={{ display: "inline-block", width: 14, height: 2, background: "var(--gold)" }} />
+                    {ascSign} ASC rising
+                </span>
+            </div>
+
+            {/* Layer toggle — paran latitudes default off; the prose row in
+             *  §Latitude crossings is the canonical reading surface. */}
+            {paransCount > 0 && (
+                <button
+                    type="button"
+                    onClick={onTogglePaarans}
+                    style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        background: "transparent",
+                        border: "1px solid var(--surface-border)",
+                        borderRadius: "999px",
+                        padding: "0.4rem 0.8rem",
+                        cursor: "pointer",
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "0.65rem",
+                        letterSpacing: "0.12em",
+                        textTransform: "uppercase",
+                        color: showParans ? "var(--text-primary)" : "var(--text-tertiary)",
+                    }}
+                    aria-pressed={showParans}
+                >
+                    <span
+                        aria-hidden="true"
+                        style={{
+                            display: "inline-block",
+                            width: 14,
+                            height: 2,
+                            background: showParans
+                                ? "repeating-linear-gradient(90deg, var(--text-secondary) 0 4px, transparent 4px 7px)"
+                                : "color-mix(in oklab, var(--text-tertiary) 40%, transparent)",
+                        }}
+                    />
+                    {showParans ? "Hide" : "Show"} {paransCount} paran {paransCount === 1 ? "line" : "lines"}
+                </button>
+            )}
+        </div>
+    );
+}
+
+function SubHead({ title }: { title: string }) {
+    return (
+        <h3 style={{
+            fontFamily: "var(--font-primary, serif)",
+            fontSize: "1.25rem",
+            fontWeight: 500,
+            lineHeight: 1.3,
+            color: "var(--text-primary)",
+            margin: 0,
+            textTransform: "none",
+            letterSpacing: 0,
+        }}>
+            {title}
+        </h3>
+    );
+}
+
+function paranNotesByKey(notes: ReadonlyArray<{ paranKey: string; headline: string; body: string }> | undefined) {
+    const out = new Map<string, { headline: string; body: string }>();
+    if (!notes) return out;
+    for (const n of notes) {
+        if (!n?.paranKey) continue;
+        out.set(n.paranKey.toLowerCase(), { headline: n.headline, body: n.body });
+    }
+    return out;
 }

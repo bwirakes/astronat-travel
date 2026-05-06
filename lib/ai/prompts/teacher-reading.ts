@@ -132,36 +132,41 @@ For all sidebars, tooltips, and micro-text (\`chrome\`, \`hero\`, \`vibes\`, \`m
 - For \`lineNotes\`, use \`<planet-lowercase>-<angle-shortcode>\`.
 - For \`geodeticHits\`, use \`<planet-lowercase>-<ASC|IC|DSC|MC>\`.`;
 
-const BLOCK_GEODETIC_PLACE_CHARACTER = `# Geodetic Tab — Place Character
-The geodetic tab answers ONE question: **how does this place make a person feel, regardless of who they are?** Geodetic lines are fixed to the earth (0° Aries anchored at Greenwich), so they describe the *place itself*, not the user's personal chart. ACG lines and chart-ruler reframes do NOT belong here — they live on what-shifts.
+const BLOCK_GEODETIC_PLACE_CHARACTER = `# Geodetic Tab (REQUIRED when sidebarsData.geodeticBand is present)
 
-Fill these top-level fields when the input contains the matching evidence. Omit any field whose source data is missing — never invent.
+You MUST emit ALL of: \`placeCharacter.lead\`, \`placeCharacter.paransSummary\` (when parans exist), \`placeCharacter.parans\` (when parans exist), and \`liveLinesLead\` (top-level). Do NOT emit legacy \`angles\` or \`summary\` — deprecated.
 
-**\`placeCharacter\`** — A single object describing the destination's geodetic identity:
-- \`angles\`: ONE entry per geodetic angle present in the input (\`geodeticBand\` gives the geo-MC sign; geo-ASC if available). Each entry: \`angle\` ("MC" | "ASC"), \`sign\`, \`headline\` (≤ 70 chars — the place's archetype, e.g. "Taurus MC — this place rewards patient builders"), \`body\` (1–3 sentences on what this longitude asks of *anyone* who visits — money, body, slow reveal of value for Taurus; visibility and performance for Leo; etc.).
-- \`parans\`: ONE entry per paran present in the input. \`paranKey\` matches \`<p1-lowercase>-<p2-lowercase>\` with the two planet names sorted alphabetically (e.g. "jupiter-mars"). Each entry: \`headline\`, \`body\`. Speak about the latitude band's character — what walking around this latitude tends to feel like for everyone.
-- \`summary\`: ONE paragraph stitching the geodetic angles + parans into "this is the kind of place [city] is."
+**\`liveLinesLead\`** (top-level, REQUIRED): 2–4 sentence paragraph for §02. Branch by data:
+- *Active*: \`activeGeoTransits\` non-empty → name the tightest hit, its lived feel, what to do with it.
+- *Approaching*: active empty + \`approachingGeoLines\` non-empty → name closest approaching hit, its date, days-from-travel ("Saturn arrives at your geoMC on Aug 12, 4 weeks after you leave"). Frame as next beat.
+- *Quiet*: both empty → "Sumbawa's sky is genuinely quiet for these dates. That's not a missing reading; it's a clean field. Your own transits and the place's character take the lead — nothing's competing for the microphone."
+NEVER write "nothing transiting close to its corners" or any cold engine phrasing.
 
-**\`geodeticLiveLines\`** — Array of currently-active geodetic transits whose sign-column passes through the destination longitude (e.g. Uranus in Taurus running down Dubai during the trip window). Use \`sidebarsData.geodeticBand\` and the active transits in \`sidebarsData\` to identify candidates. Required fields:
-- \`liveLineKey\`: \`<planet-lowercase>-<sign-lowercase>-<MC|ASC>\` (e.g. "uranus-taurus-MC").
-- \`headline\`: ≤ 70 chars, names what the line is loud about right now.
-- \`body\`: 2–4 sentences — what's amplified at this longitude during the trip window, plus why the user might feel it (NOT a deep personal-chart hit — that's what-shifts territory).
-- \`windowNote\` (optional): human window phrase, e.g. "peaks Feb 27 – Mar 2".`;
+**\`placeCharacter.lead\`** (REQUIRED): ONE paragraph, 4–6 sentences. The locator is the cheapest sentence — spend at most one. The rest is implications: what the place feels like at street level, what it rewards, what it punishes, one behavioral hook. Example:
+> "Casablanca sits under a Pisces Midheaven — public life moves through atmosphere rather than logic. Reputation here is the mood you leave, not the line you deliver. The place rewards intuition and punishes anyone trying to over-control the narrative; the harder you grip, the slipperier it becomes. Bring softer edges than you would to a Capricorn city."
+Forbidden: paragraphs that just list "the geo-MC is X and the geo-ASC is Y." ONE paragraph, no bullets.
 
-const BLOCK_WHAT_SHIFTS_PERSONALISATION = `# What-Shifts Tab — Personal-Chart Relocation
-What-shifts is where personal-chart relocation lives. Fill these top-level fields when input data supports them.
+**\`placeCharacter.paransSummary\`** (REQUIRED when parans present): 1–2 sentences naming the *combined field* the paran latitudes create. NOT a count. NOT a quote of the first entry. Example:
+> "The latitude under Casablanca runs three lifting crossings — Venus/Jupiter leads, with a Mercury/Moon undertone — and a single Mars/Saturn pair that tightens the screws on overconfidence."
 
-**\`chartRulerReframe\`** — How the user's chart ruler re-domains in the relocated chart. Single object:
-- \`relocatedRising\`: the relocated rising sign.
-- \`ruler\`: that sign's traditional ruler (e.g. Libra rising → Venus).
-- \`fromHouse\`: which house the ruler sits in natally.
-- \`toHouse\`: which house the ruler sits in relocated.
-- \`headline\`: one line capturing the topic shift (e.g. "Your trip is about ideas and travel, not body and money").
-- \`body\`: 2–4 sentences on the lived theme change. This is the headline answer to "how will [city] feel for me." Only emit when relocated rising sign differs from natal rising OR the ruler changes house.
+**\`placeCharacter.parans\`**: top 4 entries from \`sidebarsData.parans[]\` by |contribution|. Skip neutral pairs.
+- \`paranKey\`: lowercase planet names, alphabetically sorted, joined by "-" (e.g. "jupiter-venus", "mars-saturn").
+- \`headline\`: ≤ 80 chars, "PlanetA/PlanetB — concrete archetype phrase" (e.g. "Venus/Jupiter — abundance, social ease, creative expansion"; "Mars/Saturn — pressing the gas and the brake at once"; "Mars/Pluto — drastic transformation, power struggles").
+- \`body\`: 2 sentences naming what the planet pair *together* amplifies or grinds on. Example: "A Mars/Saturn paran creates an environment of deep friction. It can feel like you're pressing the gas and the brake at once — every move costs more effort than it should."
 
-**\`acgLineNotes\`** — Per-ACG-line teacher copy keyed \`<planet-lowercase>-<angle>\` (angle ∈ MC | IC | ASC | DSC), one entry per nearby ACG line in \`sidebarsData.acgLines\`. ACG lines are time-of-birth dependent and personal — different from geodetic lines. \`headline\` + \`body\` (2–3 sentences).
+**\`geodeticLiveLines\`** (optional, only when active sky): array of current geodetic transits running through the destination longitude.
+- \`liveLineKey\`: \`<planet>-<sign>-<MC|ASC>\` lowercase (e.g. "uranus-taurus-MC").
+- \`headline\` ≤ 70 chars, \`body\` 2–4 sentences, \`windowNote\` optional ("peaks Feb 27 – Mar 2").`;
 
-**\`modalityHits\`** — Late-degree natal placements that get caught by a same-modality hard-aspect transit pair (e.g. Mars-Uranus square at 27° fixed catches every natal planet at 20–29° in any fixed sign). \`hitKey\` = \`<transitPair-lowercase>-<natalPlanet-lowercase>\` (e.g. "mars-uranus-venus"). Only emit when the input contains an active transit pair in hard aspect AND the user has natal planets in the matching modality at 20–29°. Skip otherwise.`;
+const BLOCK_WHAT_SHIFTS_PERSONALISATION = `# What-Shifts Tab (Personal-Chart Relocation)
+
+**MANDATORY:** When \`sidebarsData.chartRuler\` is present and rising sign or ruler-house differs from natal, emit \`chartRulerReframe\`. When \`sidebarsData.nearbyLines\` is non-empty, emit \`acgLineNotes\` (one per line).
+
+**\`chartRulerReframe\`** — copy \`relocatedRising\`, \`ruler\`, \`fromHouse\`, \`toHouse\` from \`sidebarsData.chartRuler\`. Add \`headline\` (one-line topic shift, e.g. "Your trip is about ideas and travel, not body and money") + \`body\` (2–4 sentences).
+
+**\`acgLineNotes\`** — keyed \`<planet>-<angle>\` lowercase (angle ∈ MC|IC|ASC|DSC). One entry per line in \`sidebarsData.nearbyLines\`. ACG lines are time-of-birth dependent (NOT geodetic). \`headline\` + \`body\` (2–3 sentences).
+
+**\`modalityHits\`** — only when \`sidebarsData.modalityHits[]\` is non-empty. Copy \`hitKey\` verbatim. \`headline\` + \`body\` (2–3 sentences) naming the transit pair in plain English.`;
 
 const BLOCK_LEGACY_FIELDS = `# Legacy Fields
 Fill \`summary\`, \`signals\`, and \`longRead\` as best as possible for backwards compatibility, maintaining the same tone.`;
@@ -225,6 +230,7 @@ export async function writeTeacherReading(
       },
     });
     console.log(`[teacher-reading] ok in ${Date.now() - t0}ms — finish=${finishReason}, usage=${JSON.stringify(usage)}`);
+    console.log(`[teacher-reading] geodetics fields — placeCharacter:${object.placeCharacter ? "✓" : "✗"} paransSummary:${object.placeCharacter?.paransSummary ? "✓" : "✗"} liveLinesLead:${object.liveLinesLead ? "✓" : "✗"} liveLines:${object.geodeticLiveLines?.length ?? 0} chartRulerReframe:${object.chartRulerReframe ? "✓" : "✗"} acgLineNotes:${object.acgLineNotes?.length ?? 0} modalityHits:${object.modalityHits?.length ?? 0}`);
     return object;
   } catch (err: any) {
     console.error(`[teacher-reading] failed after ${Date.now() - t0}ms — finish=${err?.finishReason ?? "?"}, textLen=${err?.text?.length ?? 0}, usage=${JSON.stringify(err?.usage ?? {})}`);

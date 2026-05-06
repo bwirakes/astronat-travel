@@ -97,6 +97,11 @@ export default function WhatShiftsTab({ vm, isDark, relocatedWheel, copiedTab }:
                 )}
             </div>
 
+            {/* ─ SECTION: CHART RULER REFRAME (teacher-authored) ────────── */}
+            {vm.relocated.chartRulerReframe && (
+                <ChartRulerReframeCallout cr={vm.relocated.chartRulerReframe} />
+            )}
+
             {/* ─ SECTION: ANGLES ────────────────────────────────────────── */}
             <SectionHead
                 index="01"
@@ -127,6 +132,22 @@ export default function WhatShiftsTab({ vm, isDark, relocatedWheel, copiedTab }:
                     vm.relocated.planetsInHouses.map((p, i) => <PlanetShiftCard key={i} row={p} />)
                 )}
             </div>
+
+            {/* ─ SECTION: ACG LINE NOTES (teacher-authored, optional) ───── */}
+            {Object.keys(vm.relocated.acgLineNotes).length > 0 && (
+                <>
+                    <SectionHead
+                        index="02b"
+                        title="Planetary lines amplifying here"
+                        sub="ACG lines you're walking under at this destination. Time-of-birth dependent — each carries its own flavor."
+                    />
+                    <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 mb-12">
+                        {Object.entries(vm.relocated.acgLineNotes).map(([key, note]) => (
+                            <AcgLineNoteCard key={key} lineKey={key} note={note} />
+                        ))}
+                    </div>
+                </>
+            )}
 
             {/* ─ SECTION: ASPECTS ───────────────────────────────────────── */}
             <SectionHead
@@ -163,7 +184,121 @@ export default function WhatShiftsTab({ vm, isDark, relocatedWheel, copiedTab }:
                     </div>
                 </>
             )}
+
+            {/* ─ SECTION: MODALITY HITS (teacher-authored, optional) ────── */}
+            {vm.relocated.modalityHits.length > 0 && (
+                <>
+                    <SectionHead
+                        index="05"
+                        title="Late-degree pressure points"
+                        sub="Hard-aspect transit pairs catching natal placements at 20–29° in the same modality. The cohort flag — anyone in this degree band feels it."
+                    />
+                    <div className="grid gap-3 grid-cols-1 sm:[grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
+                        {vm.relocated.modalityHits.map((m) => (
+                            <ModalityHitCard key={m.hitKey} hit={m} />
+                        ))}
+                    </div>
+                </>
+            )}
         </TabSection>
+    );
+}
+
+// ─── Teacher-copy renderers (what-shifts tab) ─────────────────────────────
+
+function ChartRulerReframeCallout({ cr }: { cr: NonNullable<V4VM["relocated"]["chartRulerReframe"]>; }) {
+    return (
+        <div
+            className="mb-10 p-5 sm:p-6 max-w-[720px] mx-auto"
+            style={{
+                border: "1px solid var(--gold)",
+                borderRadius: "10px",
+                background: "color-mix(in oklab, var(--gold) 5%, transparent)",
+            }}
+        >
+            <div
+                className="text-[11px] tracking-[0.16em] uppercase mb-2"
+                style={{ fontFamily: FONT_MONO, color: "var(--gold)", fontWeight: 700 }}
+            >
+                Chart ruler · {cr.ruler} · H{cr.fromHouse} → H{cr.toHouse}
+            </div>
+            <h3
+                className="text-[18px] sm:text-[20px] m-0 mb-3"
+                style={{ fontFamily: FONT_PRIMARY, color: "var(--text-primary)", fontWeight: 600 }}
+            >
+                {cr.headline}
+            </h3>
+            <p
+                className="text-[15px] leading-[1.55] m-0 max-w-[640px]"
+                style={{ fontFamily: FONT_BODY, color: "var(--text-primary)" }}
+            >
+                {cr.body}
+            </p>
+        </div>
+    );
+}
+
+function AcgLineNoteCard({ lineKey, note }: { lineKey: string; note: { headline: string; body: string }; }) {
+    const [planet, angle] = lineKey.split("-");
+    return (
+        <div
+            className="p-4"
+            style={{
+                border: "1px solid var(--surface-border)",
+                borderRadius: "8px",
+            }}
+        >
+            <div
+                className="text-[10px] tracking-[0.16em] uppercase mb-2"
+                style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)", fontWeight: 700 }}
+            >
+                {planet} · {angle?.toUpperCase()}
+            </div>
+            <h4
+                className="text-[15px] m-0 mb-2"
+                style={{ fontFamily: FONT_PRIMARY, color: "var(--text-primary)", fontWeight: 600 }}
+            >
+                {note.headline}
+            </h4>
+            <p
+                className="text-[14px] leading-[1.55] m-0"
+                style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
+            >
+                {note.body}
+            </p>
+        </div>
+    );
+}
+
+function ModalityHitCard({ hit }: { hit: V4VM["relocated"]["modalityHits"][number]; }) {
+    return (
+        <div
+            className="p-4"
+            style={{
+                border: "1px solid var(--color-spiced-life)",
+                borderRadius: "8px",
+                background: "color-mix(in oklab, var(--color-spiced-life) 5%, transparent)",
+            }}
+        >
+            <div
+                className="text-[10px] tracking-[0.16em] uppercase mb-2"
+                style={{ fontFamily: FONT_MONO, color: "var(--color-spiced-life)", fontWeight: 700 }}
+            >
+                {hit.hitKey.replace(/-/g, " · ")}
+            </div>
+            <h4
+                className="text-[15px] m-0 mb-2"
+                style={{ fontFamily: FONT_PRIMARY, color: "var(--text-primary)", fontWeight: 600 }}
+            >
+                {hit.headline}
+            </h4>
+            <p
+                className="text-[14px] leading-[1.55] m-0"
+                style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
+            >
+                {hit.body}
+            </p>
+        </div>
     );
 }
 

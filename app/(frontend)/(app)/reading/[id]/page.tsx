@@ -149,6 +149,14 @@ function ReadingContent() {
             birthLat: d.birth?.lat ?? d.birthLat,
             birthLon: d.birth?.lon ?? d.birthLon,
             teacherReading: d.teacherReading,
+            // Geodetic / parans / live transits — needed by the V4 viewmodel's
+            // deriveGeodetic and deriveParans. Without these, vm.geodetic
+            // returns null and every teacher-copy section on the place-field
+            // tab gets gated off even when the LLM emitted them.
+            geodeticBand: d.geodeticBand,
+            activeGeoTransits: d.activeGeoTransits,
+            parans: d.parans,
+            geodeticEngineVersion: d.geodeticEngineVersion,
             aiInsights: d.aiInsights || DEFAULT_AI_INSIGHTS,
             // Synastry-only fields (undefined for astrocartography)
             partnerName: d.partnerName,
