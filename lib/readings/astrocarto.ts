@@ -446,43 +446,71 @@ export async function runAstrocarto(
   }
 
   let couplesReading: any = undefined;
+  let couplesBestWindows: string[] = [];
+  let couplesAvoidWindows: string[] = [];
+  let couplesBestWindowScores: number[] = [];
+  let couplesAvoidWindowScores: number[] = [];
   if (readingCategory === "synastry" && partnerMatrix && synastryDerived) {
     try {
       const { buildCouplesAIInput } = await import("./ai-couples-input-builder");
       const { writeCouplesReading } = await import("@/lib/ai/prompts/couples-reading");
       const { toCouplesViewModel } = await import("@/app/lib/couples-viewmodel");
+      const { buildRangeHighlights } = await import("@/app/lib/window-scoring");
+      const { jointScore } = await import("@/app/lib/verdict");
+
+      // Joint timing windows. Stack both partners' transit hits and score
+      // against the joint baseline so a hard transit on either chart drags
+      // the window down. Mirrors the teacher path's window derivation.
+      if (travelDate) {
+        const jointBaseline = jointScore(matrixResult.macroScore, partnerMatrix.macroScore);
+        const jointTransits = [...rawTransits, ...partnerMatrix.rawTransits];
+        const ranges = buildRangeHighlights(travelDate, jointTransits, jointBaseline, goalIds ?? []);
+        const shortDate = (iso: string) => {
+          const d = new Date(iso);
+          return `${d.toLocaleString("en-US", { month: "short" })} ${d.getUTCDate()}`;
+        };
+        couplesBestWindows = ranges.good.map(g => `${shortDate(g.startISO)} — ${shortDate(g.endISO)}`);
+        couplesAvoidWindows = ranges.bad.map(g => `${shortDate(g.startISO)} — ${shortDate(g.endISO)}`);
+        couplesBestWindowScores = ranges.good.map(g => Math.round(g.score));
+        couplesAvoidWindowScores = ranges.bad.map(g => Math.round(g.score));
+      }
 
       const mockReading = {
         destination,
         travelDate,
         goals: selectedGoals,
         partnerName: partnerProfile?.first_name ?? "Partner",
-        
+
         userMacroScore: matrixResult.macroScore,
         userMacroVerdict: matrixResult.macroVerdict,
         partnerMacroScore: partnerMatrix.macroScore,
         partnerMacroVerdict: partnerMatrix.macroVerdict,
-        
+
         scoreDelta: synastryDerived.scoreDelta,
         averageScore: synastryDerived.averageScore,
         recommendation: synastryDerived.recommendation,
-        
+
         // Match the shape expected by toCouplesViewModel
         userHouses: matrixResult.houses.map((h: any) => ({ house: h.house, score: h.score })),
         userPlanetaryLines: acgLines,
         userRelocatedCusps: relocatedCusps,
         userEventScores: eventScores,
         natalPlanets: natalPlanets,
-        
+
         partnerHouses: partnerMatrix.houses,
         partnerPlanetaryLines: partnerMatrix.acgLines,
         partnerRelocatedCusps: partnerMatrix.relocatedCusps,
         partnerEventScores: partnerMatrix.eventScores,
         partnerNatalPlanets: partnerNatalPlanets,
-        
+
         houseComparison: synastryDerived.houseComparison,
         synastryAspects,
-        
+
+        bestWindows: couplesBestWindows,
+        avoidWindows: couplesAvoidWindows,
+        bestWindowScores: couplesBestWindowScores,
+        avoidWindowScores: couplesAvoidWindowScores,
+
         details: {} // the viewmodel sometimes looks at reading.details
       };
 
@@ -583,6 +611,10 @@ export async function runAstrocarto(
       : {}),
     ...(teacherReading ? { teacherReading } : {}),
     ...(couplesReading ? { couplesReading } : {}),
+    ...(couplesBestWindows.length ? { bestWindows: couplesBestWindows } : {}),
+    ...(couplesAvoidWindows.length ? { avoidWindows: couplesAvoidWindows } : {}),
+    ...(couplesBestWindowScores.length ? { bestWindowScores: couplesBestWindowScores } : {}),
+    ...(couplesAvoidWindowScores.length ? { avoidWindowScores: couplesAvoidWindowScores } : {}),
     ...(partnerNatalPlanets ? { partnerNatalPlanets, synastryAspects } : {}),
     ...(partnerMatrix && synastryDerived
       ? {

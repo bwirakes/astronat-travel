@@ -91,6 +91,18 @@ export interface AstrocartoReadingResult {
   averageScore?: number;
   houseComparison?: any[];
   recommendation?: "go" | "caution" | "avoid";
+
+  /** Joint timing windows for the synastry trip, derived by stacking both
+   *  partners' transits and running buildRangeHighlights against the joint
+   *  baseline. Strings shaped like "Sep 14 — Sep 18" so the AI can echo them
+   *  verbatim as `windowDate` in couplesReading.timings.{best,avoid}WindowNotes. */
+  bestWindows?: string[];
+  avoidWindows?: string[];
+  /** Per-window joint score, index-aligned with bestWindows / avoidWindows.
+   *  Rendered as a small badge next to the date in §03 so the reader can see
+   *  the relative strength of each window at a glance. */
+  bestWindowScores?: number[];
+  avoidWindowScores?: number[];
 }
 
 export interface RunAstrocartoInput {

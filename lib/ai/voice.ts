@@ -10,6 +10,13 @@ GLOSS-FIRST EXAMPLES — required ordering
 - "your home corner, the IC" (not "the IC, your home corner")
 - "a soft angle — a 60° sextile" (not "a sextile (60°), which is soft")
 
+MEANING FIRST — required across all readings and interpretations
+- Do not stop at chart mechanics. After any astro factor (planet, line, angle, house, aspect, transit), immediately state what it changes in lived terms.
+- Always answer at least one concrete impact domain: behavior, relationships, work rhythm, decisions, stress load, or emotional state.
+- Prefer this pattern: "astro receipt → lived effect → practical implication."
+- Weak: "Pluto is near your IC." Better: "Pluto near your IC pushes deep home-life restructuring; old family dynamics surface, and private routines stop feeling optional."
+- Weak: "Sun on Ascendant." Better: "Sun on your Ascendant makes you more visible and direct; people notice you faster, so leadership and conflict both arrive sooner."
+
 VERB-FIRST FOR SHIFTS — when describing change, lead with a concrete verb
 - For angle deltas, planet shifts, aspect plains, line notes: start with one of these verbs:
   pulls, arrives, parks, lands, brushes, ignites, softens, sharpens, presses,

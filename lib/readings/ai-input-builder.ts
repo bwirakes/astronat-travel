@@ -16,6 +16,7 @@ import {
   type ArrivalCandidate,
 } from "@/app/lib/window-scoring";
 import { verdictBand, verdictTone } from "@/app/lib/verdict";
+import { formatTransitDates, transitTone, aspectSentence } from "./ai-input-helpers";
 
 export interface TeacherReadingInput {
   macro: {
@@ -62,39 +63,6 @@ export interface TeacherReadingInput {
      *  verdict and frame the strongest month as the least-rough door. */
     placeFloorTripped: boolean;
   };
-}
-
-function formatTransitDates(dateIso: string): string {
-  const d = new Date(dateIso);
-  const before = new Date(d);
-  before.setUTCDate(before.getUTCDate() - 2);
-  const after = new Date(d);
-  after.setUTCDate(after.getUTCDate() + 2);
-  const fmt = (x: Date) => x.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  return `${fmt(before)} — ${fmt(after)}`;
-}
-
-const HARMONIOUS = new Set(["trine", "sextile"]);
-const TENSE = new Set(["square", "opposition"]);
-
-function transitTone(hit: TransitHit): Tone {
-  const a = hit.aspect.toLowerCase();
-  if (HARMONIOUS.has(a)) return "supportive";
-  if (TENSE.has(a)) return "challenging";
-  if (a === "conjunction") return hit.benefic ? "supportive" : "challenging";
-  return "neutral";
-}
-
-function aspectSentence(hit: TransitHit, transitSign: string, natalSign: string): string {
-  const aspectVerb: Record<string, string> = {
-    trine: "trines",
-    sextile: "sextiles",
-    square: "squares",
-    opposition: "opposes",
-    conjunction: "joins",
-  };
-  const verb = aspectVerb[hit.aspect.toLowerCase()] ?? hit.aspect;
-  return `${hit.transit_planet} in ${transitSign} ${verb} your ${hit.natal_planet} in ${natalSign}`;
 }
 
 function geodeticBandForLon(lon: number): { sign: string; longitudeRange: string } {

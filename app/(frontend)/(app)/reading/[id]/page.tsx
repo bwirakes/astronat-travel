@@ -170,6 +170,10 @@ function ReadingContent() {
             narrative: d.narrative,
             weatherForecast: d.weatherForecast,
             couplesReading: d.couplesReading,
+            bestWindows: d.bestWindows,
+            avoidWindows: d.avoidWindows,
+            bestWindowScores: d.bestWindowScores,
+            avoidWindowScores: d.avoidWindowScores,
          });
       } else {
          console.warn("Failed to fetch reading:", error);

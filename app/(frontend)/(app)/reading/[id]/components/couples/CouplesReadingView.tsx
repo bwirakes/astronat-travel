@@ -590,21 +590,21 @@ function VerdictBlock({ timings, prose }: { timings: CouplesVM["timings"]; prose
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "clamp(28px, 4vw, 48px)" }} className="windows-grid">
-        <WindowList title="BEST WINDOWS" color="var(--color-planet-jupiter)" items={timings.bestWindows} notes={prose?.timings?.bestWindowNotes} />
+        <WindowList title="BEST WINDOWS" color="var(--color-planet-jupiter)" items={timings.bestWindows} scores={timings.bestWindowScores} notes={prose?.timings?.bestWindowNotes} />
         {timings.avoidWindows.length > 0 && (
-          <WindowList title="AVOID" color="var(--color-spiced-life)" items={timings.avoidWindows} notes={prose?.timings?.avoidWindowNotes} />
+          <WindowList title="AVOID" color="var(--color-spiced-life)" items={timings.avoidWindows} scores={timings.avoidWindowScores} notes={prose?.timings?.avoidWindowNotes} />
         )}
       </div>
       <style jsx>{`
         @media (min-width: 720px) {
-          .windows-grid { grid-template-columns: 2fr 1fr !important; }
+          .windows-grid { grid-template-columns: 1fr 1fr !important; }
         }
       `}</style>
     </>
   );
 }
 
-function WindowList({ title, color, items, notes }: { title: string; color: string; items: string[]; notes?: Array<{ windowDate: string; note: string }> }) {
+function WindowList({ title, color, items, scores, notes }: { title: string; color: string; items: string[]; scores?: number[]; notes?: Array<{ windowDate: string; note: string }> }) {
   if (items.length === 0) {
     return (
       <div>
@@ -625,7 +625,10 @@ function WindowList({ title, color, items, notes }: { title: string; color: stri
       </div>
       <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column" }}>
         {items.map((w, i) => {
-          const aiNote = notes?.find(n => n.windowDate === w)?.note;
+          const aiNote =
+            notes?.find(n => n.windowDate === w)?.note ??
+            notes?.find(n => n.windowDate.includes(w) || w.includes(n.windowDate))?.note ??
+            notes?.[i]?.note;
           return (
             <li
               key={i}
@@ -642,8 +645,15 @@ function WindowList({ title, color, items, notes }: { title: string; color: stri
               }}
             >
               <span style={{ color, marginTop: "0.15rem" }}>●</span>
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                <span style={{ fontWeight: 500, letterSpacing: "0.01em" }}>{w}</span>
+              <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.8rem" }}>
+                  <span style={{ fontWeight: 500, letterSpacing: "0.01em" }}>{w}</span>
+                  {scores?.[i] != null && (
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", letterSpacing: "0.1em", color, fontWeight: 600, flexShrink: 0 }}>
+                      {scores[i]}/100
+                    </span>
+                  )}
+                </div>
                 {aiNote && <span style={{ fontSize: "0.85rem", lineHeight: 1.4, color: "var(--text-tertiary)", marginTop: "0.25rem" }}>{aiNote}</span>}
               </div>
             </li>
