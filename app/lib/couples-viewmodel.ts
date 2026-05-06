@@ -111,6 +111,10 @@ export interface CouplesVM {
     accent: string;
     bestWindows: string[];
     avoidWindows: string[];
+    /** Per-window joint score, index-aligned with bestWindows / avoidWindows.
+     *  Empty array if the engine didn't compute scores (legacy readings). */
+    bestWindowScores: number[];
+    avoidWindowScores: number[];
   };
   deepDive: {
     you: ChartTabVM;
@@ -264,6 +268,10 @@ export function toCouplesViewModel(reading: any): CouplesVM {
 
   const bestWindows  = pickStringList(reading.narrative?.verdict?.bestWindows ?? reading.bestWindows ?? []);
   const avoidWindows = pickStringList(reading.narrative?.verdict?.avoidWindows ?? reading.avoidWindows ?? []);
+  const pickNumberList = (input: unknown): number[] =>
+    Array.isArray(input) ? input.map((n) => Number(n)).filter((n) => Number.isFinite(n)) : [];
+  const bestWindowScores  = pickNumberList(reading.bestWindowScores);
+  const avoidWindowScores = pickNumberList(reading.avoidWindowScores);
 
   // ── Deep Dive: per-partner chart VMs ──────────────────────────
   const youCusps: number[]  = arrayOr<number>(reading.userRelocatedCusps, reading.relocatedCusps, equalCusps());
@@ -355,6 +363,8 @@ export function toCouplesViewModel(reading: any): CouplesVM {
       accent: VERDICT_COLORS[jointBand] ?? "var(--text-secondary)",
       bestWindows,
       avoidWindows,
+      bestWindowScores,
+      avoidWindowScores,
     },
     deepDive: {
       you: youDeep,
