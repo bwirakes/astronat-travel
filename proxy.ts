@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PROTECTED_PREFIXES = [
+export const PROTECTED_PREFIXES = [
   "/dashboard",
   "/readings",
   "/reading",
@@ -16,17 +16,28 @@ const PROTECTED_PREFIXES = [
   "/scoring",
 ] as const;
 
-const AUTH_ENTRY_PREFIXES = ["/login", "/flow"] as const;
+export const AUTH_ENTRY_PREFIXES = ["/login", "/flow"] as const;
 
-function startsWithPath(pathname: string, prefix: string): boolean {
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error(
+    "proxy.ts: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY) must be set",
+  );
+}
+
+export function startsWithPath(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
-function isProtectedPath(pathname: string): boolean {
+export function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PREFIXES.some((prefix) => startsWithPath(pathname, prefix));
 }
 
-function isAuthEntryPath(pathname: string): boolean {
+export function isAuthEntryPath(pathname: string): boolean {
   return AUTH_ENTRY_PREFIXES.some((prefix) => startsWithPath(pathname, prefix));
 }
 
@@ -41,26 +52,20 @@ export async function proxy(request: NextRequest) {
 
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://placeholder.supabase.co",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-      "placeholder",
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options),
-          );
-        },
+  const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+        response = NextResponse.next({ request });
+        cookiesToSet.forEach(({ name, value, options }) =>
+          response.cookies.set(name, value, options),
+        );
       },
     },
-  );
+  });
 
   const {
     data: { user },
@@ -75,13 +80,19 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isAuthEntry) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("birth_date")
-      .eq("id", user.id)
-      .maybeSingle();
+    // Prefer the onboarded flag stored on the auth user (set when birth_date
+    // is first written). Falls back to the profiles row only when the flag
+    // hasn't been backfilled yet, so the common path stays edge-fast.
+    let hasBirthDate = user.user_metadata?.onboarded === true;
+    if (!hasBirthDate) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("birth_date")
+        .eq("id", user.id)
+        .maybeSingle();
+      hasBirthDate = Boolean(profile?.birth_date);
+    }
 
-    const hasBirthDate = Boolean(profile?.birth_date);
     if (!hasBirthDate && startsWithPath(pathname, "/flow")) {
       return response;
     }
@@ -93,6 +104,9 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+// Next.js requires `config.matcher` to be a static array literal so it can be
+// analyzed at build time — we can't compute it from PROTECTED_PREFIXES /
+// AUTH_ENTRY_PREFIXES. The proxy-paths test asserts the two stay in sync.
 export const config = {
   matcher: [
     "/dashboard/:path*",

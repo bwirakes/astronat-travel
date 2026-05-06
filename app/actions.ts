@@ -23,6 +23,9 @@ export async function createProfileAction(birthData: { name: string, date: strin
       life_goals: [],
     };
     const res = await createProfile(defaultProfile);
+    // Mirror onboarded state onto the auth user so the edge proxy can gate
+    // /login and /flow without a profiles roundtrip on every request.
+    await supabase.auth.updateUser({ data: { onboarded: true } });
     return { data: res };
   } catch (error) {
     return { error: String(error) };
