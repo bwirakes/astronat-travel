@@ -283,7 +283,7 @@ function AngleCard({ angle: a }: { angle: V4VM["relocated"]["angles"][number] })
         <article
             className="px-[22px] py-5 border rounded-[8px] flex flex-col gap-[14px]"
             style={{
-                borderColor: moved ? "var(--color-spiced-life)" : "var(--surface-border)",
+                borderColor: "var(--surface-border)",
                 background: "var(--bg)",
                 borderLeftWidth: moved ? "3px" : "1px",
             }}
@@ -533,7 +533,7 @@ function PolePill({
             className="px-[22px] py-5 border rounded-[8px] flex flex-col gap-[6px]"
             style={{
                 background: "var(--bg)",
-                borderColor: active ? "var(--color-spiced-life)" : "var(--surface-border)",
+                borderColor: "var(--surface-border)",
             }}
         >
             <div

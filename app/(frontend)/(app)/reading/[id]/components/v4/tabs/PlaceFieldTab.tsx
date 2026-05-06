@@ -19,6 +19,7 @@ import type { V4VM } from "./types";
 
 interface Props {
     vm: V4VM;
+    isDark: boolean;
     birthIso: string | undefined;
     reading: any;
     relocatedAcgLines: any[];
@@ -239,7 +240,7 @@ const SIGN_FLAVOR: Record<string, string> = {
     Aquarius: "experimental, network-driven", Pisces: "permeable, dreamy",
 };
 
-export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines, copiedTab }: Props) {
+export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocatedAcgLines, copiedTab }: Props) {
     const { lat, lon, city } = vm.location;
     const geoMC  = geodeticMCLongitude(lon);
     const geoASC = geodeticASCLongitude(lon, lat);
@@ -364,7 +365,7 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
                     <div style={KICKER}>Natal × geodetic overlay</div>
                     <div style={{ width: "100%", maxWidth: "440px", margin: "0 auto", position: "relative" }}>
                         <NatalWithGeodeticOverlay
-                            isDark
+                            isDark={isDark}
                             planets={natalPlanetsForWheel}
                             cusps={cusps}
                             geoMC={geoMC}
@@ -408,7 +409,7 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
                     </p>
                     <div style={{ width: "100%", maxWidth: "440px", margin: "var(--space-md) auto 0" }}>
                         <GeodeticHouseWheel
-                            isDark
+                            isDark={isDark}
                             cusps={vm.geodeticHouseFrame.cusps}
                             natalAssignments={vm.geodeticHouseFrame.natalAssignments}
                             geoASC={geoASC}
@@ -484,7 +485,7 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
                                                     letterSpacing: "0.12em",
                                                     textTransform: "uppercase",
                                                     color: "var(--color-spiced-life)",
-                                                    border: "1px solid var(--color-spiced-life)",
+                                                    border: "1px solid var(--surface-border)",
                                                     borderRadius: "999px",
                                                     padding: "0.1rem 0.4rem",
                                                     fontWeight: 700,
