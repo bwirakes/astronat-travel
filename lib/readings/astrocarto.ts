@@ -407,6 +407,12 @@ export async function runAstrocarto(
     natalAngles,
     travelType: travelType === "relocation" ? "relocation" : "trip",
     goalIds: goalIds ?? [],
+    // PR-B: feed the personal-cycle compute. All three are already
+    // computed earlier in the pipeline for the matrix; reusing them here
+    // avoids a redundant SwissEph call.
+    transitPositions: transitPositionsAtRef,
+    progressedBands,
+    birthDateUtc: dtUtcBirth,
   });
 
   let teacherReading: any = undefined;
