@@ -380,6 +380,11 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
 
             {/* ── §02 What's live now (promoted out of details) ───────── */}
             <SectionHead index="02" title={`What's live in ${city} now`}  flush />
+            {vm.geodetic?.liveLinesLead && (
+                <p style={{ ...BODY, fontSize: "1.05rem", margin: "0 0 var(--space-md) 0", maxWidth: "640px" }}>
+                    {vm.geodetic.liveLinesLead}
+                </p>
+            )}
             {vm.progressions && (
                 <ProgressionsLine bands={vm.progressions.bands} />
             )}
@@ -388,7 +393,7 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
             )}
             {liveItems.length > 0 ? (
                 <LiveNowTable items={liveItems} />
-            ) : (vm.geodetic?.liveLines.length ?? 0) > 0 ? null : reading?.geodeticEngineVersion ? (
+            ) : (vm.geodetic?.liveLines.length ?? 0) > 0 || vm.geodetic?.liveLinesLead ? null : reading?.geodeticEngineVersion ? (
                 <p style={BODY_MUTED}>
                     The sky over {city} is quiet right now &mdash; nothing transiting close to its corners.
                 </p>
@@ -551,15 +556,21 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
                             sky this longitude owns.
                         </p>
                     )}
-                    {vm.parans.length > 0 && (
-                        <ParansDisclosure
-                            parans={vm.parans}
-                            city={city}
-                            notes={paranNotesByKey(vm.geodetic?.placeCharacter?.parans)}
-                        />
-                    )}
                 </div>
             </div>
+
+            {vm.parans.length > 0 && (
+                <>
+                    <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
+                    <SectionHead index="06" title="Latitude crossings" flush />
+                    <ParansDisclosure
+                        parans={vm.parans}
+                        city={city}
+                        notes={paranNotesByKey(vm.geodetic?.placeCharacter?.parans)}
+                        paransSummary={vm.geodetic?.placeCharacter?.paransSummary ?? ""}
+                    />
+                </>
+            )}
 
             <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
 
@@ -1222,10 +1233,12 @@ function ParanList({ parans, city: _city, notes }: {
                         : p.contribution < 0
                             ? "var(--color-spiced-life)"
                             : "var(--text-tertiary)";
-                    const offset = Math.abs(p.latOffset).toFixed(1);
-                    const direction = p.latOffset > 0 ? "north" : "south";
                     const note = notes?.get(`${p.p1}-${p.p2}`.toLowerCase())
                         ?? notes?.get(`${p.p2}-${p.p1}`.toLowerCase());
+                    // 1° latitude orb is the activation threshold — the
+                    // pair's combined energy lands at the destination
+                    // strongly enough to be felt, not just present.
+                    const isActivated = Math.abs(p.latOffset) <= 1;
                     return (
                         <li
                             key={`paran-${i}`}
@@ -1236,7 +1249,7 @@ function ParanList({ parans, city: _city, notes }: {
                         >
                             <div style={{
                                 display: "grid",
-                                gridTemplateColumns: "minmax(180px, 1fr) auto auto",
+                                gridTemplateColumns: "minmax(180px, 1fr) auto",
                                 gap: "1rem",
                                 alignItems: "baseline",
                             }}>
@@ -1263,27 +1276,23 @@ function ParanList({ parans, city: _city, notes }: {
                                         </div>
                                     )}
                                 </div>
-                                <div style={{
-                                    fontFamily: "var(--font-mono)",
-                                    fontSize: "0.7rem",
-                                    color: "var(--text-secondary)",
-                                    whiteSpace: "nowrap",
-                                }}>
-                                    {offset}° {direction} of you
-                                </div>
-                                <span style={{
-                                    fontFamily: "var(--font-mono)",
-                                    fontSize: "0.7rem",
-                                    fontWeight: 700,
-                                    color: tone,
-                                    padding: "0.25rem 0.6rem",
-                                    border: `1px solid ${tone}`,
-                                    borderRadius: "999px",
-                                    background: `color-mix(in oklab, ${tone} 8%, transparent)`,
-                                    whiteSpace: "nowrap",
-                                }}>
-                                    {p.contribution > 0 ? "+" : ""}{Math.round(p.contribution)}
-                                </span>
+                                {isActivated && (
+                                    <span style={{
+                                        fontFamily: "var(--font-mono)",
+                                        fontSize: "0.65rem",
+                                        fontWeight: 700,
+                                        letterSpacing: "0.14em",
+                                        textTransform: "uppercase",
+                                        color: tone,
+                                        padding: "0.3rem 0.65rem",
+                                        border: `1px solid ${tone}`,
+                                        borderRadius: "999px",
+                                        background: `color-mix(in oklab, ${tone} 8%, transparent)`,
+                                        whiteSpace: "nowrap",
+                                    }}>
+                                        Paran activated
+                                    </span>
+                                )}
                             </div>
                             {note && (
                                 <div style={{ marginTop: "0.6rem", paddingLeft: "0.1rem" }}>
@@ -1450,10 +1459,11 @@ function LiveLinesList({ lines }: { lines: V4VM["geodetic"] extends infer G
     );
 }
 
-function ParansDisclosure({ parans, city, notes }: {
+function ParansDisclosure({ parans, city, notes, paransSummary }: {
     parans: V4Paran[];
     city: string;
     notes: Map<string, { headline: string; body: string }>;
+    paransSummary: string;
 }) {
     // Top crossings only — sorted by archetype loading (|contribution|) so
     // the strongest pair leads. Older display showed 8 rows, which crowded
@@ -1477,11 +1487,7 @@ function ParansDisclosure({ parans, city, notes }: {
     return (
         <details
             className="parans-disclosure"
-            style={{
-                marginTop: "var(--space-xl)",
-                borderTop: "1px solid var(--surface-border)",
-                paddingTop: "var(--space-lg)",
-            }}
+            style={{ marginTop: 0 }}
         >
             <style>{`
                 .parans-disclosure summary::-webkit-details-marker { display: none; }
@@ -1499,19 +1505,25 @@ function ParansDisclosure({ parans, city, notes }: {
                 }}
             >
                 <div style={{ flex: 1 }}>
-                    <SubHead title="Latitude crossings" />
-                    <div style={{
-                        ...MONO_SM,
-                        color: "var(--text-tertiary)",
-                        marginTop: "0.4rem",
-                        letterSpacing: "0.04em",
-                    }}>
-                        {summaryLine}
-                    </div>
-                    {lead?.headline && (
-                        <p style={{ ...BODY, margin: "0.6rem 0 0 0", maxWidth: "640px" }}>
-                            {lead.headline}
+                    {paransSummary ? (
+                        <p style={{ ...BODY, margin: 0, maxWidth: "640px" }}>
+                            {paransSummary}
                         </p>
+                    ) : (
+                        <>
+                            <div style={{
+                                ...MONO_SM,
+                                color: "var(--text-tertiary)",
+                                letterSpacing: "0.04em",
+                            }}>
+                                {summaryLine}
+                            </div>
+                            {lead?.headline && (
+                                <p style={{ ...BODY, margin: "0.5rem 0 0 0", maxWidth: "640px" }}>
+                                    {lead.headline}
+                                </p>
+                            )}
+                        </>
                     )}
                 </div>
                 <span

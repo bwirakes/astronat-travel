@@ -157,6 +157,12 @@ const PlaceCharacterSchema = z.object({
   // the place asks of you. This replaces the older locator + summary +
   // per-angle card stack which read as repetitive.
   lead: z.string().optional(),
+  // 1–2 sentence visible summary for the §06 latitude-crossings disclosure
+  // header. Names the *field* the parans create taken together — not a
+  // count, not a quote of the first paran. Replaces the bland
+  // "8 crossings · 1 pressing" mono line as the disclosure's read-at-a-
+  // glance answer.
+  paransSummary: z.string().optional(),
   // Legacy fields — accepted for back-compat with cached readings written
   // before the consolidation. New readings should emit `lead` only and skip
   // these. The viewmodel falls back to `summary` when `lead` is absent.
@@ -176,6 +182,7 @@ const GeodeticLiveLineSchema = z.object({
   body: z.string(),         // 2–4 sentences — what's loud here, why now
   windowNote: z.string().optional(),  // e.g. "peaks Feb 27 – Mar 2"
 });
+
 
 // ── What-Shifts tab ────────────────────────────────────────────────────────
 // One-shot chart-ruler reframe — how the user's chart ruler re-domains in
@@ -315,6 +322,14 @@ export const TeacherReadingSchema = z.object({
   // Parans live inside placeCharacter so there's one source of truth.
   placeCharacter: PlaceCharacterSchema.optional(),
   geodeticLiveLines: z.array(GeodeticLiveLineSchema).max(12).optional(),
+  // §02 sky-state lead — required prose paragraph for "What's live in [city]
+  // now". Frames the sky over the destination during the travel window
+  // whether loud or quiet. When tight transits hit the geo-corners, names
+  // them with their implications. When the sky is quiet, names *that*
+  // honestly and surfaces the next approaching transit (from
+  // sidebarsData.approachingGeoLines) so the reader gets narrative
+  // momentum, not just an empty cell.
+  liveLinesLead: z.string().optional(),
 
   // What-shifts tab — personal-chart relocation copy.
   chartRulerReframe: ChartRulerReframeSchema.optional(),

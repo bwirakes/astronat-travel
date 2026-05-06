@@ -1,7 +1,7 @@
 import type { EditorialEvidence } from "@/app/lib/reading-tabs";
 import type { TransitHit } from "@/lib/astro/transit-solver";
 import type { Tone } from "@/lib/ai/schemas";
-import { signFromLongitude, houseFromLongitude } from "@/app/lib/geodetic";
+import { signFromLongitude, houseFromLongitude, geodeticMCLongitude, geodeticASCLongitude } from "@/app/lib/geodetic";
 import { acgLineRawScore } from "@/app/lib/house-matrix";
 import { houseTopic, spellAngle, closenessBand, houseVibe } from "./house-topics";
 import { buildEditorialEvidence, deriveScoreNarrative } from "@/app/lib/reading-tabs";
@@ -76,6 +76,20 @@ export interface TeacherReadingInput {
       natalSign: string;
       natalDegree: number;          // 0–29.99 within sign
       hitKey: string;               // "<transitPair>-<natalPlanet-lowercase>"
+    }>;
+    /** Approaching geo-angle hits — derived from rawTransits by checking each
+     *  sample's transit_planet_lon against the destination's four geodetic
+     *  angles (geoMC, geoIC, geoASC, geoDSC). Includes hits OUTSIDE the
+     *  3° activation orb so the LLM has narrative momentum even when the
+     *  sky is currently quiet ("Saturn arrives at your geoMC on Aug 12,
+     *  4 weeks after you leave"). Sorted by date, capped at 4. */
+    approachingGeoLines?: Array<{
+      planet: string;
+      angle: "MC" | "IC" | "ASC" | "DSC";
+      date: string;                 // ISO YYYY-MM-DD when planet is closest
+      orbAtClosest: number;         // degrees, may exceed 3
+      withinActivationOrb: boolean; // orbAtClosest ≤ 3
+      daysFromTravel: number;       // signed; negative = before travel date
     }>;
   };
 
@@ -534,6 +548,62 @@ export function buildAIInput(args: {
       .filter((x): x is NonNullable<typeof x> => x !== null);
   }).slice(0, 12);
 
+  // ── Approaching geo-angle hits ────────────────────────────────────────
+  // For each rawTransit sample, compute the planet's angular distance to
+  // each of the destination's four geodetic angles. Keep the tightest hit
+  // per planet within ±60 days of travelDate, regardless of whether it's
+  // within the 3° activation orb. Lets the LLM say "Saturn arrives at your
+  // geoMC on Aug 12 — 4 weeks after you leave" when the sky is currently
+  // quiet, instead of leaving §02 stranded.
+  const approachingGeoLines = (() => {
+    if (typeof destinationLon !== "number" || typeof destinationLat !== "number") return [];
+    const geoMC = geodeticMCLongitude(destinationLon);
+    const geoASC = geodeticASCLongitude(destinationLon, destinationLat);
+    const geoIC = (geoMC + 180) % 360;
+    const geoDSC = (geoASC + 180) % 360;
+    const ANGLES: Array<{ k: "MC" | "IC" | "ASC" | "DSC"; lon: number }> = [
+      { k: "MC", lon: geoMC }, { k: "IC", lon: geoIC },
+      { k: "ASC", lon: geoASC }, { k: "DSC", lon: geoDSC },
+    ];
+    const angularDiff = (a: number, b: number) => {
+      let d = Math.abs(a - b) % 360;
+      if (d > 180) d = 360 - d;
+      return d;
+    };
+    const travelMs = travelDate ? new Date(travelDate).getTime() : refTime;
+    const SIXTY_DAYS = 60 * 86_400_000;
+
+    type Hit = { planet: string; angle: "MC" | "IC" | "ASC" | "DSC"; date: string; orbAtClosest: number; daysFromTravel: number };
+    const tightestPerPlanet = new Map<string, Hit>();
+
+    for (const t of rawTransits) {
+      if (typeof t.transit_planet_lon !== "number") continue;
+      const tDate = new Date(t.date).getTime();
+      if (Math.abs(tDate - travelMs) > SIXTY_DAYS) continue;
+      const planet = t.transit_planet;
+      let best: { angle: "MC" | "IC" | "ASC" | "DSC"; orb: number } | null = null;
+      for (const a of ANGLES) {
+        const orb = angularDiff(t.transit_planet_lon, a.lon);
+        if (!best || orb < best.orb) best = { angle: a.k, orb };
+      }
+      if (!best || best.orb > 8) continue; // 8° hard cap — beyond that it's noise
+      const cur = tightestPerPlanet.get(planet);
+      if (!cur || best.orb < cur.orbAtClosest) {
+        tightestPerPlanet.set(planet, {
+          planet,
+          angle: best.angle,
+          date: t.date,
+          orbAtClosest: Math.round(best.orb * 100) / 100,
+          daysFromTravel: Math.round((tDate - travelMs) / 86_400_000),
+        });
+      }
+    }
+    return [...tightestPerPlanet.values()]
+      .sort((a, b) => a.orbAtClosest - b.orbAtClosest)
+      .slice(0, 4)
+      .map((h) => ({ ...h, withinActivationOrb: h.orbAtClosest <= 3 }));
+  })();
+
   return {
     macro: {
       destination,
@@ -579,6 +649,7 @@ export function buildAIInput(args: {
       ...(paransForPrompt.length ? { parans: paransForPrompt } : {}),
       ...(chartRulerCtx ? { chartRuler: chartRulerCtx } : {}),
       ...(modalityHitsForPrompt.length ? { modalityHits: modalityHitsForPrompt } : {}),
+      ...(approachingGeoLines.length ? { approachingGeoLines } : {}),
     }
   };
 }

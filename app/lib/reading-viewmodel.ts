@@ -272,9 +272,11 @@ export interface V4PlaceCharacterParanNote {
  *  summary fields which read as repetitive (locator → summary → per-angle
  *  card all said variants of the same thing). When loading legacy readings
  *  written before this change, the viewmodel falls back to the old
- *  `summary` field for `lead`. */
+ *  `summary` field for `lead`. `paransSummary` is the visible one-liner
+ *  shown in the §06 disclosure header. */
 export interface V4PlaceCharacter {
     lead: string;
+    paransSummary: string;
     parans: V4PlaceCharacterParanNote[];
 }
 export interface V4GeodeticLiveLine {
@@ -486,6 +488,10 @@ export interface V4ReadingVM {
          *  sign column passing through the destination). Teacher copy only —
          *  the structured transit hits live in `activeTransits` above. */
         liveLines: V4GeodeticLiveLine[];
+        /** §02 sky-state lead — teacher prose framing the sky over the
+         *  destination during the travel window. Always present when the
+         *  LLM ran successfully; replaces the cold "sky is quiet" fallback. */
+        liveLinesLead: string;
     } | null;
 
     relocated: {
@@ -1638,6 +1644,7 @@ function deriveGeodetic(reading: any): {
     activeTransits: V4GeoTransit[];
     placeCharacter: V4PlaceCharacter | null;
     liveLines: V4GeodeticLiveLine[];
+    liveLinesLead: string;
 } | null {
     const band = reading?.geodeticBand;
     if (!band || !band.sign) return null;
@@ -1650,7 +1657,8 @@ function deriveGeodetic(reading: any): {
     const activeTransits = normalizeActiveGeoTransits(reading?.activeGeoTransits);
     const placeCharacter = derivePlaceCharacter(reading);
     const liveLines = deriveGeodeticLiveLines(reading);
-    return { sign, longitudeRange, flavor, note, activeTransits, placeCharacter, liveLines };
+    const liveLinesLead = String(reading?.teacherReading?.liveLinesLead ?? "");
+    return { sign, longitudeRange, flavor, note, activeTransits, placeCharacter, liveLines, liveLinesLead };
 }
 
 function derivePlaceCharacter(reading: any): V4PlaceCharacter | null {
@@ -1661,6 +1669,7 @@ function derivePlaceCharacter(reading: any): V4PlaceCharacter | null {
     // to `summary` so they don't blank out, but don't try to reconstruct a
     // pseudo-lead from the angle bodies (would read as a Frankenstein).
     const lead = String(raw.lead ?? raw.summary ?? "");
+    const paransSummary = String(raw.paransSummary ?? "");
     const parans: V4PlaceCharacterParanNote[] = Array.isArray(raw.parans)
         ? raw.parans
             .filter((p: any) => p && typeof p.paranKey === "string")
@@ -1670,8 +1679,8 @@ function derivePlaceCharacter(reading: any): V4PlaceCharacter | null {
                 body: String(p.body ?? ""),
             }))
         : [];
-    if (!lead && !parans.length) return null;
-    return { lead, parans };
+    if (!lead && !parans.length && !paransSummary) return null;
+    return { lead, paransSummary, parans };
 }
 
 function deriveGeodeticLiveLines(reading: any): V4GeodeticLiveLine[] {
