@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 import Link from "next/link";
 import Image from "next/image";
 import ThemeToggle from "./ThemeToggle";
 import { Menu, User } from "lucide-react";
-import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "./ui/sheet";
 import { 
   DropdownMenu, 
@@ -18,8 +18,16 @@ import {
 } from "./ui/dropdown-menu";
 import styles from "./navbar.module.css";
 
+const MENU_LINKS = [
+    { href: "/chart", label: "My Chart" },
+    { href: "/couples", label: "Couples" },
+    { href: "/mundane", label: "World Charts" },
+    { href: "/weather", label: "Sky Weather" },
+    { href: "/learn", label: "Learn" },
+];
+
 export default function AppNavbar() {
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<SupabaseUser | null>(null);
     const supabase = createClient();
     const [open, setOpen] = useState(false);
 
@@ -102,30 +110,15 @@ export default function AppNavbar() {
                                 
                                 <div className="flex flex-col gap-5 mt-2">
                                     <div className="text-xs font-mono uppercase tracking-[0.2em] text-[var(--text-tertiary)] mb-2">Explore</div>
-                                    <Link href="/chart" onClick={() => setOpen(false)} className="text-2xl font-secondary hover:text-[var(--gold)] hover:translate-x-2 transition-all duration-300 flex items-center justify-between group">
-                                        My Chart
-                                        <span className="text-[var(--gold)] opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 font-mono text-sm">&rarr;</span>
-                                    </Link>
-                                    <div className="h-px w-full bg-[var(--surface-border)] opacity-30" />
-                                    <Link href="/couples" onClick={() => setOpen(false)} className="text-2xl font-secondary hover:text-[var(--gold)] hover:translate-x-2 transition-all duration-300 flex items-center justify-between group">
-                                        Couples
-                                        <span className="text-[var(--gold)] opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 font-mono text-sm">&rarr;</span>
-                                    </Link>
-                                    <div className="h-px w-full bg-[var(--surface-border)] opacity-30" />
-                                    <Link href="/mundane" onClick={() => setOpen(false)} className="text-2xl font-secondary hover:text-[var(--gold)] hover:translate-x-2 transition-all duration-300 flex items-center justify-between group">
-                                        World Charts
-                                        <span className="text-[var(--gold)] opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 font-mono text-sm">&rarr;</span>
-                                    </Link>
-                                    <div className="h-px w-full bg-[var(--surface-border)] opacity-30" />
-                                    <Link href="/reading/new?type=weather" onClick={() => setOpen(false)} className="text-2xl font-secondary hover:text-[var(--gold)] hover:translate-x-2 transition-all duration-300 flex items-center justify-between group">
-                                        Sky Weather
-                                        <span className="text-[var(--gold)] opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 font-mono text-sm">&rarr;</span>
-                                    </Link>
-                                    <div className="h-px w-full bg-[var(--surface-border)] opacity-30" />
-                                    <Link href="/learn" onClick={() => setOpen(false)} className="text-2xl font-secondary hover:text-[var(--gold)] hover:translate-x-2 transition-all duration-300 flex items-center justify-between group">
-                                        Learn
-                                        <span className="text-[var(--gold)] opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 font-mono text-sm">&rarr;</span>
-                                    </Link>
+                                    {MENU_LINKS.map((link, index) => (
+                                        <Fragment key={link.href}>
+                                            <Link href={link.href} onClick={() => setOpen(false)} className="text-2xl font-secondary hover:text-[var(--gold)] hover:translate-x-2 transition-all duration-300 flex items-center justify-between group">
+                                                {link.label}
+                                                <span className="text-[var(--gold)] opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 font-mono text-sm">&rarr;</span>
+                                            </Link>
+                                            {index < MENU_LINKS.length - 1 && <div className="h-px w-full bg-[var(--surface-border)] opacity-30" />}
+                                        </Fragment>
+                                    ))}
                                 </div>
                                 
                                 {user && (
