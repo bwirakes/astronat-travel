@@ -263,21 +263,19 @@ export interface V4Paran {
 /** Geodetic place-character — what the destination IS, regardless of viewer.
  *  Sourced from `teacherReading.placeCharacter`. Empty/missing fields fall
  *  back to the deterministic copy in PlaceFieldTab. */
-export interface V4PlaceCharacterAngle {
-    angle: "MC" | "ASC";
-    sign: string;
-    headline: string;
-    body: string;
-}
 export interface V4PlaceCharacterParanNote {
     paranKey: string;       // "<p1>-<p2>" lowercase, alpha-sorted
     headline: string;
     body: string;
 }
+/** Single consolidated lead paragraph — replaces the older angles[] +
+ *  summary fields which read as repetitive (locator → summary → per-angle
+ *  card all said variants of the same thing). When loading legacy readings
+ *  written before this change, the viewmodel falls back to the old
+ *  `summary` field for `lead`. */
 export interface V4PlaceCharacter {
-    angles: V4PlaceCharacterAngle[];
+    lead: string;
     parans: V4PlaceCharacterParanNote[];
-    summary: string;
 }
 export interface V4GeodeticLiveLine {
     liveLineKey: string;    // "<planet>-<sign>-<MC|ASC>" lowercase
@@ -1658,16 +1656,11 @@ function deriveGeodetic(reading: any): {
 function derivePlaceCharacter(reading: any): V4PlaceCharacter | null {
     const raw = reading?.teacherReading?.placeCharacter;
     if (!raw || typeof raw !== "object") return null;
-    const angles: V4PlaceCharacterAngle[] = Array.isArray(raw.angles)
-        ? raw.angles
-            .filter((a: any) => a && (a.angle === "MC" || a.angle === "ASC"))
-            .map((a: any) => ({
-                angle: a.angle,
-                sign: String(a.sign ?? ""),
-                headline: String(a.headline ?? ""),
-                body: String(a.body ?? ""),
-            }))
-        : [];
+    // Prefer the new `lead` field. Legacy readings (written before the
+    // schema collapse) only have `summary` plus per-angle cards — fall back
+    // to `summary` so they don't blank out, but don't try to reconstruct a
+    // pseudo-lead from the angle bodies (would read as a Frankenstein).
+    const lead = String(raw.lead ?? raw.summary ?? "");
     const parans: V4PlaceCharacterParanNote[] = Array.isArray(raw.parans)
         ? raw.parans
             .filter((p: any) => p && typeof p.paranKey === "string")
@@ -1677,9 +1670,8 @@ function derivePlaceCharacter(reading: any): V4PlaceCharacter | null {
                 body: String(p.body ?? ""),
             }))
         : [];
-    const summary = String(raw.summary ?? "");
-    if (!angles.length && !parans.length && !summary) return null;
-    return { angles, parans, summary };
+    if (!lead && !parans.length) return null;
+    return { lead, parans };
 }
 
 function deriveGeodeticLiveLines(reading: any): V4GeodeticLiveLine[] {

@@ -512,11 +512,6 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
 
             {/* ── §05 Where [city] sits — two-column: sticky map + scrolling prose ─ */}
             <SectionHead index="05" title={`Where ${city} sits in the zodiac`} flush />
-            <p style={BODY}>
-                {city} sits where {signFromLongitude(geoMC)} runs overhead and{" "}
-                {signFromLongitude(geoASC)} rises on the horizon. The shaded band is the slice of
-                sky this longitude owns.
-            </p>
 
             <div className="grid grid-cols-1 lg:grid-cols-[5fr_6fr] gap-8 lg:gap-10 mt-6">
                 <div className="lg:sticky lg:top-20 lg:self-start">
@@ -545,8 +540,16 @@ export default function PlaceFieldTab({ vm, birthIso, reading, relocatedAcgLines
                 </div>
 
                 <div>
-                    {vm.geodetic?.placeCharacter && (
-                        <PlaceCharacterBlock pc={vm.geodetic.placeCharacter} city={city} />
+                    {vm.geodetic?.placeCharacter?.lead ? (
+                        <p style={{ ...BODY, fontSize: "1.05rem", margin: 0, maxWidth: "640px" }}>
+                            {vm.geodetic.placeCharacter.lead}
+                        </p>
+                    ) : (
+                        <p style={BODY}>
+                            {city} sits where {signFromLongitude(geoMC)} runs overhead and{" "}
+                            {signFromLongitude(geoASC)} rises on the horizon. The shaded band is the slice of
+                            sky this longitude owns.
+                        </p>
                     )}
                     {vm.parans.length > 0 && (
                         <ParansDisclosure
@@ -1447,72 +1450,24 @@ function LiveLinesList({ lines }: { lines: V4VM["geodetic"] extends infer G
     );
 }
 
-function PlaceCharacterBlock({ pc, city }: { pc: NonNullable<V4VM["geodetic"]>["placeCharacter"]; city: string }) {
-    if (!pc) return null;
-    const hasAngles = pc.angles.length > 0;
-    if (!hasAngles && !pc.summary) return null;
-    return (
-        <div style={{ marginTop: "var(--space-xl)" }}>
-            <SubHead title={`The character of ${city}`} />
-            {pc.summary && (
-                <p style={{ ...BODY, margin: "var(--space-xs) 0 var(--space-md) 0", maxWidth: "640px" }}>
-                    {pc.summary}
-                </p>
-            )}
-            {hasAngles && (
-                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                    {pc.angles.map((a) => (
-                        <li
-                            key={a.angle}
-                            style={{
-                                padding: "var(--space-md) 0",
-                                borderBottom: "1px solid var(--surface-border)",
-                            }}
-                        >
-                            <div style={{
-                                fontFamily: "var(--font-mono)",
-                                fontSize: "0.65rem",
-                                letterSpacing: "0.16em",
-                                textTransform: "uppercase",
-                                color: "var(--text-tertiary)",
-                                fontWeight: 500,
-                                marginBottom: "0.35rem",
-                            }}>
-                                Geodetic {a.angle} in {a.sign}
-                            </div>
-                            <h4 style={{
-                                fontFamily: "var(--font-primary, serif)",
-                                fontSize: "1.1rem",
-                                fontWeight: 600,
-                                lineHeight: 1.35,
-                                color: "var(--text-primary)",
-                                margin: "0 0 0.5rem 0",
-                                textTransform: "none",
-                            }}>
-                                {a.headline}
-                            </h4>
-                            <p style={{ ...BODY, margin: 0, maxWidth: "640px" }}>
-                                {a.body}
-                            </p>
-                        </li>
-                    ))}
-                </ul>
-            )}
-        </div>
-    );
-}
-
 function ParansDisclosure({ parans, city, notes }: {
     parans: V4Paran[];
     city: string;
     notes: Map<string, { headline: string; body: string }>;
 }) {
+    // Top crossings only — sorted by archetype loading (|contribution|) so
+    // the strongest pair leads. Older display showed 8 rows, which crowded
+    // the page with neutral pairs the reader doesn't need.
+    const TOP_N = 3;
+    const topParans = [...parans]
+        .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
+        .slice(0, TOP_N);
+
     const lifting = parans.filter((p) => p.contribution > 0).length;
     const pressing = parans.filter((p) => p.contribution < 0).length;
     const neutral = parans.length - lifting - pressing;
-    const closest = [...parans].sort((a, b) => Math.abs(a.latOffset) - Math.abs(b.latOffset))[0];
-    const closestKey = closest && (notes.get(`${closest.p1}-${closest.p2}`.toLowerCase())
-        ?? notes.get(`${closest.p2}-${closest.p1}`.toLowerCase()));
+    const lead = topParans[0] && (notes.get(`${topParans[0].p1}-${topParans[0].p2}`.toLowerCase())
+        ?? notes.get(`${topParans[0].p2}-${topParans[0].p1}`.toLowerCase()));
     const summaryParts = [`${parans.length} crossing${parans.length === 1 ? "" : "s"}`];
     if (lifting) summaryParts.push(`${lifting} lifting`);
     if (pressing) summaryParts.push(`${pressing} pressing`);
@@ -1553,9 +1508,9 @@ function ParansDisclosure({ parans, city, notes }: {
                     }}>
                         {summaryLine}
                     </div>
-                    {closestKey?.headline && (
+                    {lead?.headline && (
                         <p style={{ ...BODY, margin: "0.6rem 0 0 0", maxWidth: "640px" }}>
-                            {closestKey.headline}
+                            {lead.headline}
                         </p>
                     )}
                 </div>
@@ -1576,10 +1531,10 @@ function ParansDisclosure({ parans, city, notes }: {
             <div style={{ marginTop: "var(--space-md)" }}>
                 <p style={{ ...BODY_MUTED, margin: "0 0 var(--space-md) 0" }}>
                     Pairs of your natal planets that cross the horizon together at a latitude
-                    near {city}&rsquo;s. Tight benefic pairs lift the field; tight malefic pairs
-                    press it.
+                    near {city}&rsquo;s. Showing the {topParans.length === 1 ? "strongest crossing" : `${topParans.length} strongest crossings`} —
+                    benefic pairs lift the field, malefic pairs press it.
                 </p>
-                <ParanList parans={parans} city={city} notes={notes} />
+                <ParanList parans={topParans} city={city} notes={notes} />
             </div>
         </details>
     );

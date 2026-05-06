@@ -151,9 +151,18 @@ const ParanNoteSchema = z.object({
 });
 
 const PlaceCharacterSchema = z.object({
-  angles: z.array(PlaceCharacterAngleSchema).max(4),
+  // Consolidated lead — one rich paragraph (3–5 sentences) that fuses three
+  // ideas the older shape split apart: where the city sits in the zodiac
+  // (geo-MC sign), what that signature feels like for anyone there, and what
+  // the place asks of you. This replaces the older locator + summary +
+  // per-angle card stack which read as repetitive.
+  lead: z.string().optional(),
+  // Legacy fields — accepted for back-compat with cached readings written
+  // before the consolidation. New readings should emit `lead` only and skip
+  // these. The viewmodel falls back to `summary` when `lead` is absent.
+  angles: z.array(PlaceCharacterAngleSchema).max(4).optional(),
+  summary: z.string().optional(),
   parans: z.array(ParanNoteSchema).max(8),
-  summary: z.string(),      // one paragraph stitching it together
 });
 
 // Live geodetic transit — a planet currently transiting through the

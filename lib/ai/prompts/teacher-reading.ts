@@ -135,17 +135,23 @@ For all sidebars, tooltips, and micro-text (\`chrome\`, \`hero\`, \`vibes\`, \`m
 const BLOCK_GEODETIC_PLACE_CHARACTER = `# Geodetic Tab — Place Character (REQUIRED when source data present)
 The geodetic tab answers ONE question: **how does this place make a person feel, regardless of who they are?** Geodetic lines are fixed to the earth (0° Aries anchored at Greenwich), so they describe the *place itself*, not the user's personal chart. ACG lines and chart-ruler reframes do NOT belong here — they live on what-shifts.
 
-**MANDATORY OUTPUT RULES (do not skip):**
-- If \`sidebarsData.geodeticBand\` is present → you MUST emit \`placeCharacter\` with at least one entry in \`angles\` (the geodetic MC). This is non-negotiable. Skipping it leaves §05 of the geodetic tab blank.
-- If \`sidebarsData.parans\` is a non-empty array → \`placeCharacter.parans\` MUST contain one entry per paran in the input.
-- \`placeCharacter.summary\` is ALWAYS required when \`placeCharacter\` is emitted.
-
-For other fields below: omit only when the matching source data is missing — never invent.
+**MANDATORY when \`sidebarsData.geodeticBand\` is present:** you MUST emit \`placeCharacter.lead\`. Skipping it leaves the geodetic tab blank. Do NOT emit the legacy \`angles\` or \`summary\` fields — they're deprecated.
 
 **\`placeCharacter\`** — A single object describing the destination's geodetic identity:
-- \`angles\`: ONE entry per geodetic angle present in the input (\`sidebarsData.geodeticBand\` gives the geo-MC sign). Each entry: \`angle\` ("MC" | "ASC"), \`sign\`, \`headline\` (≤ 70 chars — the place's archetype, e.g. "Taurus MC — this place rewards patient builders"), \`body\` (1–3 sentences on what this longitude asks of *anyone* who visits — money, body, slow reveal of value for Taurus; visibility and performance for Leo; etc.).
-- \`parans\`: ONE entry per paran in \`sidebarsData.parans[]\` (skip if the array is missing or empty). \`paranKey\` matches \`<p1-lowercase>-<p2-lowercase>\` with the two planet names sorted alphabetically (e.g. "jupiter-mars"). Each entry: \`headline\`, \`body\`. Speak about the latitude band's character — what walking around this latitude tends to feel like for everyone.
-- \`summary\`: ONE paragraph stitching the geodetic angles + parans into "this is the kind of place [city] is."
+- \`lead\`: ONE consolidated paragraph, 3–5 sentences. This is the *only* prose readers see for the place's character — make it count. It must do three things in one breath: (a) name where the city sits in the zodiac (the geo-MC sign from \`sidebarsData.geodeticBand\`), (b) describe what that signature feels like at street level, and (c) say what this place asks of anyone who comes here. Examples of voice:
+    - "Casablanca sits under a Pisces Midheaven, which gives the city's public face a permeable, dream-soaked quality. Reputation here moves through atmosphere rather than logic — what people remember about you is the mood you left, not the line you delivered. The place rewards intuition and punishes anyone trying to over-control the narrative."
+    - "Dubai sits under a Taurus Midheaven, and the city's whole proposition is the body — what you can buy for it, build with it, and rest in. Public life here moves at a deliberate pace; it rewards the long arc and the patient build, not the headline-of-the-week. If you came here for speed, the place will keep handing you weight."
+  Do NOT list bullet points. Do NOT name multiple angles separately. ONE paragraph.
+- \`parans\`: top entries from \`sidebarsData.parans[]\`. Cap at 4 — pick the 4 with the highest |contribution| (closest to destination latitude AND most planet-archetype loaded). Skip the rest. \`paranKey\` matches the two planet names lowercase, alphabetically sorted, joined by "-" (e.g. "jupiter-venus", "mars-saturn"). Each entry needs:
+  - \`headline\`: ≤ 80 chars in the form "PlanetA/PlanetB — concrete archetype phrase". Examples:
+    - "Venus/Jupiter — abundance, social ease, creative expansion"
+    - "Mercury/Moon — emotional expression, quick learning, self-care"
+    - "Mars/Saturn — pressing the gas and the brake at once"
+    - "Mars/Pluto — drastic transformation, power struggles, extreme physical bursts"
+  - \`body\`: 2 sentences in the same concrete archetype voice. Speak about the latitude band as a *combination* — what the planet pair *together* tends to amplify or grind on for anyone walking that latitude. Voice examples:
+    - Supportive (positive contribution): "A Venus/Jupiter paran might amplify themes of abundance, social ease, and creative expansion. Anyone walking this latitude tends to find the doors open more readily — for better and for the slack it can breed."
+    - Intense (negative contribution): "A Mars/Saturn paran creates an environment of deep friction, requiring immense discipline. It can feel like you're pressing the gas and the brake at the same time — every move costs more effort than it should."
+  Do NOT use the words "this place" or "your latitude" generically. Name the planet pair and what that pair *concretely* does.
 
 **\`geodeticLiveLines\`** — Array of currently-active geodetic transits whose sign-column passes through the destination longitude (e.g. Uranus in Taurus running down Dubai during the trip window). Use \`sidebarsData.geodeticBand\` and the active transits in \`sidebarsData\` to identify candidates. Required fields:
 - \`liveLineKey\`: \`<planet-lowercase>-<sign-lowercase>-<MC|ASC>\` (e.g. "uranus-taurus-MC").
