@@ -9,7 +9,8 @@ import { getNatalChart, getPartnerNatalChart, getProfile, saveNatalChart, savePa
 import { SwissEphSingleton, computeRealtimePositions } from "@/lib/astro/transits";
 import { resolveACGFull, computeParans } from "@/lib/astro/acg-lines";
 import { solve12MonthTransits, type TransitHit } from "@/lib/astro/transit-solver";
-import { computeHouseMatrix, mapTransitsToMatrix, computeGlobalPenalty, acgLineRawScore } from "@/app/lib/house-matrix";
+import { computeHouseMatrix, mapTransitsToMatrix, computeGlobalPenalty, computeCurrentSkyPenalty, acgLineRawScore } from "@/app/lib/house-matrix";
+import { isCurrentSkyPenaltyEnabled } from "@/app/lib/scoring-flags";
 import { computeEventScores } from "@/app/lib/scoring-engine";
 import { houseFromLongitude, signFromLongitude } from "@/app/lib/geodetic";
 import { birthToUtc } from "@/lib/astro/birth-utc";
@@ -229,10 +230,12 @@ export async function runAstrocarto(
     } : {}),
   });
   const mappedTransits = mapTransitsToMatrix(rawTransits, natalPlanets, relocatedCusps, profile.birth_lat ?? undefined);
-  const globalPenalty = computeGlobalPenalty(mappedTransits);
   // A1: raw transit positions at refDate — feed Step 5b (transit-on-geodetic-angle).
   // computeHouseMatrix tolerates undefined; the cost is one extra SwissEph call.
   const transitPositionsAtRef = await computeRealtimePositions(refDate);
+  const globalPenalty = isCurrentSkyPenaltyEnabled()
+    ? computeCurrentSkyPenalty(transitPositionsAtRef, natalPlanets)
+    : computeGlobalPenalty(mappedTransits);
   // A5: progressed Sun/Moon bands at refDate (async, day-for-a-year).
   const progressedBands = await computeProgressedBands({
     birthDateUtc: dtUtcBirth,
@@ -311,7 +314,10 @@ export async function runAstrocarto(
       } : {}),
     });
     const pMappedTransits = mapTransitsToMatrix(pRawTransits, partnerNatalPlanets, pRelocatedCusps, partnerProfile.birth_lat ?? undefined);
-    const pGlobalPenalty = computeGlobalPenalty(pMappedTransits);
+    const pTransitPositions = await computeRealtimePositions(refDate);
+    const pGlobalPenalty = isCurrentSkyPenaltyEnabled()
+      ? computeCurrentSkyPenalty(pTransitPositions, partnerNatalPlanets)
+      : computeGlobalPenalty(pMappedTransits);
     const pParans = computeParans(pAcgAllLines, targetLat);
 
     const pSun = partnerNatalPlanets.find((p: any) => (p.planet || p.name || "").toLowerCase() === "sun");

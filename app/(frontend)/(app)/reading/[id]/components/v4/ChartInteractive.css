@@ -156,7 +156,9 @@
 .chart-int .chart-int-center-m { font-family: var(--font-primary, serif); font-size: 14px; letter-spacing: -0.005em; fill: var(--ci-ink); }
 
 .chart-int .chart-int-tip {
-  background: var(--ci-ink); color: var(--ci-bg);
+  background: var(--ci-bg);
+  color: var(--ci-ink);
+  border: 1px solid var(--ci-border);
   border-radius: var(--radius-md, 8px); padding: 24px 26px;
   position: sticky; top: 20px;
   min-height: 380px;
@@ -170,23 +172,23 @@
 .chart-int .chart-int-tip-title {
   font-family: var(--font-primary, serif); font-size: 22px; font-weight: 400;
   letter-spacing: -0.01em; line-height: 1.2; margin: 0;
-  color: var(--ci-bg); text-wrap: balance;
+  color: var(--ci-ink); text-wrap: balance;
 }
 .chart-int .chart-int-tip-body {
   font-size: 14.5px; line-height: 1.6; font-weight: 300;
-  color: color-mix(in oklab, var(--ci-bg) 92%, transparent); margin: 0; text-wrap: pretty;
+  color: var(--ci-ink-soft); margin: 0; text-wrap: pretty;
 }
 .chart-int .chart-int-tip-kv {
   display: grid; grid-template-columns: 78px 1fr; gap: 12px;
-  padding-top: 10px; border-top: 1px solid color-mix(in oklab, var(--ci-bg) 14%, transparent);
+  padding-top: 10px; border-top: 1px solid var(--ci-border);
 }
-.chart-int .chart-int-tip-k { font-family: var(--font-mono, monospace); font-size: 9px; letter-spacing: 0.16em; color: color-mix(in oklab, var(--ci-bg) 50%, transparent); text-transform: uppercase; padding-top: 2px; }
-.chart-int .chart-int-tip-v { font-size: 13px; line-height: 1.5; font-weight: 300; color: color-mix(in oklab, var(--ci-bg) 88%, transparent); }
+.chart-int .chart-int-tip-k { font-family: var(--font-mono, monospace); font-size: 9px; letter-spacing: 0.16em; color: var(--ci-ink-faint); text-transform: uppercase; padding-top: 2px; }
+.chart-int .chart-int-tip-v { font-size: 13px; line-height: 1.5; font-weight: 300; color: var(--ci-ink-soft); }
 .chart-int .chart-int-tip-hint {
   margin-top: auto; padding-top: 14px;
-  border-top: 1px solid color-mix(in oklab, var(--ci-bg) 14%, transparent);
+  border-top: 1px solid var(--ci-border);
   font-size: 12px; line-height: 1.5; font-weight: 300;
-  color: color-mix(in oklab, var(--ci-bg) 58%, transparent); font-style: italic;
+  color: var(--ci-ink-faint); font-style: italic;
 }
 
 .chart-int .chart-int-legend {

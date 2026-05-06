@@ -28,7 +28,22 @@ import type { FinalEventScore } from "./scoring-engine";
 // SHAPE
 // ═══════════════════════════════════════════════════════════════
 
-export type GoalId = "love" | "career" | "community" | "relocation" | "growth" | "timing";
+export type GoalId =
+  | "identity"
+  | "wealth"
+  | "home"
+  | "romance"
+  | "health"
+  | "partnerships"
+  | "career"
+  | "friendship"
+  | "spirituality"
+  // Legacy IDs still accepted for old readings.
+  | "love"
+  | "community"
+  | "relocation"
+  | "growth"
+  | "timing";
 
 export interface PartnerEventScore {
   event: string;
@@ -142,8 +157,16 @@ const TONE_ACCENT_MAP: Record<ReturnType<typeof verdictTone>, string> = {
 };
 
 const GOAL_TO_EVENTS: Record<GoalId, string[]> = {
+  identity:   ["Identity & Self-Discovery"],
+  wealth:     ["Wealth & Financial Growth"],
+  home:       ["Home, Family & Roots"],
+  romance:    ["Romance & Love"],
+  health:     ["Health, Routine & Wellness"],
+  partnerships: ["Partnerships & Marriage"],
+  career:     ["Career & Public Recognition"],
+  friendship: ["Friendship & Networking"],
+  spirituality: ["Spirituality & Inner Peace"],
   love:       ["Romance & Love", "Partnerships & Marriage"],
-  career:     ["Career & Public Recognition", "Wealth & Financial Growth"],
   community:  ["Friendship & Networking"],
   relocation: ["Home, Family & Roots", "Identity & Self-Discovery"],
   growth:     ["Spirituality & Inner Peace", "Identity & Self-Discovery"],
@@ -565,12 +588,15 @@ function pickStringList(v: unknown): string[] {
 }
 
 function resolveGoals(raw: unknown): GoalId[] {
-  if (!Array.isArray(raw)) return ["love", "career"];
-  const valid: GoalId[] = ["love", "career", "community", "relocation", "growth", "timing"];
+  if (!Array.isArray(raw)) return ["romance", "career"];
+  const valid: GoalId[] = [
+    "identity", "wealth", "home", "romance", "health", "partnerships", "career", "friendship", "spirituality",
+    "love", "community", "relocation", "growth", "timing",
+  ];
   const filtered = (raw as unknown[])
     .map((g) => String(g).toLowerCase())
     .filter((g): g is GoalId => valid.includes(g as GoalId));
-  return filtered.length ? filtered : ["love", "career"];
+  return filtered.length ? filtered : ["romance", "career"];
 }
 
 function equalCusps(): number[] {

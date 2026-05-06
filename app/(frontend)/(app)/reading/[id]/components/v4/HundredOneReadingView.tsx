@@ -354,6 +354,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                                         <TabsContent value="place-field" className="mt-0 outline-none data-[state=inactive]:hidden">
                                             <PlaceFieldTab
                                                 vm={vm}
+                                                isDark={isDark}
                                                 natalForMap={natalForMap}
                                                 birthIso={birthIso}
                                                 reading={reading}

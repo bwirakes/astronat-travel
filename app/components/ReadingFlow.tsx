@@ -3,17 +3,20 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, Heart, Briefcase, Users, Clock, Sprout, Home, Plane, Building, Loader2 } from "lucide-react";
+import { ArrowRight, ArrowLeft, User, Coins, Home, Heart, Activity, Handshake, Briefcase, Users, Sparkles, Plane, Building, Loader2 } from "lucide-react";
 import CityAutocomplete from "./CityAutocomplete";
 import { createClient } from "@/lib/supabase/client";
 
 const LIFE_GOALS = [
-  { id: "love", label: "Love & Relationships", icon: Heart, color: "var(--color-spiced-life)", sub: "Venus lines · 5th & 7th house" },
-  { id: "career", label: "Career & Ambition", icon: Briefcase, color: "var(--color-y2k-blue)", sub: "MC lines · 10th & 6th house" },
-  { id: "community", label: "Community & Friends", icon: Users, color: "var(--color-acqua)", sub: "Jupiter lines · 11th & 3rd house" },
-  { id: "timing", label: "Timing & Transitions", icon: Clock, color: "var(--gold)", sub: "Personal transits · travel windows" },
-  { id: "growth", label: "Personal Growth", icon: Sprout, color: "var(--sage)", sub: "Neptune lines · 9th & 12th house" },
-  { id: "relocation", label: "Relocation / Living", icon: Home, color: "var(--gold)", sub: "IC lines · 4th house patterns" },
+  { id: "identity", label: "Identity & Self-Discovery", icon: User, color: "var(--color-y2k-blue)", sub: "1st + 9th house emphasis" },
+  { id: "wealth", label: "Wealth & Financial Growth", icon: Coins, color: "var(--gold)", sub: "2nd + 8th house momentum" },
+  { id: "home", label: "Home, Family & Roots", icon: Home, color: "var(--color-acqua)", sub: "4th house foundation" },
+  { id: "romance", label: "Romance & Love", icon: Heart, color: "var(--color-spiced-life)", sub: "5th + 7th house chemistry" },
+  { id: "health", label: "Health, Routine & Wellness", icon: Activity, color: "var(--sage)", sub: "6th + 12th house balance" },
+  { id: "partnerships", label: "Partnerships & Marriage", icon: Handshake, color: "var(--color-spiced-life)", sub: "7th + 11th house bonds" },
+  { id: "career", label: "Career & Public Recognition", icon: Briefcase, color: "var(--color-y2k-blue)", sub: "10th + 6th house visibility" },
+  { id: "friendship", label: "Friendship & Networking", icon: Users, color: "var(--color-acqua)", sub: "11th + 3rd house community" },
+  { id: "spirituality", label: "Spirituality & Inner Peace", icon: Sparkles, color: "var(--gold)", sub: "12th + 9th house reflection" },
 ];
 
 const slideVariants = {
@@ -363,7 +366,7 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
                 </p>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "1.5rem" }}>
-                  {LIFE_GOALS.map(({ id, label, icon: Icon, color, sub }) => {
+                  {LIFE_GOALS.map(({ id, label, icon: Icon, color }) => {
                     const active = goals.includes(id);
                     return (
                       <motion.button key={id} onClick={() => toggleGoal(id)} whileTap={{ scale: 0.97 }}
@@ -380,9 +383,6 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
                         <div>
                           <div style={{ fontFamily: "var(--font-body)", fontWeight: 600, color: active ? "var(--text-primary)" : "var(--text-secondary)", fontSize: "0.75rem", marginBottom: "0.1rem" }}>
                             {label}
-                          </div>
-                          <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.48rem", color: active ? color : "var(--text-tertiary)", letterSpacing: "0.05em" }}>
-                            {sub}
                           </div>
                         </div>
                       </motion.button>

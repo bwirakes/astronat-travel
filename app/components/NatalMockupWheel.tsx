@@ -474,12 +474,12 @@ export default function NatalMockupWheel({ isDark, planets, cusps, onPlanetClick
           zIndex: 50,
           width: "300px",
           pointerEvents: "none",
-          background: "rgba(10, 10, 10, 0.98)",
+          background: isDark ? "rgba(10, 10, 10, 0.98)" : "var(--bg-raised)",
           backdropFilter: "blur(6px)",
           border: "1px solid var(--surface-border)",
           borderRadius: "var(--radius-md)",
           padding: "var(--space-lg)",
-          boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
+          boxShadow: isDark ? "0 10px 40px rgba(0,0,0,0.5)" : "0 10px 32px rgba(0,0,0,0.14)",
         }}
       >
         <PlanetPlacementHoverContent

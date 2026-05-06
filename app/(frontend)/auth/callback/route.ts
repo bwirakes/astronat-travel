@@ -27,6 +27,13 @@ export async function GET(request: Request) {
           return NextResponse.redirect(`${origin}/flow?step=1`)
         }
 
+        // Backfill the auth-user onboarded flag for users created before the
+        // proxy started reading it, so subsequent navigations skip the
+        // profiles lookup.
+        if (user.user_metadata?.onboarded !== true) {
+          await supabase.auth.updateUser({ data: { onboarded: true } })
+        }
+
         // Onboarded users honour `next` if provided, else land on /dashboard.
         // Reject "/" so authenticated users don't end up on the public
         // marketing root after sign-in.
