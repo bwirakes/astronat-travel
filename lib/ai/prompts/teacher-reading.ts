@@ -127,10 +127,41 @@ const BLOCK_WINDOWS_RULES = `**windows** — One \`windows\` array entry per can
 const BLOCK_SIDEBARS = `# The Sidebars (Micro-text)
 
 For all sidebars, tooltips, and micro-text (\`chrome\`, \`hero\`, \`vibes\`, \`monthAspects\`, \`lineNotes\`, \`geodeticHits\`, \`angleDeltas\`, \`planetShifts\`, \`aspectPlains\`, \`weeks\`, \`todos\`, \`glossaryEntries\`):
-**Keep these sharp, punchy, and outcome-oriented. Maximum 2 sentences each.** Use the \`sidebarsData\` for the raw inputs to these fields. 
+**Keep these sharp, punchy, and outcome-oriented. Maximum 2 sentences each.** Use the \`sidebarsData\` for the raw inputs to these fields.
 - For \`monthAspects\`, match \`aspectKey\`.
 - For \`lineNotes\`, use \`<planet-lowercase>-<angle-shortcode>\`.
 - For \`geodeticHits\`, use \`<planet-lowercase>-<ASC|IC|DSC|MC>\`.`;
+
+const BLOCK_GEODETIC_PLACE_CHARACTER = `# Geodetic Tab — Place Character
+The geodetic tab answers ONE question: **how does this place make a person feel, regardless of who they are?** Geodetic lines are fixed to the earth (0° Aries anchored at Greenwich), so they describe the *place itself*, not the user's personal chart. ACG lines and chart-ruler reframes do NOT belong here — they live on what-shifts.
+
+Fill these top-level fields when the input contains the matching evidence. Omit any field whose source data is missing — never invent.
+
+**\`placeCharacter\`** — A single object describing the destination's geodetic identity:
+- \`angles\`: ONE entry per geodetic angle present in the input (\`geodeticBand\` gives the geo-MC sign; geo-ASC if available). Each entry: \`angle\` ("MC" | "ASC"), \`sign\`, \`headline\` (≤ 70 chars — the place's archetype, e.g. "Taurus MC — this place rewards patient builders"), \`body\` (1–3 sentences on what this longitude asks of *anyone* who visits — money, body, slow reveal of value for Taurus; visibility and performance for Leo; etc.).
+- \`parans\`: ONE entry per paran present in the input. \`paranKey\` matches \`<p1-lowercase>-<p2-lowercase>\` with the two planet names sorted alphabetically (e.g. "jupiter-mars"). Each entry: \`headline\`, \`body\`. Speak about the latitude band's character — what walking around this latitude tends to feel like for everyone.
+- \`summary\`: ONE paragraph stitching the geodetic angles + parans into "this is the kind of place [city] is."
+
+**\`geodeticLiveLines\`** — Array of currently-active geodetic transits whose sign-column passes through the destination longitude (e.g. Uranus in Taurus running down Dubai during the trip window). Use \`sidebarsData.geodeticBand\` and the active transits in \`sidebarsData\` to identify candidates. Required fields:
+- \`liveLineKey\`: \`<planet-lowercase>-<sign-lowercase>-<MC|ASC>\` (e.g. "uranus-taurus-MC").
+- \`headline\`: ≤ 70 chars, names what the line is loud about right now.
+- \`body\`: 2–4 sentences — what's amplified at this longitude during the trip window, plus why the user might feel it (NOT a deep personal-chart hit — that's what-shifts territory).
+- \`windowNote\` (optional): human window phrase, e.g. "peaks Feb 27 – Mar 2".`;
+
+const BLOCK_WHAT_SHIFTS_PERSONALISATION = `# What-Shifts Tab — Personal-Chart Relocation
+What-shifts is where personal-chart relocation lives. Fill these top-level fields when input data supports them.
+
+**\`chartRulerReframe\`** — How the user's chart ruler re-domains in the relocated chart. Single object:
+- \`relocatedRising\`: the relocated rising sign.
+- \`ruler\`: that sign's traditional ruler (e.g. Libra rising → Venus).
+- \`fromHouse\`: which house the ruler sits in natally.
+- \`toHouse\`: which house the ruler sits in relocated.
+- \`headline\`: one line capturing the topic shift (e.g. "Your trip is about ideas and travel, not body and money").
+- \`body\`: 2–4 sentences on the lived theme change. This is the headline answer to "how will [city] feel for me." Only emit when relocated rising sign differs from natal rising OR the ruler changes house.
+
+**\`acgLineNotes\`** — Per-ACG-line teacher copy keyed \`<planet-lowercase>-<angle>\` (angle ∈ MC | IC | ASC | DSC), one entry per nearby ACG line in \`sidebarsData.acgLines\`. ACG lines are time-of-birth dependent and personal — different from geodetic lines. \`headline\` + \`body\` (2–3 sentences).
+
+**\`modalityHits\`** — Late-degree natal placements that get caught by a same-modality hard-aspect transit pair (e.g. Mars-Uranus square at 27° fixed catches every natal planet at 20–29° in any fixed sign). \`hitKey\` = \`<transitPair-lowercase>-<natalPlanet-lowercase>\` (e.g. "mars-uranus-venus"). Only emit when the input contains an active transit pair in hard aspect AND the user has natal planets in the matching modality at 20–29°. Skip otherwise.`;
 
 const BLOCK_LEGACY_FIELDS = `# Legacy Fields
 Fill \`summary\`, \`signals\`, and \`longRead\` as best as possible for backwards compatibility, maintaining the same tone.`;
@@ -161,6 +192,8 @@ const BLOCKS: readonly string[] = [
   BLOCK_TIMING_RULES,
   BLOCK_WINDOWS_RULES,
   BLOCK_SIDEBARS,
+  BLOCK_GEODETIC_PLACE_CHARACTER,
+  BLOCK_WHAT_SHIFTS_PERSONALISATION,
   BLOCK_LEGACY_FIELDS,
   BLOCK_HARD_CONSTRAINTS,
 ];
