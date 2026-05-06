@@ -39,7 +39,8 @@ import {
     type ChartRulerInfo,
 } from "./astro-constants";
 import { KNOWN_BENEFIC_COMBOS, KNOWN_MALEFIC_COMBOS, getOccupantModifier, applySectModulation, W_EVENTS } from "./planet-library";
-import { essentialDignityScore, essentialDignityLabel } from "./dignity";
+import { essentialDignityScore, essentialDignityLabel, solarProximityModifier } from "./dignity";
+import { degreeTheoryModifier } from "./degree-theory";
 import {
     signFromLongitude,
     houseFromLongitude,
@@ -64,7 +65,7 @@ import {
 } from "./geodetic/harmonic-triggers";
 import type { ProgressionsResult } from "./progressions";
 import type { ComputedPosition } from "@/lib/astro/transits";
-import { WIDE_SCORING_V1 } from "./scoring-flags";
+import { WIDE_SCORING_V1, softCapScore } from "./scoring-flags";
 
 
 
@@ -836,16 +837,18 @@ export function computeHouseMatrix(params: {
                 // Sect modulation (P0-B)
                 if (sect) mod = applySectModulation(mod, pNameLower, sect);
 
-                // Gap 4: Combustion / Cazimi (solar proximity)
+                // Gap 4: Combustion / Cazimi / Under the Beams (solar proximity)
                 if (sunLon !== undefined && pNameLower !== "sun") {
-                    let solarDiff = Math.abs(p.longitude - sunLon) % 360;
-                    if (solarDiff > 180) solarDiff = 360 - solarDiff;
-                    if (solarDiff <= 0.28) {
-                        mod = Math.round(mod * 2.5);  // Cazimi: in heart of Sun = very powerful
-                    } else if (solarDiff <= 8) {
-                        mod = Math.round(mod * 0.30); // Combust: overwhelmed by solar light
+                    const solar = solarProximityModifier(pName, p.longitude, sunLon);
+                    if (solar.multiplier !== 1) {
+                        mod = Math.round(mod * solar.multiplier);
                     }
                 }
+
+                // Degree theory: small additive nudge based on the Nth-sign
+                // archetype the planet's degree carries (no-op when the flag
+                // is off — see degree-theory.ts).
+                mod += degreeTheoryModifier(pName, p.longitude);
 
                 // Gap 2: Planetary Joy bonus (+30 if planet is in its joy house)
                 if (PLANETARY_JOYS[pNameLower] === h) {
@@ -1166,7 +1169,7 @@ export function computeHouseMatrix(params: {
     // target mean near 55 while preserving upper-tail resolution so a 97
     // genuinely means "extraordinary" rather than "happens 1 in 35 times."
     const stretchedMacro = 50 + (rawMacro - 50) * 1.4;
-    const macroScore = Math.max(0, Math.min(100, Math.round(stretchedMacro)));
+    const macroScore = softCapScore(stretchedMacro);
 
     let macroVerdict: string;
     if (macroScore >= 80) macroVerdict = "Highly Productive";
@@ -1374,4 +1377,81 @@ export function computeGlobalPenalty(transits: any[]): number {
     // (saturated in 100% of simulated readings). At 12 the penalty actually
     // discriminates between calm and tense weather.
     return Math.min(12, penalty);
+}
+
+/**
+ * Computes a "current sky" penalty from the literal planetary positions on
+ * the travel date — i.e. aspects between transitPositions and natalPlanets
+ * that are exact (within ≤3°) RIGHT NOW, not somewhere in the next 9 months.
+ *
+ * Returns a net value in [-12, +12]:
+ *   positive = malefic-dominated tense day (drags base score down)
+ *   negative = benefic-dominated calm day (lifts base score)
+ *
+ * This is the date-aware replacement for the older window-aggregate
+ * computeGlobalPenalty, which was effectively pinned at the cap year-round.
+ * Callers should prefer this when refDate is meaningful.
+ */
+export function computeCurrentSkyPenalty(
+    transitPositions: Array<{ name: string; longitude: number }>,
+    natalPlanets: Array<{ name?: string; planet?: string; longitude: number }>,
+): number {
+    let penalty = 0;
+    let lift = 0;
+    const TIGHT_ORB = 3;
+
+    // Major aspects we care about (degrees from conjunction).
+    const aspects: Array<{ angle: number; kind: "conj" | "soft" | "hard" }> = [
+        { angle: 0,   kind: "conj" },
+        { angle: 60,  kind: "soft" },  // sextile
+        { angle: 90,  kind: "hard" },  // square
+        { angle: 120, kind: "soft" },  // trine
+        { angle: 180, kind: "hard" },  // opposition
+    ];
+
+    for (const tp of transitPositions) {
+        const tName = (tp.name || "").toLowerCase();
+        if (!tName) continue;
+        const isMalefic = STRONG_MALEFICS.some((m) => tName.includes(m));
+        const isBenefic = BENEFIC_PLANETS.includes(tName);
+
+        for (const np of natalPlanets) {
+            const nName = (np.planet || np.name || "").toLowerCase();
+            if (!nName || nName === tName) continue;
+
+            let diff = Math.abs(tp.longitude - np.longitude) % 360;
+            if (diff > 180) diff = 360 - diff;
+
+            for (const a of aspects) {
+                const orb = Math.abs(diff - a.angle);
+                if (orb > TIGHT_ORB) continue;
+
+                if (a.kind === "hard") {
+                    if (orb <= 1 && isMalefic)      penalty += 7;
+                    else if (orb <= 2 && isMalefic) penalty += 5;
+                    else if (orb <= 3 && isMalefic) penalty += 3;
+                    else if (orb <= 1)              penalty += 4;
+                    else if (orb <= 3)              penalty += 2;
+                } else if (a.kind === "soft" && isBenefic) {
+                    if (orb <= 1)      lift += 10;
+                    else if (orb <= 2) lift += 7;
+                    else if (orb <= 3) lift += 4;
+                } else if (a.kind === "conj" && isBenefic) {
+                    // Conjunction with a benefic planet acts as a soft lift.
+                    if (orb <= 1)      lift += 8;
+                    else if (orb <= 2) lift += 5;
+                    else if (orb <= 3) lift += 3;
+                } else if (a.kind === "conj" && isMalefic) {
+                    // Conjunction with a malefic acts as a hard penalty.
+                    if (orb <= 1)      penalty += 5;
+                    else if (orb <= 2) penalty += 3;
+                    else if (orb <= 3) penalty += 2;
+                }
+                break; // only one aspect can match per planet pair
+            }
+        }
+    }
+
+    const net = penalty - lift;
+    return Math.max(-12, Math.min(12, net));
 }
