@@ -30,6 +30,46 @@ import {
     CHALDEAN_FACES,
 } from "./dignity-tables";
 
+import { isSolarTiersV2Enabled } from "./scoring-flags";
+
+// ── Solar Proximity (Cazimi / Combust / Under the Beams) ────────────────────
+
+/**
+ * Traditional solar-proximity tiers used to modulate a planet's strength
+ * when scored close to the Sun.
+ *
+ *   Cazimi          — within 17 arcminutes (≤ 0.2833°)        ×2.5
+ *   Combust         — between 0.2833° and 9°                  ×0.30
+ *   Under the Beams — between 9° and 17°  (V2 only)           ×0.65
+ *
+ * Returns `multiplier === 1` and `label === null` if the planet is the Sun
+ * or far enough from it for no proximity effect to apply, or when the V2
+ * tiers are disabled and the planet is not Cazimi/Combust under the legacy
+ * thresholds.
+ *
+ * The Sun is never modulated against itself (multiplier 1, label null).
+ */
+export function solarProximityModifier(
+    planetName: string,
+    planetLon: number,
+    sunLon: number,
+): { multiplier: number; label: "Cazimi" | "Combust" | "Under Beams" | null } {
+    if ((planetName || "").toLowerCase() === "sun") {
+        return { multiplier: 1, label: null };
+    }
+
+    let solarDiff = Math.abs(planetLon - sunLon) % 360;
+    if (solarDiff > 180) solarDiff = 360 - solarDiff;
+
+    if (solarDiff <= 0.2833) return { multiplier: 2.5,  label: "Cazimi"  };
+    if (solarDiff <= 9)      return { multiplier: 0.30, label: "Combust" };
+
+    if (isSolarTiersV2Enabled() && solarDiff <= 17) {
+        return { multiplier: 0.65, label: "Under Beams" };
+    }
+    return { multiplier: 1, label: null };
+}
+
 // ── Essential Dignity Score ───────────────────────────────────────────────
 
 /**
@@ -143,7 +183,16 @@ export function essentialDignityLabel(
     sign: string,
     degree?: number,
     sect?: "day" | "night",
+    sunLon?: number,
+    planetLon?: number,
 ): string {
+    // Solar-proximity labels override the essential dignity description
+    // when provided (back-compat: omitted args → legacy behavior).
+    if (sunLon !== undefined && planetLon !== undefined) {
+        const solar = solarProximityModifier(planet, planetLon, sunLon);
+        if (solar.label) return solar.label;
+    }
+
     const table = ESSENTIAL_DIGNITY[planet];
     if (!table) return "Peregrine";
 

@@ -6,6 +6,7 @@
 import { HouseMatrixResult } from "./house-matrix";
 import { W_EVENTS, M_AFFINITY, PLANETS, NUM_HOUSES, LIFE_EVENTS } from "./planet-library";
 import { EVENT_LABELS, verdictBand } from "./verdict";
+import { softCapScore } from "./scoring-flags";
 
 export interface OccupancyPlanet {
     name: string;
@@ -107,7 +108,7 @@ export function computeEventScores(
         
         // E_Final = Base Volume + Affinity Modifiers
         const rawScore = baseVolume + affinityModifier;
-        const finalScore = Math.max(0, Math.min(100, Math.round(rawScore))); // Floor/Ceil clamp
+        const finalScore = softCapScore(rawScore);
 
         results.push({
             eventName: LIFE_EVENTS[i],
