@@ -79,7 +79,7 @@ export default function CouplesReadingView({ vm, paramId }: Props) {
             title="Goal Scores"
             sub={
               <>
-                Top three goals from your selection — <strong style={{ color: "var(--text-primary)" }}>{vm.goals.selectedGoals.join(" and ")}</strong>.
+                Full goal scorecard for this destination, prioritized by your selection — <strong style={{ color: "var(--text-primary)" }}>{vm.goals.selectedGoals.join(" and ")}</strong>.
                 Bars are coloured by each partner&apos;s individual verdict band.
               </>
             }
@@ -478,8 +478,8 @@ function GoalComparison({
       </div>
 
       <ol style={{ listStyle: "none", padding: 0, margin: 0 }}>
-        {goals.topThree.map((e, i) => (
-          <EventRow key={e.event} ev={e} pinned={goals.priority.has(e.event)} divider={i < goals.topThree.length - 1} note={prose?.goalScores?.eventNotes?.find(n => n.event === e.event)?.note} />
+        {goals.events.map((e, i) => (
+          <EventRow key={e.event} ev={e} pinned={goals.priority.has(e.event)} divider={i < goals.events.length - 1} note={prose?.goalScores?.eventNotes?.find(n => n.event === e.event)?.note} />
         ))}
       </ol>
     </>

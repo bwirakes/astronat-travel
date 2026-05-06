@@ -39,6 +39,55 @@ export const READING_TAB_IDS = READING_TABS.map((tab) => tab.id) as [
 ];
 
 export const GOAL_DEFINITIONS = {
+    identity: {
+        label: "Identity",
+        eventIndex: 0,
+        outcome: "a stronger sense of self and clearer personal direction",
+        action: "prioritize choices that reinforce confidence, autonomy, and visibility",
+    },
+    wealth: {
+        label: "Wealth",
+        eventIndex: 1,
+        outcome: "better financial momentum, earning potential, and resource stability",
+        action: "focus on budgeting, offers, and investments that compound over time",
+    },
+    home: {
+        label: "Home",
+        eventIndex: 2,
+        outcome: "a steadier foundation for family life and emotional roots",
+        action: "build supportive routines and choose environments that feel nourishing",
+    },
+    romance: {
+        label: "Romance",
+        eventIndex: 3,
+        outcome: "closer relationships and stronger romantic openings",
+        action: "make space for dates, honest conversations, and softer social plans",
+    },
+    health: {
+        label: "Health",
+        eventIndex: 4,
+        outcome: "better daily rhythm, recovery, and physical consistency",
+        action: "set sustainable habits around sleep, movement, and workload",
+    },
+    partnerships: {
+        label: "Partnerships",
+        eventIndex: 5,
+        outcome: "more durable one-to-one collaboration and commitment",
+        action: "invest in clear agreements, boundaries, and shared expectations",
+    },
+    friendship: {
+        label: "Friendship",
+        eventIndex: 7,
+        outcome: "stronger networks, introductions, and local belonging",
+        action: "say yes to repeat encounters, small groups, and low-stakes invitations",
+    },
+    spirituality: {
+        label: "Spirituality",
+        eventIndex: 8,
+        outcome: "more perspective, inner clarity, and spiritual room",
+        action: "protect study time, rituals, long walks, and quiet reflection",
+    },
+    // Legacy goal IDs kept for backward compatibility with older readings.
     love: {
         label: "Love",
         eventIndex: 3,
