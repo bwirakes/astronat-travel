@@ -132,65 +132,41 @@ For all sidebars, tooltips, and micro-text (\`chrome\`, \`hero\`, \`vibes\`, \`m
 - For \`lineNotes\`, use \`<planet-lowercase>-<angle-shortcode>\`.
 - For \`geodeticHits\`, use \`<planet-lowercase>-<ASC|IC|DSC|MC>\`.`;
 
-const BLOCK_GEODETIC_PLACE_CHARACTER = `# Geodetic Tab — Place Character (REQUIRED when source data present)
-The geodetic tab answers ONE question: **how does this place make a person feel, regardless of who they are?** Geodetic lines are fixed to the earth (0° Aries anchored at Greenwich), so they describe the *place itself*, not the user's personal chart. ACG lines and chart-ruler reframes do NOT belong here — they live on what-shifts.
+const BLOCK_GEODETIC_PLACE_CHARACTER = `# Geodetic Tab (REQUIRED when sidebarsData.geodeticBand is present)
 
-**MANDATORY when \`sidebarsData.geodeticBand\` is present:** you MUST emit BOTH \`placeCharacter.lead\` AND \`liveLinesLead\` (top-level). Skipping either leaves a blank section. Do NOT emit the legacy \`angles\` or \`summary\` fields — they're deprecated.
+You MUST emit ALL of: \`placeCharacter.lead\`, \`placeCharacter.paransSummary\` (when parans exist), \`placeCharacter.parans\` (when parans exist), and \`liveLinesLead\` (top-level). Do NOT emit legacy \`angles\` or \`summary\` — deprecated.
 
-**\`liveLinesLead\`** (top-level, required) — A 2–4 sentence prose paragraph for §02 "What's live in [city] now". Frames the sky over the destination *during the travel window*. There are three branches:
+**\`liveLinesLead\`** (top-level, REQUIRED): 2–4 sentence paragraph for §02. Branch by data:
+- *Active*: \`activeGeoTransits\` non-empty → name the tightest hit, its lived feel, what to do with it.
+- *Approaching*: active empty + \`approachingGeoLines\` non-empty → name closest approaching hit, its date, days-from-travel ("Saturn arrives at your geoMC on Aug 12, 4 weeks after you leave"). Frame as next beat.
+- *Quiet*: both empty → "Sumbawa's sky is genuinely quiet for these dates. That's not a missing reading; it's a clean field. Your own transits and the place's character take the lead — nothing's competing for the microphone."
+NEVER write "nothing transiting close to its corners" or any cold engine phrasing.
 
-  1. **Active sky**: \`sidebarsData.activeGeoTransits\` array is non-empty (or \`sidebarsData.topTransits\` shows tight transits). Open by naming the dominant geo-angle hit (planet × angle), explain what that *feels like* under this longitude during these dates, and end with what to *do* with it. Example: "Mars arrives at your geoMC on March 14 — a hot streak for visibility but a short fuse on patience. Lean into the 9th-of-the-month meeting; route the 18th into solo hours. Anyone walking Casablanca that week will feel the heat."
-  2. **Approaching sky**: \`sidebarsData.activeGeoTransits\` is empty BUT \`sidebarsData.approachingGeoLines\` has entries. Open by naming the *closest approaching* hit, its date, and its days-from-travel offset. Frame it as the next narrative beat. Example: "The sky over Sumbawa stays neutral during your stay — no outer planets pressing the corners. Saturn arrives at your geoMC on August 12, four weeks after you leave, so this trip catches the calm before that ridge. Use it to scout, not to commit."
-  3. **Quiet sky**: both active and approaching arrays are empty. Open by naming the *quiet* honestly and explaining what that means for a traveler — the place's *character* takes the lead instead of the weather, and the user's natal-chart aspects to the geo-angles become the dominant signal. Example: "Sumbawa's sky is genuinely quiet for these dates — no outer planets within working distance of the corners. That's not a missing reading; it's a clean field. Whatever you bring (your own transits, your intentions for the trip) is what will sound — the place isn't competing for the microphone."
+**\`placeCharacter.lead\`** (REQUIRED): ONE paragraph, 4–6 sentences. The locator is the cheapest sentence — spend at most one. The rest is implications: what the place feels like at street level, what it rewards, what it punishes, one behavioral hook. Example:
+> "Casablanca sits under a Pisces Midheaven — public life moves through atmosphere rather than logic. Reputation here is the mood you leave, not the line you deliver. The place rewards intuition and punishes anyone trying to over-control the narrative; the harder you grip, the slipperier it becomes. Bring softer edges than you would to a Capricorn city."
+Forbidden: paragraphs that just list "the geo-MC is X and the geo-ASC is Y." ONE paragraph, no bullets.
 
-  Forbidden: opening with "the sky over X is quiet right now — nothing transiting close to its corners." That's the cold engine fallback, not a reading. Always frame the *implications*, never just the absence.
+**\`placeCharacter.paransSummary\`** (REQUIRED when parans present): 1–2 sentences naming the *combined field* the paran latitudes create. NOT a count. NOT a quote of the first entry. Example:
+> "The latitude under Casablanca runs three lifting crossings — Venus/Jupiter leads, with a Mercury/Moon undertone — and a single Mars/Saturn pair that tightens the screws on overconfidence."
 
-**\`placeCharacter\`** — A single object describing the destination's geodetic identity:
-- \`lead\`: ONE consolidated paragraph, 4–6 sentences. This is the *only* prose readers see for the place's character — make it count. **The locator is the cheapest sentence; the implications are what readers came for.** Spend at most ONE sentence naming where the city sits in the zodiac (the geo-MC sign from \`sidebarsData.geodeticBand\`); the rest of the paragraph MUST live in implication territory:
-    - what living/visiting under this signature *actually feels like* at street level — the texture of public life, the type of person the city rewards, the type of move it punishes;
-    - what the place asks of anyone who comes here, AND what trying to fight that ask costs;
-    - one concrete behavioral hook ("the place rewards X, punishes Y") that gives the reader something to do with the information.
-  Examples of voice (note how one sentence locates and the rest *implicates*):
-    - "Casablanca sits under a Pisces Midheaven, which gives the city's public face a permeable, dream-soaked quality. Reputation here moves through atmosphere rather than logic — what people remember about you is the mood you left, not the line you delivered. The place rewards intuition and punishes anyone trying to over-control the narrative; the harder you grip, the slipperier it becomes. Bring softer edges than you would to a Capricorn city, and let the work argue itself."
-    - "Dubai sits under a Taurus Midheaven, and the city's whole proposition is the body — what you can buy for it, build with it, and rest in. Public life moves at a deliberate, weighted pace; it rewards the long arc and the patient build, not the headline-of-the-week. If you came here for speed, the place will keep handing you weight until you slow down. The leverage is in showing up for the third dinner, not the first."
-  Forbidden: ANY paragraph that just lists "the geo-MC is X, the geo-ASC is Y, the shaded band shows Z." That's a programmatic locator, not a reading. Do NOT list bullet points. Do NOT name multiple angles separately. ONE paragraph.
-- \`paransSummary\`: ONE short paragraph (1–2 sentences) describing the *combined field* the paran latitudes create around the destination. NOT a count, NOT a quote of the first entry. Examples:
-    - "The latitude under Casablanca runs three lifting crossings — Venus/Jupiter heads the field with a Mercury/Moon undertone — and a single Mars/Saturn pair that quietly tightens the screws on overconfidence."
-    - "This latitude is mostly neutral, with one notable Mars/Pluto crossing that adds an underground intensity to anything you start while you're here."
-  Use this voice when the parans together suggest a pattern (mostly lifting, mostly pressing, dominated by one pair, etc.); use the second voice when parans are sparse or neutral.
-- \`parans\`: top entries from \`sidebarsData.parans[]\`. Cap at 4 — pick the 4 with the highest |contribution| (closest to destination latitude AND most planet-archetype loaded). Skip the rest. \`paranKey\` matches the two planet names lowercase, alphabetically sorted, joined by "-" (e.g. "jupiter-venus", "mars-saturn"). Each entry needs:
-  - \`headline\`: ≤ 80 chars in the form "PlanetA/PlanetB — concrete archetype phrase". Examples:
-    - "Venus/Jupiter — abundance, social ease, creative expansion"
-    - "Mercury/Moon — emotional expression, quick learning, self-care"
-    - "Mars/Saturn — pressing the gas and the brake at once"
-    - "Mars/Pluto — drastic transformation, power struggles, extreme physical bursts"
-  - \`body\`: 2 sentences in the same concrete archetype voice. Speak about the latitude band as a *combination* — what the planet pair *together* tends to amplify or grind on for anyone walking that latitude. Voice examples:
-    - Supportive (positive contribution): "A Venus/Jupiter paran might amplify themes of abundance, social ease, and creative expansion. Anyone walking this latitude tends to find the doors open more readily — for better and for the slack it can breed."
-    - Intense (negative contribution): "A Mars/Saturn paran creates an environment of deep friction, requiring immense discipline. It can feel like you're pressing the gas and the brake at the same time — every move costs more effort than it should."
-  Do NOT use the words "this place" or "your latitude" generically. Name the planet pair and what that pair *concretely* does.
+**\`placeCharacter.parans\`**: top 4 entries from \`sidebarsData.parans[]\` by |contribution|. Skip neutral pairs.
+- \`paranKey\`: lowercase planet names, alphabetically sorted, joined by "-" (e.g. "jupiter-venus", "mars-saturn").
+- \`headline\`: ≤ 80 chars, "PlanetA/PlanetB — concrete archetype phrase" (e.g. "Venus/Jupiter — abundance, social ease, creative expansion"; "Mars/Saturn — pressing the gas and the brake at once"; "Mars/Pluto — drastic transformation, power struggles").
+- \`body\`: 2 sentences naming what the planet pair *together* amplifies or grinds on. Example: "A Mars/Saturn paran creates an environment of deep friction. It can feel like you're pressing the gas and the brake at once — every move costs more effort than it should."
 
-**\`geodeticLiveLines\`** — Array of currently-active geodetic transits whose sign-column passes through the destination longitude (e.g. Uranus in Taurus running down Dubai during the trip window). Use \`sidebarsData.geodeticBand\` and the active transits in \`sidebarsData\` to identify candidates. Required fields:
-- \`liveLineKey\`: \`<planet-lowercase>-<sign-lowercase>-<MC|ASC>\` (e.g. "uranus-taurus-MC").
-- \`headline\`: ≤ 70 chars, names what the line is loud about right now.
-- \`body\`: 2–4 sentences — what's amplified at this longitude during the trip window, plus why the user might feel it (NOT a deep personal-chart hit — that's what-shifts territory).
-- \`windowNote\` (optional): human window phrase, e.g. "peaks Feb 27 – Mar 2".`;
+**\`geodeticLiveLines\`** (optional, only when active sky): array of current geodetic transits running through the destination longitude.
+- \`liveLineKey\`: \`<planet>-<sign>-<MC|ASC>\` lowercase (e.g. "uranus-taurus-MC").
+- \`headline\` ≤ 70 chars, \`body\` 2–4 sentences, \`windowNote\` optional ("peaks Feb 27 – Mar 2").`;
 
-const BLOCK_WHAT_SHIFTS_PERSONALISATION = `# What-Shifts Tab — Personal-Chart Relocation (REQUIRED when source data present)
-What-shifts is where personal-chart relocation lives.
+const BLOCK_WHAT_SHIFTS_PERSONALISATION = `# What-Shifts Tab (Personal-Chart Relocation)
 
-**MANDATORY:** When \`sidebarsData.chartRuler\` is present, you MUST emit \`chartRulerReframe\`. The only exception is when \`natalAscSign === relocatedAscSign\` AND \`natalRulerHouse === relocatedRulerHouse\` (truly nothing shifts). When \`sidebarsData.nearbyLines\` has entries, you MUST emit \`acgLineNotes\` with one entry per line.
+**MANDATORY:** When \`sidebarsData.chartRuler\` is present and rising sign or ruler-house differs from natal, emit \`chartRulerReframe\`. When \`sidebarsData.nearbyLines\` is non-empty, emit \`acgLineNotes\` (one per line).
 
-**\`chartRulerReframe\`** — How the user's chart ruler re-domains in the relocated chart. Source data: \`sidebarsData.chartRuler\`. Single object:
-- \`relocatedRising\`: copy from \`sidebarsData.chartRuler.relocatedAscSign\`.
-- \`ruler\`: copy from \`sidebarsData.chartRuler.chartRuler\`.
-- \`fromHouse\`: copy from \`sidebarsData.chartRuler.natalRulerHouse\`.
-- \`toHouse\`: copy from \`sidebarsData.chartRuler.relocatedRulerHouse\`.
-- \`headline\`: one line capturing the topic shift (e.g. "Your trip is about ideas and travel, not body and money").
-- \`body\`: 2–4 sentences on the lived theme change. This is the headline answer to "how will [city] feel for me." Only emit when \`natalAscSign !== relocatedAscSign\` OR \`natalRulerHouse !== relocatedRulerHouse\`.
+**\`chartRulerReframe\`** — copy \`relocatedRising\`, \`ruler\`, \`fromHouse\`, \`toHouse\` from \`sidebarsData.chartRuler\`. Add \`headline\` (one-line topic shift, e.g. "Your trip is about ideas and travel, not body and money") + \`body\` (2–4 sentences).
 
-**\`acgLineNotes\`** — Per-ACG-line teacher copy keyed \`<planet-lowercase>-<angle>\` (angle ∈ MC | IC | ASC | DSC), one entry per nearby ACG line in \`sidebarsData.nearbyLines\`. ACG lines are time-of-birth dependent and personal — different from geodetic lines. \`headline\` + \`body\` (2–3 sentences).
+**\`acgLineNotes\`** — keyed \`<planet>-<angle>\` lowercase (angle ∈ MC|IC|ASC|DSC). One entry per line in \`sidebarsData.nearbyLines\`. ACG lines are time-of-birth dependent (NOT geodetic). \`headline\` + \`body\` (2–3 sentences).
 
-**\`modalityHits\`** — Late-degree natal placements caught by a same-modality hard-aspect transit pair. Source: \`sidebarsData.modalityHits[]\` (already pre-computed; skip the field if the array is missing or empty). For each entry, copy \`hitKey\` verbatim and write \`headline\` + \`body\` (2–3 sentences) explaining what this transit pair lights up in the user's chart given the natal planet's sign/degree. The body MUST name the transit pair in plain English (e.g. "Mars and Uranus collide in late Aquarius") and what part of the chart it's pressing on.`;
+**\`modalityHits\`** — only when \`sidebarsData.modalityHits[]\` is non-empty. Copy \`hitKey\` verbatim. \`headline\` + \`body\` (2–3 sentences) naming the transit pair in plain English.`;
 
 const BLOCK_LEGACY_FIELDS = `# Legacy Fields
 Fill \`summary\`, \`signals\`, and \`longRead\` as best as possible for backwards compatibility, maintaining the same tone.`;

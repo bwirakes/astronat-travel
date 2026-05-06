@@ -1541,11 +1541,13 @@ function ParansDisclosure({ parans, city, notes, paransSummary }: {
                 />
             </summary>
             <div style={{ marginTop: "var(--space-md)" }}>
-                <p style={{ ...BODY_MUTED, margin: "0 0 var(--space-md) 0" }}>
-                    Pairs of your natal planets that cross the horizon together at a latitude
-                    near {city}&rsquo;s. Showing the {topParans.length === 1 ? "strongest crossing" : `${topParans.length} strongest crossings`} —
-                    benefic pairs lift the field, malefic pairs press it.
-                </p>
+                {!paransSummary && (
+                    <p style={{ ...BODY_MUTED, margin: "0 0 var(--space-md) 0" }}>
+                        Pairs of your natal planets that cross the horizon together at a latitude
+                        near {city}&rsquo;s. Showing the {topParans.length === 1 ? "strongest crossing" : `${topParans.length} strongest crossings`} —
+                        benefic pairs lift the field, malefic pairs press it.
+                    </p>
+                )}
                 <ParanList parans={topParans} city={city} notes={notes} />
             </div>
         </details>
