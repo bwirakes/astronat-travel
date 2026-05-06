@@ -22,13 +22,14 @@ import { PageHeader } from "@/components/app/page-header-context";
 import TabSection from "../shared/TabSection";
 import LearnFooter from "../shared/LearnFooter";
 import { EVENT_LABELS, VERDICT_COLORS, verdictBand, type VerdictBand } from "@/app/lib/verdict";
+import { destinationFlag } from "@/app/lib/country-flag";
 import type { CouplesVM, PartnerEventScore, ChartTabVM, SynastryAspectVM } from "@/app/lib/couples-viewmodel";
 
 // ═══════════════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════════
 
-const SECTION_GAP = "clamp(32px, 4vw, 56px)";
+const SECTION_GAP = "clamp(8px, 1.5vw, 24px)";
 const PAGE_MAX = 1200;
 
 /** Per-event bar fill. Intentionally a 5-stop palette (vs. VERDICT_COLORS'
@@ -70,7 +71,7 @@ export default function CouplesReadingView({ vm, paramId }: Props) {
           <StatLedger ledger={vm.ledger} partnerName={vm.hero.partnerName} flush />
 
           <ChapterSection index="01" title="The Read">
-            <MagazineIntro intro={vm.intro} destination={vm.hero.destination} />
+            <MagazineIntro intro={vm.intro} destination={vm.hero.destination} prose={vm.prose} />
           </ChapterSection>
 
           <ChapterSection
@@ -83,11 +84,10 @@ export default function CouplesReadingView({ vm, paramId }: Props) {
               </>
             }
           >
-            <GoalComparison goals={vm.goals} partnerName={vm.hero.partnerName} />
+            <GoalComparison goals={vm.goals} partnerName={vm.hero.partnerName} prose={vm.prose} />
           </ChapterSection>
-
           <ChapterSection index="03" title="Timings">
-            <VerdictBlock timings={vm.timings} />
+            <VerdictBlock timings={vm.timings} prose={vm.prose} />
           </ChapterSection>
 
           <ChapterSection
@@ -95,7 +95,7 @@ export default function CouplesReadingView({ vm, paramId }: Props) {
             title={`How ${vm.hero.destination} Feels`}
             sub={<>Two relocated charts and the cross-aspects between them. Each entry shows what the city activates.</>}
           >
-            <DeepDive deepDive={vm.deepDive} tab={tab} onTab={setTab} destination={vm.hero.destination} />
+            <DeepDive deepDive={vm.deepDive} tab={tab} onTab={setTab} destination={vm.hero.destination} prose={vm.prose} />
           </ChapterSection>
 
           <ChapterSection
@@ -103,7 +103,7 @@ export default function CouplesReadingView({ vm, paramId }: Props) {
             title={`Who You Are in ${vm.hero.destination}`}
             sub={<>{vm.geodetic.summary}</>}
           >
-            <GeodeticSummary geodetic={vm.geodetic} youName="You" />
+            <GeodeticSummary geodetic={vm.geodetic} youName="You" lead={vm.prose?.geodetic?.summary} />
           </ChapterSection>
 
           <div style={{ marginTop: "clamp(80px, 10vw, 140px)" }}>
@@ -192,11 +192,34 @@ function Divider() {
   return <span aria-hidden style={{ background: "var(--surface-border)", width: 1, alignSelf: "stretch" }} />;
 }
 
+/** AI-authored lead paragraph that opens a sub-section (used by ChartTab,
+ *  SynastryTab, GeodeticSummary). Same editorial signature as
+ *  `SectionHead.sub` — kept consistent so AI prose reads with one voice
+ *  regardless of which section it's in. */
+function AiLead({ children }: { children: React.ReactNode }) {
+  return (
+    <p
+      style={{
+        fontFamily: "var(--font-body)",
+        fontSize: "0.88rem",
+        lineHeight: 1.55,
+        fontWeight: 300,
+        color: "var(--text-secondary)",
+        margin: 0,
+        maxWidth: "62ch",
+      }}
+    >
+      {children}
+    </p>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════
 // HERO
 // ═══════════════════════════════════════════════════════════════
 
 function Hero({ hero }: { hero: CouplesVM["hero"] }) {
+  const flag = destinationFlag(hero.destinationFull || hero.destination);
   return (
     <section
       style={{
@@ -213,20 +236,12 @@ function Hero({ hero }: { hero: CouplesVM["hero"] }) {
     >
       <SynastryWatermark />
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", minWidth: 0, position: "relative", zIndex: 1 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: 0, position: "relative", zIndex: 1 }}>
         <span
           style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: "0.7rem",
-            letterSpacing: "0.18em",
-            textTransform: "uppercase",
-            color: "var(--text-secondary)",
-          }}
-        >
-          {hero.dateRange} · WITH {hero.partnerName.toUpperCase()}
-        </span>
-        <span
-          style={{
+            display: "inline-flex",
+            alignItems: "baseline",
+            gap: "clamp(12px, 1.4vw, 20px)",
             fontFamily: "var(--font-primary)",
             fontSize: "clamp(40px, 5.5vw, 72px)",
             lineHeight: 0.95,
@@ -235,13 +250,30 @@ function Hero({ hero }: { hero: CouplesVM["hero"] }) {
           }}
         >
           {hero.destination}
+          {flag && (
+            <span
+              role="img"
+              aria-label={`Flag of ${flag.iso}`}
+              style={{ fontSize: "0.7em", lineHeight: 1, letterSpacing: 0 }}
+            >
+              {flag.emoji}
+            </span>
+          )}
+        </span>
+        <span
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: "12px",
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            color: "var(--text-secondary)",
+          }}
+        >
+          {hero.dateRange} · WITH {hero.partnerName.toUpperCase()}
         </span>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "10px", position: "relative", zIndex: 1 }}>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", color: "var(--text-tertiary)" }}>
-          MATCH
-        </span>
         <span style={{ display: "flex", alignItems: "baseline", gap: "6px", fontFamily: "var(--font-primary)" }}>
           <span style={{ fontSize: "clamp(44px, 5.5vw, 72px)", lineHeight: 1, color: hero.joint.accent, letterSpacing: "-0.02em" }}>
             {hero.joint.score}
@@ -355,10 +387,12 @@ function LedgerColumn({
 // §01 THE READ
 // ═══════════════════════════════════════════════════════════════
 
-function MagazineIntro({ intro, destination }: { intro: CouplesVM["intro"]; destination: string }) {
+function MagazineIntro({ intro, destination, prose }: { intro: CouplesVM["intro"]; destination: string; prose: CouplesVM["prose"] }) {
+  const aiLead = prose?.theRead?.lead;
+  const introLetter = aiLead ? aiLead.charAt(0) : "B";
+  
   const goalsLine = intro.goals.join(" and ");
   const bold: React.CSSProperties = { fontWeight: 700, color: "var(--text-primary)" };
-  const introLetter = "B"; // matches the deterministic opener "Based on…"
 
   return (
     <div style={{ display: "flex", alignItems: "flex-start", gap: "clamp(16px, 2.5vw, 32px)" }}>
@@ -387,24 +421,30 @@ function MagazineIntro({ intro, destination }: { intro: CouplesVM["intro"]; dest
           paddingTop: "0.7rem",
         }}
       >
-        ased on shared goals in <span style={bold}>{goalsLine}</span>, {destination} supports{" "}
-        {intro.topPicks.length === 0 ? (
-          <span style={bold}>your shared picks</span>
+        {aiLead ? (
+          <>{aiLead.slice(1)}</>
         ) : (
-          <span style={bold}>
-            {intro.topPicks.slice(0, -1).join(", ")}{intro.topPicks.length > 1 ? ", and " : ""}{intro.topPicks.slice(-1)}
-          </span>
-        )}{" "}
-        most.{" "}
-        {intro.cautions.length > 0 && (
-          <>Friction concentrates in <span style={bold}>{intro.cautions.join(", ")}</span>. </>
-        )}
-        {intro.bestWindowShort && (
-          <>Target <span style={bold}>{intro.bestWindowShort}</span> for the strongest window
-          {intro.avoidWindowShort ? "; " : "."} </>
-        )}
-        {intro.avoidWindowShort && (
-          <>skip <span style={bold}>{intro.avoidWindowShort}</span>.</>
+          <>
+            ased on shared goals in <span style={bold}>{goalsLine}</span>, {destination} supports{" "}
+            {intro.topPicks.length === 0 ? (
+              <span style={bold}>your shared picks</span>
+            ) : (
+              <span style={bold}>
+                {intro.topPicks.slice(0, -1).join(", ")}{intro.topPicks.length > 1 ? ", and " : ""}{intro.topPicks.slice(-1)}
+              </span>
+            )}{" "}
+            most.{" "}
+            {intro.cautions.length > 0 && (
+              <>Friction concentrates in <span style={bold}>{intro.cautions.join(", ")}</span>. </>
+            )}
+            {intro.bestWindowShort && (
+              <>Target <span style={bold}>{intro.bestWindowShort}</span> for the strongest window
+              {intro.avoidWindowShort ? "; " : "."} </>
+            )}
+            {intro.avoidWindowShort && (
+              <>skip <span style={bold}>{intro.avoidWindowShort}</span>.</>
+            )}
+          </>
         )}
       </p>
     </div>
@@ -416,8 +456,8 @@ function MagazineIntro({ intro, destination }: { intro: CouplesVM["intro"]; dest
 // ═══════════════════════════════════════════════════════════════
 
 function GoalComparison({
-  goals, partnerName,
-}: { goals: CouplesVM["goals"]; partnerName: string }) {
+  goals, partnerName, prose
+}: { goals: CouplesVM["goals"]; partnerName: string; prose: CouplesVM["prose"] }) {
   return (
     <>
       <div
@@ -439,14 +479,14 @@ function GoalComparison({
 
       <ol style={{ listStyle: "none", padding: 0, margin: 0 }}>
         {goals.topThree.map((e, i) => (
-          <EventRow key={e.event} ev={e} pinned={goals.priority.has(e.event)} divider={i < goals.topThree.length - 1} />
+          <EventRow key={e.event} ev={e} pinned={goals.priority.has(e.event)} divider={i < goals.topThree.length - 1} note={prose?.goalScores?.eventNotes?.find(n => n.event === e.event)?.note} />
         ))}
       </ol>
     </>
   );
 }
 
-function EventRow({ ev, pinned, divider }: { ev: PartnerEventScore; pinned: boolean; divider: boolean }) {
+function EventRow({ ev, pinned, divider, note }: { ev: PartnerEventScore; pinned: boolean; divider: boolean; note?: string }) {
   const youBand     = verdictBand(ev.you);
   const partnerBand = verdictBand(ev.partner);
   const delta = Math.abs(ev.you - ev.partner);
@@ -474,6 +514,11 @@ function EventRow({ ev, pinned, divider }: { ev: PartnerEventScore; pinned: bool
           <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>
             {EVENT_LABELS[youBand]} · {EVENT_LABELS[partnerBand]}
           </span>
+          {note && (
+            <p style={{ marginTop: "0.5rem", marginBottom: 0, fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.4 }}>
+              {note}
+            </p>
+          )}
         </div>
       </div>
       <BarCell score={ev.you}     color={BAND_FILL[youBand]} />
@@ -512,7 +557,7 @@ function BarCell({ score, color }: { score: number; color: string }) {
 // §03 TIMINGS
 // ═══════════════════════════════════════════════════════════════
 
-function VerdictBlock({ timings }: { timings: CouplesVM["timings"] }) {
+function VerdictBlock({ timings, prose }: { timings: CouplesVM["timings"]; prose: CouplesVM["prose"] }) {
   return (
     <>
       <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem", margin: "0 0 clamp(36px, 5vw, 56px)" }}>
@@ -540,14 +585,14 @@ function VerdictBlock({ timings }: { timings: CouplesVM["timings"] }) {
             maxWidth: "60ch",
           }}
         >
-          {capitalizeFirst(timings.rationale)}.
+          {prose?.timings?.rationale ? prose.timings.rationale : `${capitalizeFirst(timings.rationale)}.`}
         </p>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "clamp(28px, 4vw, 48px)" }} className="windows-grid">
-        <WindowList title="BEST WINDOWS" color="var(--color-planet-jupiter)" items={timings.bestWindows} />
+        <WindowList title="BEST WINDOWS" color="var(--color-planet-jupiter)" items={timings.bestWindows} notes={prose?.timings?.bestWindowNotes} />
         {timings.avoidWindows.length > 0 && (
-          <WindowList title="AVOID" color="var(--color-spiced-life)" items={timings.avoidWindows} />
+          <WindowList title="AVOID" color="var(--color-spiced-life)" items={timings.avoidWindows} notes={prose?.timings?.avoidWindowNotes} />
         )}
       </div>
       <style jsx>{`
@@ -559,7 +604,7 @@ function VerdictBlock({ timings }: { timings: CouplesVM["timings"] }) {
   );
 }
 
-function WindowList({ title, color, items }: { title: string; color: string; items: string[] }) {
+function WindowList({ title, color, items, notes }: { title: string; color: string; items: string[]; notes?: Array<{ windowDate: string; note: string }> }) {
   if (items.length === 0) {
     return (
       <div>
@@ -579,25 +624,31 @@ function WindowList({ title, color, items }: { title: string; color: string; ite
         {title}
       </div>
       <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column" }}>
-        {items.map((w, i) => (
-          <li
-            key={i}
-            style={{
-              display: "flex",
-              gap: "0.8rem",
-              alignItems: "flex-start",
-              fontFamily: "var(--font-body)",
-              fontSize: "0.92rem",
-              color: "var(--text-secondary)",
-              padding: "0.7rem 0",
-              borderBottom: i < items.length - 1 ? "1px solid var(--surface-border)" : "none",
-              lineHeight: 1.5,
-            }}
-          >
-            <span style={{ color, marginTop: "0.15rem" }}>●</span>
-            {w}
-          </li>
-        ))}
+        {items.map((w, i) => {
+          const aiNote = notes?.find(n => n.windowDate === w)?.note;
+          return (
+            <li
+              key={i}
+              style={{
+                display: "flex",
+                gap: "0.8rem",
+                alignItems: "flex-start",
+                fontFamily: "var(--font-body)",
+                fontSize: "0.92rem",
+                color: "var(--text-secondary)",
+                padding: "0.7rem 0",
+                borderBottom: i < items.length - 1 ? "1px solid var(--surface-border)" : "none",
+                lineHeight: 1.5,
+              }}
+            >
+              <span style={{ color, marginTop: "0.15rem" }}>●</span>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <span style={{ fontWeight: 500, letterSpacing: "0.01em" }}>{w}</span>
+                {aiNote && <span style={{ fontSize: "0.85rem", lineHeight: 1.4, color: "var(--text-tertiary)", marginTop: "0.25rem" }}>{aiNote}</span>}
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
@@ -608,12 +659,13 @@ function WindowList({ title, color, items }: { title: string; color: string; ite
 // ═══════════════════════════════════════════════════════════════
 
 function DeepDive({
-  deepDive, tab, onTab, destination,
+  deepDive, tab, onTab, destination, prose
 }: {
   deepDive: CouplesVM["deepDive"];
   tab: "you" | "partner" | "synastry";
   onTab: (t: "you" | "partner" | "synastry") => void;
   destination: string;
+  prose: CouplesVM["prose"];
 }) {
   const tabs: Array<{ id: "you" | "partner" | "synastry"; label: string }> = [
     { id: "you",      label: "For you" },
@@ -681,17 +733,17 @@ function DeepDive({
       <AnimatePresence mode="wait">
         {tab === "you" && (
           <motion.div key="you" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
-            <ChartTab tab={deepDive.you} destination={destination} />
+            <ChartTab tab={deepDive.you} destination={destination} lead={prose?.deepDive?.youLead} />
           </motion.div>
         )}
         {tab === "partner" && (
           <motion.div key="partner" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
-            <ChartTab tab={deepDive.partner} destination={destination} />
+            <ChartTab tab={deepDive.partner} destination={destination} lead={prose?.deepDive?.partnerLead} />
           </motion.div>
         )}
         {tab === "synastry" && (
           <motion.div key="synastry" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
-            <SynastryTab synastry={deepDive.synastry} partnerName={deepDive.partnerName} />
+            <SynastryTab synastry={deepDive.synastry} partnerName={deepDive.partnerName} lead={prose?.deepDive?.synastryLead} aspectMeanings={prose?.deepDive?.aspectMeanings} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -699,7 +751,7 @@ function DeepDive({
   );
 }
 
-function ChartTab({ tab, destination }: { tab: ChartTabVM; destination: string }) {
+function ChartTab({ tab, destination, lead }: { tab: ChartTabVM; destination: string; lead?: string }) {
   const accent = VERDICT_COLORS[verdictBand(tab.macroScore)] ?? "var(--text-secondary)";
 
   return (
@@ -709,6 +761,7 @@ function ChartTab({ tab, destination }: { tab: ChartTabVM; destination: string }
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "clamp(24px, 3vw, 36px)" }}>
+        {lead && <AiLead>{lead}</AiLead>}
         <div
           style={{
             display: "grid",
@@ -792,7 +845,7 @@ function FlatStat({ label, value, accent }: { label: string; value: string; acce
   );
 }
 
-function SynastryTab({ synastry, partnerName }: { synastry: CouplesVM["deepDive"]["synastry"]; partnerName: string }) {
+function SynastryTab({ synastry, partnerName, lead, aspectMeanings }: { synastry: CouplesVM["deepDive"]["synastry"]; partnerName: string; lead?: string; aspectMeanings?: Array<{ aspectKey: string; meaning: string }> }) {
   const hasAny = synastry.harmonious.length > 0 || synastry.tense.length > 0;
   if (!hasAny) {
     return (
@@ -804,13 +857,12 @@ function SynastryTab({ synastry, partnerName }: { synastry: CouplesVM["deepDive"
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "clamp(24px, 3.5vw, 40px)" }}>
-      <p style={{ fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--text-secondary)", margin: 0, maxWidth: "62ch", lineHeight: 1.55, fontWeight: 300 }}>
-        Where your charts meet directly. Harmonious aspects are baseline ease;
-        tense ones are productive friction if you know what they&apos;re about.
-      </p>
+      <AiLead>
+        {lead || `Where your charts meet directly. Harmonious aspects are baseline ease; tense ones are productive friction if you know what they're about.`}
+      </AiLead>
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "clamp(28px, 4vw, 48px)" }} className="aspect-grid">
-        <AspectColumn title="Harmonious" tone="lift"  items={synastry.harmonious} partnerName={partnerName} />
-        <AspectColumn title="Tense"      tone="press" items={synastry.tense}      partnerName={partnerName} />
+        <AspectColumn title="Harmonious" tone="lift"  items={synastry.harmonious} partnerName={partnerName} aspectMeanings={aspectMeanings} />
+        <AspectColumn title="Tense"      tone="press" items={synastry.tense}      partnerName={partnerName} aspectMeanings={aspectMeanings} />
       </div>
       <style jsx>{`
         @media (min-width: 880px) {
@@ -822,8 +874,8 @@ function SynastryTab({ synastry, partnerName }: { synastry: CouplesVM["deepDive"
 }
 
 function AspectColumn({
-  title, tone, items, partnerName,
-}: { title: string; tone: "lift" | "press"; items: SynastryAspectVM[]; partnerName: string }) {
+  title, tone, items, partnerName, aspectMeanings
+}: { title: string; tone: "lift" | "press"; items: SynastryAspectVM[]; partnerName: string; aspectMeanings?: Array<{ aspectKey: string; meaning: string }> }) {
   // Aligned with VERDICT_COLORS: lift = sage (good signal), press = spiced.
   const accent = tone === "lift" ? "var(--sage)" : "var(--color-spiced-life)";
   return (
@@ -865,9 +917,24 @@ function AspectColumn({
                   ORB {a.orb.toFixed(1)}°
                 </span>
               </div>
-              <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--text-secondary)", lineHeight: 1.55 }}>
-                {a.meaning}
-              </p>
+              {(() => {
+                // Canonical key on the VM (`${p1}-${aspect}-${p2}` lowercased)
+                // is the contract: the AI is instructed to echo this exact
+                // value as `aspectKey`. Reverse-key fallback is defensive
+                // for older AI outputs authored before the contract was
+                // tightened — can be removed once those readings expire.
+                const reverse = `${a.p2}-${a.aspect}-${a.p1}`.toLowerCase();
+                const match = aspectMeanings?.find((m) => {
+                  const k = m.aspectKey.toLowerCase();
+                  return k === a.key || k === reverse;
+                });
+                const displayMeaning = match?.meaning ?? a.meaning;
+                return (
+                  <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--text-secondary)", lineHeight: 1.55 }}>
+                    {displayMeaning}
+                  </p>
+                );
+              })()}
             </li>
           ))}
         </ul>
@@ -880,9 +947,10 @@ function AspectColumn({
 // §05 GEODETIC
 // ═══════════════════════════════════════════════════════════════
 
-function GeodeticSummary({ geodetic, youName }: { geodetic: CouplesVM["geodetic"]; youName: string }) {
+function GeodeticSummary({ geodetic, youName, lead }: { geodetic: CouplesVM["geodetic"]; youName: string; lead?: string }) {
   return (
     <>
+      {lead && <AiLead>{lead}</AiLead>}
       <div style={{ marginTop: "clamp(28px, 4vw, 48px)", display: "grid", gridTemplateColumns: "1fr", gap: 0 }}>
         <GeoRow
           who={youName.toUpperCase()}

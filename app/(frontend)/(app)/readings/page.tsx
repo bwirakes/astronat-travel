@@ -231,6 +231,13 @@ function ReadingsContent() {
         </div>
       </div>
 
+      <button
+        className="dashboard-fab"
+        onClick={() => router.push("/reading/new")}
+      >
+        + New Reading
+      </button>
+
       <style jsx>{`
         .readings-shell {
           width: 100%;

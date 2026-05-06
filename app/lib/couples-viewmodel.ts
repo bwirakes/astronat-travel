@@ -50,6 +50,11 @@ export interface SynastryAspectVM {
   aspect: string;
   orb: number;
   meaning: string;
+  /** Canonical lookup key: `${p1}-${aspect}-${p2}` lowercased.
+   *  The AI prose pipeline uses this verbatim as the `aspectKey` in
+   *  `CouplesReading.deepDive.aspectMeanings[]` so the view can match
+   *  AI-authored meanings to rendered aspects without inventing IDs. */
+  key: string;
 }
 
 export interface ChartTabVM {
@@ -64,6 +69,10 @@ export interface ChartTabVM {
 export interface CouplesVM {
   hero: {
     destination: string;
+    /** Original unparsed destination ("Budapest, Hungary") so consumers
+     *  that need the country part (flag lookup, full label) can recover
+     *  it without re-reading the persisted reading. */
+    destinationFull: string;
     dateRange: string;
     partnerName: string;
     /** The headline "for both of you" score. Joint quality, not agreement. */
@@ -115,6 +124,7 @@ export interface CouplesVM {
     summary: string;
     partnerName: string;
   };
+  prose: import("@/lib/ai/schemas").CouplesReading | null;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -235,7 +245,8 @@ export function toCouplesViewModel(reading: any): CouplesVM {
   const ptnrBand  = verdictBand(partnerScore);
 
   const partnerName: string = reading.partnerName || "Partner";
-  const destination: string = String(reading.destination || "").split(",")[0] || "the destination";
+  const destinationFull: string = String(reading.destination || "");
+  const destination: string = destinationFull.split(",")[0] || "the destination";
   const dateRange: string = formatDateRange(reading.travelDate);
 
   // ── Goals + events ────────────────────────────────────────────
@@ -300,6 +311,7 @@ export function toCouplesViewModel(reading: any): CouplesVM {
   return {
     hero: {
       destination,
+      destinationFull,
       dateRange,
       partnerName,
       joint: {
@@ -358,6 +370,7 @@ export function toCouplesViewModel(reading: any): CouplesVM {
       summary: relocSummary(youAsc, ptnrAsc, youMc, ptnrMc),
       partnerName,
     },
+    prose: reading.couplesReading || null,
   };
 }
 
@@ -483,7 +496,7 @@ function decorateAspect(a: any): SynastryAspectVM {
   const meaning = ASPECT_MEANINGS[key] ??
     ASPECT_FALLBACK[aspect] ??
     "Energies meet here — read the band, not the headline.";
-  return { p1, p2, aspect, orb, meaning };
+  return { p1, p2, aspect, orb, meaning, key };
 }
 
 function relocNote(standout: StandoutPlacement[], _which: "you" | "partner", destination: string): string {

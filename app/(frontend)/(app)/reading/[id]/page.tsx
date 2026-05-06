@@ -158,14 +158,18 @@ function ReadingContent() {
             partnerMacroScore: d.partnerMacroScore,
             partnerMacroVerdict: d.partnerMacroVerdict,
             partnerHouses: d.partnerHouses,
+            partnerPlanetaryLines: d.partnerPlanetaryLines,
             partnerNatalPlanets: d.partnerNatalPlanets,
             partnerRelocatedCusps: d.partnerRelocatedCusps,
+            partnerEventScores: d.partnerEventScores,
+            userEventScores: d.userEventScores,
             synastryAspects: d.synastryAspects,
             houseComparison: d.houseComparison,
             scoreDelta: d.scoreDelta,
             recommendation: d.recommendation,
             narrative: d.narrative,
             weatherForecast: d.weatherForecast,
+            couplesReading: d.couplesReading,
          });
       } else {
          console.warn("Failed to fetch reading:", error);
