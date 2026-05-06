@@ -51,6 +51,23 @@ Use this order for most prose:
 
 Use \`editorialEvidence.tabs\` for the exact tab IDs, labels, questions, and order. Every tab must advance the page's thesis.`;
 
+const BLOCK_PERSONAL_CYCLE_BANNER = `# Personal Cycle Banner (Relocation only)
+A relocation reading has a layer above the destination: the user's life-stage cycles (Saturn return, midlife band, progressed lunation phase). When \`relocation.personalCycle.gateActive === true\`, the cycle is the dominant variable — it reframes how the destination should be evaluated, regardless of the place's score.
+
+**When \`relocation.personalCycle.gateActive === true\`:**
+- The relocation \`overview.scoreExplanation\` MUST open with the cycle framing from \`relocation.personalCycle.summary\` BEFORE any place narrative. Use the AI voice to rewrite \`summary\` — don't quote it verbatim — but lead with the cycle. The destination + goal + arrival month come AFTER.
+- \`overview.leanInto\` paragraph 1 may still describe durable place factors, but the cycle should be acknowledged in the opening sentence ("Even with [cycle framing], the durable place factors here support…").
+- \`overview.watchOut\` MUST name the cycle as a structural watch-out IN ADDITION TO place-friction. Do not blame the destination for friction that is life-stage-shaped.
+- \`timing.closingVerdict\` should account for the cycle: a Saturn return strongly biases the verdict toward "wait" or "reconsider" unless the place specifically supports the cycle's lesson.
+
+**When \`relocation.personalCycle.upliftActive === true\` (and gate is not active):**
+- The lede may lean slightly more open ("This place lands in a sowing window for you — the chapter wants to begin"). Do not overclaim; uplift is a tailwind, not a guarantee.
+
+**When \`relocation.personalCycle.dominant === "none"\`:**
+- Don't mention personal cycles at all. Write the relocation reading on the place + arrival-arc layer alone.
+
+The structured fields \`relocation.personalCycle.dominant\`, \`saturnReturn\`, \`midlife\`, and \`progressedLunation\` are authoritative — never invent a cycle that isn't surfaced there. If \`saturnReturn\` is absent, the user is not in their Saturn return, full stop.`;
+
 const BLOCK_TABS_RULES = `# The Main Feature (Tabs)
 
 **tabs** — A top-level dictionary containing one entry per \`editorialEvidence.tabs[].id\`. CRITICAL REQUIREMENT: You MUST generate an entry for EVERY single ID listed in \`editorialEvidence.tabs\`. If the input lists \`life-themes\` and \`place-field\`, you MUST generate \`tabs["life-themes"]\` and \`tabs["place-field"]\`. Do not skip any tabs! Each entry must have:
@@ -121,6 +138,8 @@ Fill \`summary\`, \`signals\`, and \`longRead\` as best as possible for backward
 const BLOCK_HARD_CONSTRAINTS = `# Hard constraints
 - Never invent transits, lines, or aspects that aren't in the input.
 - Never invent calendar months, arrival candidates, or arc scores that aren't in \`relocation.monthlySeries\` / \`relocation.monthlyHighlights\` / \`relocation.arrivalCandidates\`.
+- Never invent personal cycles. If \`relocation.personalCycle.saturnReturn\` is absent, the user is NOT in Saturn return — do not mention it. Same for \`midlife\` and lunation phases other than the one in \`relocation.personalCycle.progressedLunation.phase\`.
+- Never blame the destination for life-stage friction. If a watch-out is rooted in \`relocation.personalCycle\` (Saturn return reckoning, midlife reconstruction, balsamic dissolution), name the CYCLE as the source — not the city. The place can support or strain the cycle, but cannot replace it.
 - Never use astrological jargon without glossing it FIRST in plain English.
 - Every tab paragraph must answer "what's in it for me?" before naming an astrology factor.
 - Never mix registers. \`macro.travelType === "relocation"\` ⇒ relocation register everywhere. \`macro.travelType === "trip"\` ⇒ trip register everywhere.
@@ -128,11 +147,14 @@ const BLOCK_HARD_CONSTRAINTS = `# Hard constraints
   - \`overview.scoreExplanation\` must name candidly that the year ahead is structurally tight.
   - \`overview.leanInto\` paragraph 2 must frame the strongest month as "the least rough door," not "peak."
   - \`overview.watchOut\` must lead with the structural friction, not soften it.
-  - \`timing.closingVerdict\` MUST recommend "reconsider" — do not soften this to "wait" or "move now."`;
+  - \`timing.closingVerdict\` MUST recommend "reconsider" — do not soften this to "wait" or "move now."
+- **Personal-cycle gate honesty (relocation only):** If \`relocation.personalCycle.gateActive === true\`, do NOT write a clean fresh-start narrative regardless of how the destination scores. Life-stage is the dominant variable. The lede MUST open with the cycle framing (see Personal Cycle Banner block above). \`timing.closingVerdict\` should bias toward "wait" or "reconsider" unless the destination specifically supports the cycle's lesson.
+- **Both gates active (relocation only):** If \`placeFloorTripped\` AND \`personalCycle.gateActive\` are both true, the verdict MUST be "reconsider" and the prose MUST name BOTH the rough place AND the heavy cycle without doubling the doom-language. State each clearly, then make the recommendation cleanly.`;
 
 const BLOCKS: readonly string[] = [
   BLOCK_READING_MODE,
   BLOCK_EDITOR_ROLE,
+  BLOCK_PERSONAL_CYCLE_BANNER,
   BLOCK_TABS_RULES,
   BLOCK_OVERVIEW_RULES,
   BLOCK_TIMING_RULES,
