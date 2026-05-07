@@ -96,9 +96,15 @@ async function loadOrComputePartnerNatal(
     partnerProfile.birth_lon,
   );
 
+  // Cache hit only counts when BOTH planets and cusps are present. Earlier
+  // cache rows persisted just `ephemeris_data.planets` and no `cusps_data`,
+  // so an early cache hit would return cusps=[], propagate empty into the
+  // reading row, and break §04 partner natal→relocated rendering. When
+  // cusps are missing, fall through to recompute and re-cache.
   const cached = await getPartnerNatalChart(partnerId);
-  if (cached?.ephemeris_data?.planets) {
-    return { planets: cached.ephemeris_data.planets, cusps: cached.cusps_data?.cusps ?? [], dtUtc };
+  const cachedCusps = Array.isArray(cached?.cusps_data?.cusps) ? cached.cusps_data.cusps : null;
+  if (cached?.ephemeris_data?.planets && cachedCusps && cachedCusps.length === 12) {
+    return { planets: cached.ephemeris_data.planets, cusps: cachedCusps, dtUtc };
   }
 
   const swe = await SwissEphSingleton.getInstance();
@@ -647,7 +653,7 @@ export async function runAstrocarto(
           partnerHouses: partnerMatrix.houses,
           partnerPlanetaryLines: partnerMatrix.acgLines,
           partnerRelocatedCusps: partnerMatrix.relocatedCusps,
-          ...(partnerNatalCusps ? { partnerNatalCusps } : {}),
+          ...(partnerNatalCusps && partnerNatalCusps.length === 12 ? { partnerNatalCusps } : {}),
           partnerEventScores: partnerMatrix.eventScores,
           partnerName: partnerProfile?.first_name ?? "Partner",
           scoreDelta: synastryDerived.scoreDelta,
