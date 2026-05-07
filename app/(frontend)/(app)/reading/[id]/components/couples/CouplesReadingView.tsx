@@ -13,9 +13,12 @@
  *   §02 Timings            — verdict + Best/Avoid windows
  *   §03 How <city> Feels   — relocated charts (3 tabs)
  *   §04 Who You Are in <city> — relocated angles per partner
+ *   §05 Three things to know — editorial takeaways trio (AI-authored,
+ *                              hidden when prose.takeaways is missing — old
+ *                              persisted readings predate the field)
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import NatalMockupWheel from "@/app/components/NatalMockupWheel";
 import { PageHeader } from "@/components/app/page-header-context";
@@ -23,7 +26,8 @@ import SectionHead from "../shared/SectionHead";
 import LearnFooter from "../shared/LearnFooter";
 import { EVENT_LABELS, VERDICT_COLORS, verdictBand, type VerdictBand } from "@/app/lib/verdict";
 import { destinationFlag } from "@/app/lib/country-flag";
-import type { CouplesVM, PartnerEventScore, ChartTabVM, SynastryAspectVM } from "@/app/lib/couples-viewmodel";
+import SignIcon from "@/app/components/SignIcon";
+import type { CouplesVM, PartnerEventScore, ChartTabVM, SynastryAspectVM, AngleVM } from "@/app/lib/couples-viewmodel";
 
 // ═══════════════════════════════════════════════════════════════
 // CONSTANTS
@@ -54,6 +58,7 @@ interface Props {
 
 export default function CouplesReadingView({ vm, paramId }: Props) {
   const [tab, setTab] = useState<"you" | "partner" | "synastry">("you");
+  const isDark = useIsDarkTheme();
 
   return (
     <>
@@ -95,7 +100,7 @@ export default function CouplesReadingView({ vm, paramId }: Props) {
             title={`How ${vm.hero.destination} Feels`}
             sub={<>Two relocated charts and the cross-aspects between them. Each entry shows what the city activates.</>}
           >
-            <DeepDive deepDive={vm.deepDive} tab={tab} onTab={setTab} destination={vm.hero.destination} prose={vm.prose} />
+            <DeepDive deepDive={vm.deepDive} tab={tab} onTab={setTab} destination={vm.hero.destination} prose={vm.prose} isDark={isDark} />
           </ChapterSection>
 
           <ChapterSection
@@ -103,8 +108,20 @@ export default function CouplesReadingView({ vm, paramId }: Props) {
             title={`Who You Are in ${vm.hero.destination}`}
             sub={<>{vm.geodetic.summary}</>}
           >
-            <GeodeticSummary geodetic={vm.geodetic} youName="You" lead={vm.prose?.geodetic?.summary} />
+            <GeodeticSummary
+              geodetic={vm.geodetic}
+              youAngles={vm.deepDive.you.angles}
+              partnerAngles={vm.deepDive.partner.angles}
+              youName="You"
+              lead={vm.prose?.geodetic?.summary}
+            />
           </ChapterSection>
+
+          {vm.prose?.takeaways && vm.prose.takeaways.length === 3 && (
+            <ChapterSection index="05" title="Three things to know">
+              <Takeaways items={vm.prose.takeaways} />
+            </ChapterSection>
+          )}
 
           <div style={{ marginTop: "clamp(80px, 10vw, 140px)" }}>
             <LearnFooter />
@@ -477,28 +494,47 @@ function GoalComparison({
 }: { goals: CouplesVM["goals"]; partnerName: string; prose: CouplesVM["prose"] }) {
   return (
     <>
-      <div
-        style={{
-          marginTop: "clamp(20px, 3vw, 32px)",
-          display: "grid",
-          gridTemplateColumns: "minmax(180px, 1.2fr) 1fr 1fr auto",
-          alignItems: "center",
-          gap: "var(--space-md)",
-          padding: "0 var(--space-md) var(--space-sm)",
-          borderBottom: "1px solid var(--surface-border)",
-        }}
-      >
-        <span />
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>YOU</span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>{partnerName.toUpperCase()}</span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", color: "var(--text-tertiary)", minWidth: "2rem", textAlign: "right" }}>Δ</span>
+      <div className="goals-header" style={{ marginTop: "clamp(20px, 3vw, 32px)", padding: "0 var(--space-md) var(--space-sm)", borderBottom: "1px solid var(--surface-border)" }}>
+        {/* On narrow viewports the header collapses to just the column-header
+            stats row (no title spacer). On wide it sits to the right of the
+            event title column for table-style alignment. */}
+        <span className="goals-header-spacer" aria-hidden />
+        <div className="goals-stats">
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>YOU</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>{partnerName.toUpperCase()}</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", color: "var(--text-tertiary)", minWidth: "2rem", textAlign: "right" }}>Δ</span>
+        </div>
       </div>
 
       <ol style={{ listStyle: "none", padding: 0, margin: 0 }}>
-        {goals.events.map((e, i) => (
-          <EventRow key={e.event} ev={e} pinned={goals.priority.has(e.event)} divider={i < goals.events.length - 1} note={prose?.goalScores?.eventNotes?.find(n => n.event === e.event)?.note} />
+        {goals.events.slice(0, 3).map((e, i, arr) => (
+          <EventRow key={e.event} ev={e} pinned={goals.priority.has(e.event)} divider={i < arr.length - 1} note={prose?.goalScores?.eventNotes?.find(n => n.event === e.event)?.note} />
         ))}
       </ol>
+
+      <style jsx>{`
+        .goals-header,
+        :global(.goals-row) {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: var(--space-md);
+          align-items: center;
+        }
+        .goals-header-spacer { display: none; }
+        :global(.goals-stats) {
+          display: grid;
+          grid-template-columns: 1fr 1fr auto;
+          gap: var(--space-md);
+          align-items: center;
+        }
+        @media (min-width: 720px) {
+          .goals-header,
+          :global(.goals-row) {
+            grid-template-columns: minmax(220px, 1.2fr) minmax(280px, 2fr);
+          }
+          .goals-header-spacer { display: block; }
+        }
+      `}</style>
     </>
   );
 }
@@ -507,15 +543,14 @@ function EventRow({ ev, pinned, divider, note }: { ev: PartnerEventScore; pinned
   const youBand     = verdictBand(ev.you);
   const partnerBand = verdictBand(ev.partner);
   const delta = Math.abs(ev.you - ev.partner);
-  const showDelta = delta >= 15;
+  // Always show the gap so readers can see partner alignment at a glance.
+  // Gold accent when the gap is significant (>=15 pts), tertiary otherwise.
+  const significantGap = delta >= 15;
 
   return (
     <li
+      className="goals-row"
       style={{
-        display: "grid",
-        gridTemplateColumns: "minmax(180px, 1.2fr) 1fr 1fr auto",
-        alignItems: "center",
-        gap: "var(--space-md)",
         padding: "var(--space-md)",
         borderBottom: divider ? "1px solid var(--surface-border)" : "none",
       }}
@@ -538,20 +573,22 @@ function EventRow({ ev, pinned, divider, note }: { ev: PartnerEventScore; pinned
           )}
         </div>
       </div>
-      <BarCell score={ev.you}     color={BAND_FILL[youBand]} />
-      <BarCell score={ev.partner} color={BAND_FILL[partnerBand]} />
-      <span
-        style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: "0.62rem",
-          letterSpacing: "0.22em",
-          color: showDelta ? "var(--gold)" : "var(--text-tertiary)",
-          minWidth: "2.5rem",
-          textAlign: "right",
-        }}
-      >
-        {showDelta ? `Δ${delta}` : "—"}
-      </span>
+      <div className="goals-stats">
+        <BarCell score={ev.you}     color={BAND_FILL[youBand]} />
+        <BarCell score={ev.partner} color={BAND_FILL[partnerBand]} />
+        <span
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: "0.62rem",
+            letterSpacing: "0.22em",
+            color: significantGap ? "var(--gold)" : "var(--text-tertiary)",
+            minWidth: "2.5rem",
+            textAlign: "right",
+          }}
+        >
+          Δ{delta}
+        </span>
+      </div>
     </li>
   );
 }
@@ -688,13 +725,14 @@ function WindowList({ title, color, items, scores, notes }: { title: string; col
 // ═══════════════════════════════════════════════════════════════
 
 function DeepDive({
-  deepDive, tab, onTab, destination, prose
+  deepDive, tab, onTab, destination, prose, isDark,
 }: {
   deepDive: CouplesVM["deepDive"];
   tab: "you" | "partner" | "synastry";
   onTab: (t: "you" | "partner" | "synastry") => void;
   destination: string;
   prose: CouplesVM["prose"];
+  isDark: boolean;
 }) {
   const tabs: Array<{ id: "you" | "partner" | "synastry"; label: string }> = [
     { id: "you",      label: "For you" },
@@ -765,12 +803,12 @@ function DeepDive({
       <AnimatePresence mode="wait">
         {tab === "you" && (
           <motion.div key="you" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
-            <ChartTab tab={deepDive.you} destination={destination} lead={prose?.deepDive?.youLead} />
+            <ChartTab tab={deepDive.you} destination={destination} lead={prose?.deepDive?.youLead} isDark={isDark} />
           </motion.div>
         )}
         {tab === "partner" && (
           <motion.div key="partner" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
-            <ChartTab tab={deepDive.partner} destination={destination} lead={prose?.deepDive?.partnerLead} />
+            <ChartTab tab={deepDive.partner} destination={destination} lead={prose?.deepDive?.partnerLead} isDark={isDark} />
           </motion.div>
         )}
         {tab === "synastry" && (
@@ -783,7 +821,7 @@ function DeepDive({
   );
 }
 
-function ChartTab({ tab, lead }: { tab: ChartTabVM; destination: string; lead?: string }) {
+function ChartTab({ tab, lead, isDark }: { tab: ChartTabVM; destination: string; lead?: string; isDark: boolean }) {
   const accent = VERDICT_COLORS[verdictBand(tab.macroScore)] ?? "var(--text-secondary)";
   // Prefer AI-authored prose lead when present; else use the synthesized
   // angle-driven lead from the viewmodel (mirrors WhatShiftsTab.buildLead).
@@ -792,11 +830,10 @@ function ChartTab({ tab, lead }: { tab: ChartTabVM; destination: string; lead?: 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "clamp(32px, 4vw, 56px)" }} className="dd-grid">
       <div style={{ maxWidth: 480, width: "100%", margin: "0 auto" }}>
-        <NatalMockupWheel isDark planets={tab.planets as any} cusps={tab.cusps} />
+        <NatalMockupWheel isDark={isDark} planets={tab.planets as any} cusps={tab.cusps} />
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "clamp(24px, 3vw, 36px)" }}>
-        {introLead && <AiLead>{introLead}</AiLead>}
         <div
           style={{
             display: "grid",
@@ -812,6 +849,7 @@ function ChartTab({ tab, lead }: { tab: ChartTabVM; destination: string; lead?: 
           <Divider />
           <FlatStat label="MODALITY" value={tab.modality} />
         </div>
+        {introLead && <AiLead>{introLead}</AiLead>}
       </div>
 
       <style jsx>{`
@@ -938,65 +976,182 @@ function AspectColumn({
 // §05 GEODETIC
 // ═══════════════════════════════════════════════════════════════
 
-function GeodeticSummary({ geodetic, youName, lead }: { geodetic: CouplesVM["geodetic"]; youName: string; lead?: string }) {
+function GeodeticSummary({ geodetic, youAngles, partnerAngles, youName, lead }: {
+  geodetic: CouplesVM["geodetic"];
+  youAngles: AngleVM[];
+  partnerAngles: AngleVM[];
+  youName: string;
+  lead?: string;
+}) {
+  // AngleVM array is index-aligned: 0 = ASC, 1 = IC, 2 = DSC, 3 = MC.
   return (
     <>
       {lead && <AiLead>{lead}</AiLead>}
-      <div style={{ marginTop: "clamp(28px, 4vw, 48px)", display: "grid", gridTemplateColumns: "1fr", gap: 0 }}>
-        <GeoRow
+      <div style={{ marginTop: "clamp(28px, 4vw, 48px)", display: "grid", gridTemplateColumns: "1fr", gap: "clamp(28px, 4vw, 48px)" }} className="geo-grid">
+        <GeoColumn
           who={youName.toUpperCase()}
-          ascSign={geodetic.you.ascSign} ascDeg={geodetic.you.ascDeg}
-          mcSign={geodetic.you.mcSign}   mcDeg={geodetic.you.mcDeg}
+          accent="var(--color-y2k-blue)"
+          asc={youAngles[0]} mc={youAngles[3]}
           note={geodetic.you.note}
-          first
         />
-        <GeoRow
+        <GeoColumn
           who={geodetic.partnerName.toUpperCase()}
-          ascSign={geodetic.partner.ascSign} ascDeg={geodetic.partner.ascDeg}
-          mcSign={geodetic.partner.mcSign}   mcDeg={geodetic.partner.mcDeg}
+          accent="var(--color-spiced-life)"
+          asc={partnerAngles[0]} mc={partnerAngles[3]}
           note={geodetic.partner.note}
         />
       </div>
+      <style jsx>{`
+        @media (min-width: 880px) {
+          .geo-grid { grid-template-columns: 1fr 1fr !important; }
+        }
+      `}</style>
     </>
   );
 }
 
-function GeoRow({ who, ascSign, ascDeg, mcSign, mcDeg, note, first }: {
-  who: string; ascSign: string; ascDeg: number; mcSign: string; mcDeg: number; note: string; first?: boolean;
+/** Per-partner column. Mirrors the AspectColumn pattern from §03 Between You
+ *  (mono kicker + colored hairline below + stacked rows underneath) so the
+ *  two halves of §04 read as a side-by-side comparison rather than two
+ *  isolated cards. Accent: y2k-blue for "you", spiced-life for partner. */
+function GeoColumn({ who, accent, asc, mc, note }: {
+  who: string; accent: string;
+  asc: AngleVM | undefined;
+  mc: AngleVM | undefined;
+  note: string;
 }) {
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "minmax(90px, auto) minmax(160px, auto) 1fr",
-        gap: "clamp(20px, 3vw, 40px)",
-        alignItems: "baseline",
-        padding: "clamp(20px, 3vw, 32px) 0",
-        borderTop: first ? "1px solid var(--surface-border)" : "none",
-        borderBottom: "1px solid var(--surface-border)",
-      }}
-    >
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>
+    <div>
+      <div
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: "0.62rem",
+          letterSpacing: "0.22em",
+          color: accent,
+          fontWeight: 700,
+          marginBottom: "var(--space-md)",
+          paddingBottom: "0.5rem",
+          borderBottom: `1px solid ${accent}`,
+        }}
+      >
         {who}
-      </span>
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: "0.6rem" }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", color: "var(--text-tertiary)" }}>ASC</span>
-          <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.2rem", color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
-            {ascSign} {ascDeg}°
-          </span>
-        </div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: "0.6rem" }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", color: "var(--text-tertiary)" }}>MC</span>
-          <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.2rem", color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
-            {mcSign} {mcDeg}°
-          </span>
-        </div>
       </div>
-      <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--text-secondary)", lineHeight: 1.6, maxWidth: "75ch" }}>
+
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        {asc && <GeoAngleRow label="ASC" angle={asc} accent={accent} divider />}
+        {mc  && <GeoAngleRow label="MC"  angle={mc}  accent={accent} />}
+      </div>
+
+      <p style={{ margin: "var(--space-md) 0 0", fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--text-secondary)", lineHeight: 1.6, maxWidth: "75ch" }}>
         {note}
       </p>
     </div>
+  );
+}
+
+/** "10° Aries" → "Aries". Matches the shape produced by `fmtSignDeg` in
+ *  couples-viewmodel.ts. Returns "" when natal is unavailable ("—" sentinel
+ *  on legacy readings missing partnerNatalCusps). */
+function signFromFmt(formatted: string): string {
+  const m = formatted.match(/[A-Z][a-z]+$/);
+  return m ? m[0] : "";
+}
+
+function GeoAngleRow({ label, angle, accent, divider }: { label: "ASC" | "MC"; angle: AngleVM; accent: string; divider?: boolean }) {
+  const natalSign = signFromFmt(angle.natal);
+  const reloSign  = signFromFmt(angle.relocated);
+  const hasNatalShift = natalSign && reloSign && natalSign !== reloSign;
+  const hasNatal = angle.natal !== "—";
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: "var(--space-md)",
+        padding: "var(--space-md) 0",
+        borderBottom: divider ? "1px solid var(--surface-border)" : "none",
+      }}
+    >
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", color: "var(--text-tertiary)", fontWeight: 600 }}>
+        {label}
+      </span>
+      <span style={{ display: "inline-flex", alignItems: "center", gap: "0.55rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+        {hasNatal && natalSign && (
+          <>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", color: "var(--text-tertiary)" }}>
+              <SignIcon sign={natalSign} color="currentColor" size={16} />
+              <span style={{ fontFamily: "var(--font-primary)", fontSize: "0.95rem", letterSpacing: "-0.005em" }}>
+                {angle.natal}
+              </span>
+            </span>
+            <span aria-hidden style={{ fontFamily: "var(--font-mono)", color: "var(--text-tertiary)", fontSize: "0.85rem" }}>→</span>
+          </>
+        )}
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", color: hasNatalShift ? accent : "var(--text-primary)" }}>
+          {reloSign && <SignIcon sign={reloSign} color={hasNatalShift ? accent : accent} size={20} />}
+          <span style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(1.05rem, 1.5vw, 1.2rem)", color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
+            {angle.relocated}
+          </span>
+        </span>
+      </span>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// §05 TAKEAWAYS
+// ═══════════════════════════════════════════════════════════════
+
+/** Editorial trio that closes the spread. Three bullets, fixed count, each
+ *  one a different angle (experience / timing / between-you). Schema enforces
+ *  exactly 3 strings; view falls through gracefully if the field is missing
+ *  on legacy persisted readings. */
+function Takeaways({ items }: { items: string[] }) {
+  return (
+    <ol style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column" }}>
+      {items.map((item, i) => (
+        <li
+          key={i}
+          style={{
+            display: "grid",
+            gridTemplateColumns: "auto 1fr",
+            columnGap: "var(--space-lg)",
+            alignItems: "baseline",
+            padding: "var(--space-md) 0",
+            borderBottom: i < items.length - 1 ? "1px solid var(--surface-border)" : "none",
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.62rem",
+              letterSpacing: "0.22em",
+              color: "var(--text-tertiary)",
+              fontWeight: 700,
+              minWidth: "1.5rem",
+            }}
+          >
+            {String(i + 1).padStart(2, "0")}
+          </span>
+          <p
+            style={{
+              margin: 0,
+              fontFamily: "var(--font-primary)",
+              fontSize: "clamp(1.05rem, 1.5vw, 1.2rem)",
+              lineHeight: 1.4,
+              color: "var(--text-primary)",
+              letterSpacing: "-0.005em",
+              fontWeight: 400,
+              maxWidth: "75ch",
+            }}
+          >
+            {item}
+          </p>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -1007,4 +1162,27 @@ function GeoRow({ who, ascSign, ascDeg, mcSign, mcDeg, note, first }: {
 function capitalizeFirst(s: string): string {
   if (!s) return s;
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/** Mirrors the pattern in app/(frontend)/(app)/chart/ChartClient.tsx —
+ *  observe `data-theme` on the html element so the wheel can switch between
+ *  light/dark stroke palettes when the user toggles theme. Hardcoded
+ *  isDark={true} made the chart strokes washed out on light backgrounds. */
+function useIsDarkTheme(): boolean {
+  const [isDark, setIsDark] = useState(true);
+  useEffect(() => {
+    const read = () => {
+      const theme = document.documentElement.getAttribute("data-theme");
+      setIsDark(theme !== "light");
+    };
+    read();
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.attributeName === "data-theme") read();
+      }
+    });
+    observer.observe(document.documentElement, { attributes: true });
+    return () => observer.disconnect();
+  }, []);
+  return isDark;
 }

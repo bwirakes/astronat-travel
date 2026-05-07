@@ -435,5 +435,10 @@ export const CouplesReadingSchema = z.object({
   geodetic: z.object({
     summary: z.string(),
   }),
+  /** Three editorial bullets that close the spread — one experience signal,
+   *  one timing call, one between-you observation. Each must surface a new
+   *  angle (no paraphrase of leads above). Length(3) is intentional: the
+   *  trio is a fixed editorial format, not a flexible list. */
+  takeaways: z.array(z.string()).length(3),
 });
 export type CouplesReading = z.infer<typeof CouplesReadingSchema>;
