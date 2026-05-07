@@ -169,6 +169,7 @@ function ReadingContent() {
             partnerPlanetaryLines: d.partnerPlanetaryLines,
             partnerNatalPlanets: d.partnerNatalPlanets,
             partnerRelocatedCusps: d.partnerRelocatedCusps,
+            partnerNatalCusps: d.partnerNatalCusps,
             partnerEventScores: d.partnerEventScores,
             userEventScores: d.userEventScores,
             synastryAspects: d.synastryAspects,
