@@ -487,21 +487,16 @@ function GoalComparison({
 }: { goals: CouplesVM["goals"]; partnerName: string; prose: CouplesVM["prose"] }) {
   return (
     <>
-      <div
-        style={{
-          marginTop: "clamp(20px, 3vw, 32px)",
-          display: "grid",
-          gridTemplateColumns: "minmax(180px, 1.2fr) 1fr 1fr auto",
-          alignItems: "center",
-          gap: "var(--space-md)",
-          padding: "0 var(--space-md) var(--space-sm)",
-          borderBottom: "1px solid var(--surface-border)",
-        }}
-      >
-        <span />
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>YOU</span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>{partnerName.toUpperCase()}</span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", color: "var(--text-tertiary)", minWidth: "2rem", textAlign: "right" }}>Δ</span>
+      <div className="goals-header" style={{ marginTop: "clamp(20px, 3vw, 32px)", padding: "0 var(--space-md) var(--space-sm)", borderBottom: "1px solid var(--surface-border)" }}>
+        {/* On narrow viewports the header collapses to just the column-header
+            stats row (no title spacer). On wide it sits to the right of the
+            event title column for table-style alignment. */}
+        <span className="goals-header-spacer" aria-hidden />
+        <div className="goals-stats">
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>YOU</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>{partnerName.toUpperCase()}</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", color: "var(--text-tertiary)", minWidth: "2rem", textAlign: "right" }}>Δ</span>
+        </div>
       </div>
 
       <ol style={{ listStyle: "none", padding: 0, margin: 0 }}>
@@ -509,6 +504,30 @@ function GoalComparison({
           <EventRow key={e.event} ev={e} pinned={goals.priority.has(e.event)} divider={i < arr.length - 1} note={prose?.goalScores?.eventNotes?.find(n => n.event === e.event)?.note} />
         ))}
       </ol>
+
+      <style jsx>{`
+        .goals-header,
+        :global(.goals-row) {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: var(--space-md);
+          align-items: center;
+        }
+        .goals-header-spacer { display: none; }
+        :global(.goals-stats) {
+          display: grid;
+          grid-template-columns: 1fr 1fr auto;
+          gap: var(--space-md);
+          align-items: center;
+        }
+        @media (min-width: 720px) {
+          .goals-header,
+          :global(.goals-row) {
+            grid-template-columns: minmax(220px, 1.2fr) minmax(280px, 2fr);
+          }
+          .goals-header-spacer { display: block; }
+        }
+      `}</style>
     </>
   );
 }
@@ -523,11 +542,8 @@ function EventRow({ ev, pinned, divider, note }: { ev: PartnerEventScore; pinned
 
   return (
     <li
+      className="goals-row"
       style={{
-        display: "grid",
-        gridTemplateColumns: "minmax(180px, 1.2fr) 1fr 1fr auto",
-        alignItems: "center",
-        gap: "var(--space-md)",
         padding: "var(--space-md)",
         borderBottom: divider ? "1px solid var(--surface-border)" : "none",
       }}
@@ -550,20 +566,22 @@ function EventRow({ ev, pinned, divider, note }: { ev: PartnerEventScore; pinned
           )}
         </div>
       </div>
-      <BarCell score={ev.you}     color={BAND_FILL[youBand]} />
-      <BarCell score={ev.partner} color={BAND_FILL[partnerBand]} />
-      <span
-        style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: "0.62rem",
-          letterSpacing: "0.22em",
-          color: significantGap ? "var(--gold)" : "var(--text-tertiary)",
-          minWidth: "2.5rem",
-          textAlign: "right",
-        }}
-      >
-        Δ{delta}
-      </span>
+      <div className="goals-stats">
+        <BarCell score={ev.you}     color={BAND_FILL[youBand]} />
+        <BarCell score={ev.partner} color={BAND_FILL[partnerBand]} />
+        <span
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: "0.62rem",
+            letterSpacing: "0.22em",
+            color: significantGap ? "var(--gold)" : "var(--text-tertiary)",
+            minWidth: "2.5rem",
+            textAlign: "right",
+          }}
+        >
+          Δ{delta}
+        </span>
+      </div>
     </li>
   );
 }
