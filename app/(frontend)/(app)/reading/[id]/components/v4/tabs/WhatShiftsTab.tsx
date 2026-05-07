@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import NatalMockupWheel, { type NatalPlanet } from "@/app/components/NatalMockupWheel";
 import SectionHead from "../../shared/SectionHead";
 import TabSection from "../../shared/TabSection";
@@ -9,6 +10,7 @@ import { geodeticPlanetMeaning } from "@/app/lib/geodetic/planet-meanings";
 interface Props {
     vm: V4VM;
     isDark: boolean;
+    natalWheel: { cusps: number[]; planets: NatalPlanet[] } | null;
     relocatedWheel: { cusps: number[]; planets: NatalPlanet[] } | null;
     copiedTab?: {
         lead?: string;
@@ -27,9 +29,10 @@ const ASPECT_LEFT_BORDER: Record<string, string> = {
     "very-strong": "var(--gold)",
 };
 
-export default function WhatShiftsTab({ vm, isDark, relocatedWheel, copiedTab }: Props) {
+export default function WhatShiftsTab({ vm, isDark, natalWheel, relocatedWheel, copiedTab }: Props) {
     const lead = buildLead(vm);
     const seasonal = buildSeasonal(vm);
+    const [chartMode, setChartMode] = useState<"compare" | "relocated">("compare");
 
     const tabLead = copiedTab?.lead?.trim() || "";
     const tabIntro = copiedTab?.plainEnglishSummary || vm.chrome.step7Intro;
@@ -51,50 +54,65 @@ export default function WhatShiftsTab({ vm, isDark, relocatedWheel, copiedTab }:
                     {lead}
                 </p>
             )}
-            <p
-                className="text-[12px] tracking-[0.04em] m-0 mb-8 max-w-[560px]"
-                style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}
-            >
-                Same planets, new houses and angles · single wheel at {vm.relocated.travel.place}.
-            </p>
-
-            {/* ─ POLES ──────────────────────────────────────────────────── */}
-            <div className="grid items-stretch mb-10 gap-5 grid-cols-1 sm:grid-cols-[1fr_40px_1fr]">
-                <PolePill
-                    tag="Natal chart"
-                    place={vm.relocated.birth.place}
-                    coords={vm.relocated.birth.coords}
-                />
-                <div
-                    className="flex items-center justify-center text-[28px] sm:rotate-0 rotate-90"
-                    style={{ fontFamily: FONT_PRIMARY, color: "var(--text-tertiary)" }}
-                >
-                    →
-                </div>
-                <PolePill
-                    tag="Relocated to"
-                    place={vm.relocated.travel.place}
-                    coords={vm.relocated.travel.coords}
-                    active
-                />
-            </div>
-
-            {/* ─ WHEEL ──────────────────────────────────────────────────── */}
-            <div className="py-4 mx-auto max-w-[720px] mb-10">
-                {relocatedWheel ? (
-                    <NatalMockupWheel
-                        isDark={isDark}
-                        planets={relocatedWheel.planets}
-                        cusps={relocatedWheel.cusps}
-                    />
-                ) : (
-                    <p
-                        className="text-[10px] tracking-[0.14em] uppercase text-center p-4 m-0"
-                        style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}
+            {/* ─ CHARTS ──────────────────────────────────────────────────── */}
+            <div className="mb-10 max-w-[1080px] mx-auto">
+                <header className="mb-4">
+                    <div
+                        className="flex flex-wrap items-center justify-between gap-3 pb-[10px] border-b"
+                        style={{ borderColor: "var(--surface-border)" }}
                     >
-                        Relocated house cusps are not available for this reading.
+                        <div className="flex items-baseline gap-[0.85rem]">
+                            <span className="text-[10px] tracking-[0.22em] font-bold" style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}>
+                                §01
+                            </span>
+                            <h3
+                                className="m-0"
+                                style={{
+                                    fontFamily: FONT_PRIMARY,
+                                    fontSize: "clamp(1.1rem, 2vw, 1.4rem)",
+                                    color: "var(--text-primary)",
+                                    lineHeight: 1.2,
+                                    letterSpacing: "-0.01em",
+                                    fontWeight: 500,
+                                }}
+                            >
+                                Chart comparison
+                            </h3>
+                        </div>
+                        <div
+                            role="tablist"
+                            aria-label="Chart display mode"
+                            className="inline-flex p-1 border rounded-full gap-1"
+                            style={{ borderColor: "var(--surface-border)", background: "var(--surface)" }}
+                        >
+                            <ModePill active={chartMode === "compare"} onClick={() => setChartMode("compare")} label="Compare" />
+                            <ModePill active={chartMode === "relocated"} onClick={() => setChartMode("relocated")} label="Relocated only" />
+                        </div>
+                    </div>
+                    <p className="m-0 mt-[10px] text-[14px] leading-[1.55]" style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)", fontWeight: 300 }}>
+                        Natal baseline vs relocated house emphasis.
                     </p>
-                )}
+                </header>
+                <div className={`grid gap-4 ${chartMode === "compare" ? "grid-cols-1 xl:grid-cols-2" : "grid-cols-1"}`}>
+                    {chartMode === "compare" && (
+                        <ChartPanel
+                            title="Natal Chart"
+                            subtitle={shortPlace(vm.relocated.birth.place)}
+                            isDark={isDark}
+                            wheel={natalWheel}
+                            emptyText="Natal house cusps are not available for this reading."
+                            muted
+                        />
+                    )}
+                    <ChartPanel
+                        title="Relocated Chart"
+                        subtitle={shortPlace(vm.relocated.travel.place)}
+                        isDark={isDark}
+                        wheel={relocatedWheel}
+                        emptyText="Relocated house cusps are not available for this reading."
+                        accent
+                    />
+                </div>
             </div>
 
             {/* ─ SECTION: CHART RULER REFRAME (teacher-authored) ────────── */}
@@ -300,6 +318,92 @@ function ModalityHitCard({ hit }: { hit: V4VM["relocated"]["modalityHits"][numbe
             </p>
         </div>
     );
+}
+
+function ChartPanel({
+    title,
+    subtitle,
+    wheel,
+    isDark,
+    emptyText,
+    accent,
+    muted,
+}: {
+    title: string;
+    subtitle: string;
+    wheel: { cusps: number[]; planets: NatalPlanet[] } | null;
+    isDark: boolean;
+    emptyText: string;
+    accent?: boolean;
+    muted?: boolean;
+}) {
+    return (
+        <section
+            className="border rounded-[8px] px-4 py-4"
+            style={{
+                borderColor: accent ? "var(--color-spiced-life)" : "var(--surface-border)",
+                background: "var(--bg)",
+                opacity: muted ? 0.88 : 1,
+            }}
+        >
+            <header className="flex items-baseline justify-between gap-2 mb-2">
+                <h3 className="text-[16px] m-0 uppercase tracking-[0.08em]" style={{ fontFamily: FONT_PRIMARY, color: "var(--text-primary)" }}>
+                    {title}
+                </h3>
+                <span className="text-[9px] tracking-[0.16em] uppercase" style={{ fontFamily: FONT_MONO, color: accent ? "var(--color-spiced-life)" : "var(--text-tertiary)" }}>
+                    {subtitle}
+                </span>
+            </header>
+            {wheel ? (
+                <div className="max-w-[760px] mx-auto xl:max-w-[620px]">
+                    <NatalMockupWheel
+                        isDark={isDark}
+                        planets={wheel.planets}
+                        cusps={wheel.cusps}
+                    />
+                </div>
+            ) : (
+                <p className="text-[10px] tracking-[0.14em] uppercase text-center p-4 m-0" style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}>
+                    {emptyText}
+                </p>
+            )}
+        </section>
+    );
+}
+
+function ModePill({
+    active,
+    onClick,
+    label,
+}: {
+    active: boolean;
+    onClick: () => void;
+    label: string;
+}) {
+    return (
+        <button
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={onClick}
+            className="px-3 py-1.5 rounded-full text-[10px] tracking-[0.12em] uppercase border"
+            style={{
+                fontFamily: FONT_MONO,
+                color: active ? "var(--color-spiced-life)" : "var(--text-tertiary)",
+                borderColor: active ? "var(--color-spiced-life)" : "transparent",
+                background: active
+                    ? "color-mix(in oklab, var(--color-spiced-life) 8%, transparent)"
+                    : "transparent",
+            }}
+        >
+            {label}
+        </button>
+    );
+}
+
+function shortPlace(place: string): string {
+    const parts = place.split(",").map((p) => p.trim()).filter(Boolean);
+    return parts.slice(0, 2).join(", ");
 }
 
 // ─── Lead synthesizer ──────────────────────────────────────────────────────
@@ -652,43 +756,3 @@ function SeasonalCard({ item }: { item: SeasonalItem }) {
     );
 }
 
-function PolePill({
-    tag,
-    place,
-    coords,
-    active,
-}: {
-    tag: string;
-    place: string;
-    coords: string;
-    active?: boolean;
-}) {
-    return (
-        <div
-            className="px-[22px] py-5 border rounded-[8px] flex flex-col gap-[6px]"
-            style={{
-                background: "var(--bg)",
-                borderColor: "var(--surface-border)",
-            }}
-        >
-            <div
-                className="text-[10px] tracking-[0.18em] uppercase mb-1"
-                style={{ fontFamily: FONT_MONO, color: active ? "var(--color-spiced-life)" : "var(--text-tertiary)" }}
-            >
-                {tag}
-            </div>
-            <div
-                className="text-[24px] leading-[1.1] tracking-[-0.01em]"
-                style={{ fontFamily: FONT_PRIMARY, color: "var(--text-primary)" }}
-            >
-                {place}
-            </div>
-            <div
-                className="text-[11px] tracking-[0.04em]"
-                style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}
-            >
-                {coords}
-            </div>
-        </div>
-    );
-}
