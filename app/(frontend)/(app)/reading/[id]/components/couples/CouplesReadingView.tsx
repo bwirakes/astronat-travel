@@ -809,7 +809,6 @@ function ChartTab({ tab, lead, isDark }: { tab: ChartTabVM; destination: string;
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "clamp(24px, 3vw, 36px)" }}>
-        {introLead && <AiLead>{introLead}</AiLead>}
         <div
           style={{
             display: "grid",
@@ -825,6 +824,7 @@ function ChartTab({ tab, lead, isDark }: { tab: ChartTabVM; destination: string;
           <Divider />
           <FlatStat label="MODALITY" value={tab.modality} />
         </div>
+        {introLead && <AiLead>{introLead}</AiLead>}
       </div>
 
       <style jsx>{`
