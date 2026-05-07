@@ -26,6 +26,7 @@ import SectionHead from "../shared/SectionHead";
 import LearnFooter from "../shared/LearnFooter";
 import { EVENT_LABELS, VERDICT_COLORS, verdictBand, type VerdictBand } from "@/app/lib/verdict";
 import { destinationFlag } from "@/app/lib/country-flag";
+import { SIGN_GLYPHS } from "@/app/lib/planet-data";
 import type { CouplesVM, PartnerEventScore, ChartTabVM, SynastryAspectVM } from "@/app/lib/couples-viewmodel";
 
 // ═══════════════════════════════════════════════════════════════
@@ -973,16 +974,17 @@ function GeodeticSummary({ geodetic, youName, lead }: { geodetic: CouplesVM["geo
   return (
     <>
       {lead && <AiLead>{lead}</AiLead>}
-      <div style={{ marginTop: "clamp(28px, 4vw, 48px)", display: "grid", gridTemplateColumns: "1fr", gap: 0 }}>
-        <GeoRow
+      <div style={{ marginTop: "clamp(28px, 4vw, 48px)", display: "flex", flexDirection: "column", gap: "clamp(16px, 2vw, 24px)" }}>
+        <GeoCard
           who={youName.toUpperCase()}
+          accent="var(--color-y2k-blue)"
           ascSign={geodetic.you.ascSign} ascDeg={geodetic.you.ascDeg}
           mcSign={geodetic.you.mcSign}   mcDeg={geodetic.you.mcDeg}
           note={geodetic.you.note}
-          first
         />
-        <GeoRow
+        <GeoCard
           who={geodetic.partnerName.toUpperCase()}
+          accent="var(--color-spiced-life)"
           ascSign={geodetic.partner.ascSign} ascDeg={geodetic.partner.ascDeg}
           mcSign={geodetic.partner.mcSign}   mcDeg={geodetic.partner.mcDeg}
           note={geodetic.partner.note}
@@ -992,54 +994,94 @@ function GeodeticSummary({ geodetic, youName, lead }: { geodetic: CouplesVM["geo
   );
 }
 
-function GeoRow({ who, ascSign, ascDeg, mcSign, mcDeg, note, first }: {
-  who: string; ascSign: string; ascDeg: number; mcSign: string; mcDeg: number; note: string; first?: boolean;
+/** Per-partner geodetic card. Differentiated by a 3px left accent bar
+ *  (y2k-blue for "you", spiced-life for partner) so the two stack visually
+ *  distinct, plus zodiac glyphs on the ASC/MC chips for chart-language
+ *  parity with the wheel. */
+function GeoCard({ who, accent, ascSign, ascDeg, mcSign, mcDeg, note }: {
+  who: string; accent: string;
+  ascSign: string; ascDeg: number; mcSign: string; mcDeg: number;
+  note: string;
 }) {
   return (
-    <div
-      className="geo-row"
+    <article
       style={{
-        padding: "clamp(20px, 3vw, 32px) 0",
-        borderTop: first ? "1px solid var(--surface-border)" : "none",
-        borderBottom: "1px solid var(--surface-border)",
+        border: "1px solid var(--surface-border)",
+        borderLeft: `3px solid ${accent}`,
+        borderRadius: "8px",
+        padding: "clamp(20px, 3vw, 32px)",
+        background: "var(--bg)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "clamp(16px, 2vw, 24px)",
       }}
     >
-      <span className="geo-who" style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>
-        {who}
-      </span>
-      <div className="geo-angles" style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: "0.6rem" }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", color: "var(--text-tertiary)" }}>ASC</span>
-          <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.2rem", color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
-            {ascSign} {ascDeg}°
-          </span>
-        </div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: "0.6rem" }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", color: "var(--text-tertiary)" }}>MC</span>
-          <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.2rem", color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
-            {mcSign} {mcDeg}°
-          </span>
-        </div>
+      <header style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "var(--space-md)", flexWrap: "wrap" }}>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", letterSpacing: "0.18em", textTransform: "uppercase", color: accent, fontWeight: 700 }}>
+          {who}
+        </span>
+      </header>
+
+      <div className="geo-angle-chips">
+        <AngleChip label="ASC" sign={ascSign} deg={ascDeg} accent={accent} />
+        <AngleChip label="MC"  sign={mcSign}  deg={mcDeg}  accent={accent} />
       </div>
-      <p className="geo-note" style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--text-secondary)", lineHeight: 1.6, maxWidth: "75ch" }}>
+
+      <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--text-secondary)", lineHeight: 1.6, maxWidth: "75ch" }}>
         {note}
       </p>
 
       <style jsx>{`
-        .geo-row {
-          display: flex;
-          flex-direction: column;
-          gap: clamp(12px, 2vw, 20px);
+        .geo-angle-chips {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: var(--space-md);
         }
-        @media (min-width: 720px) {
-          .geo-row {
-            display: grid;
-            grid-template-columns: minmax(90px, auto) minmax(160px, auto) 1fr;
-            gap: clamp(20px, 3vw, 40px);
-            align-items: baseline;
+        @media (min-width: 520px) {
+          .geo-angle-chips {
+            grid-template-columns: 1fr 1fr;
           }
         }
       `}</style>
+    </article>
+  );
+}
+
+function AngleChip({ label, sign, deg, accent }: { label: "ASC" | "MC"; sign: string; deg: number; accent: string }) {
+  const glyph = SIGN_GLYPHS[sign] ?? "";
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "auto 1fr",
+        columnGap: "var(--space-md)",
+        alignItems: "center",
+        padding: "var(--space-md)",
+        background: "var(--surface)",
+        borderRadius: "6px",
+        minWidth: 0,
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          fontFamily: "var(--font-primary)",
+          fontSize: "clamp(1.8rem, 3vw, 2.2rem)",
+          lineHeight: 1,
+          color: accent,
+          letterSpacing: "-0.02em",
+        }}
+      >
+        {glyph}
+      </span>
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", minWidth: 0 }}>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", color: "var(--text-tertiary)", fontWeight: 600 }}>
+          {label}
+        </span>
+        <span style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(1.05rem, 1.5vw, 1.2rem)", color: "var(--text-primary)", letterSpacing: "-0.01em", lineHeight: 1.2 }}>
+          {sign} {deg}°
+        </span>
+      </div>
     </div>
   );
 }
