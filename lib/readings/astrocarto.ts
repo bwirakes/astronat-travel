@@ -654,6 +654,7 @@ export async function runAstrocarto(
           partnerPlanetaryLines: partnerMatrix.acgLines,
           partnerRelocatedCusps: partnerMatrix.relocatedCusps,
           ...(partnerNatalCusps && partnerNatalCusps.length === 12 ? { partnerNatalCusps } : {}),
+          userEventScores: eventScores,
           partnerEventScores: partnerMatrix.eventScores,
           partnerName: partnerProfile?.first_name ?? "Partner",
           scoreDelta: synastryDerived.scoreDelta,

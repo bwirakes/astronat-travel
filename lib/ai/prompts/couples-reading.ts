@@ -80,6 +80,13 @@ Sentence 1 = chart receipt (which angle/sign shifts here); sentence 2 = lived im
 - Word budgets above are caps, not targets — write less if the data supports less.
 - Keep prose intensity aligned to scoreProfile bands and ordering.
 - **Anti-repetition:** Each section must surface a *different* concrete signal. Do not reuse the same chart receipt (same line, same aspect, same transit) verbatim across two leads. Across the whole reading, no sentence may paraphrase another. The takeaways trio especially must not restate leads above — bring new angles or new lived implications.
+- **Sentence-length discipline (ESL audience, 7th–8th grade reading level):** Average sentence length 10–15 words. Hard cap 22 words per sentence. If a thought needs more, split it: two short sentences beat one compound one. Avoid stacked subordinate clauses. Prefer concrete subject-verb-object over passive constructions. The drop-cap opener (theRead.lead, sentence 1) must be especially short — readers parse it slowly because of the floated capital, so keep it under 14 words.
+- **Bolding for skimming (markdown):** Inline \`**bold**\` segments render as bold in the view. Use them sparingly and with discipline:
+  1. **What to bold:** literal action takeaways ("**lean into Sep 14 — Sep 18**"), exact window strings, named partners, named places, or the single concrete directive of a sentence. Bold marks what a skimming reader must catch.
+  2. **What NOT to bold:** poetic metaphors, hedges, mood words, OR astrological jargon (planet names, aspect names, house numbers, line names). Never bold "Saturn" or "the 7th house" — bold the lived consequence instead.
+  3. **Cap:** at most one bold span per sentence; at most two per paragraph. If everything is bold, nothing is.
+  4. **Front-loading for list items (REQUIRED):** in goalScores.eventNotes, timings.bestWindowNotes, timings.avoidWindowNotes, and the takeaways trio, bold the first 2–4 words of the entry. This gives the eye an anchor when scanning down the list. Examples: "**Lean into Sep 14 — Sep 18.** The synastry actually breathes here." / "**Skip Oct 9 — Oct 11** unless you enjoy fighting in airports." / "**Negotiate sleep and pace** — the Mars-Sun square doesn't care that you're on holiday."
+  5. **Drop-cap exception:** do NOT place a \`**bold**\` segment at the very start of theRead.lead. The view floats the first character as a drop cap, and a leading bold marker would break the rendering.
 `;
 
 export async function writeCouplesReading(

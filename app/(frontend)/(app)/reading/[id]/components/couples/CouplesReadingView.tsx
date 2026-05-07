@@ -36,12 +36,13 @@ import type { CouplesVM, PartnerEventScore, ChartTabVM, SynastryAspectVM, AngleV
 const SECTION_GAP = "clamp(8px, 1.5vw, 24px)";
 const PAGE_MAX = 1200;
 
-/** Per-event bar fill. Intentionally a 5-stop palette (vs. VERDICT_COLORS'
- *  3 stops) — partner-vs-partner bars need more visible nuance, so peak/
- *  solid/mixed/tight/hard each get a distinct colour. */
+/** Per-event bar fill. Both "good" bands (peak, solid) share the sage green
+ *  family so positive verdicts read green at a glance; the numeric score
+ *  carries the peak-vs-solid nuance. Mixed/tight/hard each keep their own
+ *  hue so cautions remain visually distinct. */
 const BAND_FILL: Record<VerdictBand, string> = {
   peak:  "var(--sage)",
-  solid: "var(--color-y2k-blue)",
+  solid: "color-mix(in oklab, var(--sage) 75%, var(--text-tertiary))",
   mixed: "var(--color-acqua)",
   tight: "var(--gold)",
   hard:  "var(--color-spiced-life)",
@@ -106,7 +107,6 @@ export default function CouplesReadingView({ vm, paramId }: Props) {
           <ChapterSection
             index="04"
             title={`Who You Are in ${vm.hero.destination}`}
-            sub={<>{vm.geodetic.summary}</>}
           >
             <GeodeticSummary
               geodetic={vm.geodetic}
@@ -203,8 +203,8 @@ function ChapterSection({
       {sub && (
         <p style={{
           fontFamily: "var(--font-body)",
-          fontSize: "0.95rem",
-          lineHeight: 1.6,
+          fontSize: "1rem",
+          lineHeight: 1.7,
           fontWeight: 300,
           color: "var(--text-secondary)",
           margin: "var(--space-md) 0 var(--space-lg)",
@@ -235,16 +235,38 @@ function AiLead({ children }: { children: React.ReactNode }) {
     <p
       style={{
         fontFamily: "var(--font-body)",
-        fontSize: "0.92rem",
-        lineHeight: 1.6,
+        fontSize: "1rem",
+        lineHeight: 1.7,
         fontWeight: 300,
         color: "var(--text-secondary)",
         margin: 0,
         maxWidth: "75ch",
       }}
     >
-      {children}
+      {typeof children === "string" ? <RichText>{children}</RichText> : children}
     </p>
+  );
+}
+
+/** Renders inline `**bold**` segments inside AI-authored strings. Lets the
+ *  model front-load list items (e.g. "**Lean into Sep 14 — Sep 18.** ...")
+ *  so ESL readers can skim. Discipline rules live in the prompt: bold ONLY
+ *  literal action takeaways, named windows, or named partners — never
+ *  metaphors or astrological jargon. */
+function RichText({ children }: { children: string }) {
+  const parts = children.split(/(\*\*[^*]+\*\*)/g);
+  return (
+    <>
+      {parts.map((p, i) =>
+        p.startsWith("**") && p.endsWith("**") && p.length > 4 ? (
+          <strong key={i} style={{ fontWeight: 700, color: "var(--text-primary)" }}>
+            {p.slice(2, -2)}
+          </strong>
+        ) : (
+          <span key={i}>{p}</span>
+        ),
+      )}
+    </>
   );
 }
 
@@ -447,8 +469,9 @@ function MagazineIntro({ intro, destination, prose }: { intro: CouplesVM["intro"
       <p
         style={{
           fontFamily: "var(--font-body)",
-          fontSize: "clamp(1rem, 1.4vw, 1.15rem)",
-          lineHeight: 1.6,
+          fontSize: "1.05rem",
+          lineHeight: 1.7,
+          fontWeight: 300,
           color: "var(--text-secondary)",
           margin: 0,
           maxWidth: "75ch",
@@ -456,7 +479,7 @@ function MagazineIntro({ intro, destination, prose }: { intro: CouplesVM["intro"
         }}
       >
         {aiLead ? (
-          <>{aiLead.slice(1)}</>
+          <RichText>{aiLead.slice(1)}</RichText>
         ) : (
           <>
             ased on shared goals in <span style={bold}>{goalsLine}</span>, {destination} supports{" "}
@@ -551,7 +574,7 @@ function EventRow({ ev, pinned, divider, note }: { ev: PartnerEventScore; pinned
     <li
       className="goals-row"
       style={{
-        padding: "var(--space-md)",
+        padding: "var(--space-lg) var(--space-md)",
         borderBottom: divider ? "1px solid var(--surface-border)" : "none",
       }}
     >
@@ -567,8 +590,8 @@ function EventRow({ ev, pinned, divider, note }: { ev: PartnerEventScore; pinned
             {EVENT_LABELS[youBand]} · {EVENT_LABELS[partnerBand]}
           </span>
           {note && (
-            <p style={{ marginTop: "0.5rem", marginBottom: 0, fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.4 }}>
-              {note}
+            <p style={{ marginTop: "0.6rem", marginBottom: 0, fontFamily: "var(--font-body)", fontSize: "1rem", fontWeight: 300, color: "var(--text-secondary)", lineHeight: 1.7, maxWidth: "75ch" }}>
+              <RichText>{note}</RichText>
             </p>
           )}
         </div>
@@ -629,17 +652,20 @@ function VerdictBlock({ timings, prose }: { timings: CouplesVM["timings"]; prose
         </div>
         <p
           style={{
-            fontFamily: "var(--font-primary)",
-            fontSize: "clamp(1.1rem, 2vw, 1.4rem)",
-            lineHeight: 1.3,
-            color: "var(--text-primary)",
+            fontFamily: "var(--font-body)",
+            fontSize: "1rem",
+            lineHeight: 1.7,
+            fontWeight: 300,
+            color: "var(--text-secondary)",
             margin: 0,
-            letterSpacing: "-0.01em",
-            fontWeight: 500,
             maxWidth: "75ch",
           }}
         >
-          {prose?.timings?.rationale ? prose.timings.rationale : `${capitalizeFirst(timings.rationale)}.`}
+          {prose?.timings?.rationale ? (
+            <RichText>{prose.timings.rationale}</RichText>
+          ) : (
+            `${capitalizeFirst(timings.rationale)}.`
+          )}
         </p>
       </div>
 
@@ -689,26 +715,26 @@ function WindowList({ title, color, items, scores, notes }: { title: string; col
               <li
                 key={i}
                 style={{
-                  padding: "var(--space-md) 0",
+                  padding: "var(--space-lg) 0",
                   borderBottom: i < items.length - 1 ? "1px solid var(--surface-border)" : "none",
                   display: "flex",
                   flexDirection: "column",
-                  gap: "0.4rem",
+                  gap: "0.5rem",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "var(--space-md)" }}>
-                  <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.05rem", color: "var(--text-primary)", letterSpacing: "-0.005em" }}>
+                  <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.1rem", color: "var(--text-primary)", letterSpacing: "-0.005em" }}>
                     {w}
                   </span>
                   {scores?.[i] != null && (
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.85rem", color: "var(--text-primary)", fontWeight: 600, whiteSpace: "nowrap", letterSpacing: "0.02em" }}>
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.9rem", color: "var(--text-primary)", fontWeight: 600, whiteSpace: "nowrap", letterSpacing: "0.02em" }}>
                       {scores[i]}<span style={{ color: "var(--text-tertiary)", fontWeight: 400 }}>/100</span>
                     </span>
                   )}
                 </div>
                 {aiNote && (
-                  <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--text-secondary)", lineHeight: 1.55 }}>
-                    {aiNote}
+                  <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "1rem", fontWeight: 300, color: "var(--text-secondary)", lineHeight: 1.7, maxWidth: "75ch" }}>
+                    <RichText>{aiNote}</RichText>
                   </p>
                 )}
               </li>
@@ -878,7 +904,7 @@ function SynastryTab({ synastry, partnerName, lead, aspectMeanings }: { synastry
   const hasAny = synastry.harmonious.length > 0 || synastry.tense.length > 0;
   if (!hasAny) {
     return (
-      <p style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--text-tertiary)", margin: 0, maxWidth: "75ch" }}>
+      <p style={{ fontFamily: "var(--font-body)", fontSize: "1rem", fontWeight: 300, color: "var(--text-tertiary)", margin: 0, maxWidth: "75ch" }}>
         No cross-aspects within standard orbs.
       </p>
     );
@@ -931,15 +957,15 @@ function AspectColumn({
             <li
               key={i}
               style={{
-                padding: "var(--space-md) 0",
+                padding: "var(--space-lg) 0",
                 borderBottom: i < items.length - 1 ? "1px solid var(--surface-border)" : "none",
                 display: "flex",
                 flexDirection: "column",
-                gap: "0.4rem",
+                gap: "0.55rem",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "var(--space-md)" }}>
-                <span style={{ fontFamily: "var(--font-primary)", fontSize: "1rem", color: "var(--text-primary)", fontWeight: 500, letterSpacing: "-0.01em" }}>
+                <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.05rem", color: "var(--text-primary)", fontWeight: 500, letterSpacing: "-0.01em" }}>
                   {a.p1} {a.aspect} {partnerName}&apos;s {a.p2}
                 </span>
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.18em", color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>
@@ -959,8 +985,8 @@ function AspectColumn({
                 });
                 const displayMeaning = match?.meaning ?? a.meaning;
                 return (
-                  <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--text-secondary)", lineHeight: 1.55 }}>
-                    {displayMeaning}
+                  <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "1rem", fontWeight: 300, color: "var(--text-secondary)", lineHeight: 1.7, maxWidth: "75ch" }}>
+                    <RichText>{displayMeaning}</RichText>
                   </p>
                 );
               })()}
@@ -1042,8 +1068,8 @@ function GeoColumn({ who, accent, asc, mc, note }: {
         {mc  && <GeoAngleRow label="MC"  angle={mc}  accent={accent} />}
       </div>
 
-      <p style={{ margin: "var(--space-md) 0 0", fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--text-secondary)", lineHeight: 1.6, maxWidth: "75ch" }}>
-        {note}
+      <p style={{ margin: "var(--space-lg) 0 0", fontFamily: "var(--font-body)", fontSize: "1rem", fontWeight: 300, color: "var(--text-secondary)", lineHeight: 1.7, maxWidth: "75ch" }}>
+        <RichText>{note}</RichText>
       </p>
     </div>
   );
@@ -1070,7 +1096,7 @@ function GeoAngleRow({ label, angle, accent, divider }: { label: "ASC" | "MC"; a
         justifyContent: "space-between",
         alignItems: "center",
         gap: "var(--space-md)",
-        padding: "var(--space-md) 0",
+        padding: "var(--space-lg) 0",
         borderBottom: divider ? "1px solid var(--surface-border)" : "none",
       }}
     >
@@ -1119,7 +1145,7 @@ function Takeaways({ items }: { items: string[] }) {
             gridTemplateColumns: "auto 1fr",
             columnGap: "var(--space-lg)",
             alignItems: "baseline",
-            padding: "var(--space-md) 0",
+            padding: "var(--space-lg) 0",
             borderBottom: i < items.length - 1 ? "1px solid var(--surface-border)" : "none",
           }}
         >
@@ -1139,15 +1165,15 @@ function Takeaways({ items }: { items: string[] }) {
             style={{
               margin: 0,
               fontFamily: "var(--font-primary)",
-              fontSize: "clamp(1.05rem, 1.5vw, 1.2rem)",
-              lineHeight: 1.4,
+              fontSize: "clamp(1.1rem, 1.5vw, 1.2rem)",
+              lineHeight: 1.55,
               color: "var(--text-primary)",
               letterSpacing: "-0.005em",
               fontWeight: 400,
               maxWidth: "75ch",
             }}
           >
-            {item}
+            <RichText>{item}</RichText>
           </p>
         </li>
       ))}
