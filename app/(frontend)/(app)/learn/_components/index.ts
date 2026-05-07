@@ -1,5 +1,5 @@
 /**
- * Barrel for lesson primitives. Pages should import from here, not from
+ * Barrel for learn primitives. Pages should import from here, not from
  * individual files, so the framework's public surface stays one path.
  */
 
@@ -7,10 +7,14 @@
 export {
   CURRICULUM,
   getLesson,
+  getShelf,
+  getStartHereList,
+  getGuides,
   getPrev,
   getNext,
   type Lesson,
   type LessonId,
+  type GuideShelf,
 } from "./curriculum";
 
 // Shell
@@ -18,21 +22,27 @@ export { LessonShell } from "./LessonShell";
 export { ProgressRail } from "./ProgressRail";
 export { LessonDisclaimer } from "./LessonDisclaimer";
 
-// Act 1 — Intro
-export { LessonIntro } from "./LessonIntro";
+// Guide-shaped primitives (the new direction — magazine guides, not lessons)
+export { GuideHeader } from "./GuideHeader";
+export { GuideButton, type GuideButtonVariant } from "./GuideButton";
+export { PullQuote } from "./PullQuote";
+export { RelatedGuides } from "./RelatedGuides";
 
-// Act 2 — Teach
+// Lesson-shaped primitives (legacy — still consumed by un-migrated pages)
+export { LessonIntro } from "./LessonIntro";
+export { Recap } from "./Recap";
+export { PaginationCard } from "./PaginationCard";
+
+// Body / teaching primitives — used by both shapes
 export { ConceptZero } from "./ConceptZero";
 export { SectionHeader } from "./SectionHeader";
 export { ProseSection } from "./ProseSection";
 export { ConceptCard, type StructuredBody } from "./ConceptCard";
 export { ConceptStack } from "./ConceptStack";
 export { ElementSection } from "./ElementSection";
-export { Recap } from "./Recap";
 
 // Act 3 — Next
 export { SourcesPanel } from "./SourcesPanel";
-export { PaginationCard } from "./PaginationCard";
 
 // Inline reading primitives
 export { GlossaryTerm } from "./GlossaryTerm";

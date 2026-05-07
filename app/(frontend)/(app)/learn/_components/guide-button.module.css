@@ -1,0 +1,220 @@
+/* ── Guide Button — editorial typographic lockup for /learn cards ────────
+   Lifted from app/components/explore-buttons.module.css. Same editorial
+   grammar — kicker mono + display-alt-2 script + body 800 uppercase main +
+   secondary-serif sub — but parametrized by category palette so the hub
+   stays consistent and each card still has its own tone.
+   ─────────────────────────────────────────────────────────────────────── */
+
+.btn {
+    border: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: var(--space-md);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    text-align: left;
+    height: 220px;
+    min-height: 220px;
+    border-radius: var(--shape-asymmetric-md, 12px 4px 12px 4px);
+    transition: transform 0.2s var(--ease, ease), box-shadow 0.2s var(--ease, ease);
+    color: inherit;
+    text-decoration: none;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+}
+
+@media (min-width: 768px) {
+    .btn {
+        height: 260px;
+        min-height: 260px;
+        padding: var(--space-lg);
+    }
+}
+
+/* ── Header row: kicker (left) · counter (right) ─────────────────────── */
+.header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-md);
+    position: relative;
+    z-index: 2;
+}
+
+.kicker {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.counter {
+    font-family: var(--font-primary);
+    font-size: clamp(2rem, 3vw, 2.5rem);
+    line-height: 0.9;
+    letter-spacing: -0.02em;
+    font-style: italic;
+}
+
+.meta {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.6;
+}
+
+/* ── Title stack: script (rotated) + main (big serif uppercase) ──────── */
+.titleStack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    position: relative;
+    z-index: 2;
+    margin-top: auto;
+}
+
+.script {
+    font-family: var(--font-display-alt-2, "Pinyon Script", cursive);
+    font-size: clamp(2.4rem, 4.2vw, 3.6rem);
+    line-height: 0.55;
+    margin-bottom: 6px;
+    margin-left: 0.4em;
+    transform: rotate(-4deg);
+    text-shadow: 1px 1px 0 rgba(248, 245, 236, 0.6);
+}
+
+.main {
+    font-family: var(--font-primary);
+    font-weight: 800;
+    font-size: clamp(2.2rem, 4vw, 3.2rem);
+    letter-spacing: -0.03em;
+    line-height: 0.92;
+    text-transform: uppercase;
+}
+
+.sub {
+    font-family: var(--font-secondary, var(--font-primary));
+    font-style: italic;
+    font-size: clamp(0.85rem, 1.6vw, 1rem);
+    line-height: 1.3;
+    margin-top: var(--space-xs);
+    max-width: 90%;
+    opacity: 0.85;
+    position: relative;
+    z-index: 2;
+}
+
+/* ── Decoration slot (SVG bottom-right corner) ───────────────────────── */
+.decoration {
+    position: absolute;
+    right: var(--space-md);
+    bottom: var(--space-md);
+    z-index: 1;
+    opacity: 0.85;
+    pointer-events: none;
+}
+
+@media (min-width: 768px) {
+    .decoration {
+        right: var(--space-lg);
+        bottom: var(--space-lg);
+    }
+}
+
+/* ── Background-image overlay slot (optional retro illustration) ─────── */
+.bgImage {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0.45;
+    z-index: 0;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+}
+
+/* ── Category palettes — bg + ink + accent ───────────────────────────── */
+/* Hardcoded hexes per the ExploreButtons convention so the hub never
+   theme-flips inversely to the cards. */
+
+.signs {
+    background-color: #CAF1F0; /* Acqua */
+    color: #1B1B1B;
+}
+.signs .kicker, .signs .script, .signs .counter {
+    color: #0456fb; /* Y2K blue */
+}
+
+.chart {
+    background-color: #F8F5EC; /* Eggshell */
+    color: #1B1B1B;
+}
+.chart .kicker, .chart .script, .chart .counter {
+    color: #0456fb; /* Y2K blue */
+}
+
+.chartDark {
+    background-color: #000;
+    color: #F8F5EC;
+}
+.chartDark .kicker, .chartDark .script, .chartDark .counter {
+    color: #CAF1F0; /* Acqua */
+}
+
+.sky {
+    background-color: #1B1B1B;
+    color: #F8F5EC;
+}
+.sky .kicker, .sky .script, .sky .counter {
+    color: #E6C36F; /* Gold */
+}
+
+.tradition {
+    background-color: #E67A7A; /* Spiced life */
+    color: #1B1B1B;
+}
+.tradition .kicker, .tradition .script, .tradition .counter {
+    color: #1B1B1B;
+}
+
+.relocation {
+    background-color: #CAF1F0; /* Acqua, lighter ink */
+    color: #1B1B1B;
+}
+.relocation .kicker, .relocation .script, .relocation .counter {
+    color: #E67A7A; /* Spiced life */
+}
+
+.relocationAlt {
+    background-color: #E67A7A;
+    color: #1B1B1B;
+}
+.relocationAlt .kicker, .relocationAlt .script, .relocationAlt .counter {
+    color: #F8F5EC;
+}
+
+.practice {
+    background-color: #F8F5EC;
+    background-image: linear-gradient(rgba(248, 245, 236, 0.6), rgba(248, 245, 236, 0.95));
+    color: #1B1B1B;
+}
+.practice .kicker, .practice .script, .practice .counter {
+    color: #E6C36F; /* Gold */
+}
+
+.welcome {
+    background-color: #1B1B1B;
+    color: #F8F5EC;
+}
+.welcome .kicker, .welcome .script, .welcome .counter {
+    color: #0456fb;
+}
