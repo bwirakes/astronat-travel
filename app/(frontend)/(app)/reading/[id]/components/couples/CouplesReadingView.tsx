@@ -26,6 +26,7 @@ import SectionHead from "../shared/SectionHead";
 import LearnFooter from "../shared/LearnFooter";
 import { EVENT_LABELS, VERDICT_COLORS, verdictBand, type VerdictBand } from "@/app/lib/verdict";
 import { destinationFlag } from "@/app/lib/country-flag";
+import SignIcon from "@/app/components/SignIcon";
 import type { CouplesVM, PartnerEventScore, ChartTabVM, SynastryAspectVM } from "@/app/lib/couples-viewmodel";
 
 // ═══════════════════════════════════════════════════════════════
@@ -1025,8 +1026,8 @@ function GeoColumn({ who, accent, ascSign, ascDeg, mcSign, mcDeg, note }: {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column" }}>
-        <GeoAngleRow label="ASC" sign={ascSign} deg={ascDeg} divider />
-        <GeoAngleRow label="MC"  sign={mcSign}  deg={mcDeg} />
+        <GeoAngleRow label="ASC" sign={ascSign} deg={ascDeg} accent={accent} divider />
+        <GeoAngleRow label="MC"  sign={mcSign}  deg={mcDeg} accent={accent} />
       </div>
 
       <p style={{ margin: "var(--space-md) 0 0", fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--text-secondary)", lineHeight: 1.6, maxWidth: "75ch" }}>
@@ -1036,13 +1037,13 @@ function GeoColumn({ who, accent, ascSign, ascDeg, mcSign, mcDeg, note }: {
   );
 }
 
-function GeoAngleRow({ label, sign, deg, divider }: { label: "ASC" | "MC"; sign: string; deg: number; divider?: boolean }) {
+function GeoAngleRow({ label, sign, deg, accent, divider }: { label: "ASC" | "MC"; sign: string; deg: number; accent: string; divider?: boolean }) {
   return (
     <div
       style={{
         display: "flex",
         justifyContent: "space-between",
-        alignItems: "baseline",
+        alignItems: "center",
         gap: "var(--space-md)",
         padding: "var(--space-md) 0",
         borderBottom: divider ? "1px solid var(--surface-border)" : "none",
@@ -1051,8 +1052,11 @@ function GeoAngleRow({ label, sign, deg, divider }: { label: "ASC" | "MC"; sign:
       <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", color: "var(--text-tertiary)", fontWeight: 600 }}>
         {label}
       </span>
-      <span style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(1.05rem, 1.5vw, 1.2rem)", color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
-        {sign} {deg}°
+      <span style={{ display: "inline-flex", alignItems: "center", gap: "0.55rem" }}>
+        <SignIcon sign={sign} color={accent} size={20} />
+        <span style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(1.05rem, 1.5vw, 1.2rem)", color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
+          {sign} {deg}°
+        </span>
       </span>
     </div>
   );
