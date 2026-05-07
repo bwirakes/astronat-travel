@@ -173,6 +173,7 @@ export async function runAstrocarto(
 
   // 2. Optional partner chart for synastry
   let partnerNatalPlanets: any[] | null = null;
+  let partnerNatalCusps: number[] | null = null;
   let partnerProfile: any = null;
   let dtUtcPartner: Date | null = null;
   let synastryAspects: ReturnType<typeof computeSynastryAspects> = [];
@@ -195,6 +196,7 @@ export async function runAstrocarto(
 
     const partnerData = await loadOrComputePartnerNatal(partnerId, partnerProfile);
     partnerNatalPlanets = partnerData.planets;
+    partnerNatalCusps = partnerData.cusps;
     dtUtcPartner = partnerData.dtUtc;
     synastryAspects = computeSynastryAspects(natalPlanets, partnerNatalPlanets);
   }
@@ -645,6 +647,7 @@ export async function runAstrocarto(
           partnerHouses: partnerMatrix.houses,
           partnerPlanetaryLines: partnerMatrix.acgLines,
           partnerRelocatedCusps: partnerMatrix.relocatedCusps,
+          ...(partnerNatalCusps ? { partnerNatalCusps } : {}),
           partnerEventScores: partnerMatrix.eventScores,
           partnerName: partnerProfile?.first_name ?? "Partner",
           scoreDelta: synastryDerived.scoreDelta,

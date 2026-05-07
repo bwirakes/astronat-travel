@@ -51,12 +51,18 @@ export interface PartnerEventScore {
   partner: number;
 }
 
-export interface StandoutPlacement {
-  planet: string;
-  sign: string;
-  degree: string;
-  house: string;
-  note: string;
+export interface AngleVM {
+  /** Display name, e.g. "Rising (ASC)". */
+  name: string;
+  /** Plain-English topic, e.g. "How you come across". */
+  plain: string;
+  /** "24° Aries" — "—" only if natal cusps are missing for this side
+   *  (legacy reading rows that pre-date partnerNatalCusps persistence). */
+  natal: string;
+  /** "11° Cancer" — always present (computed from relocated cusps). */
+  relocated: string;
+  /** Sentence-long copy describing what shifts when this angle moves. */
+  delta: string;
 }
 
 export interface SynastryAspectVM {
@@ -78,7 +84,13 @@ export interface ChartTabVM {
   macroScore: number;
   element: string;
   modality: string;
-  standout: StandoutPlacement[];
+  /** One-sentence "what shifts here" opener. Synthesized from the strongest
+   *  natal→relocated sign change among the four angles, mirroring the lead
+   *  in WhatShiftsTab. */
+  lead: string;
+  /** Four corner cards (ASC/IC/DSC/MC). When natal cusps are unavailable,
+   *  `natal` falls back to "—" but `relocated` and `delta` still render. */
+  angles: AngleVM[];
 }
 
 export interface CouplesVM {
@@ -197,29 +209,21 @@ const HOUSE_LABEL: Record<number, string> = {
   9: "Travel",    10: "Career",   11: "Community",  12: "Inner",
 };
 
-// Per-(planet × house) one-line implications for relocated standouts.
-// Generic templated fallback used when no specific entry exists.
-const STANDOUT_NOTES: Record<string, string> = {
-  "Sun-10":     "MC-conjunct here — public visibility runs hot.",
-  "Sun-1":      "Sun rising — you'll be seen as the version of you who shows up here.",
-  "Sun-7":      "Sun on the DSC — relationships do the talking in this city.",
-  "Sun-4":      "Sun on the IC — private life expands; public life softens.",
-  "Moon-1":     "Moon rising — emotions sit on the surface here.",
-  "Moon-4":     "Moon on the IC — felt sense of home arrives faster than expected.",
-  "Moon-10":    "Moon on the MC — career feeds on emotional weather.",
-  "Venus-7":    "Venus on the DSC — partnership is the headline; this is a love stop.",
-  "Venus-9":    "Venus in 9H — romance asks for movement, not nesting.",
-  "Venus-4":    "Venus on the IC — affection deepens the longer you stay still.",
-  "Mars-1":     "Mars rising — you'll move fast here, take physical risks.",
-  "Mars-3":     "Mars in 3H — sharp tongue, fast recovery. Don't take heat personally.",
-  "Mars-10":    "Mars on the MC — driven, visible, spikey at work.",
-  "Jupiter-9":  "Jupiter in 9H — long walks, language pickup, low-key opportunity.",
-  "Jupiter-10": "Jupiter on the MC — career luck swings up; put your name on things.",
-  "Saturn-1":   "Saturn rising — body tightens; sleep, structure, fewer plans.",
-  "Saturn-10":  "Saturn on the MC — the work demands more than usual; reputation hardens.",
-  "Saturn-4":   "Saturn on the IC — home life feels like a project to get right.",
-  "Mercury-3":  "Mercury in 3H — talking, writing, errands all run faster here.",
-  "Neptune-12": "Neptune in 12H — dreams loud, edges soft. Pace the social calendar.",
+// Four-corner labels and default "what shifts" copy. Mirrors the angle
+// section of WhatShiftsTab so the couples deep-dive uses the same vocabulary
+// as the solo /reading view.
+const ANGLE_PLAIN: Record<"ASC" | "IC" | "DSC" | "MC", { name: string; plain: string }> = {
+  ASC: { name: "Rising (ASC)", plain: "How you come across" },
+  IC:  { name: "Roots (IC)",   plain: "What feels like home" },
+  DSC: { name: "Partner (DSC)", plain: "Who you attract" },
+  MC:  { name: "Calling (MC)", plain: "What you're known for" },
+};
+
+const ANGLE_DELTA: Record<"ASC" | "IC" | "DSC" | "MC", string> = {
+  ASC: "Your public-facing self shifts. People meet a slightly different version of you here.",
+  IC:  "What feels like home re-codes. The kind of room that settles you here may not be the kind that settles you back home.",
+  DSC: "You'll attract a different sort of person here — close encounters carry a different flavor.",
+  MC:  "What you want to be known for shifts. A quieter dream can sharpen into a real plan in this place.",
 };
 
 // Curated synastry-aspect meanings. Lookup key: `{p1Lower}-{aspect}-{p2Lower}`,
@@ -299,8 +303,16 @@ export function toCouplesViewModel(reading: any): CouplesVM {
   // ── Deep Dive: per-partner chart VMs ──────────────────────────
   const youCusps: number[]  = arrayOr<number>(reading.userRelocatedCusps, reading.relocatedCusps, equalCusps());
   const ptnrCusps: number[] = arrayOr<number>(reading.partnerRelocatedCusps, equalCusps());
+  // Natal cusps for the natal→relocated comparison on the four-corners cards.
+  // `partnerNatalCusps` is a recent persistence addition (see lib/readings/
+  // astrocarto.ts); legacy synastry rows lack it and fall back to "—".
+  const youNatalCusps  = arrayOr<number>(reading.natalCusps);
+  const ptnrNatalCusps = arrayOr<number>(reading.partnerNatalCusps);
   const youPlanets  = normalizePlanets(reading.natalPlanets);
   const ptnrPlanets = normalizePlanets(reading.partnerNatalPlanets);
+
+  const youAngles  = buildAngles(youNatalCusps,  youCusps);
+  const ptnrAngles = buildAngles(ptnrNatalCusps, ptnrCusps);
 
   const youDeep: ChartTabVM = {
     planets: youPlanets,
@@ -308,7 +320,8 @@ export function toCouplesViewModel(reading: any): CouplesVM {
     macroScore: youScore,
     element: dominantElement(youPlanets),
     modality: dominantModality(youPlanets),
-    standout: topStandoutPlacements(youPlanets, youCusps, destination),
+    lead: buildAngleLead(youAngles, destination),
+    angles: youAngles,
   };
   const ptnrDeep: ChartTabVM = {
     planets: ptnrPlanets,
@@ -316,7 +329,8 @@ export function toCouplesViewModel(reading: any): CouplesVM {
     macroScore: partnerScore,
     element: dominantElement(ptnrPlanets),
     modality: dominantModality(ptnrPlanets),
-    standout: topStandoutPlacements(ptnrPlanets, ptnrCusps, destination),
+    lead: buildAngleLead(ptnrAngles, destination),
+    angles: ptnrAngles,
   };
 
   // ── Synastry aspects: split by tone, attach meanings ──────────
@@ -397,9 +411,9 @@ export function toCouplesViewModel(reading: any): CouplesVM {
     },
     geodetic: {
       you:     { ascSign: youAsc.sign,  ascDeg: youAsc.deg,  mcSign: youMc.sign,  mcDeg: youMc.deg,
-                 note: relocNote(youDeep.standout, "you", destination) },
+                 note: youDeep.lead },
       partner: { ascSign: ptnrAsc.sign, ascDeg: ptnrAsc.deg, mcSign: ptnrMc.sign, mcDeg: ptnrMc.deg,
-                 note: relocNote(ptnrDeep.standout, "partner", destination) },
+                 note: ptnrDeep.lead },
       summary: relocSummary(youAsc, ptnrAsc, youMc, ptnrMc),
       partnerName,
     },
@@ -479,45 +493,36 @@ export function dominantModality(planets: Array<{ planet: string; longitude: num
   return winner ? `${winner}-leaning` : "Mixed";
 }
 
-/** Top 3 placements by editorial weight: angular planets first (within 8°
- *  of any angle), then luminaries by tightness, then dignified planets. */
-export function topStandoutPlacements(
-  planets: Array<{ planet: string; longitude: number }>,
-  cusps: number[],
-  _destination: string,
-): StandoutPlacement[] {
-  void _destination;
-  const angles = [cusps[0], cusps[3], cusps[6], cusps[9]].filter((n) => typeof n === "number");
-  const scored = planets.map((p) => {
-    const sign = signFromLon(p.longitude);
-    const house = houseFromLon(p.longitude, cusps);
-    let score = 0;
-
-    const angleOrb = angles.length
-      ? Math.min(...angles.map((a) => angularDistance(p.longitude, a)))
-      : 999;
-    if (angleOrb <= 8) score += 50 - angleOrb * 5;
-
-    if (p.planet === "Sun" || p.planet === "Moon") score += 30;
-    if (p.planet === "Mars" || p.planet === "Saturn" || p.planet === "Jupiter") score += 10;
-
-    return { p, sign, house, score };
-  });
-  scored.sort((a, b) => b.score - a.score);
-
-  return scored.slice(0, 3).map(({ p, sign, house }): StandoutPlacement => {
-    const houseLabel = HOUSE_LABEL[house] ?? "";
-    const noteKey = `${p.planet}-${house}`;
-    const note = STANDOUT_NOTES[noteKey] ??
-      `${p.planet} in ${sign} sits in ${ordinal(house)} house here — ${houseLabel.toLowerCase()} territory.`;
+/** Build the four-corner cards (ASC/IC/DSC/MC) for one partner. Cusp indices:
+ *  ASC=0, IC=3, DSC=6, MC=9. When `natalCusps` is empty (legacy reading),
+ *  the natal column renders as "—" but relocated/delta still populate. */
+export function buildAngles(natalCusps: number[], relocatedCusps: number[]): AngleVM[] {
+  const cuspIdx = { ASC: 0, IC: 3, DSC: 6, MC: 9 } as const;
+  return (["ASC", "IC", "DSC", "MC"] as const).map((k) => {
+    const natalLon = natalCusps[cuspIdx[k]];
+    const reloLon  = relocatedCusps[cuspIdx[k]];
     return {
-      planet: p.planet,
-      sign,
-      degree: degMin(p.longitude),
-      house: `${house}H ${houseLabel}`,
-      note,
+      name: ANGLE_PLAIN[k].name,
+      plain: ANGLE_PLAIN[k].plain,
+      natal: typeof natalLon === "number" ? fmtSignDeg(natalLon) : "—",
+      relocated: typeof reloLon === "number" ? fmtSignDeg(reloLon) : "—",
+      delta: ANGLE_DELTA[k],
     };
   });
+}
+
+/** One-sentence "what shifts" opener. Mirrors WhatShiftsTab.buildLead: prefer
+ *  the strongest natal→relocated sign change, fall back to a generic "the
+ *  rest of the chart reshapes around this place" line. */
+export function buildAngleLead(angles: AngleVM[], destination: string): string {
+  const changed = angles.filter((a) => a.natal !== "—" && signOfFmt(a.natal) !== signOfFmt(a.relocated));
+  const headline = changed[0] ?? angles.find((a) => a.relocated !== "—") ?? angles[0];
+  if (!headline) return `${destination} reshapes the chart's framing.`;
+  const topic = (headline.plain || headline.name).toLowerCase();
+  if (headline.natal === "—" || headline.relocated === "—") {
+    return `In ${destination}, ${topic} re-frames — the chart reshapes around this place.`;
+  }
+  return `In ${destination}, ${topic} shifts from ${headline.natal} into ${headline.relocated} — the rest of the chart reshapes around that move.`;
 }
 
 function decorateAspect(a: any): SynastryAspectVM {
@@ -530,13 +535,6 @@ function decorateAspect(a: any): SynastryAspectVM {
     ASPECT_FALLBACK[aspect] ??
     "Energies meet here — read the band, not the headline.";
   return { p1, p2, aspect, orb, meaning, key };
-}
-
-function relocNote(standout: StandoutPlacement[], _which: "you" | "partner", destination: string): string {
-  void _which;
-  if (!standout.length) return `${destination} amplifies parts of the chart that aren't angular.`;
-  const top = standout[0];
-  return top.note;
 }
 
 export function relocSummary(
@@ -635,6 +633,18 @@ function houseFromLon(lon: number, cusps: number[]): number {
 function angularDistance(a: number, b: number): number {
   const diff = ((a - b) % 360 + 360) % 360;
   return Math.min(diff, 360 - diff);
+}
+
+/** Format a longitude (0–360°) as "24° Aries" for display. */
+function fmtSignDeg(lon: number): string {
+  const within = ((lon % 30) + 30) % 30;
+  return `${Math.floor(within)}° ${signFromLon(lon)}`;
+}
+
+/** Extract the sign from a `fmtSignDeg` string ("24° Aries" → "Aries"). */
+function signOfFmt(formatted: string): string {
+  const m = formatted.match(/[A-Z][a-z]+$/);
+  return m ? m[0] : formatted;
 }
 
 function relocAngle(lon: unknown): { sign: string; deg: number } {
