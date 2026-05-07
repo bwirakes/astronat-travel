@@ -2,15 +2,16 @@ import SignIcon from "@/app/components/SignIcon";
 import {
   LessonShell,
   LessonIntro,
-  ConceptZero,
-  ConceptStack,
+  ProseSection,
   ConceptCard,
+  ElementSection,
   Recap,
   SourcesPanel,
   PaginationCard,
-  DiagramFigure,
-  Aside,
+  Plate,
+  KeyStrip,
   GlossaryTerm,
+  getLesson,
   getNext,
   getPrev,
 } from "../_components";
@@ -168,43 +169,74 @@ const ELEMENTS: Element[] = ["Fire", "Earth", "Air", "Water"];
 const MODALITIES: Modality[] = ["Cardinal", "Fixed", "Mutable"];
 
 const MODALITY_DESC: Record<Modality, string> = {
-  Cardinal: "Initiates. Starts the season.",
-  Fixed: "Sustains. Holds the season.",
-  Mutable: "Adapts. Releases the season.",
+  Cardinal: "initiates",
+  Fixed: "sustains",
+  Mutable: "adapts",
 };
 
 const ELEMENT_DESC: Record<Element, string> = {
-  Fire: "Action, will, vitality.",
-  Earth: "Body, matter, what lasts.",
-  Air: "Mind, language, exchange.",
-  Water: "Feeling, depth, undercurrent.",
+  Fire: "action",
+  Earth: "matter",
+  Air: "mind",
+  Water: "feeling",
 };
 
+/**
+ * The four element-level chapter breaks that group the twelve sign cards.
+ * Order matters — it sets the reader's pacing through the second half of
+ * the lesson. Each caption is one editorial sentence in Astro-Nat voice:
+ * a stance, not a description.
+ */
+const ELEMENT_GROUPS: { element: Element; caption: string }[] = [
+  {
+    element: "Fire",
+    caption:
+      "The signs that run on momentum and conviction. Fire moves first and asks questions later — and yes, that is how things start.",
+  },
+  {
+    element: "Earth",
+    caption:
+      "The signs that take the real world seriously. Earth builds slowly, keeps what it builds, and is unimpressed by anything that cannot survive contact with reality.",
+  },
+  {
+    element: "Air",
+    caption:
+      "The signs that live in language, ideas, and the spaces between people. Air does not trust a feeling until it can name it.",
+  },
+  {
+    element: "Water",
+    caption:
+      "The signs of memory, depth, and emotional intelligence. Water feels first — and remembers far longer than anyone gives it credit for.",
+  },
+];
+
+/**
+ * The 3×4 grid of signs by modality × element. Cells carry only SignIcon +
+ * name — definitions live in the KeyStrips below the figure, not crammed into
+ * the headers. Sized to content (max-w via the Plate wrapper); centered.
+ */
 function ModalityMatrix() {
   const findSign = (mod: Modality, el: Element) =>
     SIGNS.find((s) => s.modality === mod && s.element === el)!;
 
   return (
-    <DiagramFigure
+    <Plate
       number={1}
-      caption="Every sign is one cell in this 3×4 grid. The modality says how the sign moves; the element says what material it moves through."
+      title="Twelve into one"
+      caption="Twelve signs, organised by modality (rows) and element (columns)."
     >
-      <div className="overflow-x-auto bg-[var(--bg-raised)]">
+      {/* ─── Desktop / tablet: 3×4 matrix ─────────────────────────────── */}
+      <div className="hidden md:block">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-[var(--surface-border)]">
-              <th className="p-4 font-mono text-[9px] uppercase tracking-[0.25em] opacity-50 align-bottom" />
+              <th className="p-5 align-bottom w-32 lg:w-44" />
               {ELEMENTS.map((e) => (
                 <th
                   key={e}
-                  className="p-4 align-bottom border-l border-[var(--surface-border)]"
+                  className="p-5 align-bottom border-l border-[var(--surface-border)] font-primary text-lg lg:text-xl tracking-tight uppercase"
                 >
-                  <div className="font-primary text-xl tracking-tight uppercase">
-                    {e}
-                  </div>
-                  <div className="font-mono text-[9px] uppercase tracking-widest opacity-50 mt-1">
-                    {ELEMENT_DESC[e]}
-                  </div>
+                  <GlossaryTerm term={e.toLowerCase()}>{e}</GlossaryTerm>
                 </th>
               ))}
             </tr>
@@ -212,36 +244,23 @@ function ModalityMatrix() {
           <tbody>
             {MODALITIES.map((m) => (
               <tr key={m} className="border-b border-[var(--surface-border)]">
-                <th className="p-4 align-top">
-                  <div className="font-primary text-xl tracking-tight uppercase">
-                    {m}
-                  </div>
-                  <div className="font-mono text-[9px] uppercase tracking-widest opacity-50 mt-1 max-w-[12ch]">
-                    {MODALITY_DESC[m]}
-                  </div>
+                <th className="p-5 align-middle font-primary text-lg lg:text-xl tracking-tight uppercase">
+                  <GlossaryTerm term={m.toLowerCase()}>{m}</GlossaryTerm>
                 </th>
                 {ELEMENTS.map((e) => {
                   const sign = findSign(m, e);
                   return (
                     <td
                       key={e}
-                      className="p-4 align-top border-l border-[var(--surface-border)]"
+                      className="p-5 align-middle border-l border-[var(--surface-border)]"
                     >
                       <div className="flex items-center gap-3">
-                        <span
-                          className="text-2xl"
-                          style={{ color: "var(--lesson-accent)" }}
-                        >
-                          {sign.symbol}
+                        <span style={{ color: "var(--lesson-accent)" }}>
+                          <SignIcon sign={sign.name} size={28} />
                         </span>
-                        <div>
-                          <div className="font-primary text-base tracking-tight uppercase">
-                            {sign.name}
-                          </div>
-                          <div className="font-mono text-[9px] uppercase tracking-widest opacity-50">
-                            {sign.dates.split(" — ")[0]}
-                          </div>
-                        </div>
+                        <span className="font-primary text-base lg:text-lg tracking-tight uppercase">
+                          {sign.name}
+                        </span>
                       </div>
                     </td>
                   );
@@ -251,87 +270,230 @@ function ModalityMatrix() {
           </tbody>
         </table>
       </div>
-    </DiagramFigure>
+
+      {/* ─── Mobile: grouped vertical layout ─────────────────────────── */}
+      <div className="md:hidden divide-y divide-[var(--surface-border)] border-y border-[var(--surface-border)]">
+        {MODALITIES.map((m) => (
+          <div key={m} className="py-5">
+            <div className="font-primary text-lg tracking-tight uppercase mb-4">
+              <GlossaryTerm term={m.toLowerCase()}>{m}</GlossaryTerm>
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              {ELEMENTS.map((e) => {
+                const sign = findSign(m, e);
+                return (
+                  <div key={e} className="flex items-center gap-3">
+                    <span style={{ color: "var(--lesson-accent)" }}>
+                      <SignIcon sign={sign.name} size={24} />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-primary text-sm tracking-tight uppercase truncate">
+                        {sign.name}
+                      </div>
+                      <div className="font-mono text-[8px] uppercase tracking-widest opacity-50">
+                        <GlossaryTerm term={e.toLowerCase()}>{e}</GlossaryTerm>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ─── Keys — the definitions that used to crowd the headers ───── */}
+      <div className="mt-10 md:mt-12">
+        <KeyStrip
+          label="Element"
+          items={ELEMENTS.map((e) => ({ term: e, defn: ELEMENT_DESC[e] }))}
+        />
+        <KeyStrip
+          label="Modality"
+          items={MODALITIES.map((m) => ({ term: m, defn: MODALITY_DESC[m] }))}
+        />
+      </div>
+    </Plate>
+  );
+}
+
+/**
+ * One sign card. Pulled out so the page can render two ConceptStacks
+ * (split around the matrix) without duplicating prop wiring.
+ */
+function SignConceptCard({ sign }: { sign: Sign }) {
+  return (
+    <ConceptCard
+      title={sign.name}
+      subtitle={sign.dates}
+      badge={<SignIcon sign={sign.name} size={36} />}
+      watermark={<SignIcon sign={sign.name} size={320} />}
+      meta={[
+        {
+          label: "Element",
+          value: (
+            <GlossaryTerm term={sign.element.toLowerCase()}>
+              {sign.element}
+            </GlossaryTerm>
+          ),
+        },
+        {
+          label: "Modality",
+          value: (
+            <GlossaryTerm term={sign.modality.toLowerCase()}>
+              {sign.modality}
+            </GlossaryTerm>
+          ),
+        },
+        { label: "Gift", value: sign.gift },
+        { label: "Shadow", value: sign.shadow },
+      ]}
+    >
+      <p>{sign.desc}</p>
+    </ConceptCard>
   );
 }
 
 export default function ZodiacLessonPage() {
+  const lesson = getLesson("zodiac");
   const prev = getPrev("zodiac");
   const next = getNext("zodiac");
 
   return (
     <LessonShell lessonId="zodiac">
       <LessonIntro
-        eyebrow="The Zodiac"
-        title={["The", "Zodiac"]}
-        italicLine={1}
-        lede="Twelve 30° slices of the sky. They are how astrologers measure where things are — and the system every other lesson in this Academy uses."
+        lesson={lesson}
+        title="The"
+        titleItalic="Zodiac"
+        lede="You&rsquo;ve been told you&rsquo;re a Pisces, a Capricorn, a Sagittarius — and chances are nobody told you what the words actually mean. The zodiac is not a personality test. It is a coordinate system: twelve 30° slices of the sky used by every working astrologer for two thousand years, and the foundation every other lesson in this Academy stands on."
         objectives={[
           "Read the zodiac as 360° of ecliptic longitude, divided into 12 equal sectors.",
           "Tell signs apart from constellations — and know why they drifted.",
           "Place every sign in the 3×4 grid of modality × element.",
         ]}
-        prereqs={[
-          { label: "Viewing the Stars", href: "/learn/viewing-the-stars" },
-        ]}
       />
 
-      <ConceptZero>
-        The zodiac is a 360° band of sky, centered on the{" "}
-        <GlossaryTerm
-          term="ecliptic"
-          definition="The plane of Earth's orbit around the Sun, projected onto the sky. The Sun, Moon, and planets all appear to move along this line."
-        >
-          ecliptic
-        </GlossaryTerm>
-        , divided into twelve 30° sectors. Each sector is a sign. Signs are
-        coordinates on a measuring tape, not the constellations they were once
-        named for.
-      </ConceptZero>
+      <ProseSection id="s01" kicker="§ 01" title="The system in one breath">
+        <p>
+          If you know your sign and not much else, you are holding the
+          smallest piece of a system that maps the entire sky. Here is the
+          system. Three hundred and sixty degrees of the orbit Earth shares
+          with the Sun — the{" "}
+          <GlossaryTerm
+            term="ecliptic"
+            definition="The plane of Earth's orbit around the Sun, projected onto the sky. The Sun, Moon, and planets all appear to move along this line."
+          >
+            ecliptic
+          </GlossaryTerm>
+          {" "}— divided into twelve equal 30° sectors. Each sector is a sign.
+          A sign is a coordinate, the way <em>longitude 47.3°</em> is a
+          coordinate. It is not a personality. It is not a horoscope. It is
+          not a description of what the heavens look like tonight, because
+          what they look like has drifted. The system kept the names anyway
+          because the math still works.
+        </p>
+      </ProseSection>
 
-      <section className="px-6 md:px-12 lg:px-20 max-w-7xl mx-auto">
-        <Aside label="Signs ≠ constellations">
-          About 2,000 years ago the 12 signs and the 12 constellations
-          overlapped. They no longer do. Earth&apos;s axis wobbles ({" "}
+      <ProseSection id="s02" kicker="§ 02" title="Yes, but the constellations">
+        <p>
+          The signs and the constellations of the same name no longer
+          overlap. Two thousand years ago, when Hellenistic astrologers fixed
+          the names, they did. They no longer do. Earth&rsquo;s axis wobbles in
+          a slow ~26,000-year arc — astronomers call it{" "}
           <GlossaryTerm
             term="precession"
             definition="The slow ~26,000-year wobble of Earth's rotational axis. Causes the equinox points to drift backwards through the constellations over time."
           >
             precession
           </GlossaryTerm>
-          ), so the Sun rises against different stars now than it did in the
-          age of Hipparchus. Western astrology kept the calendar (the{" "}
-          <em>tropical zodiac</em>, anchored to the equinoxes); Vedic astrology
-          kept the stars (the <em>sidereal zodiac</em>). This Academy teaches
-          tropical — but acknowledges the drift, because it&apos;s the most common
-          objection a skeptical reader will raise. Both systems are
-          internally coherent.
-        </Aside>
-      </section>
+          {" "}— and the Sun now rises against different stars than it did in
+          the age of Hipparchus. Western astrology kept the calendar — signs
+          anchored to the seasons and the equinoxes, the{" "}
+          <em>tropical zodiac</em>. Vedic astrology kept the stars — signs
+          anchored to the actual constellations, the <em>sidereal zodiac</em>.
+          This Academy teaches tropical, and we name the drift up front
+          because anyone bothering to think it through will ask. Both systems
+          are internally coherent. Neither is the other one&rsquo;s mistake. The
+          pop-astrology version that pretends the drift does not exist is.
+        </p>
 
-      <section className="px-6 md:px-12 lg:px-20 py-8 max-w-7xl mx-auto">
-        <ModalityMatrix />
-      </section>
+        <h4>Why a measuring tape matters</h4>
+        <p>
+          Once you accept that a sign is a coordinate, every other concept in
+          astrology stops feeling like jargon. Planets sit at coordinates.
+          The angles of your chart — the rising sign, the midheaven — are
+          coordinates. Aspects, the geometric relationships between planets,
+          are measured between coordinates. Houses are slices of coordinates
+          rotated against your birthplace. The whole craft is one extended
+          exercise in plotting positions on a 360° dial and asking what the
+          geometry means. Lose the dial and you lose the craft. That is why
+          this is Lesson 02: every subsequent lesson in this Academy assumes
+          you can read a sign as a number first and a meaning second.
+        </p>
+        <p>
+          The twelve signs are not twelve random labels either. They sort
+          cleanly into two axes. <em>Modality</em> is how a sign moves —
+          Cardinal signs initiate, Fixed signs sustain, Mutable signs adapt.{" "}
+          <em>Element</em> is what a sign is made of — Fire is action, Earth
+          is matter, Air is mind, Water is feeling. Three modalities, four
+          elements, twelve intersections. Cardinal Fire is Aries. Fixed Earth
+          is Taurus. Mutable Water is Pisces. No leftovers, no overlaps. By
+          the end of this lesson you will read each sign as a coordinate{" "}
+          <em>and</em> as a position in that grid — the catalog of twelve and
+          the system they belong to, in one breath.
+        </p>
+      </ProseSection>
 
-      <ConceptStack layout="grid">
-        {SIGNS.map((sign) => (
-          <ConceptCard
-            key={sign.name}
-            kicker={`${sign.modality} ${sign.element}`}
-            title={sign.name}
-            tradition="hellenistic"
-            badge={<SignIcon sign={sign.name} size={28} />}
-            watermark={sign.symbol}
-            meta={[
-              { label: "Dates", value: sign.dates },
-              { label: "Gift", value: sign.gift, tone: "positive" },
-              { label: "Shadow", value: sign.shadow, tone: "warning" },
-            ]}
+      {/* ─── The 12 signs, grouped by element ──────────────────────────
+          Each ElementSection sets a magazine-style chapter break with a
+          numbered header (01/04 · FIRE) + caption + member list, then
+          stacks its three signs in a single article column. Card numbers
+          stay continuous via startIndex so Aries=01 and Pisces=12. */}
+      {ELEMENT_GROUPS.map((group, gi) => {
+        const signs = SIGNS.filter((s) => s.element === group.element);
+        return (
+          <ElementSection
+            key={group.element}
+            number={gi + 1}
+            total={ELEMENT_GROUPS.length}
+            title={group.element}
+            caption={group.caption}
+            members={signs.map((s) => s.name).join(" · ")}
+            startIndex={gi * signs.length}
           >
-            <p>{sign.desc}</p>
-          </ConceptCard>
-        ))}
-      </ConceptStack>
+            {signs.map((sign) => (
+              <SignConceptCard key={sign.name} sign={sign} />
+            ))}
+          </ElementSection>
+        );
+      })}
+
+      {/* Bridge into §03: the matrix is the synthesis of the twelve cards
+          above — twelve portraits resolve into one grid. The s03 anchor
+          here pairs with the third objective ("Place every sign in the
+          3×4 grid"). */}
+      <ProseSection id="s03" kicker="§ 03" title="The grid">
+        <p>
+          You have met the twelve. Now see them all at once. The 3×4 grid
+          below collapses every sign into a single coordinate of modality
+          and element — three rows for how a sign moves, four columns for
+          what it is made of, every sign at exactly one intersection. This
+          is the structural truth behind the personalities.
+        </p>
+      </ProseSection>
+
+      <ModalityMatrix />
+
+      {/* Bridge from the figure into the recap. Without this, the matrix
+          slams straight into the checklist. */}
+      <ProseSection>
+        <p>
+          That is the whole system on one page. Twelve coordinates, three
+          modalities, four elements, no leftovers. The rest of this Academy
+          is just learning what gets parked in each coordinate — and what
+          the geometry between coordinates means.
+        </p>
+      </ProseSection>
 
       <Recap
         items={[

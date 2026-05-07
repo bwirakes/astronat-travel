@@ -14,19 +14,20 @@ const TRADITION_META: Record<Tradition, { label: string; cssVar: string }> = {
 };
 
 /**
- * Color-coded "where this claim comes from" chip. The R-rule from the
+ * Color-coded "where this claim comes from" credit. The R-rule from the
  * curriculum plan: every interpretive claim is attributed to a tradition or
  * to "our reading" — never to "the cosmos."
  *
- * Visual: tiny dot + label. Matches the de-facto eyebrow chip style.
+ * Visual: a 4px dot + small-caps mono text. No border, no fill, no pill —
+ * reads as a magazine credit byline rather than a UI tag.
  */
 export function TraditionChip({ tradition, label }: TraditionChipProps) {
   const meta = TRADITION_META[tradition];
   return (
-    <span className="inline-flex items-center gap-2 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.25em] px-2.5 py-1 rounded-full border border-[var(--surface-border)]">
+    <span className="inline-flex items-center gap-2 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.3em]">
       <span
         aria-hidden
-        className="w-1.5 h-1.5 rounded-full"
+        className="w-1 h-1 rounded-full"
         style={{ background: meta.cssVar }}
       />
       <span style={{ color: meta.cssVar }}>{label ?? meta.label}</span>

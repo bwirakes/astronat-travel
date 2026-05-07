@@ -6,19 +6,15 @@
 // Curriculum data
 export {
   CURRICULUM,
-  MODULES,
   getLesson,
-  getModule,
   getPrev,
   getNext,
   type Lesson,
   type LessonId,
-  type ModuleId,
 } from "./curriculum";
 
 // Shell
 export { LessonShell } from "./LessonShell";
-export { LessonChip } from "./LessonChip";
 export { ProgressRail } from "./ProgressRail";
 export { LessonDisclaimer } from "./LessonDisclaimer";
 
@@ -27,8 +23,11 @@ export { LessonIntro } from "./LessonIntro";
 
 // Act 2 — Teach
 export { ConceptZero } from "./ConceptZero";
-export { ConceptCard } from "./ConceptCard";
+export { SectionHeader } from "./SectionHeader";
+export { ProseSection } from "./ProseSection";
+export { ConceptCard, type StructuredBody } from "./ConceptCard";
 export { ConceptStack } from "./ConceptStack";
+export { ElementSection } from "./ElementSection";
 export { Recap } from "./Recap";
 
 // Act 3 — Next
@@ -41,3 +40,18 @@ export { TraditionChip, type Tradition } from "./TraditionChip";
 export { SourceLine } from "./SourceLine";
 export { Aside } from "./Aside";
 export { DiagramFigure } from "./DiagramFigure";
+export { Plate } from "./Plate";
+export { KeyStrip } from "./KeyStrip";
+
+// Glossary infrastructure
+export { Glossify, NoGloss } from "./Glossify";
+export {
+  GlossaryScopeProvider,
+  useGlossaryScope,
+} from "./glossary-scope";
+export {
+  GLOSSARY,
+  getGlossaryEntry,
+  getAllGlossaryPatterns,
+  type GlossaryEntry,
+} from "./glossary-data";

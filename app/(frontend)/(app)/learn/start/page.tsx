@@ -10,25 +10,27 @@ import {
   TraditionChip,
   SourceLine,
   Aside,
+  getLesson,
   getNext,
 } from "../_components";
 
 export default function StartHerePage() {
+  const lesson = getLesson("start");
   const next = getNext("start");
 
   return (
     <LessonShell lessonId="start">
       <LessonIntro
+        lesson={lesson}
         eyebrow="Orientation"
-        title={["Start", "Here"]}
-        italicLine={1}
+        title="Start"
+        titleItalic="Here"
         lede="Before any signs, planets, or charts: a short orientation. What astrology is, what it isn't, and how to read this Academy."
         objectives={[
           "Tell astronomy and astrology apart — and understand why both matter here.",
           "Recognize the three traditions this curriculum draws from.",
           "Know how a lesson is structured and where to find the glossary.",
         ]}
-        scrollCue
       />
 
       <ConceptZero>
