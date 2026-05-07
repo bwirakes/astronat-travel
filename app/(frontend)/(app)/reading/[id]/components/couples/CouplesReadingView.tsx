@@ -8,18 +8,18 @@
  * presentational so design iteration doesn't require touching data math.
  *
  * Section order (chapter-opener marks at the top of each):
- *   §01 The Read           — drop-cap intro
- *   §02 Goal Scores        — top 3 LIFE_EVENTS, side-by-side bars
- *   §03 Timings            — verdict + Best/Avoid windows
- *   §04 How <city> Feels   — relocated charts (3 tabs)
- *   §05 Who You Are in <city> — relocated angles per partner
+ *   The Read               — drop-cap intro (no §, opens the spread)
+ *   §01 Goal Scores        — top 3 LIFE_EVENTS, side-by-side bars
+ *   §02 Timings            — verdict + Best/Avoid windows
+ *   §03 How <city> Feels   — relocated charts (3 tabs)
+ *   §04 Who You Are in <city> — relocated angles per partner
  */
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import NatalMockupWheel from "@/app/components/NatalMockupWheel";
 import { PageHeader } from "@/components/app/page-header-context";
-import TabSection from "../shared/TabSection";
+import SectionHead from "../shared/SectionHead";
 import LearnFooter from "../shared/LearnFooter";
 import { EVENT_LABELS, VERDICT_COLORS, verdictBand, type VerdictBand } from "@/app/lib/verdict";
 import { destinationFlag } from "@/app/lib/country-flag";
@@ -70,12 +70,12 @@ export default function CouplesReadingView({ vm, paramId }: Props) {
           <Hero hero={vm.hero} />
           <StatLedger ledger={vm.ledger} partnerName={vm.hero.partnerName} flush />
 
-          <ChapterSection index="01" title="The Read">
+          <section style={{ marginTop: "clamp(40px, 5vw, 64px)" }}>
             <MagazineIntro intro={vm.intro} destination={vm.hero.destination} prose={vm.prose} />
-          </ChapterSection>
+          </section>
 
           <ChapterSection
-            index="02"
+            index="01"
             title="Goal Scores"
             sub={
               <>
@@ -86,12 +86,12 @@ export default function CouplesReadingView({ vm, paramId }: Props) {
           >
             <GoalComparison goals={vm.goals} partnerName={vm.hero.partnerName} prose={vm.prose} />
           </ChapterSection>
-          <ChapterSection index="03" title="Timings">
+          <ChapterSection index="02" title="Timings">
             <VerdictBlock timings={vm.timings} prose={vm.prose} />
           </ChapterSection>
 
           <ChapterSection
-            index="04"
+            index="03"
             title={`How ${vm.hero.destination} Feels`}
             sub={<>Two relocated charts and the cross-aspects between them. Each entry shows what the city activates.</>}
           >
@@ -99,7 +99,7 @@ export default function CouplesReadingView({ vm, paramId }: Props) {
           </ChapterSection>
 
           <ChapterSection
-            index="05"
+            index="04"
             title={`Who You Are in ${vm.hero.destination}`}
             sub={<>{vm.geodetic.summary}</>}
           >
@@ -166,21 +166,38 @@ function ClosingFooter({
   );
 }
 
-/** Magazine chapter wrapper. Adopts the same `TabSection` chrome the v4
- *  reading uses for its tab openers — kicker on top, big serif H2 below —
- *  so couples and v4 share one chapter-header shape. The chapter index is
- *  carried in the kicker (`§ 01`) to preserve the magazine signature. */
+/** Magazine chapter wrapper. Couples is a single scrollable spread (no top-
+ *  level tabs), so the heavy `TabSection` opener felt shouty when stacked.
+ *  Switched to `SectionHead` so chapters render in the same kicker-inline +
+ *  hairline grammar as their internal subsections — one rhythm, one scale. */
 function ChapterSection({
   index, title, sub, children,
 }: {
   index: string; title: string; sub?: React.ReactNode; children: React.ReactNode;
 }) {
+  // Render the chapter sub paragraph ourselves (instead of via SectionHead.sub)
+  // so the chapter intro can run wider (~75ch) than the subsection sub default
+  // (640px / ~62ch). Couples' compact chapter header leaves more horizontal
+  // room beside the body text than the bigger TabSection opener would have,
+  // so a wider intro reads better.
   return (
-    <div style={{ marginTop: SECTION_GAP }}>
-      <TabSection kicker={`§ ${index}`} title={title} intro={sub}>
-        {children}
-      </TabSection>
-    </div>
+    <section style={{ marginTop: "clamp(56px, 7vw, 88px)" }}>
+      <SectionHead index={index} title={title} flush />
+      {sub && (
+        <p style={{
+          fontFamily: "var(--font-body)",
+          fontSize: "0.95rem",
+          lineHeight: 1.6,
+          fontWeight: 300,
+          color: "var(--text-secondary)",
+          margin: "var(--space-md) 0 var(--space-lg)",
+          maxWidth: "75ch",
+        }}>
+          {sub}
+        </p>
+      )}
+      {children}
+    </section>
   );
 }
 
@@ -201,12 +218,12 @@ function AiLead({ children }: { children: React.ReactNode }) {
     <p
       style={{
         fontFamily: "var(--font-body)",
-        fontSize: "0.88rem",
-        lineHeight: 1.55,
+        fontSize: "0.92rem",
+        lineHeight: 1.6,
         fontWeight: 300,
         color: "var(--text-secondary)",
         margin: 0,
-        maxWidth: "62ch",
+        maxWidth: "75ch",
       }}
     >
       {children}
@@ -417,7 +434,7 @@ function MagazineIntro({ intro, destination, prose }: { intro: CouplesVM["intro"
           lineHeight: 1.6,
           color: "var(--text-secondary)",
           margin: 0,
-          maxWidth: "60ch",
+          maxWidth: "75ch",
           paddingTop: "0.7rem",
         }}
       >
@@ -582,7 +599,7 @@ function VerdictBlock({ timings, prose }: { timings: CouplesVM["timings"]; prose
             margin: 0,
             letterSpacing: "-0.01em",
             fontWeight: 500,
-            maxWidth: "60ch",
+            maxWidth: "75ch",
           }}
         >
           {prose?.timings?.rationale ? prose.timings.rationale : `${capitalizeFirst(timings.rationale)}.`}
@@ -590,9 +607,9 @@ function VerdictBlock({ timings, prose }: { timings: CouplesVM["timings"]; prose
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "clamp(28px, 4vw, 48px)" }} className="windows-grid">
-        <WindowList title="BEST WINDOWS" color="var(--color-planet-jupiter)" items={timings.bestWindows} scores={timings.bestWindowScores} notes={prose?.timings?.bestWindowNotes} />
+        <WindowList title="Best windows" color="var(--color-planet-jupiter)" items={timings.bestWindows} scores={timings.bestWindowScores} notes={prose?.timings?.bestWindowNotes} />
         {timings.avoidWindows.length > 0 && (
-          <WindowList title="AVOID" color="var(--color-spiced-life)" items={timings.avoidWindows} scores={timings.avoidWindowScores} notes={prose?.timings?.avoidWindowNotes} />
+          <WindowList title="Avoid windows" color="var(--color-spiced-life)" items={timings.avoidWindows} scores={timings.avoidWindowScores} notes={prose?.timings?.avoidWindowNotes} />
         )}
       </div>
       <style jsx>{`
@@ -605,61 +622,63 @@ function VerdictBlock({ timings, prose }: { timings: CouplesVM["timings"]; prose
 }
 
 function WindowList({ title, color, items, scores, notes }: { title: string; color: string; items: string[]; scores?: number[]; notes?: Array<{ windowDate: string; note: string }> }) {
-  if (items.length === 0) {
-    return (
-      <div>
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)", marginBottom: "var(--space-md)", paddingBottom: "0.5rem", borderBottom: "1px solid var(--surface-border)" }}>
-          {title}
-        </div>
-        <p style={{ margin: 0, fontFamily: "var(--font-mono)", fontSize: "0.8rem", color: "var(--text-tertiary)" }}>
-          —
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div>
-      <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)", marginBottom: "var(--space-md)", paddingBottom: "0.5rem", borderBottom: "1px solid var(--surface-border)" }}>
+      <div
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: "0.62rem",
+          letterSpacing: "0.22em",
+          textTransform: "uppercase",
+          color,
+          fontWeight: 700,
+          marginBottom: "var(--space-md)",
+          paddingBottom: "0.5rem",
+          borderBottom: `1px solid ${color}`,
+        }}
+      >
         {title}
       </div>
-      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column" }}>
-        {items.map((w, i) => {
-          const aiNote =
-            notes?.find(n => n.windowDate === w)?.note ??
-            notes?.find(n => n.windowDate.includes(w) || w.includes(n.windowDate))?.note ??
-            notes?.[i]?.note;
-          return (
-            <li
-              key={i}
-              style={{
-                display: "flex",
-                gap: "0.8rem",
-                alignItems: "flex-start",
-                fontFamily: "var(--font-body)",
-                fontSize: "0.92rem",
-                color: "var(--text-secondary)",
-                padding: "0.7rem 0",
-                borderBottom: i < items.length - 1 ? "1px solid var(--surface-border)" : "none",
-                lineHeight: 1.5,
-              }}
-            >
-              <span style={{ color, marginTop: "0.15rem" }}>●</span>
-              <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.8rem" }}>
-                  <span style={{ fontWeight: 500, letterSpacing: "0.01em" }}>{w}</span>
+      {items.length === 0 ? (
+        <p style={{ margin: 0, fontFamily: "var(--font-mono)", fontSize: "0.8rem", color: "var(--text-tertiary)" }}>—</p>
+      ) : (
+        <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column" }}>
+          {items.map((w, i) => {
+            const aiNote =
+              notes?.find(n => n.windowDate === w)?.note ??
+              notes?.find(n => n.windowDate.includes(w) || w.includes(n.windowDate))?.note ??
+              notes?.[i]?.note;
+            return (
+              <li
+                key={i}
+                style={{
+                  padding: "var(--space-md) 0",
+                  borderBottom: i < items.length - 1 ? "1px solid var(--surface-border)" : "none",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.4rem",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "var(--space-md)" }}>
+                  <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.05rem", color: "var(--text-primary)", letterSpacing: "-0.005em" }}>
+                    {w}
+                  </span>
                   {scores?.[i] != null && (
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", letterSpacing: "0.1em", color, fontWeight: 600, flexShrink: 0 }}>
-                      {scores[i]}/100
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.85rem", color: "var(--text-primary)", fontWeight: 600, whiteSpace: "nowrap", letterSpacing: "0.02em" }}>
+                      {scores[i]}<span style={{ color: "var(--text-tertiary)", fontWeight: 400 }}>/100</span>
                     </span>
                   )}
                 </div>
-                {aiNote && <span style={{ fontSize: "0.85rem", lineHeight: 1.4, color: "var(--text-tertiary)", marginTop: "0.25rem" }}>{aiNote}</span>}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+                {aiNote && (
+                  <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--text-secondary)", lineHeight: 1.55 }}>
+                    {aiNote}
+                  </p>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }
@@ -705,34 +724,34 @@ function DeepDive({
               onClick={() => onTab(t.id)}
               aria-pressed={active}
               style={{
-                background: active ? "color-mix(in oklab, var(--color-y2k-blue) 10%, transparent)" : "transparent",
-                border: `1px solid ${active ? "var(--color-y2k-blue)" : "var(--surface-border)"}`,
-                borderRadius: "999px",
-                padding: "0.55rem 1rem",
+                background: active ? "color-mix(in oklab, var(--color-spiced-life) 6%, transparent)" : "transparent",
+                border: `1px solid ${active ? "var(--color-spiced-life)" : "var(--surface-border)"}`,
+                borderRadius: "2px",
+                padding: "0.55rem 0.9rem",
                 cursor: "pointer",
                 display: "inline-flex",
                 alignItems: "baseline",
-                gap: "0.55rem",
+                gap: "0.6rem",
                 color: active ? "var(--text-primary)" : "var(--text-secondary)",
-                transition: "background 0.2s, border-color 0.2s, color 0.2s",
+                transition: "color 0.2s, border-color 0.2s, background 0.2s",
               }}
             >
               <span
                 style={{
                   fontFamily: "var(--font-mono)",
-                  fontSize: "0.6rem",
+                  fontSize: "0.62rem",
                   letterSpacing: "0.22em",
-                  color: active ? "var(--color-y2k-blue)" : "var(--text-tertiary)",
+                  color: active ? "var(--color-spiced-life)" : "var(--text-tertiary)",
                 }}
               >
                 {num}
               </span>
               <span
                 style={{
-                  fontFamily: "var(--font-body)",
-                  fontSize: "0.92rem",
-                  fontWeight: active ? 500 : 400,
-                  letterSpacing: "-0.005em",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "0.7rem",
+                  fontWeight: active ? 600 : 400,
+                  letterSpacing: "0.18em",
                   textTransform: "uppercase",
                 }}
               >
@@ -821,7 +840,7 @@ function SynastryTab({ synastry, partnerName, lead, aspectMeanings }: { synastry
   const hasAny = synastry.harmonious.length > 0 || synastry.tense.length > 0;
   if (!hasAny) {
     return (
-      <p style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--text-tertiary)", margin: 0, maxWidth: "62ch" }}>
+      <p style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--text-tertiary)", margin: 0, maxWidth: "75ch" }}>
         No cross-aspects within standard orbs.
       </p>
     );
@@ -974,7 +993,7 @@ function GeoRow({ who, ascSign, ascDeg, mcSign, mcDeg, note, first }: {
           </span>
         </div>
       </div>
-      <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--text-secondary)", lineHeight: 1.6, maxWidth: "50ch" }}>
+      <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--text-secondary)", lineHeight: 1.6, maxWidth: "75ch" }}>
         {note}
       </p>
     </div>

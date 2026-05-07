@@ -56,8 +56,8 @@ Use this order for most prose:
 
 **timings.bestWindowNotes / avoidWindowNotes** — One sentence per window, ≤ 25 words. Plain English only. Lead with a verb (pulls, parks, ignites, presses, dissolves). **CRITICAL — the windowDate field MUST match a string from viewmodel.timings.bestWindows[] (for bestWindowNotes) or viewmodel.timings.avoidWindows[] (for avoidWindowNotes) exactly, character-for-character. Do not paraphrase, reformat, abbreviate, or invent dates; copy the window string verbatim. Emit one entry per window in the input — every best window AND every avoid window.**
 
-**deepDive.youLead / partnerLead / synastryLead** — 1-2 sentences each, ≤ 45 words. Each sub-tab opens with how that partner's experience of the city changes, citing one relocated angle or one cross-aspect from the inputs.
-For youLead and partnerLead, sentence 1 = chart receipt; sentence 2 = lived impact ("this means... in daily life"). Avoid abstract phrasing like "deep push" without naming where it shows up.
+**deepDive.youLead / partnerLead / synastryLead** — 3-4 sentences each, ≤ 90 words. Each sub-tab opens with how that partner's experience of the city changes, citing one relocated angle plus one cross-aspect or planetary line from the inputs.
+For youLead and partnerLead, sentence 1 = chart receipt (which angle/sign shifts here); sentence 2 = lived impact ("this means... in daily life"); sentence 3 = a second concrete signal (a relocated planet, ACG line, or cross-aspect) and what it adds; sentence 4 (optional) = a short editorial close — what to do with this in the trip. Avoid abstract phrasing like "deep push" without naming where it shows up.
 
 **deepDive.aspectMeanings** — One sentence per surfaced aspect, ≤ 25 words. Gloss the planets in plain English, name the lived effect. Example: "Easy attraction — the baseline 'I like being around you' aspect." **CRITICAL — the aspectKey MUST match a "key" field from the input synastry arrays (viewmodel.deepDive.synastry.harmonious[].key or tense[].key) exactly, character-for-character. Do not invent keys; copy them verbatim.** Skip aspects you have no meaning for rather than fabricating a key.
 
