@@ -13,6 +13,9 @@
  *   §02 Timings            — verdict + Best/Avoid windows
  *   §03 How <city> Feels   — relocated charts (3 tabs)
  *   §04 Who You Are in <city> — relocated angles per partner
+ *   §05 Three things to know — editorial takeaways trio (AI-authored,
+ *                              hidden when prose.takeaways is missing — old
+ *                              persisted readings predate the field)
  */
 
 import { useState } from "react";
@@ -105,6 +108,12 @@ export default function CouplesReadingView({ vm, paramId }: Props) {
           >
             <GeodeticSummary geodetic={vm.geodetic} youName="You" lead={vm.prose?.geodetic?.summary} />
           </ChapterSection>
+
+          {vm.prose?.takeaways && vm.prose.takeaways.length === 3 && (
+            <ChapterSection index="05" title="Three things to know">
+              <Takeaways items={vm.prose.takeaways} />
+            </ChapterSection>
+          )}
 
           <div style={{ marginTop: "clamp(80px, 10vw, 140px)" }}>
             <LearnFooter />
@@ -997,6 +1006,61 @@ function GeoRow({ who, ascSign, ascDeg, mcSign, mcDeg, note, first }: {
         {note}
       </p>
     </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// §05 TAKEAWAYS
+// ═══════════════════════════════════════════════════════════════
+
+/** Editorial trio that closes the spread. Three bullets, fixed count, each
+ *  one a different angle (experience / timing / between-you). Schema enforces
+ *  exactly 3 strings; view falls through gracefully if the field is missing
+ *  on legacy persisted readings. */
+function Takeaways({ items }: { items: string[] }) {
+  return (
+    <ol style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column" }}>
+      {items.map((item, i) => (
+        <li
+          key={i}
+          style={{
+            display: "grid",
+            gridTemplateColumns: "auto 1fr",
+            columnGap: "var(--space-lg)",
+            alignItems: "baseline",
+            padding: "var(--space-md) 0",
+            borderBottom: i < items.length - 1 ? "1px solid var(--surface-border)" : "none",
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.62rem",
+              letterSpacing: "0.22em",
+              color: "var(--text-tertiary)",
+              fontWeight: 700,
+              minWidth: "1.5rem",
+            }}
+          >
+            {String(i + 1).padStart(2, "0")}
+          </span>
+          <p
+            style={{
+              margin: 0,
+              fontFamily: "var(--font-primary)",
+              fontSize: "clamp(1.05rem, 1.5vw, 1.2rem)",
+              lineHeight: 1.4,
+              color: "var(--text-primary)",
+              letterSpacing: "-0.005em",
+              fontWeight: 400,
+              maxWidth: "75ch",
+            }}
+          >
+            {item}
+          </p>
+        </li>
+      ))}
+    </ol>
   );
 }
 
