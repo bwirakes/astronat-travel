@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { PageHeader } from "@/components/app/page-header-context";
 import { COUNTRY_CHARTS, type CountryChart } from "@/lib/astro/mundane-charts";
 import { MundaneCard } from "@/app/components/MundaneCard";
+import { AstroLoader } from "@/app/components/ui/astro-loader";
 
 function MundaneClient() {
   const router = useRouter();
@@ -71,7 +72,7 @@ function MundaneClient() {
 
 export default function MundanePage() {
   return (
-    <Suspense fallback={<div>Loading Mundane Astrology...</div>}>
+    <Suspense fallback={<AstroLoader label="Loading mundane astrology..." minHeight="75vh" />}>
       <MundaneClient />
     </Suspense>
   );

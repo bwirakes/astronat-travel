@@ -1,14 +1,11 @@
 import { Suspense } from "react";
 import ChartClient from "./ChartClient";
+import { AstroLoader } from "@/app/components/ui/astro-loader";
 
 export default function ChartPage() {
     return (
         <Suspense fallback={
-            <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color: "var(--text-tertiary)", letterSpacing: "0.1em" }}>
-                    LOADING CHART...
-                </span>
-            </div>
+            <AstroLoader label="Loading chart..." />
         }>
             <ChartClient />
         </Suspense>

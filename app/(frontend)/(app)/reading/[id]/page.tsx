@@ -9,6 +9,7 @@ import { toCouplesViewModel } from "@/app/lib/couples-viewmodel";
 import WeatherReading from "./components/weather/WeatherReading";
 import HundredOneReadingView from "./components/v4/HundredOneReadingView";
 import CouplesReadingView from "./components/couples/CouplesReadingView";
+import { AstroLoader } from "@/app/components/ui/astro-loader";
 
 function ReadingContent() {
   const params = useParams();
@@ -261,31 +262,7 @@ function ReadingContent() {
   }, [reading, params.id, isDemo]);
 
   if (!mounted || loading) {
-     return (
-       <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[var(--color-charcoal)]">
-         <style>{`
-           @keyframes spin {
-             from { transform: rotate(0deg); }
-             to { transform: rotate(360deg); }
-           }
-         `}</style>
-         <img
-           src="/avatar/saturn-monogram.svg"
-           alt="Loading..."
-           style={{ width: '80px', animation: 'spin 3s linear infinite' }}
-         />
-         <span style={{
-           fontFamily: 'var(--font-mono)',
-           fontSize: '0.6rem',
-           letterSpacing: '0.2em',
-           textTransform: 'uppercase',
-           marginTop: '1.5rem',
-           color: 'var(--color-eggshell)'
-         }}>
-           Computing Chart Matrix...
-         </span>
-       </div>
-     );
+     return <AstroLoader label="Computing chart matrix..." />;
   }
 
   if (notFound || !reading) {
