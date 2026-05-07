@@ -27,7 +27,7 @@ import LearnFooter from "../shared/LearnFooter";
 import { EVENT_LABELS, VERDICT_COLORS, verdictBand, type VerdictBand } from "@/app/lib/verdict";
 import { destinationFlag } from "@/app/lib/country-flag";
 import SignIcon from "@/app/components/SignIcon";
-import type { CouplesVM, PartnerEventScore, ChartTabVM, SynastryAspectVM } from "@/app/lib/couples-viewmodel";
+import type { CouplesVM, PartnerEventScore, ChartTabVM, SynastryAspectVM, AngleVM } from "@/app/lib/couples-viewmodel";
 
 // ═══════════════════════════════════════════════════════════════
 // CONSTANTS
@@ -108,7 +108,13 @@ export default function CouplesReadingView({ vm, paramId }: Props) {
             title={`Who You Are in ${vm.hero.destination}`}
             sub={<>{vm.geodetic.summary}</>}
           >
-            <GeodeticSummary geodetic={vm.geodetic} youName="You" lead={vm.prose?.geodetic?.summary} />
+            <GeodeticSummary
+              geodetic={vm.geodetic}
+              youAngles={vm.deepDive.you.angles}
+              partnerAngles={vm.deepDive.partner.angles}
+              youName="You"
+              lead={vm.prose?.geodetic?.summary}
+            />
           </ChapterSection>
 
           {vm.prose?.takeaways && vm.prose.takeaways.length === 3 && (
@@ -970,7 +976,14 @@ function AspectColumn({
 // §05 GEODETIC
 // ═══════════════════════════════════════════════════════════════
 
-function GeodeticSummary({ geodetic, youName, lead }: { geodetic: CouplesVM["geodetic"]; youName: string; lead?: string }) {
+function GeodeticSummary({ geodetic, youAngles, partnerAngles, youName, lead }: {
+  geodetic: CouplesVM["geodetic"];
+  youAngles: AngleVM[];
+  partnerAngles: AngleVM[];
+  youName: string;
+  lead?: string;
+}) {
+  // AngleVM array is index-aligned: 0 = ASC, 1 = IC, 2 = DSC, 3 = MC.
   return (
     <>
       {lead && <AiLead>{lead}</AiLead>}
@@ -978,15 +991,13 @@ function GeodeticSummary({ geodetic, youName, lead }: { geodetic: CouplesVM["geo
         <GeoColumn
           who={youName.toUpperCase()}
           accent="var(--color-y2k-blue)"
-          ascSign={geodetic.you.ascSign} ascDeg={geodetic.you.ascDeg}
-          mcSign={geodetic.you.mcSign}   mcDeg={geodetic.you.mcDeg}
+          asc={youAngles[0]} mc={youAngles[3]}
           note={geodetic.you.note}
         />
         <GeoColumn
           who={geodetic.partnerName.toUpperCase()}
           accent="var(--color-spiced-life)"
-          ascSign={geodetic.partner.ascSign} ascDeg={geodetic.partner.ascDeg}
-          mcSign={geodetic.partner.mcSign}   mcDeg={geodetic.partner.mcDeg}
+          asc={partnerAngles[0]} mc={partnerAngles[3]}
           note={geodetic.partner.note}
         />
       </div>
@@ -1003,9 +1014,10 @@ function GeodeticSummary({ geodetic, youName, lead }: { geodetic: CouplesVM["geo
  *  (mono kicker + colored hairline below + stacked rows underneath) so the
  *  two halves of §04 read as a side-by-side comparison rather than two
  *  isolated cards. Accent: y2k-blue for "you", spiced-life for partner. */
-function GeoColumn({ who, accent, ascSign, ascDeg, mcSign, mcDeg, note }: {
+function GeoColumn({ who, accent, asc, mc, note }: {
   who: string; accent: string;
-  ascSign: string; ascDeg: number; mcSign: string; mcDeg: number;
+  asc: AngleVM | undefined;
+  mc: AngleVM | undefined;
   note: string;
 }) {
   return (
@@ -1026,8 +1038,8 @@ function GeoColumn({ who, accent, ascSign, ascDeg, mcSign, mcDeg, note }: {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column" }}>
-        <GeoAngleRow label="ASC" sign={ascSign} deg={ascDeg} accent={accent} divider />
-        <GeoAngleRow label="MC"  sign={mcSign}  deg={mcDeg} accent={accent} />
+        {asc && <GeoAngleRow label="ASC" angle={asc} accent={accent} divider />}
+        {mc  && <GeoAngleRow label="MC"  angle={mc}  accent={accent} />}
       </div>
 
       <p style={{ margin: "var(--space-md) 0 0", fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--text-secondary)", lineHeight: 1.6, maxWidth: "75ch" }}>
@@ -1037,7 +1049,20 @@ function GeoColumn({ who, accent, ascSign, ascDeg, mcSign, mcDeg, note }: {
   );
 }
 
-function GeoAngleRow({ label, sign, deg, accent, divider }: { label: "ASC" | "MC"; sign: string; deg: number; accent: string; divider?: boolean }) {
+/** "10° Aries" → "Aries". Matches the shape produced by `fmtSignDeg` in
+ *  couples-viewmodel.ts. Returns "" when natal is unavailable ("—" sentinel
+ *  on legacy readings missing partnerNatalCusps). */
+function signFromFmt(formatted: string): string {
+  const m = formatted.match(/[A-Z][a-z]+$/);
+  return m ? m[0] : "";
+}
+
+function GeoAngleRow({ label, angle, accent, divider }: { label: "ASC" | "MC"; angle: AngleVM; accent: string; divider?: boolean }) {
+  const natalSign = signFromFmt(angle.natal);
+  const reloSign  = signFromFmt(angle.relocated);
+  const hasNatalShift = natalSign && reloSign && natalSign !== reloSign;
+  const hasNatal = angle.natal !== "—";
+
   return (
     <div
       style={{
@@ -1052,10 +1077,23 @@ function GeoAngleRow({ label, sign, deg, accent, divider }: { label: "ASC" | "MC
       <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", color: "var(--text-tertiary)", fontWeight: 600 }}>
         {label}
       </span>
-      <span style={{ display: "inline-flex", alignItems: "center", gap: "0.55rem" }}>
-        <SignIcon sign={sign} color={accent} size={20} />
-        <span style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(1.05rem, 1.5vw, 1.2rem)", color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
-          {sign} {deg}°
+      <span style={{ display: "inline-flex", alignItems: "center", gap: "0.55rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+        {hasNatal && natalSign && (
+          <>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", color: "var(--text-tertiary)" }}>
+              <SignIcon sign={natalSign} color="currentColor" size={16} />
+              <span style={{ fontFamily: "var(--font-primary)", fontSize: "0.95rem", letterSpacing: "-0.005em" }}>
+                {angle.natal}
+              </span>
+            </span>
+            <span aria-hidden style={{ fontFamily: "var(--font-mono)", color: "var(--text-tertiary)", fontSize: "0.85rem" }}>→</span>
+          </>
+        )}
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", color: hasNatalShift ? accent : "var(--text-primary)" }}>
+          {reloSign && <SignIcon sign={reloSign} color={hasNatalShift ? accent : accent} size={20} />}
+          <span style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(1.05rem, 1.5vw, 1.2rem)", color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
+            {angle.relocated}
+          </span>
         </span>
       </span>
     </div>
