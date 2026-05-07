@@ -18,7 +18,7 @@
  *                              persisted readings predate the field)
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import NatalMockupWheel from "@/app/components/NatalMockupWheel";
 import { PageHeader } from "@/components/app/page-header-context";
@@ -57,6 +57,7 @@ interface Props {
 
 export default function CouplesReadingView({ vm, paramId }: Props) {
   const [tab, setTab] = useState<"you" | "partner" | "synastry">("you");
+  const isDark = useIsDarkTheme();
 
   return (
     <>
@@ -98,7 +99,7 @@ export default function CouplesReadingView({ vm, paramId }: Props) {
             title={`How ${vm.hero.destination} Feels`}
             sub={<>Two relocated charts and the cross-aspects between them. Each entry shows what the city activates.</>}
           >
-            <DeepDive deepDive={vm.deepDive} tab={tab} onTab={setTab} destination={vm.hero.destination} prose={vm.prose} />
+            <DeepDive deepDive={vm.deepDive} tab={tab} onTab={setTab} destination={vm.hero.destination} prose={vm.prose} isDark={isDark} />
           </ChapterSection>
 
           <ChapterSection
@@ -504,8 +505,8 @@ function GoalComparison({
       </div>
 
       <ol style={{ listStyle: "none", padding: 0, margin: 0 }}>
-        {goals.events.map((e, i) => (
-          <EventRow key={e.event} ev={e} pinned={goals.priority.has(e.event)} divider={i < goals.events.length - 1} note={prose?.goalScores?.eventNotes?.find(n => n.event === e.event)?.note} />
+        {goals.events.slice(0, 3).map((e, i, arr) => (
+          <EventRow key={e.event} ev={e} pinned={goals.priority.has(e.event)} divider={i < arr.length - 1} note={prose?.goalScores?.eventNotes?.find(n => n.event === e.event)?.note} />
         ))}
       </ol>
     </>
@@ -516,7 +517,9 @@ function EventRow({ ev, pinned, divider, note }: { ev: PartnerEventScore; pinned
   const youBand     = verdictBand(ev.you);
   const partnerBand = verdictBand(ev.partner);
   const delta = Math.abs(ev.you - ev.partner);
-  const showDelta = delta >= 15;
+  // Always show the gap so readers can see partner alignment at a glance.
+  // Gold accent when the gap is significant (>=15 pts), tertiary otherwise.
+  const significantGap = delta >= 15;
 
   return (
     <li
@@ -554,12 +557,12 @@ function EventRow({ ev, pinned, divider, note }: { ev: PartnerEventScore; pinned
           fontFamily: "var(--font-mono)",
           fontSize: "0.62rem",
           letterSpacing: "0.22em",
-          color: showDelta ? "var(--gold)" : "var(--text-tertiary)",
+          color: significantGap ? "var(--gold)" : "var(--text-tertiary)",
           minWidth: "2.5rem",
           textAlign: "right",
         }}
       >
-        {showDelta ? `Δ${delta}` : "—"}
+        Δ{delta}
       </span>
     </li>
   );
@@ -697,13 +700,14 @@ function WindowList({ title, color, items, scores, notes }: { title: string; col
 // ═══════════════════════════════════════════════════════════════
 
 function DeepDive({
-  deepDive, tab, onTab, destination, prose
+  deepDive, tab, onTab, destination, prose, isDark,
 }: {
   deepDive: CouplesVM["deepDive"];
   tab: "you" | "partner" | "synastry";
   onTab: (t: "you" | "partner" | "synastry") => void;
   destination: string;
   prose: CouplesVM["prose"];
+  isDark: boolean;
 }) {
   const tabs: Array<{ id: "you" | "partner" | "synastry"; label: string }> = [
     { id: "you",      label: "For you" },
@@ -774,12 +778,12 @@ function DeepDive({
       <AnimatePresence mode="wait">
         {tab === "you" && (
           <motion.div key="you" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
-            <ChartTab tab={deepDive.you} destination={destination} lead={prose?.deepDive?.youLead} />
+            <ChartTab tab={deepDive.you} destination={destination} lead={prose?.deepDive?.youLead} isDark={isDark} />
           </motion.div>
         )}
         {tab === "partner" && (
           <motion.div key="partner" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
-            <ChartTab tab={deepDive.partner} destination={destination} lead={prose?.deepDive?.partnerLead} />
+            <ChartTab tab={deepDive.partner} destination={destination} lead={prose?.deepDive?.partnerLead} isDark={isDark} />
           </motion.div>
         )}
         {tab === "synastry" && (
@@ -792,7 +796,7 @@ function DeepDive({
   );
 }
 
-function ChartTab({ tab, lead }: { tab: ChartTabVM; destination: string; lead?: string }) {
+function ChartTab({ tab, lead, isDark }: { tab: ChartTabVM; destination: string; lead?: string; isDark: boolean }) {
   const accent = VERDICT_COLORS[verdictBand(tab.macroScore)] ?? "var(--text-secondary)";
   // Prefer AI-authored prose lead when present; else use the synthesized
   // angle-driven lead from the viewmodel (mirrors WhatShiftsTab.buildLead).
@@ -801,7 +805,7 @@ function ChartTab({ tab, lead }: { tab: ChartTabVM; destination: string; lead?: 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "clamp(32px, 4vw, 56px)" }} className="dd-grid">
       <div style={{ maxWidth: 480, width: "100%", margin: "0 auto" }}>
-        <NatalMockupWheel isDark planets={tab.planets as any} cusps={tab.cusps} />
+        <NatalMockupWheel isDark={isDark} planets={tab.planets as any} cusps={tab.cusps} />
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "clamp(24px, 3vw, 36px)" }}>
@@ -1071,4 +1075,27 @@ function Takeaways({ items }: { items: string[] }) {
 function capitalizeFirst(s: string): string {
   if (!s) return s;
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/** Mirrors the pattern in app/(frontend)/(app)/chart/ChartClient.tsx —
+ *  observe `data-theme` on the html element so the wheel can switch between
+ *  light/dark stroke palettes when the user toggles theme. Hardcoded
+ *  isDark={true} made the chart strokes washed out on light backgrounds. */
+function useIsDarkTheme(): boolean {
+  const [isDark, setIsDark] = useState(true);
+  useEffect(() => {
+    const read = () => {
+      const theme = document.documentElement.getAttribute("data-theme");
+      setIsDark(theme !== "light");
+    };
+    read();
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.attributeName === "data-theme") read();
+      }
+    });
+    observer.observe(document.documentElement, { attributes: true });
+    return () => observer.disconnect();
+  }, []);
+  return isDark;
 }
