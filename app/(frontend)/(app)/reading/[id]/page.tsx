@@ -1,28 +1,60 @@
 "use client";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, Suspense } from "react";
+import dynamic from "next/dynamic";
+import { useEffect, useMemo, useState, Suspense, type ReactElement } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { MOCK_READING_DETAILS } from "@/lib/astro/mock-readings";
 import { hasV4TeacherReading } from "@/app/lib/reading-viewmodel";
-import { toCouplesViewModel } from "@/app/lib/couples-viewmodel";
-import WeatherReading from "./components/weather/WeatherReading";
-import HundredOneReadingView from "./components/v4/HundredOneReadingView";
-import CouplesReadingView from "./components/couples/CouplesReadingView";
 import { AstroLoader } from "@/app/components/ui/astro-loader";
 
-function ReadingContent() {
-  const params = useParams();
+function LoadingWeatherReading(): ReactElement {
+  return <AstroLoader label="Loading weather reading..." minHeight="75vh" />;
+}
+
+function LoadingReading(): ReactElement {
+  return <AstroLoader label="Loading reading..." minHeight="75vh" />;
+}
+
+function LoadingCouplesReading(): ReactElement {
+  return <AstroLoader label="Loading couples reading..." minHeight="75vh" />;
+}
+
+function normalizeRouteId(rawId: string | string[] | undefined): string {
+  if (typeof rawId === "string") return rawId;
+  if (Array.isArray(rawId)) return rawId[0] ?? "";
+  return "";
+}
+
+const WeatherReading = dynamic(() => import("./components/weather/WeatherReading"), {
+  loading: LoadingWeatherReading,
+});
+
+const HundredOneReadingView = dynamic(() => import("./components/v4/HundredOneReadingView"), {
+  loading: LoadingReading,
+});
+
+const CouplesReadingRouteView = dynamic(() => import("./components/couples/CouplesReadingRouteView"), {
+  loading: LoadingCouplesReading,
+});
+
+const DEFAULT_AI_INSIGHTS = {
+  primary: { label: "MACRO OVERVIEW", title: "The Astrological Verdict", content: "Evaluating relocation matrix..." },
+  highest: { label: "HIGHEST ENERGY", title: "Peak Resonance", content: "Evaluating relocation matrix..." },
+  vulnerable: { label: "FRICTION POINT", title: "Vulnerability Score", content: "Evaluating relocation matrix..." },
+  timing: { label: "OPTIMAL ACTION WINDOW", title: "Peak Timing", content: "Evaluating relocation matrix..." }
+};
+
+function ReadingContent(): ReactElement | null {
+  const params = useParams<{ id?: string | string[] }>();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
+  const readingId = normalizeRouteId(params.id);
 
   const [reading, setReading] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [isDark, setIsDark] = useState(true);
-  
-  const [mounted, setMounted] = useState(false);
   const [narrative, setNarrative] = useState<any>(null);
   const [narrativeLoading, setNarrativeLoading] = useState(false);
   const [showUpsell, setShowUpsell] = useState(false);
@@ -44,39 +76,17 @@ function ReadingContent() {
     return () => { active = false; };
   }, [isDemo, reading]);
 
-  // Theme observer
   useEffect(() => {
-    setMounted(true);
-    const checkTheme = () => {
-      const theme = document.documentElement.getAttribute("data-theme");
-      setIsDark(theme !== "light");
-    };
-    
-    checkTheme();
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.attributeName === "data-theme") checkTheme();
-      });
-    });
+    let active = true;
 
-    observer.observe(document.documentElement, { attributes: true });
-    return () => observer.disconnect();
-  }, []);
-
-  const DEFAULT_AI_INSIGHTS = {
-    primary: { label: "MACRO OVERVIEW", title: "The Astrological Verdict", content: "Evaluating relocation matrix..." },
-    highest: { label: "HIGHEST ENERGY", title: "Peak Resonance", content: "Evaluating relocation matrix..." },
-    vulnerable: { label: "FRICTION POINT", title: "Vulnerability Score", content: "Evaluating relocation matrix..." },
-    timing: { label: "OPTIMAL ACTION WINDOW", title: "Peak Timing", content: "Evaluating relocation matrix..." }
-  };
-
-  useEffect(() => {
     async function fetchReading() {
       setLoading(true);
+      setNotFound(false);
       
       if (isDemo) {
-        const mockId = typeof params.id === 'string' ? params.id : "1";
+        const mockId = readingId || "1";
         const mockData = MOCK_READING_DETAILS[mockId] || MOCK_READING_DETAILS["1"];
+        if (!active) return;
         setReading({
           ...mockData,
           destination: mockData.destination || "Unknown Destination",
@@ -91,6 +101,7 @@ function ReadingContent() {
       }
 
       const { data: { user } } = await supabase.auth.getUser();
+      if (!active) return;
       if (!user) {
         setLoading(false);
         return;
@@ -99,11 +110,11 @@ function ReadingContent() {
       let data: any;
       let error: any;
 
-      if (typeof params.id === 'string' && params.id.length > 30) {
+      if (readingId.length > 30) {
         const res = await supabase
           .from('readings')
           .select('*')
-          .eq('id', params.id)
+          .eq('id', readingId)
           .eq('user_id', user.id)
           .single();
         data = res.data;
@@ -120,6 +131,8 @@ function ReadingContent() {
         data = res.data;
         error = res.error;
       }
+
+      if (!active) return;
       
       if (data && data.details) {
          const d = data.details as any;
@@ -193,13 +206,14 @@ function ReadingContent() {
     }
     
     fetchReading();
-  }, [params.id, supabase, isDemo]);
+    return () => { active = false; };
+  }, [readingId, supabase, isDemo]);
 
   // Fetch narrative separately — streaming NDJSON, sections arrive progressively.
   // Skipped when the new teacherReading payload is present (new pipeline already
   // produced the long-form copy in a single AI call with the shared voice).
   useEffect(() => {
-    if (!reading || isDemo || typeof params.id !== 'string' || params.id.length < 30) return;
+    if (!reading || isDemo || readingId.length < 30) return;
     if (reading.weatherForecast) return;
     if (reading.teacherReading) {
       if (!hasV4TeacherReading(reading.teacherReading)) {
@@ -219,7 +233,7 @@ function ReadingContent() {
 
     (async () => {
       try {
-        const res = await fetch(`/api/readings/${params.id}/narrative`, { method: 'POST' });
+        const res = await fetch(`/api/readings/${readingId}/narrative`, { method: 'POST' });
         if (!res.body) throw new Error('No response body');
 
         const reader = res.body.getReader();
@@ -259,14 +273,19 @@ function ReadingContent() {
     })();
 
     return () => { cancelled = true; };
-  }, [reading, params.id, isDemo]);
+  }, [reading, readingId, isDemo]);
 
-  if (!mounted || loading) {
-     return <AstroLoader label="Computing chart matrix..." />;
+  useEffect(() => {
+    if (!loading && (notFound || !reading)) {
+      router.replace("/readings");
+    }
+  }, [loading, notFound, reading, router]);
+
+  if (loading) {
+    return <AstroLoader label="Computing chart matrix..." />;
   }
 
   if (notFound || !reading) {
-    router.replace("/readings");
     return null;
   }
 
@@ -276,12 +295,17 @@ function ReadingContent() {
   const isWeather = !!reading.weatherForecast;
 
   if (isWeather) {
-    return <WeatherReading forecast={reading.weatherForecast} readingId={typeof params.id === "string" ? params.id : undefined} />;
+    return <WeatherReading forecast={reading.weatherForecast} readingId={readingId || undefined} />;
   }
 
   if (isSynastry) {
-    const reshaped = { ...reading, narrative };
-    return <CouplesReadingView vm={toCouplesViewModel(reshaped)} paramId={typeof params.id === 'string' ? params.id : undefined} />;
+    return (
+      <CouplesReadingRouteView
+        reading={reading}
+        narrative={narrative}
+        paramId={readingId || undefined}
+      />
+    );
   }
 
   return (
@@ -290,12 +314,12 @@ function ReadingContent() {
       narrative={narrative}
       narrativeLoading={narrativeLoading}
       showUpsell={showUpsell}
-      paramId={typeof params.id === 'string' ? params.id : undefined}
+      paramId={readingId || undefined}
     />
   );
 }
 
-export default function ReadingPage() {
+export default function ReadingPage(): ReactElement {
   return (
     <Suspense fallback={null}>
       <ReadingContent />
