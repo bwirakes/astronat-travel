@@ -36,12 +36,13 @@ import type { CouplesVM, PartnerEventScore, ChartTabVM, SynastryAspectVM, AngleV
 const SECTION_GAP = "clamp(8px, 1.5vw, 24px)";
 const PAGE_MAX = 1200;
 
-/** Per-event bar fill. Intentionally a 5-stop palette (vs. VERDICT_COLORS'
- *  3 stops) — partner-vs-partner bars need more visible nuance, so peak/
- *  solid/mixed/tight/hard each get a distinct colour. */
+/** Per-event bar fill. Both "good" bands (peak, solid) share the sage green
+ *  family so positive verdicts read green at a glance; the numeric score
+ *  carries the peak-vs-solid nuance. Mixed/tight/hard each keep their own
+ *  hue so cautions remain visually distinct. */
 const BAND_FILL: Record<VerdictBand, string> = {
   peak:  "var(--sage)",
-  solid: "var(--color-y2k-blue)",
+  solid: "color-mix(in oklab, var(--sage) 75%, var(--text-tertiary))",
   mixed: "var(--color-acqua)",
   tight: "var(--gold)",
   hard:  "var(--color-spiced-life)",
@@ -106,7 +107,6 @@ export default function CouplesReadingView({ vm, paramId }: Props) {
           <ChapterSection
             index="04"
             title={`Who You Are in ${vm.hero.destination}`}
-            sub={<>{vm.geodetic.summary}</>}
           >
             <GeodeticSummary
               geodetic={vm.geodetic}
@@ -203,8 +203,8 @@ function ChapterSection({
       {sub && (
         <p style={{
           fontFamily: "var(--font-body)",
-          fontSize: "0.95rem",
-          lineHeight: 1.6,
+          fontSize: "1rem",
+          lineHeight: 1.7,
           fontWeight: 300,
           color: "var(--text-secondary)",
           margin: "var(--space-md) 0 var(--space-lg)",
@@ -231,20 +231,58 @@ function Divider() {
  *  `SectionHead.sub` — kept consistent so AI prose reads with one voice
  *  regardless of which section it's in. */
 function AiLead({ children }: { children: React.ReactNode }) {
+  // String children are split on `\n\n` so the AI can author multi-paragraph
+  // leads (chunking dense chart-receipt prose). JSX children render as a
+  // single paragraph for the static fallback callers.
+  const baseStyle: React.CSSProperties = {
+    fontFamily: "var(--font-body)",
+    fontSize: "1rem",
+    lineHeight: 1.75,
+    fontWeight: 300,
+    color: "var(--text-primary)",
+    margin: 0,
+    maxWidth: "75ch",
+  };
+  if (typeof children !== "string") {
+    return <p style={baseStyle}>{children}</p>;
+  }
+  const paragraphs = children.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
   return (
-    <p
-      style={{
-        fontFamily: "var(--font-body)",
-        fontSize: "0.92rem",
-        lineHeight: 1.6,
-        fontWeight: 300,
-        color: "var(--text-secondary)",
-        margin: 0,
-        maxWidth: "75ch",
-      }}
-    >
-      {children}
-    </p>
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
+      {paragraphs.map((para, i) => (
+        <p key={i} style={baseStyle}>
+          <RichText>{para}</RichText>
+        </p>
+      ))}
+    </div>
+  );
+}
+
+/** Renders inline `**bold**` segments inside AI-authored strings. Lets the
+ *  model front-load list items (e.g. "**Lean into Sep 14 — Sep 18.** ...")
+ *  so ESL readers can skim. Italics are intentionally NOT supported —
+ *  italic body text is harder to read for ESL/dyslexic users — so any
+ *  stray `_foo_` or `*foo*` markdown the model emits is stripped before
+ *  rendering. Discipline rules live in the prompt. */
+function RichText({ children }: { children: string }) {
+  // Strip italics markers (single `_..._` and single-asterisk `*...*`) but
+  // leave double-asterisk pairs intact for the bold parser below.
+  const normalized = children
+    .replace(/(^|[^\*])\*([^\*\n][^\*\n]*?)\*(?!\*)/g, "$1$2")
+    .replace(/(^|[^_])_([^_\n][^_\n]*?)_(?!_)/g, "$1$2");
+  const parts = normalized.split(/(\*\*[^*]+\*\*)/g);
+  return (
+    <>
+      {parts.map((p, i) =>
+        p.startsWith("**") && p.endsWith("**") && p.length > 4 ? (
+          <strong key={i} style={{ fontWeight: 700, color: "var(--text-primary)" }}>
+            {p.slice(2, -2)}
+          </strong>
+        ) : (
+          <span key={i}>{p}</span>
+        ),
+      )}
+    </>
   );
 }
 
@@ -380,17 +418,43 @@ function StatLedger({
         borderBottom: "1px solid var(--surface-border)",
         padding: "clamp(24px, 3.5vw, 40px) 0",
         display: "grid",
-        gridTemplateColumns: "1fr 1px 1fr 1px 1fr",
-        alignItems: "stretch",
-        gap: "clamp(16px, 2.5vw, 32px)",
+        gridTemplateColumns: "1fr auto 1fr",
+        alignItems: "center",
+        gap: "clamp(20px, 3vw, 40px)",
       }}
     >
       <LedgerColumn name="YOU" score={ledger.you.score} label={ledger.you.label} accent={youAccent} />
-      <Divider />
-      <LedgerColumn name="Δ MACRO" score={ledger.delta} label="POINTS APART" accent="var(--text-tertiary)" suffix="pts" />
-      <Divider />
+      <DeltaConnector delta={ledger.delta} />
       <LedgerColumn name={partnerName.toUpperCase()} score={ledger.partner.score} label={ledger.partner.label} accent={partnerAccent} align="right" />
     </section>
+  );
+}
+
+/** Visual connector between YOU and PARTNER — a small chip carrying the
+ *  delta. Demoted from a third equal column so the eye treats YOU/PARTNER
+ *  as the two primary scores and the gap as a derived adornment. */
+function DeltaConnector({ delta }: { delta: number }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.45rem" }}>
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.22em", color: "var(--text-tertiary)" }}>Δ</span>
+      <span
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: "0.95rem",
+          color: "var(--text-secondary)",
+          fontWeight: 600,
+          padding: "5px 14px",
+          border: "1px solid var(--surface-border)",
+          borderRadius: 9999,
+          letterSpacing: "0.02em",
+        }}
+      >
+        {delta}
+      </span>
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>
+        APART
+      </span>
+    </div>
   );
 }
 
@@ -447,16 +511,17 @@ function MagazineIntro({ intro, destination, prose }: { intro: CouplesVM["intro"
       <p
         style={{
           fontFamily: "var(--font-body)",
-          fontSize: "clamp(1rem, 1.4vw, 1.15rem)",
-          lineHeight: 1.6,
-          color: "var(--text-secondary)",
+          fontSize: "1.05rem",
+          lineHeight: 1.75,
+          fontWeight: 300,
+          color: "var(--text-primary)",
           margin: 0,
           maxWidth: "75ch",
           paddingTop: "0.7rem",
         }}
       >
         {aiLead ? (
-          <>{aiLead.slice(1)}</>
+          <RichText>{aiLead.slice(1)}</RichText>
         ) : (
           <>
             ased on shared goals in <span style={bold}>{goalsLine}</span>, {destination} supports{" "}
@@ -551,7 +616,7 @@ function EventRow({ ev, pinned, divider, note }: { ev: PartnerEventScore; pinned
     <li
       className="goals-row"
       style={{
-        padding: "var(--space-md)",
+        padding: "var(--space-lg) var(--space-md)",
         borderBottom: divider ? "1px solid var(--surface-border)" : "none",
       }}
     >
@@ -567,8 +632,8 @@ function EventRow({ ev, pinned, divider, note }: { ev: PartnerEventScore; pinned
             {EVENT_LABELS[youBand]} · {EVENT_LABELS[partnerBand]}
           </span>
           {note && (
-            <p style={{ marginTop: "0.5rem", marginBottom: 0, fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.4 }}>
-              {note}
+            <p style={{ marginTop: "0.6rem", marginBottom: 0, fontFamily: "var(--font-body)", fontSize: "1rem", fontWeight: 300, color: "var(--text-primary)", lineHeight: 1.75, maxWidth: "75ch" }}>
+              <RichText>{note}</RichText>
             </p>
           )}
         </div>
@@ -596,7 +661,16 @@ function EventRow({ ev, pinned, divider, note }: { ev: PartnerEventScore; pinned
 function BarCell({ score, color }: { score: number; color: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "0.7rem" }}>
-      <div style={{ flex: 1, height: 6, background: "var(--bg)", borderTop: "1px solid var(--surface-border)", borderBottom: "1px solid var(--surface-border)", overflow: "hidden" }}>
+      <div
+        style={{
+          flex: 1,
+          height: 14,
+          background: "color-mix(in oklab, var(--surface-border) 70%, var(--bg))",
+          border: "1px solid var(--surface-border)",
+          borderRadius: 2,
+          overflow: "hidden",
+        }}
+      >
         <div style={{ width: `${Math.max(0, Math.min(100, score))}%`, height: "100%", background: color, transition: "width 0.4s ease" }} />
       </div>
       <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.95rem", color: "var(--text-primary)", fontWeight: 500, minWidth: "1.8rem", textAlign: "right" }}>
@@ -614,32 +688,57 @@ function BarCell({ score, color }: { score: number; color: string }) {
 function VerdictBlock({ timings, prose }: { timings: CouplesVM["timings"]; prose: CouplesVM["prose"] }) {
   return (
     <>
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem", margin: "0 0 clamp(36px, 5vw, 56px)" }}>
-        <div
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: "0.62rem",
-            letterSpacing: "0.22em",
-            textTransform: "uppercase",
-            color: timings.accent,
-            fontWeight: 700,
-          }}
-        >
-          {timings.label} · {timings.score}/100
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)", margin: "0 0 clamp(36px, 5vw, 56px)" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: "0.9rem", flexWrap: "wrap" }}>
+          <span
+            style={{
+              fontFamily: "var(--font-primary)",
+              fontSize: "clamp(2rem, 3.6vw, 2.8rem)",
+              lineHeight: 1,
+              color: timings.accent,
+              letterSpacing: "-0.02em",
+              fontWeight: 500,
+            }}
+          >
+            {timings.score}
+          </span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "var(--text-tertiary)", letterSpacing: "0.05em" }}>
+            /100
+          </span>
+          <span
+            style={{
+              padding: "5px 12px",
+              borderRadius: 9999,
+              border: `1px solid ${timings.accent}`,
+              background: `color-mix(in oklab, ${timings.accent} 6%, transparent)`,
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.65rem",
+              letterSpacing: "0.22em",
+              textTransform: "uppercase",
+              color: timings.accent,
+              fontWeight: 600,
+              marginLeft: "auto",
+            }}
+          >
+            {timings.label}
+          </span>
         </div>
         <p
           style={{
-            fontFamily: "var(--font-primary)",
-            fontSize: "clamp(1.1rem, 2vw, 1.4rem)",
-            lineHeight: 1.3,
+            fontFamily: "var(--font-body)",
+            fontSize: "1rem",
+            lineHeight: 1.75,
+            fontWeight: 300,
             color: "var(--text-primary)",
             margin: 0,
-            letterSpacing: "-0.01em",
-            fontWeight: 500,
             maxWidth: "75ch",
           }}
         >
-          {prose?.timings?.rationale ? prose.timings.rationale : `${capitalizeFirst(timings.rationale)}.`}
+          {prose?.timings?.rationale ? (
+            <RichText>{prose.timings.rationale}</RichText>
+          ) : (
+            `${capitalizeFirst(timings.rationale)}.`
+          )}
         </p>
       </div>
 
@@ -679,7 +778,7 @@ function WindowList({ title, color, items, scores, notes }: { title: string; col
       {items.length === 0 ? (
         <p style={{ margin: 0, fontFamily: "var(--font-mono)", fontSize: "0.8rem", color: "var(--text-tertiary)" }}>—</p>
       ) : (
-        <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column" }}>
+        <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
           {items.map((w, i) => {
             const aiNote =
               notes?.find(n => n.windowDate === w)?.note ??
@@ -689,26 +788,30 @@ function WindowList({ title, color, items, scores, notes }: { title: string; col
               <li
                 key={i}
                 style={{
-                  padding: "var(--space-md) 0",
-                  borderBottom: i < items.length - 1 ? "1px solid var(--surface-border)" : "none",
+                  padding: "var(--space-lg)",
+                  background: "color-mix(in oklab, var(--surface-border) 28%, var(--bg))",
+                  borderRadius: 6,
                   display: "flex",
                   flexDirection: "column",
-                  gap: "0.4rem",
+                  gap: "0.55rem",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "var(--space-md)" }}>
-                  <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.05rem", color: "var(--text-primary)", letterSpacing: "-0.005em" }}>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--text-secondary)", fontWeight: 600 }}>
                     {w}
                   </span>
                   {scores?.[i] != null && (
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.85rem", color: "var(--text-primary)", fontWeight: 600, whiteSpace: "nowrap", letterSpacing: "0.02em" }}>
-                      {scores[i]}<span style={{ color: "var(--text-tertiary)", fontWeight: 400 }}>/100</span>
+                    <span style={{ display: "inline-flex", alignItems: "baseline", gap: "0.25rem", whiteSpace: "nowrap" }}>
+                      <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.5rem", color, fontWeight: 500, lineHeight: 1, letterSpacing: "-0.01em" }}>
+                        {scores[i]}
+                      </span>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color: "var(--text-tertiary)" }}>/100</span>
                     </span>
                   )}
                 </div>
                 {aiNote && (
-                  <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--text-secondary)", lineHeight: 1.55 }}>
-                    {aiNote}
+                  <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "1rem", fontWeight: 300, color: "var(--text-primary)", lineHeight: 1.75, maxWidth: "75ch" }}>
+                    <RichText>{aiNote}</RichText>
                   </p>
                 )}
               </li>
@@ -837,13 +940,24 @@ function ChartTab({ tab, lead, isDark }: { tab: ChartTabVM; destination: string;
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1px 1fr 1px 1fr",
-            gap: "clamp(12px, 2vw, 24px)",
+            gridTemplateColumns: "auto 1px 1fr 1px 1fr",
+            gap: "clamp(16px, 2.5vw, 28px)",
+            alignItems: "stretch",
             paddingBottom: "clamp(16px, 2vw, 24px)",
             borderBottom: "1px solid var(--surface-border)",
           }}
         >
-          <FlatStat label="MACRO" value={`${tab.macroScore}/100`} accent={accent} />
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", justifyContent: "center" }}>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>
+              MACRO
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "0.3rem" }}>
+              <span style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(2rem, 3.4vw, 2.6rem)", color: accent, lineHeight: 1, letterSpacing: "-0.02em", fontWeight: 500 }}>
+                {tab.macroScore}
+              </span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--text-tertiary)" }}>/100</span>
+            </div>
+          </div>
           <Divider />
           <FlatStat label="ELEMENT" value={tab.element} />
           <Divider />
@@ -874,11 +988,39 @@ function FlatStat({ label, value, accent }: { label: string; value: string; acce
   );
 }
 
+/** 3-dot tightness scale for synastry aspect orbs. <2° = 3 filled (exact),
+ *  2–4° = 2 (snug), >4° = 1 (wide). The dot count carries the loudness; the
+ *  numeric remains beside it for users who want the exact value. */
+function OrbIndicator({ orb, accent }: { orb: number; accent: string }) {
+  const filled = orb < 2 ? 3 : orb < 4 ? 2 : 1;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", whiteSpace: "nowrap" }}>
+      <span style={{ display: "inline-flex", gap: "3px" }}>
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: "50%",
+              background: i < filled ? accent : "transparent",
+              border: `1px solid ${i < filled ? accent : "var(--surface-border)"}`,
+            }}
+          />
+        ))}
+      </span>
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", letterSpacing: "0.05em", color: "var(--text-secondary)", fontWeight: 500 }}>
+        {orb.toFixed(1)}°
+      </span>
+    </span>
+  );
+}
+
 function SynastryTab({ synastry, partnerName, lead, aspectMeanings }: { synastry: CouplesVM["deepDive"]["synastry"]; partnerName: string; lead?: string; aspectMeanings?: Array<{ aspectKey: string; meaning: string }> }) {
   const hasAny = synastry.harmonious.length > 0 || synastry.tense.length > 0;
   if (!hasAny) {
     return (
-      <p style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--text-tertiary)", margin: 0, maxWidth: "75ch" }}>
+      <p style={{ fontFamily: "var(--font-body)", fontSize: "1rem", fontWeight: 300, color: "var(--text-tertiary)", margin: 0, maxWidth: "75ch" }}>
         No cross-aspects within standard orbs.
       </p>
     );
@@ -931,20 +1073,19 @@ function AspectColumn({
             <li
               key={i}
               style={{
-                padding: "var(--space-md) 0",
+                padding: "var(--space-lg) 0 var(--space-lg) var(--space-md)",
+                borderLeft: `2px solid ${accent}`,
                 borderBottom: i < items.length - 1 ? "1px solid var(--surface-border)" : "none",
                 display: "flex",
                 flexDirection: "column",
-                gap: "0.4rem",
+                gap: "0.55rem",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "var(--space-md)" }}>
-                <span style={{ fontFamily: "var(--font-primary)", fontSize: "1rem", color: "var(--text-primary)", fontWeight: 500, letterSpacing: "-0.01em" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "var(--space-md)" }}>
+                <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.05rem", color: "var(--text-primary)", fontWeight: 500, letterSpacing: "-0.01em" }}>
                   {a.p1} {a.aspect} {partnerName}&apos;s {a.p2}
                 </span>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.18em", color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>
-                  ORB {a.orb.toFixed(1)}°
-                </span>
+                <OrbIndicator orb={a.orb} accent={accent} />
               </div>
               {(() => {
                 // Canonical key on the VM (`${p1}-${aspect}-${p2}` lowercased)
@@ -959,8 +1100,8 @@ function AspectColumn({
                 });
                 const displayMeaning = match?.meaning ?? a.meaning;
                 return (
-                  <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--text-secondary)", lineHeight: 1.55 }}>
-                    {displayMeaning}
+                  <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "1rem", fontWeight: 300, color: "var(--text-primary)", lineHeight: 1.8, maxWidth: "75ch" }}>
+                    <RichText>{displayMeaning}</RichText>
                   </p>
                 );
               })()}
@@ -1042,8 +1183,8 @@ function GeoColumn({ who, accent, asc, mc, note }: {
         {mc  && <GeoAngleRow label="MC"  angle={mc}  accent={accent} />}
       </div>
 
-      <p style={{ margin: "var(--space-md) 0 0", fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--text-secondary)", lineHeight: 1.6, maxWidth: "75ch" }}>
-        {note}
+      <p style={{ margin: "var(--space-lg) 0 0", fontFamily: "var(--font-body)", fontSize: "1rem", fontWeight: 300, color: "var(--text-primary)", lineHeight: 1.75, maxWidth: "75ch" }}>
+        <RichText>{note}</RichText>
       </p>
     </div>
   );
@@ -1070,7 +1211,7 @@ function GeoAngleRow({ label, angle, accent, divider }: { label: "ASC" | "MC"; a
         justifyContent: "space-between",
         alignItems: "center",
         gap: "var(--space-md)",
-        padding: "var(--space-md) 0",
+        padding: "var(--space-lg) 0",
         borderBottom: divider ? "1px solid var(--surface-border)" : "none",
       }}
     >
@@ -1119,18 +1260,19 @@ function Takeaways({ items }: { items: string[] }) {
             gridTemplateColumns: "auto 1fr",
             columnGap: "var(--space-lg)",
             alignItems: "baseline",
-            padding: "var(--space-md) 0",
+            padding: "var(--space-lg) 0",
             borderBottom: i < items.length - 1 ? "1px solid var(--surface-border)" : "none",
           }}
         >
           <span
             style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "0.62rem",
-              letterSpacing: "0.22em",
-              color: "var(--text-tertiary)",
-              fontWeight: 700,
-              minWidth: "1.5rem",
+              fontFamily: "var(--font-primary)",
+              fontSize: "clamp(1.4rem, 2vw, 1.8rem)",
+              letterSpacing: "-0.01em",
+              color: "var(--color-y2k-blue)",
+              fontWeight: 500,
+              lineHeight: 1,
+              minWidth: "2.2rem",
             }}
           >
             {String(i + 1).padStart(2, "0")}
@@ -1139,15 +1281,15 @@ function Takeaways({ items }: { items: string[] }) {
             style={{
               margin: 0,
               fontFamily: "var(--font-primary)",
-              fontSize: "clamp(1.05rem, 1.5vw, 1.2rem)",
-              lineHeight: 1.4,
+              fontSize: "clamp(1.1rem, 1.5vw, 1.2rem)",
+              lineHeight: 1.55,
               color: "var(--text-primary)",
               letterSpacing: "-0.005em",
               fontWeight: 400,
               maxWidth: "75ch",
             }}
           >
-            {item}
+            <RichText>{item}</RichText>
           </p>
         </li>
       ))}

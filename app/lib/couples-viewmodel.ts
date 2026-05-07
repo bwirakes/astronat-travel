@@ -79,7 +79,10 @@ export interface SynastryAspectVM {
 }
 
 export interface ChartTabVM {
-  planets: Array<{ planet: string; longitude: number }>;
+  /** Planets are enriched with `sign`, `house`, and `degree` so the natal
+   *  wheel's hover tooltip can read them directly. The wheel gates the
+   *  tooltip on `sign && house`; without these fields, hover is silent. */
+  planets: Array<{ planet: string; longitude: number; sign: string; house: number; degree: string }>;
   cusps: number[];
   macroScore: number;
   element: string;
@@ -315,7 +318,7 @@ export function toCouplesViewModel(reading: any): CouplesVM {
   const ptnrAngles = buildAngles(ptnrNatalCusps, ptnrCusps);
 
   const youDeep: ChartTabVM = {
-    planets: youPlanets,
+    planets: enrichPlanetsForWheel(youPlanets, youCusps),
     cusps: youCusps,
     macroScore: youScore,
     element: dominantElement(youPlanets),
@@ -324,7 +327,7 @@ export function toCouplesViewModel(reading: any): CouplesVM {
     angles: youAngles,
   };
   const ptnrDeep: ChartTabVM = {
-    planets: ptnrPlanets,
+    planets: enrichPlanetsForWheel(ptnrPlanets, ptnrCusps),
     cusps: ptnrCusps,
     macroScore: partnerScore,
     element: dominantElement(ptnrPlanets),
@@ -430,7 +433,7 @@ export function toCouplesViewModel(reading: any): CouplesVM {
  *  if available, else map LIFE_EVENTS to user/partner macroScore (a flat
  *  approximation but an honest one — the page will still render). */
 export function buildEventScores(reading: any): PartnerEventScore[] {
-  const userEvents: FinalEventScore[] = Array.isArray(reading.eventScores) ? reading.eventScores : [];
+  const userEvents: FinalEventScore[] = Array.isArray(reading.userEventScores) ? reading.userEventScores : [];
   const partnerEvents: FinalEventScore[] = Array.isArray(reading.partnerEventScores) ? reading.partnerEventScores : [];
 
   if (userEvents.length === LIFE_EVENTS.length && partnerEvents.length === LIFE_EVENTS.length) {
@@ -611,6 +614,22 @@ function normalizePlanets(raw: unknown): Array<{ planet: string; longitude: numb
       return { planet: capitalize(rawName), longitude };
     })
     .filter((x): x is { planet: string; longitude: number } => x !== null);
+}
+
+/** Adds `sign`, `house`, `degree` to each planet so NatalMockupWheel's hover
+ *  tooltip (which gates on `sign && house`) lights up. Cusps come from the
+ *  relocated chart so the house is the relocated house, matching what the
+ *  wheel itself draws. */
+function enrichPlanetsForWheel(
+  planets: Array<{ planet: string; longitude: number }>,
+  cusps: number[],
+): ChartTabVM["planets"] {
+  return planets.map((p) => ({
+    ...p,
+    sign: signFromLon(p.longitude),
+    house: houseFromLon(p.longitude, cusps),
+    degree: `${Math.floor((((p.longitude % 30) + 30) % 30))}°`,
+  }));
 }
 
 function signFromLon(lon: number): string {
