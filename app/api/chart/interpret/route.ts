@@ -35,8 +35,22 @@ const google = createGoogleGenerativeAI({
 });
 
 const SYSTEM_PROMPT = `You are Astro-Nat (Natalia), a fiercely unapologetic, world-renowned astrologer.
-Your signature voice is bold, sharp, slightly defiant, and deeply empowering. You do NOT do "love and light" fluff. Your readings are a wake-up call to tear down the illusions and societal conditioning holding people back. 
-You speak with absolute authority because you have done the deep research. You are a provocateur. Do not sugarcoat anything. If a placement is going to be brutal, say it's going to be brutal. Challenge the reader to stop playing small. Do not use cuss words or profanity.
+Your signature voice is bold, sharp, slightly defiant, and deeply empowering. You do NOT do "love and light" fluff. Your readings are a wake-up call to tear down the illusions and societal conditioning holding people back.
+You speak with absolute authority because you have done the deep research. You are a provocateur. Do not sugarcoat anything. If a placement is going to be brutal, say it's going to be brutal. Treat heavy aspects (Saturn, Pluto) as institutional forces to be outsmarted or dismantled. Tell the reader exactly what to do with a touch of sharp, intellectual sass ("Frankly, we expected this"). Challenge them to stop playing small. Do not use cuss words or profanity.
+
+# Editor Role
+While writing as Astro-Nat, structure your output to the rigorous standards of a high-end publication like Monocle Magazine. The engine has already selected the placements, scores, and aspects. Your job is to make the reading feel like an elite editorial feature powered by precise astrology.
+Write at a 7th-grade vocabulary level for accessibility, but let your prose flow. Use 3-5 sentence paragraphs that synthesize the data beautifully — short, choppy sentences only when the moment calls for impact.
+
+**The Economist Rule (Glossing):** Whenever you cite an astrological term (a planet, angle, house, or aspect), you MUST briefly explain what it means in plain English using an appositive phrase in the same sentence. For example: "Saturn in your 10th house, the sector that governs public reputation and career, makes ambition feel like a duty, not a thrill." Do not assume the reader knows what Saturn or the 4th house means.
+
+**Prose Order:** Use this order for most paragraphs.
+1. Outcome — what the reader can expect to experience.
+2. Lived experience — how it will feel in normal life.
+3. Chart receipt — explicitly "show your work" by citing the exact placement (planet, sign, house, or aspect) that drives this outcome.
+4. Useful action — what to do with it.
+
+**The Voice Test:** If a sentence could appear unchanged in a textbook, rewrite it. If it could not stand next to "Frankly, we expected this," the voice is off.
 
 ${SHARED_VOICE}
 
@@ -46,9 +60,9 @@ STRICT FACTUAL RULES (do NOT invent, do NOT confuse):
 • A planet "rules" a house by ruling the sign on the cusp — it does NOT live there unless also listed as an occupant.
 
 LANGUAGE RULES:
-• Use short, punchy, editorial sentences. Let the paragraphs breathe.
-• Never use fluffy astrological jargon without explaining it in plain English.
-• Be direct. No filler.`;
+• Lead with outcome and lived experience. Receipt comes after.
+• Never use fluffy astrological jargon without glossing it in plain English in the same sentence.
+• Be direct. No filler. No "leverage," "resonance," "manifest," "energy."`;
 
 const Section = z.object({
   title: z.string(),
@@ -67,6 +81,18 @@ const HouseEnergySection = z.object({
     plainLabel: z.string(),
     oneLiner: z.string(),
   }),
+});
+
+// For aspectGeometry — curated 2-column editorial split
+const AspectEntry = z.object({
+  aspectKey: z.string(),     // "<planet1>-<type>-<planet2>" lowercase, alphabetical planets
+  headline: z.string(),      // <= 8 words, editorial title
+  body: z.string(),          // <= 28 words, prose-order rule (outcome → receipt → move)
+});
+const AspectGeometrySection = z.object({
+  intro: z.string(),                                 // 2-sentence opener for the section
+  workingFor: z.array(AspectEntry).max(3),           // tightest harmonious aspects (trine/sextile)
+  pushingYou: z.array(AspectEntry).max(3),           // tightest friction aspects (square/opposition)
 });
 
 interface HouseSummary {
@@ -103,6 +129,8 @@ interface Payload {
   peakHouses: HouseSummary[];
   shadowHouses: HouseSummary[];
   topAspects: Array<{ aspect: string; type: string; orb: string; planet1: string; planet2: string }>;
+  topHarmonious: Array<{ aspectKey: string; aspect: string; type: string; orb: string; planet1: string; planet2: string }>;
+  topChallenging: Array<{ aspectKey: string; aspect: string; type: string; orb: string; planet1: string; planet2: string }>;
   closestAcg: Array<{ planet: string; angle: string; dist_km: number; tier: string }>;
   placements: Array<{
     planet: string;
@@ -258,7 +286,7 @@ export async function POST(request: Request) {
   if (cachedInterpretation?.placementImplications) {
     const stream = new ReadableStream({
       start(controller) {
-        for (const key of ["chartEssence", "houseArchitecture", "aspectWeaver", "naturalAngles", "placementImplications"]) {
+        for (const key of ["chartEssence", "houseArchitecture", "aspectGeometry", "aspectWeaver", "naturalAngles", "placementImplications"]) {
           if (cachedInterpretation[key]) {
             emit(controller, { section: key, data: cachedInterpretation[key] });
           }
@@ -291,9 +319,13 @@ export async function POST(request: Request) {
       system: SYSTEM_PROMPT,
       prompt: `Write the "chartEssence" section. Data:\n${payloadStr}
 
-Write a comprehensive, multi-paragraph editorial deep-dive (3-4 paragraphs) breaking down the core thesis of this person's life based on their chart. 
-Start by aggressively analyzing their rising sign and chart ruler. Then weave in their Sun and Moon. 
-Do not use fluffy language. Speak with the authority of a high-end magazine feature. Go deep into what this means for their reality, their struggles, and their ultimate power. Let the paragraphs breathe.`,
+EXACTLY 2 paragraphs. Total length ~140-180 words. Tight and punchy — this is the lede, not the full feature. Separate the two paragraphs with a blank line (two newlines).
+
+Paragraph 1 (the lede, 3-4 sentences): Open with what this person is actually like to be near — the outcome the reader recognises in themselves. Do NOT open with "Your rising sign is X" or any chart receipt. Then weave in the rising sign and chart ruler with their actual placement (e.g. "Venus, your chart ruler, is in Libra in your 1st house" — NEVER just "Venus rules your chart"). Gloss every term plain-English in-line.
+
+Paragraph 2 (the receipt + the move, 3-4 sentences): Name the Sun (by sign and house) and the Moon (by sign and house) explicitly — these come from payload.natal.sunSign/sunHouse and moonSign/moonHouse. Synthesise what the trio (rising/Sun/Moon) does together for this person. Close with one sentence on the strategic move.
+
+The paragraph that names a planet without its sign and house FAILS the brief. The receipt is the difference between a horoscope blurb and an Astro-Nat reading. Apply the Voice Test before finalising.`,
       schema: z.object({ chartEssence: Section }),
     });
 
@@ -303,24 +335,45 @@ Do not use fluffy language. Speak with the authority of a high-end magazine feat
       system: SYSTEM_PROMPT,
       prompt: `Write the "houseArchitecture" section. Data:\n${payloadStr}
 
-Return two objects:
-- strongHouse: the house with the highest score. Give its house number, a 2-3 word plain label (e.g. "Creativity & Fun"), and a full 2-3 sentence paragraph explaining exactly why this area of life is so dominant and powerful for them.
-- growthHouse: the house with the lowest score. Same format. A full 2-3 sentence paragraph explaining the friction, the reality of the struggle here, and how they must strategize to overcome it.
+For BOTH oneLiners: open with what the reader lives, then RECEIPT WITH PLANET NAMES, then the move. 2-3 sentences. ~50-70 words.
 
-Do not hold back. Be blunt, pragmatic, and insightful.`,
+**RECEIPT RULES (mandatory):** The receipt sentence MUST name the actual planet(s) by name AND sign that drive the score, not just the house topic. The payload gives you this directly:
+- payload.peakHouses[0].occupants — planets physically inside the strong house, with their sign. If non-empty, NAME them (e.g. "Mercury in Virgo, sharpened by precision"). If 2+ occupants, name the most influential 1-2.
+- payload.peakHouses[0].rulerPlanet + rulerNatalSign + rulerNatalHouse — the traditional ruler of the cusp sign. Use this if occupants is empty, OR if the ruler condition is striking (e.g. cazimi/exalted/in-fall).
+- Same rules for payload.shadowHouses[0] in the growthHouse oneLiner.
+
+A oneLiner that names ONLY the house topic ("your 5th house, the sector of creativity") and NOT the planet inside it FAILS the brief. Always say WHICH PLANET in WHICH SIGN is doing the work.
+
+Output format:
+- strongHouse: Sentence 1 = the lived feeling ("People come to you for X" / "You're at your most magnetic when…"). Sentence 2 = the receipt — name the planet, sign, and house, glossed plain-English. Sentence 3 = the strategic move.
+- growthHouse: Sentence 1 = the friction the reader knows in their body. Sentence 2 = the receipt with planet + sign + house. Sentence 3 = how to outsmart it.
+
+plainLabel: 2-3 words, plain English (e.g. "Creativity & Fun," "Home & Roots"). Do NOT use jargon.`,
       schema: z.object({ houseArchitecture: HouseEnergySection }),
     });
 
-  const callAspects = () =>
+  const callAspectGeometry = () =>
     generateObject({
       model: google("gemini-3.1-flash-lite-preview"),
       system: SYSTEM_PROMPT,
-      prompt: `Write the "aspectWeaver" section. Data:\n${payloadStr}
+      prompt: `Write the "aspectGeometry" section. Data:\n${payloadStr}
 
-Pick the 2 most critical aspect geometries (planetary connections) from the data. 
-Write a highly readable 2-paragraph analysis explaining how these two specific tensions or harmonies play out in their real life. 
-Keep it brutally practical. Avoid astrological jargon without explaining the actual real-world consequence. Focus on the friction and the leverage.`,
-      schema: z.object({ aspectWeaver: Section }),
+The engine has pre-selected two shortlists in the payload:
+- payload.topHarmonious — up to 3 trine/sextile aspects, tightest orbs first. These are the tailwinds.
+- payload.topChallenging — up to 3 square/opposition aspects, tightest orbs first. These are the friction points.
+
+Output:
+- intro: 2-sentence editorial opener for the section. Open with what the geometry of this person's chart actually says about how their inner pieces talk to each other. Do NOT list aspect counts or names in the intro.
+- workingFor: ONE entry per aspect in payload.topHarmonious, IN ORDER. Do not skip. Do not invent.
+- pushingYou: ONE entry per aspect in payload.topChallenging, IN ORDER. Do not skip. Do not invent.
+
+For each entry:
+- aspectKey: copy verbatim from payload (e.g. "moon-trine-venus"). MUST match exactly so the UI can look it up.
+- headline: <= 8 words, editorial title that names what this aspect actually does in their life. Examples: "The patient builder," "A chronic argument with yourself," "Charm covers for the ambition."
+- body: <= 28 words. Apply the Prose Order: lead with the lived outcome, then a brief receipt (which two planets, glossed plain-English in-line), then a useful note. No "leverage," no "energy," no jargon.
+
+Apply the Voice Test on every headline and body before finalising.`,
+      schema: z.object({ aspectGeometry: AspectGeometrySection }),
     });
 
   const callAcg = () =>
@@ -329,7 +382,9 @@ Keep it brutally practical. Avoid astrological jargon without explaining the act
       system: SYSTEM_PROMPT,
       prompt: `Write the "naturalAngles" section. Data:\n${payloadStr}
 
-If there are strong lines (under 250km), name one and explain in plain words what it means for this person's life in that place. If not, say the chart is not tied to one place — their personality works the same everywhere. One practical takeaway sentence.`,
+If there are strong ACG lines (under 250km from birth), open with what shapes this person's life *because* they were born under that line — the lived effect. Then name the line, glossed plain-English. Then one practical takeaway.
+If there are no strong lines, say plainly that this chart is not tied to one place — the personality works the same everywhere — and end with a one-sentence move (lean into mobility, or pick a city for other reasons).
+Apply the Voice Test before finalising.`,
       schema: z.object({ naturalAngles: Section }),
     });
 
@@ -339,13 +394,20 @@ If there are strong lines (under 250km), name one and explain in plain words wha
       system: SYSTEM_PROMPT,
       prompt: `Write "placementImplications" for each natal planet in payload. Data:\n${payloadStr}
 
-Return an object keyed exactly by planet name. Each value must be a rich, 2-3 sentence paragraph.
-Format: Explain what [Planet] in [Sign] in [House] actually means for their day-to-day life and psychological reality.
+Return an object keyed exactly by planet name. Each value is a 2-3 sentence paragraph (~45-65 words).
 
-Rules:
-- Be specific, authoritative, and blunt.
-- Describe what the person experiences, the shadow side, and their strategic advantage here.
-- Do not use generic astrology fluff. Ground the interpretation in harsh, practical reality.`,
+**CRITICAL CONTEXT:** The UI shows each planet's sign, degree, house number, and house topic in a chip directly above your sentence. The reader can SEE that "Sun · Leo 24°55' · House 4, family and feeling safe" before they read your prose.
+
+**DO NOT** open with "With your natal X in Y in your Zth house of W…" or any variation that restates the chip. That copy is redundant. Every time you write "your natal Sun in Leo in your 4th house of family and feeling safe," you are wasting the reader's first sentence.
+
+**DO** lead straight with the lived outcome — what the person actually feels and does. Then a strategic note. Reference the planet/sign/house only by allusion if you must, never by full receipt restatement.
+
+Format per entry:
+- Sentence 1: the lived outcome ("You parent yourself in public," "You think on your feet and switch tracks mid-sentence," "You make peace before you make sense").
+- Sentence 2: the synthesis — what the placement actually does in this person's life. ONE light reference to a planet/sign/house allowed (e.g. "Leo in the 4th makes private life a stage"), but only if it earns the reference.
+- Sentence 3 (optional): the shadow + the move. What it costs, what to do with it.
+
+No fluff. No "energy," no "leverage," no "manifest." Apply the Voice Test before each entry. If the entry could be swapped between two charts that share a sign, it's too generic — make it specific.`,
       schema: z.object({ placementImplications: z.record(z.string(), z.string()) }),
     });
 
@@ -353,7 +415,7 @@ Rules:
     async start(controller) {
       const interpretation: Record<string, unknown> = {};
 
-      const tasks = [callEssence, callHouses, callAspects, callAcg, callPlacements].map(async (call) => {
+      const tasks = [callEssence, callHouses, callAspectGeometry, callAcg, callPlacements].map(async (call) => {
         try {
           const { object } = await call();
           for (const [key, value] of Object.entries(object)) {
@@ -511,6 +573,35 @@ async function buildPayload(userId: string, profile: ChartProfile, ephemeris: Ep
       planet2: a.planet2 ?? "",
     }));
 
+  // Curated 2-column shortlist for the aspectGeometry editorial section.
+  // Sort by raw orb (tightest first) within each family so the AI gets the
+  // strongest signals to narrate, regardless of priority-planet weighting.
+  const buildAspectKey = (planet1: string, type: string, planet2: string) => {
+    const [a, b] = [planet1, planet2].map((p) => p.toLowerCase()).sort();
+    return `${a}-${type.toLowerCase()}-${b}`;
+  };
+  const harmoniousTypes = new Set(["trine", "sextile"]);
+  const challengingTypes = new Set(["square", "opposition"]);
+  const tagAspect = (a: NatalAspect) => ({
+    aspectKey: buildAspectKey(a.planet1 ?? "", a.type ?? "", a.planet2 ?? ""),
+    aspect: a.aspect ?? "",
+    type: a.type ?? "",
+    orb: a.orb ?? "",
+    planet1: a.planet1 ?? "",
+    planet2: a.planet2 ?? "",
+    _orbDeg: parseOrbDeg(a.orb ?? ""),
+  });
+  const sortedByTightness = [...aspects].map(tagAspect).sort((a, b) => a._orbDeg - b._orbDeg);
+  const stripPriv = ({ _orbDeg, ...rest }: ReturnType<typeof tagAspect>) => rest;
+  const topHarmonious = sortedByTightness
+    .filter((a) => harmoniousTypes.has(a.type.toLowerCase()))
+    .slice(0, 3)
+    .map(stripPriv);
+  const topChallenging = sortedByTightness
+    .filter((a) => challengingTypes.has(a.type.toLowerCase()))
+    .slice(0, 3)
+    .map(stripPriv);
+
   // 4. Closest ACG lines — top 6 by distance
   const closestAcg = cityLines
     .slice()
@@ -563,6 +654,8 @@ async function buildPayload(userId: string, profile: ChartProfile, ephemeris: Ep
     peakHouses: peakHouses.map((h) => ({ ...h, sphere: HOUSE_THEMES[h.house] ?? h.sphere })),
     shadowHouses: shadowHouses.map((h) => ({ ...h, sphere: HOUSE_THEMES[h.house] ?? h.sphere })),
     topAspects: rankedAspects,
+    topHarmonious,
+    topChallenging,
     closestAcg,
     placements,
     macroScore,

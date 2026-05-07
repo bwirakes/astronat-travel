@@ -9,10 +9,11 @@ import { AcgMap } from "@/app/components/AcgMap";
 import AcgLinesCard from "@/app/components/AcgLinesCard";
 import PlanetIcon from "@/app/components/PlanetIcon";
 import AspectIcon from "@/app/components/AspectIcon";
+import SignIcon from "@/app/components/SignIcon";
 import MonocleSectionHeader from "@/app/components/editorial/MonocleSectionHeader";
 import ThickRule from "@/app/components/editorial/ThickRule";
 import { essentialDignityLabel } from "@/app/lib/dignity";
-import { resolvePlacementImplication } from "@/app/lib/astro-wording";
+import { resolvePlacementImplication, HOUSE_DOMAINS } from "@/app/lib/astro-wording";
 
 
 const ZODIAC_SIGNS = [
@@ -144,15 +145,9 @@ export default function ChartPage({
   // Guard: only ever kick off one interpret fetch per page load
   const interpretStartedRef = useRef(false);
 
-  // Which planet accordion row is open (driven by wheel tap OR direct accordion tap)
-  const [openPlanet, setOpenPlanet] = useState<string | null>(null);
-
+  // Wheel-tap handler: scroll the matching planet card into view.
   const handlePlanetClick = (planetName: string) => {
-    setOpenPlanet(prev => prev === planetName ? null : planetName);
-    // Scroll the accordion into view on mobile
-    setTimeout(() => {
-      document.getElementById(`planet-row-${planetName}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 80);
+    document.getElementById(`planet-row-${planetName}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   useEffect(() => {
@@ -318,6 +313,18 @@ export default function ChartPage({
     return m;
   }, [rawPlanets, placementImplications]);
 
+  // Map raw aspects by canonical key ("<planet1>-<type>-<planet2>" lowercase, alpha-sorted planets)
+  // so the curated aspectGeometry entries can look up orbs and aspect labels for the dot scale.
+  const aspectByKey = useMemo(() => {
+    const m = new Map<string, typeof realAspects[number]>();
+    for (const a of realAspects) {
+      const [p1, p2] = [a.planet1 ?? "", a.planet2 ?? ""].map((p: string) => p.toLowerCase()).sort();
+      const key = `${p1}-${(a.type ?? "").toLowerCase()}-${p2}`;
+      m.set(key, a);
+    }
+    return m;
+  }, [realAspects]);
+
   const wheelPlanets: NatalPlanet[] = realPlanets
     .filter((p) => !isNodePlacement(p.name))
     .map(p => ({ planet: p.name, longitude: p.longitude, isAngle: p.isAngle }));
@@ -443,7 +450,7 @@ export default function ChartPage({
                            {interpretation?.chartEssence ? (
                                <div className="flex flex-col gap-6 mb-8">
                                  {interpretation.chartEssence.content.split(/\n{2,}/).map((paragraph: string, idx: number) => (
-                                   <p key={idx} style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(18px, 1.6vw, 21px)", lineHeight: 1.75, color: "var(--text-primary)" }}>
+                                   <p key={idx} style={{ fontFamily: "var(--font-body)", fontSize: "clamp(16px, 1.3vw, 18px)", lineHeight: 1.75, color: "var(--text-primary)", fontWeight: 300, maxWidth: "70ch" }}>
                                      {paragraph}
                                    </p>
                                  ))}
@@ -481,17 +488,17 @@ export default function ChartPage({
 
                     {/* THE ARCHITECTURE */}
                     {!isMundane && (houseEnergy?.strongHouse || interpretLoading) && (
-                      <div className="mt-8 pt-8" style={{ borderTop: "2px solid var(--surface-border)" }}>
+                      <div>
                         <MonocleSectionHeader index="01" title="The Architecture" />
-                        
+
                         {houseEnergy?.strongHouse ? (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mt-6">
                               {/* Power Column */}
                               <div style={{ borderLeft: "2px solid var(--sage)", paddingLeft: "var(--space-md)" }}>
-                                  <h3 style={{ fontFamily: "var(--font-primary)", fontSize: "1.5rem", fontWeight: 600, borderBottom: "1px solid var(--sage)", paddingBottom: "0.5rem", marginBottom: "1rem", color: "var(--text-primary)" }}>
+                                  <h3 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(1.3rem, 2vw, 1.5rem)", fontWeight: 500, letterSpacing: "-0.01em", borderBottom: "1px solid var(--sage)", paddingBottom: "0.5rem", marginBottom: "1rem", color: "var(--text-primary)" }}>
                                       Area of Power
                                   </h3>
-                                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--sage)", marginBottom: "0.5rem" }}>
+                                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--sage)", marginBottom: "0.5rem", fontWeight: 700 }}>
                                       H{houseEnergy.strongHouse.houseNumber} · {houseEnergy.strongHouse.plainLabel}
                                   </div>
                                   <p style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", lineHeight: 1.75, color: "var(--text-primary)" }}>
@@ -500,10 +507,10 @@ export default function ChartPage({
                               </div>
                               {/* Growth Column */}
                               <div style={{ borderLeft: "2px solid var(--gold)", paddingLeft: "var(--space-md)" }}>
-                                  <h3 style={{ fontFamily: "var(--font-primary)", fontSize: "1.5rem", fontWeight: 600, borderBottom: "1px solid var(--gold)", paddingBottom: "0.5rem", marginBottom: "1rem", color: "var(--text-primary)" }}>
+                                  <h3 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(1.3rem, 2vw, 1.5rem)", fontWeight: 500, letterSpacing: "-0.01em", borderBottom: "1px solid var(--gold)", paddingBottom: "0.5rem", marginBottom: "1rem", color: "var(--text-primary)" }}>
                                       Area of Growth
                                   </h3>
-                                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--gold)", marginBottom: "0.5rem" }}>
+                                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--gold)", marginBottom: "0.5rem", fontWeight: 700 }}>
                                       H{houseEnergy.growthHouse?.houseNumber} · {houseEnergy.growthHouse?.plainLabel}
                                   </div>
                                   <p style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", lineHeight: 1.75, color: "var(--text-primary)" }}>
@@ -517,110 +524,226 @@ export default function ChartPage({
                       </div>
                     )}
 
-                    {/* THE TOOLKIT */}
+                    {/* SECTION 02 — WHERE EACH PLANET LANDS
+                        Card model ported from /reading[id] WhatShifts PlanetShiftCard, but
+                        without the natal-vs-relocated shift (chart has one location). */}
                     <div className="mt-16 mb-12">
-                      <MonocleSectionHeader index="02" title="Planetary Index" />
-                      <div className="border-t border-[var(--text-primary)]">
+                      <MonocleSectionHeader
+                        index="02"
+                        title="Where each planet lands"
+                        sub={<>Same ten planets, sorted by the rooms they occupy in your chart. The narrative is the placement, not the planet on its own.</>}
+                      />
+                      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 mt-6">
                           {displayPlanets.map(p => {
                             const color = PLANET_COLORS[p.planet] || "var(--text-primary)";
-                            const isOpen = openPlanet === p.planet;
                             const sentence = placementTextByPlanet[p.planet] || "You have a natural ability to process this planet's energy.";
+                            const houseDomain = HOUSE_DOMAINS[p.house || 1] ?? "";
                             return (
-                              <div key={p.planet} id={`planet-row-${p.planet}`} style={{ borderBottom: "1px solid var(--surface-border)" }}>
-                                <button onClick={() => handlePlanetClick(p.planet)} className="w-full flex items-center justify-between py-4 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--surface-border)_20%,transparent)]">
-                                  <div className="flex items-center gap-4">
-                                      <PlanetIcon planet={p.planet} size={20} color={color} />
-                                      <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.2rem", fontWeight: 600, color: "var(--text-primary)" }}>{p.planet}</span>
+                              <article
+                                key={p.planet}
+                                id={`planet-row-${p.planet}`}
+                                className="px-6 py-5 border rounded-[8px] flex flex-col"
+                                style={{ borderColor: "var(--surface-border)", background: "var(--bg)", gap: "var(--space-md)" }}
+                              >
+                                {/* Header — glyph + name on left, House position kicker on right */}
+                                <header className="flex items-baseline justify-between gap-3 flex-wrap">
+                                  <div className="flex items-center gap-[10px]">
+                                    <span style={{ color, lineHeight: 1, display: "inline-flex", alignItems: "center" }}>
+                                      <PlanetIcon planet={p.planet} size={22} color={color} />
+                                    </span>
+                                    <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.25rem", lineHeight: 1.1, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
+                                      {p.planet}
+                                    </span>
                                   </div>
-                                  <div className="flex items-center gap-4">
-                                      <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "uppercase" }}>
-                                          {p.sign} · House {p.house}
-                                      </div>
-                                      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem", transition: "transform 0.2s", transform: isOpen ? "rotate(180deg)" : "none" }}>▾</span>
+                                  <div
+                                    className="text-right"
+                                    style={{ fontFamily: "var(--font-mono)", fontSize: "0.66rem", letterSpacing: "0.16em", textTransform: "uppercase", color, fontWeight: 700, lineHeight: 1.4 }}
+                                  >
+                                    H{p.house} · {houseDomain}
                                   </div>
-                                </button>
-                                <AnimatePresence>
-                                  {isOpen && (
-                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.2 }} style={{ overflow: "hidden" }}>
-                                      <div className="pb-6 pt-2 pl-10 pr-4 max-w-[65ch]">
-                                        <p style={{ fontFamily: "var(--font-body)", fontSize: "1rem", lineHeight: 1.6, color: "var(--text-primary)", margin: "0 0 0.5rem 0" }}>{sentence}</p>
-                                        {p.dignity && (
-                                            <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color: "var(--text-tertiary)", marginTop: "0.75rem", letterSpacing: "0.05em" }}>
-                                                DIGNITY: {p.dignity}
-                                            </div>
-                                        )}
-                                      </div>
-                                    </motion.div>
-                                  )}
-                                </AnimatePresence>
-                              </div>
+                                </header>
+
+                                {/* Sign chip — small zodiac glyph + sign + degree */}
+                                <div
+                                  className="rounded-[4px] flex items-center gap-2"
+                                  style={{
+                                    background: "var(--surface)",
+                                    padding: "10px 14px",
+                                    fontFamily: "var(--font-mono)",
+                                    fontSize: "0.78rem",
+                                    letterSpacing: "0.02em",
+                                    color: "var(--text-primary)",
+                                  }}
+                                >
+                                  <SignIcon sign={p.sign} size={14} color="var(--text-secondary)" />
+                                  <span>{p.sign}{p.degree ? ` · ${p.degree}` : ""}</span>
+                                </div>
+
+                                <p style={{ fontFamily: "var(--font-body)", fontSize: "13.5px", lineHeight: 1.55, fontWeight: 300, color: "var(--text-secondary)", margin: 0 }}>
+                                  {sentence}
+                                </p>
+
+                                {p.dignity && (
+                                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--text-tertiary)", fontWeight: 700, marginTop: 2 }}>
+                                    Dignity · {p.dignity}
+                                  </div>
+                                )}
+                              </article>
                             );
                           })}
                       </div>
                     </div>
 
-                    {/* THE FRICTION (ASPECTS) */}
-                      {/* SECTION 4: ASPECT GEOMETRY */}
-                      <div style={{ marginTop: "4rem" }}>
-                        <MonocleSectionHeader index="03" title="Aspect Geometry" />
-                        
-                        {(!isMundane && (interpretation?.aspectWeaver || interpretLoading)) ? (
-                           <>
-                           <div className="mb-6">
-                            {interpretation?.aspectWeaver ? (
-                              <p style={{ fontFamily: "var(--font-body)", fontSize: "1rem", lineHeight: 1.75, color: "var(--text-primary)", margin: "0 0 2rem 0", maxWidth: "70ch" }}>
-                                {interpretation.aspectWeaver.content}
-                              </p>
-                            ) : (
-                               <div className="animate-pulse" style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-tertiary)" }}>Reading aspects...</div>
-                            )}
-                          </div>
-                           </>
-                        ) : null}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                            {aspectsToDisplay.map((a, i) => {
-                                const accent = accentForAspect(a.type);
-                                const dots = tightnessDots(a.orb);
-                                return (
-                                    <div
-                                        key={i}
+                    {/* SECTION 03 — ASPECT GEOMETRY (curated 2-column split) */}
+                    <div style={{ marginTop: "4rem" }}>
+                      <MonocleSectionHeader index="03" title="Aspect Geometry" />
+
+                      {/* Editorial intro: prefers new aspectGeometry.intro, falls back to legacy aspectWeaver.content */}
+                      {!isMundane && (() => {
+                        const intro = interpretation?.aspectGeometry?.intro ?? interpretation?.aspectWeaver?.content;
+                        if (intro) {
+                          return (
+                            <p style={{ fontFamily: "var(--font-body)", fontSize: "1rem", lineHeight: 1.75, color: "var(--text-primary)", margin: "0 0 2rem 0", maxWidth: "75ch" }}>
+                              {intro}
+                            </p>
+                          );
+                        }
+                        if (interpretLoading) {
+                          return <div className="animate-pulse" style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-tertiary)" }}>Reading aspects...</div>;
+                        }
+                        return null;
+                      })()}
+
+                      {/* Curated 2-column commentary — only when new schema is present */}
+                      {!isMundane && interpretation?.aspectGeometry && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 mt-6" style={{ gap: "var(--space-xl)" }}>
+                          {([
+                            { title: "Working For You", accent: "var(--sage)", entries: interpretation.aspectGeometry.workingFor ?? [] },
+                            { title: "Pushing You", accent: "var(--accent)", entries: interpretation.aspectGeometry.pushingYou ?? [] },
+                          ] as const).map((col) => (
+                            <div key={col.title} style={{ borderLeft: `2px solid ${col.accent}`, paddingLeft: "var(--space-md)" }}>
+                              <h3 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(1.3rem, 2vw, 1.5rem)", fontWeight: 500, letterSpacing: "-0.01em", borderBottom: `1px solid ${col.accent}`, paddingBottom: "0.5rem", marginBottom: "var(--space-md)", color: "var(--text-primary)" }}>
+                                {col.title}
+                              </h3>
+                              {col.entries.length === 0 ? (
+                                <p style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", lineHeight: 1.6, color: "var(--text-tertiary)", fontStyle: "normal" }}>
+                                  No tight aspects in this register — the geometry runs neutral here.
+                                </p>
+                              ) : (
+                                <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
+                                  {col.entries.map((entry: { aspectKey: string; headline: string; body: string }) => {
+                                    const aspectData = aspectByKey.get(entry.aspectKey);
+                                    const dots = aspectData ? tightnessDots(aspectData.orb) : 0;
+                                    return (
+                                      <div
+                                        key={entry.aspectKey}
                                         style={{
-                                            display: "flex",
-                                            flexDirection: "column",
-                                            gap: "var(--space-xs)",
-                                            padding: "var(--space-sm) var(--space-md)",
-                                            borderLeft: `2px solid ${accent}`,
-                                            background: "color-mix(in oklab, var(--surface-border) 18%, var(--bg))",
-                                            borderRadius: "var(--radius-xs)",
+                                          padding: "var(--space-md)",
+                                          background: "color-mix(in oklab, var(--surface-border) 18%, var(--bg))",
+                                          borderRadius: "var(--radius-xs)",
+                                          display: "flex",
+                                          flexDirection: "column",
+                                          gap: "var(--space-sm)",
                                         }}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <AspectIcon aspect={a.type} size={18} />
-                                            <h4 style={{ fontFamily: "var(--font-primary)", fontSize: "1.1rem", fontWeight: 600, margin: 0, color: "var(--text-primary)" }}>{a.aspect}</h4>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <div style={{ display: "flex", gap: 3 }}>
-                                                {[0, 1, 2].map(idx => (
+                                      >
+                                        {/* Headline (serif) + tightness scale */}
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                                          <h4 style={{ fontFamily: "var(--font-primary)", fontSize: "1.1rem", fontWeight: 500, letterSpacing: "-0.01em", margin: 0, color: "var(--text-primary)" }}>
+                                            {entry.headline}
+                                          </h4>
+                                          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
+                                            {aspectData && (
+                                              <div className="flex items-center gap-2">
+                                                <AspectIcon aspect={aspectData.type} size={14} />
+                                                <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.18em", textTransform: "uppercase", color: col.accent, fontWeight: 700 }}>
+                                                  {aspectData.aspect}
+                                                </span>
+                                              </div>
+                                            )}
+                                            {aspectData && (
+                                              <div className="flex items-center gap-2">
+                                                <div style={{ display: "flex", gap: 3 }}>
+                                                  {[0, 1, 2].map(idx => (
                                                     <span
-                                                        key={idx}
-                                                        style={{
-                                                            width: 7,
-                                                            height: 7,
-                                                            borderRadius: "9999px",
-                                                            background: idx < dots ? accent : `color-mix(in oklab, ${accent} 18%, transparent)`,
-                                                        }}
+                                                      key={idx}
+                                                      style={{
+                                                        width: 6,
+                                                        height: 6,
+                                                        borderRadius: "9999px",
+                                                        background: idx < dots ? col.accent : `color-mix(in oklab, ${col.accent} 18%, transparent)`,
+                                                      }}
                                                     />
-                                                ))}
-                                            </div>
-                                            <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                                                Orb {a.orb}°
-                                            </div>
+                                                  ))}
+                                                </div>
+                                                <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.05em", color: "var(--text-tertiary)", textTransform: "uppercase" }}>
+                                                  Orb {aspectData.orb}°
+                                                </span>
+                                              </div>
+                                            )}
+                                          </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
+                                        {/* AI commentary body */}
+                                        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", lineHeight: 1.75, color: "var(--text-primary)", margin: 0 }}>
+                                          {entry.body}
+                                        </p>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          ))}
                         </div>
-                      </div>
+                      )}
+
+                      {/* Legacy fallback: old cached interpretations only have aspectWeaver — show the
+                          full aspect grid so users on cached data still see something useful. */}
+                      {!isMundane && !interpretation?.aspectGeometry && interpretation?.aspectWeaver && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mt-6">
+                          {aspectsToDisplay.map((a, i) => {
+                            const accent = accentForAspect(a.type);
+                            const dots = tightnessDots(a.orb);
+                            return (
+                              <div
+                                key={i}
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: "var(--space-xs)",
+                                  padding: "var(--space-sm) var(--space-md)",
+                                  borderLeft: `2px solid ${accent}`,
+                                  background: "color-mix(in oklab, var(--surface-border) 18%, var(--bg))",
+                                  borderRadius: "var(--radius-xs)",
+                                }}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <AspectIcon aspect={a.type} size={18} />
+                                  <h4 style={{ fontFamily: "var(--font-primary)", fontSize: "1.1rem", fontWeight: 500, margin: 0, color: "var(--text-primary)" }}>{a.aspect}</h4>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div style={{ display: "flex", gap: 3 }}>
+                                    {[0, 1, 2].map(idx => (
+                                      <span
+                                        key={idx}
+                                        style={{
+                                          width: 7,
+                                          height: 7,
+                                          borderRadius: "9999px",
+                                          background: idx < dots ? accent : `color-mix(in oklab, ${accent} 18%, transparent)`,
+                                        }}
+                                      />
+                                    ))}
+                                  </div>
+                                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                    Orb {a.orb}°
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
 
                     {/* THE MAP */}
                     {!isMundane && (
@@ -629,7 +752,7 @@ export default function ChartPage({
                         {(!isMundane && (interpretation?.naturalAngles || interpretLoading)) ? (
                           <>
                              {interpretation?.naturalAngles ? (
-                              <p style={{ fontFamily: "var(--font-body)", fontSize: "1rem", lineHeight: 1.75, color: "var(--text-primary)", margin: "0 0 2rem 0", maxWidth: "70ch" }}>
+                              <p style={{ fontFamily: "var(--font-body)", fontSize: "1rem", lineHeight: 1.75, color: "var(--text-primary)", margin: "0 0 2rem 0", maxWidth: "75ch" }}>
                                 {interpretation.naturalAngles.content}
                               </p>
                             ) : (
@@ -656,10 +779,6 @@ export default function ChartPage({
                       </div>
                     )}
                     
-                    <ThickRule />
-
-                    {/* VERDICT PLACEHOLDER (can be re-added if AI writes one) */}
-
                 </div>
               </>
             ) : loading ? (
