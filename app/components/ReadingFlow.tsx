@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ArrowLeft, User, Coins, Home, Heart, Activity, Handshake, Briefcase, Users, Sparkles, Plane, Building, Loader2 } from "lucide-react";
 import CityAutocomplete from "./CityAutocomplete";
 import { createClient } from "@/lib/supabase/client";
+import { AstroLoader } from "@/app/components/ui/astro-loader";
 
 const LIFE_GOALS = [
   { id: "identity", label: "Identity & Self-Discovery", icon: User, color: "var(--color-y2k-blue)", sub: "1st + 9th house emphasis" },
@@ -201,6 +202,10 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
     }
   };
 
+  if (loading) {
+    return <AstroLoader label={type === "couples" ? "Generating your couples reading..." : "Generating your reading..."} minHeight="75vh" />;
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: "75vh", overflow: "hidden" }}>
       <AnimatePresence mode="wait" custom={dir}>
@@ -391,7 +396,7 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
                 </div>
 
                 <div style={{ display: "flex", gap: "0.6rem" }}>
-                  <button className="btn btn-secondary" onClick={back} style={{ padding: "0.75rem 1.25rem" }}><ArrowLeft size={14} /> Back</button>
+                  <button className="btn btn-secondary" onClick={back} style={{ padding: "0.75rem 1.25rem", minHeight: "44px" }}><ArrowLeft size={14} /> Back</button>
                   <button className="btn btn-primary" style={{ flex: 1, justifyContent: "center", padding: "0.75rem", borderRadius: "var(--shape-asymmetric-md)", opacity: goals.length > 0 ? 1 : 0.3 }}
                     disabled={goals.length === 0}
                     onClick={next}>
@@ -438,12 +443,14 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
                   </div>
                 )}
 
-                <div style={{ display: "flex", gap: "0.6rem" }}>
-                  <button className="btn btn-secondary" onClick={back} style={{ padding: "0.75rem 1.25rem" }}><ArrowLeft size={14} /> Back</button>
+                <div style={{ display: "flex", gap: "0.6rem", alignItems: "stretch" }}>
+                  <button className="btn btn-secondary" onClick={back} style={{ padding: "0.75rem 1.25rem", minHeight: "44px" }}><ArrowLeft size={14} /> Back</button>
                   <button className="btn btn-primary" style={{ flex: 1, justifyContent: "center", padding: "0.75rem", borderRadius: "var(--shape-asymmetric-md)", opacity: destination ? 1 : 0.3 }}
                     disabled={!destination || loading}
-                    onClick={handleGenerate}>
-                    {loading ? <><Loader2 className="animate-spin" size={15}/> Computing...</> : <>Generate Reading <ArrowRight size={15} /></>}
+                    onClick={handleGenerate}
+                    aria-busy={loading}
+                  >
+                    <>Generate Reading <ArrowRight size={15} /></>
                   </button>
                 </div>
               </div>

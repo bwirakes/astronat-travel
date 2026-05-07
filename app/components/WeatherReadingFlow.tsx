@@ -3,10 +3,11 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, Loader2, X, Droplets, Flame, Mountain, Wind, Users2, Sparkles, Heart, Rocket, Leaf, Coffee, Handshake } from "lucide-react";
+import { ArrowRight, ArrowLeft, X, Droplets, Flame, Mountain, Wind, Users2, Sparkles, Heart, Rocket, Leaf, Coffee, Handshake } from "lucide-react";
 import CityAutocomplete from "./CityAutocomplete";
 import { WEATHER_GOALS, formatAngle } from "@/app/lib/geodetic-weather-types";
 import { mockFixedAngles } from "@/app/lib/geodetic-weather-mock";
+import { AstroLoader } from "@/app/components/ui/astro-loader";
 
 interface PickedCity {
     label: string;
@@ -156,6 +157,10 @@ export default function WeatherReadingFlow() {
             setLoading(false);
         }
     };
+
+    if (loading) {
+        return <AstroLoader label={`Computing ${windowDays} day weather forecast...`} minHeight="75vh" />;
+    }
 
     return (
         <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: "75vh", overflow: "hidden", position: "relative" }}>
@@ -491,25 +496,18 @@ export default function WeatherReadingFlow() {
                                     </div>
                                 )}
 
-                                <div style={{ display: "flex", gap: "0.6rem" }}>
-                                    <button className="btn btn-secondary" onClick={back} style={{ padding: "0.75rem 1.25rem" }}>
+                                <div style={{ display: "flex", gap: "0.6rem", alignItems: "stretch" }}>
+                                    <button className="btn btn-secondary" onClick={back} style={{ padding: "0.75rem 1.25rem", minHeight: "44px" }}>
                                         <ArrowLeft size={14} /> Back
                                     </button>
                                     <button
                                         className="btn btn-primary"
                                         disabled={!canGenerate || loading}
                                         onClick={handleGenerate}
-                                        style={{ flex: 1, justifyContent: "center", padding: "0.75rem", borderRadius: "var(--shape-asymmetric-md)", opacity: canGenerate ? 1 : 0.3 }}
+                                        style={{ flex: 1, justifyContent: "center", padding: "0.75rem", borderRadius: "var(--shape-asymmetric-md)", opacity: canGenerate ? 1 : 0.3, minHeight: "44px" }}
+                                        aria-busy={loading}
                                     >
-                                        {loading ? (
-                                            <>
-                                                <Loader2 className="animate-spin" size={15} /> Computing {windowDays} days...
-                                            </>
-                                        ) : (
-                                            <>
-                                                Generate Forecast <ArrowRight size={15} />
-                                            </>
-                                        )}
+                                        <>Generate Forecast <ArrowRight size={15} /></>
                                     </button>
                                 </div>
                             </div>

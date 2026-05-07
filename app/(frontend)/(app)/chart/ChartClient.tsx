@@ -56,6 +56,22 @@ function isNodePlacement(planetName: string) {
   return normalized.includes("node") || normalized === "true node";
 }
 
+function accentForAspect(type: string): string {
+  const t = (type || "").toLowerCase();
+  if (t === "trine" || t === "sextile") return "var(--sage)";
+  if (t === "square" || t === "opposition") return "var(--accent)";
+  if (t === "conjunction") return "var(--gold)";
+  return "var(--text-tertiary)";
+}
+
+function tightnessDots(orb: number | string): number {
+  const n = typeof orb === "string" ? parseFloat(orb) : orb;
+  if (!Number.isFinite(n)) return 1;
+  if (n <= 2) return 3;
+  if (n <= 5) return 2;
+  return 1;
+}
+
 // ── Main Page ─────────────────────────────────────────────────
 
 export default function ChartPage({ 
@@ -331,13 +347,6 @@ export default function ChartPage({
     name: natal?.birth_city || "Birth place",
   };
 
-  // ── Big Three card labels (friendly names)
-  const BIG3_LABELS: Record<string, string> = {
-    "Ascendant": "Rising Sign",
-    "Sun": "Sun Sign",
-    "Moon": "Moon Sign",
-  };
-
   // ── House Energy tiles from houseArchitecture (new schema)
   const houseEnergy = interpretation?.houseArchitecture as {
     strongHouse?: { houseNumber: number; plainLabel: string; oneLiner: string };
@@ -350,29 +359,91 @@ export default function ChartPage({
         <motion.div key="main-layout" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}>
             {natal ? (
               <>
+                {/* BANNER — full-width hero, kicker+name on left, Core Identity (Asc/Sun/Moon) ledger on right */}
+                <section style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "flex-end",
+                  justifyContent: "space-between",
+                  gap: "clamp(24px, 3vw, 40px)",
+                  padding: "8px 0 clamp(20px, 2.4vw, 28px)",
+                  borderBottom: "1px solid var(--surface-border)",
+                  marginBottom: "clamp(40px, 5vw, 64px)",
+                }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", minWidth: 0 }}>
+                    <span style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "12px",
+                      letterSpacing: "0.18em",
+                      textTransform: "uppercase",
+                      color: "var(--text-secondary)",
+                    }}>
+                      Natal Chart
+                    </span>
+                    <span style={{
+                      fontFamily: "var(--font-primary)",
+                      fontSize: "clamp(40px, 5.5vw, 72px)",
+                      lineHeight: 0.95,
+                      letterSpacing: "-0.02em",
+                      color: "var(--text-primary)",
+                    }}>
+                      {profileName} Chart
+                    </span>
+                    <span style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "12px",
+                      letterSpacing: "0.18em",
+                      textTransform: "uppercase",
+                      color: "var(--text-tertiary)",
+                    }}>
+                      {natal?.birth_date || ""}{natal?.birth_city ? ` · ${natal.birth_city}` : ""}
+                    </span>
+                  </div>
+
+                  <div style={{
+                    display: "flex",
+                    alignItems: "stretch",
+                    gap: "clamp(16px, 2.5vw, 28px)",
+                  }}>
+                    {["Ascendant", "Sun", "Moon"].map((key, i) => {
+                      const p = displayPlanets.find(x => x.planet === key);
+                      if (!p) return null;
+                      const color = PLANET_COLORS[p.planet] || "var(--gold)";
+                      return (
+                        <div key={key} style={{ display: "flex", alignItems: "stretch", gap: "clamp(16px, 2.5vw, 28px)" }}>
+                          {i > 0 && (
+                            <span aria-hidden style={{ background: "var(--surface-border)", width: 1, alignSelf: "stretch" }} />
+                          )}
+                          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", minWidth: 0 }}>
+                            <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)", fontWeight: 700 }}>
+                              {key}
+                            </span>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: "0.45rem" }}>
+                              <span style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(1.5rem, 2.4vw, 1.9rem)", lineHeight: 1, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
+                                {p.sign}
+                              </span>
+                              <PlanetIcon planet={p.planet} size={18} color={color} />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(350px,400px)] gap-[4rem] lg:gap-[6rem]">
-                  
+
                   {/* LEFT COLUMN: EDITORIAL CONTENT */}
                   <div style={{ display: "flex", flexDirection: "column" }}>
-                    
-                    {/* THE LEDE & TITLE */}
-                    <div className="mb-10">
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--text-secondary)", marginBottom: "1rem" }}>
-                        ASTROLOGICAL BLUEPRINT
-                      </div>
-                      <h1 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(2.5rem, 5vw, 4rem)", lineHeight: 1.1, margin: "0 0 0.5rem 0", color: "var(--text-primary)", fontWeight: 400, textTransform: "uppercase" }}>
-                        {profileName} Chart
-                      </h1>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--text-tertiary)", opacity: 0.8, marginBottom: "2rem" }}>
-                        <span className="italic">{natal?.birth_date || ""} — {natal?.birth_city || ""}</span>
-                      </div>
 
+                    {/* THE LEDE — chartEssence prose */}
+                    <div className="mb-10">
                       {!isMundane && (interpretation?.chartEssence || interpretLoading) && (
                         <>
                            {interpretation?.chartEssence ? (
                                <div className="flex flex-col gap-6 mb-8">
-                                 {interpretation.chartEssence.content.split(/\n+/).map((paragraph: string, idx: number) => (
-                                   <p key={idx} style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(18px, 1.6vw, 21px)", lineHeight: 1.6, color: "var(--text-primary)" }}>
+                                 {interpretation.chartEssence.content.split(/\n{2,}/).map((paragraph: string, idx: number) => (
+                                   <p key={idx} style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(18px, 1.6vw, 21px)", lineHeight: 1.75, color: "var(--text-primary)" }}>
                                      {paragraph}
                                    </p>
                                  ))}
@@ -390,38 +461,12 @@ export default function ChartPage({
                       
                     {/* THE CHART WHEEL */}
                     <div>
-                      <div style={{ fontFamily: "var(--font-primary)", fontSize: "1.1rem", fontWeight: 600, borderBottom: "2px solid var(--text-primary)", paddingBottom: "0.5rem", marginBottom: "1.5rem" }}>
-                        Natal Wheel
-                      </div>
+                      <MonocleSectionHeader title="Natal Wheel" flush />
                       <div style={{ width: "100%", margin: "0 auto", position: "relative" }}>
                         <NatalMockupWheel isDark={isDark} planets={wheelPlanetsWithMetadata} cusps={natal.houses} onPlanetClick={handlePlanetClick} />
                       </div>
-                      <div style={{ textAlign: "center", fontFamily: "var(--font-mono)", fontSize: "0.55rem", color: "var(--text-tertiary)", letterSpacing: "0.1em", marginTop: "1.5rem", opacity: 0.5 }}>
-                        SELECT A PLANET TO EXPLORE ITS MEANING
-                      </div>
-                    </div>
-
-                    {/* CORE IDENTITY MODULE */}
-                    <div style={{ background: "color-mix(in srgb, var(--surface-border) 15%, transparent)", border: "1px solid var(--surface-border)", padding: "1.5rem" }}>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: "1rem", borderBottom: "1px solid var(--surface-border)", paddingBottom: "0.5rem" }}>
-                        CORE IDENTITY
-                      </div>
-                      <div className="flex flex-col gap-4">
-                        {["Ascendant", "Sun", "Moon"].map(key => {
-                          const p = displayPlanets.find(x => x.planet === key);
-                          if (!p) return null;
-                          const color = PLANET_COLORS[p.planet] || "var(--gold)";
-                          
-                          return (
-                              <div key={key} className="flex items-center justify-between">
-                                  <div>
-                                      <div style={{ fontFamily: "var(--font-primary)", fontSize: "1.1rem", fontWeight: 600, color: "var(--text-primary)" }}>{p.sign}</div>
-                                      <div style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", color: "var(--text-secondary)" }}>{key}</div>
-                                  </div>
-                                  <PlanetIcon planet={p.planet} size={24} color={color} />
-                              </div>
-                          );
-                        })}
+                      <div style={{ textAlign: "center", fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--text-secondary)", letterSpacing: "0.18em", textTransform: "uppercase", marginTop: "1.5rem" }}>
+                        Select a planet to explore
                       </div>
                     </div>
 
@@ -437,31 +482,31 @@ export default function ChartPage({
                     {/* THE ARCHITECTURE */}
                     {!isMundane && (houseEnergy?.strongHouse || interpretLoading) && (
                       <div className="mt-8 pt-8" style={{ borderTop: "2px solid var(--surface-border)" }}>
-                        <MonocleSectionHeader title="The Architecture" />
+                        <MonocleSectionHeader index="01" title="The Architecture" />
                         
                         {houseEnergy?.strongHouse ? (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mt-6">
                               {/* Power Column */}
-                              <div>
-                                  <h3 style={{ fontFamily: "var(--font-primary)", fontSize: "1.5rem", fontWeight: 600, borderBottom: "1px solid var(--text-primary)", paddingBottom: "0.5rem", marginBottom: "1rem" }}>
+                              <div style={{ borderLeft: "2px solid var(--sage)", paddingLeft: "var(--space-md)" }}>
+                                  <h3 style={{ fontFamily: "var(--font-primary)", fontSize: "1.5rem", fontWeight: 600, borderBottom: "1px solid var(--sage)", paddingBottom: "0.5rem", marginBottom: "1rem", color: "var(--text-primary)" }}>
                                       Area of Power
                                   </h3>
-                                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: "0.5rem" }}>
+                                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--sage)", marginBottom: "0.5rem" }}>
                                       H{houseEnergy.strongHouse.houseNumber} · {houseEnergy.strongHouse.plainLabel}
                                   </div>
-                                  <p style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", lineHeight: 1.6, color: "var(--text-primary)" }}>
+                                  <p style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", lineHeight: 1.75, color: "var(--text-primary)" }}>
                                       {houseEnergy.strongHouse.oneLiner}
                                   </p>
                               </div>
                               {/* Growth Column */}
-                              <div>
-                                  <h3 style={{ fontFamily: "var(--font-primary)", fontSize: "1.5rem", fontWeight: 600, borderBottom: "1px solid var(--text-primary)", paddingBottom: "0.5rem", marginBottom: "1rem" }}>
+                              <div style={{ borderLeft: "2px solid var(--gold)", paddingLeft: "var(--space-md)" }}>
+                                  <h3 style={{ fontFamily: "var(--font-primary)", fontSize: "1.5rem", fontWeight: 600, borderBottom: "1px solid var(--gold)", paddingBottom: "0.5rem", marginBottom: "1rem", color: "var(--text-primary)" }}>
                                       Area of Growth
                                   </h3>
-                                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: "0.5rem" }}>
+                                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--gold)", marginBottom: "0.5rem" }}>
                                       H{houseEnergy.growthHouse?.houseNumber} · {houseEnergy.growthHouse?.plainLabel}
                                   </div>
-                                  <p style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", lineHeight: 1.6, color: "var(--text-primary)" }}>
+                                  <p style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", lineHeight: 1.75, color: "var(--text-primary)" }}>
                                       {houseEnergy.growthHouse?.oneLiner}
                                   </p>
                               </div>
@@ -474,7 +519,7 @@ export default function ChartPage({
 
                     {/* THE TOOLKIT */}
                     <div className="mt-16 mb-12">
-                      <MonocleSectionHeader title="Planetary Index" />
+                      <MonocleSectionHeader index="02" title="Planetary Index" />
                       <div className="border-t border-[var(--text-primary)]">
                           {displayPlanets.map(p => {
                             const color = PLANET_COLORS[p.planet] || "var(--text-primary)";
@@ -517,13 +562,13 @@ export default function ChartPage({
                     {/* THE FRICTION (ASPECTS) */}
                       {/* SECTION 4: ASPECT GEOMETRY */}
                       <div style={{ marginTop: "4rem" }}>
-                        <MonocleSectionHeader title="Aspect Geometry" />
+                        <MonocleSectionHeader index="03" title="Aspect Geometry" />
                         
                         {(!isMundane && (interpretation?.aspectWeaver || interpretLoading)) ? (
                            <>
                            <div className="mb-6">
                             {interpretation?.aspectWeaver ? (
-                              <p style={{ fontFamily: "var(--font-body)", fontSize: "1rem", lineHeight: 1.6, color: "var(--text-secondary)", margin: "0 0 2rem 0", maxWidth: "70ch" }}>
+                              <p style={{ fontFamily: "var(--font-body)", fontSize: "1rem", lineHeight: 1.75, color: "var(--text-primary)", margin: "0 0 2rem 0", maxWidth: "70ch" }}>
                                 {interpretation.aspectWeaver.content}
                               </p>
                             ) : (
@@ -532,27 +577,59 @@ export default function ChartPage({
                           </div>
                            </>
                         ) : null}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-4">
-                            {aspectsToDisplay.map((a, i) => (
-                                <div key={i} className="flex flex-col py-3 border-b border-[var(--surface-border)]">
-                                    <div className="flex items-center gap-3 mb-1">
-                                        <AspectIcon aspect={a.type} size={18} />
-                                        <h4 style={{ fontFamily: "var(--font-primary)", fontSize: "1.1rem", fontWeight: 600, margin: 0, color: "var(--text-primary)" }}>{a.aspect}</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                            {aspectsToDisplay.map((a, i) => {
+                                const accent = accentForAspect(a.type);
+                                const dots = tightnessDots(a.orb);
+                                return (
+                                    <div
+                                        key={i}
+                                        style={{
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            gap: "var(--space-xs)",
+                                            padding: "var(--space-sm) var(--space-md)",
+                                            borderLeft: `2px solid ${accent}`,
+                                            background: "color-mix(in oklab, var(--surface-border) 18%, var(--bg))",
+                                            borderRadius: "var(--radius-xs)",
+                                        }}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <AspectIcon aspect={a.type} size={18} />
+                                            <h4 style={{ fontFamily: "var(--font-primary)", fontSize: "1.1rem", fontWeight: 600, margin: 0, color: "var(--text-primary)" }}>{a.aspect}</h4>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div style={{ display: "flex", gap: 3 }}>
+                                                {[0, 1, 2].map(idx => (
+                                                    <span
+                                                        key={idx}
+                                                        style={{
+                                                            width: 7,
+                                                            height: 7,
+                                                            borderRadius: "9999px",
+                                                            background: idx < dots ? accent : `color-mix(in oklab, ${accent} 18%, transparent)`,
+                                                        }}
+                                                    />
+                                                ))}
+                                            </div>
+                                            <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                                Orb {a.orb}°
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{a.type} · Orb {a.orb}</div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                       </div>
 
                     {/* THE MAP */}
                     {!isMundane && (
                       <div className="mt-16 mb-12">
-                        <MonocleSectionHeader title="Natal Geography" />
+                        <MonocleSectionHeader index="04" title="Natal Geography" />
                         {(!isMundane && (interpretation?.naturalAngles || interpretLoading)) ? (
                           <>
                              {interpretation?.naturalAngles ? (
-                              <p style={{ fontFamily: "var(--font-body)", fontSize: "1rem", lineHeight: 1.6, color: "var(--text-secondary)", margin: "0 0 2rem 0", maxWidth: "70ch" }}>
+                              <p style={{ fontFamily: "var(--font-body)", fontSize: "1rem", lineHeight: 1.75, color: "var(--text-primary)", margin: "0 0 2rem 0", maxWidth: "70ch" }}>
                                 {interpretation.naturalAngles.content}
                               </p>
                             ) : (
@@ -585,7 +662,29 @@ export default function ChartPage({
 
                 </div>
               </>
-            ) : (<div style={{ padding: "4rem", textAlign: "center" }}>No natal data available</div>)}
+            ) : loading ? (
+              <div style={{ minHeight: "60vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "var(--space-md)" }}>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>
+                  Reading your chart
+                </div>
+                <div className="animate-pulse" style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(1.4rem, 2.4vw, 1.8rem)", color: "var(--text-secondary)" }}>
+                  Loading natal data…
+                </div>
+              </div>
+            ) : error ? (
+              <div style={{ padding: "var(--space-3xl) var(--space-md)", textAlign: "center", display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--accent)" }}>
+                  Chart unavailable
+                </div>
+                <div style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(1.4rem, 2.4vw, 1.8rem)", color: "var(--text-primary)" }}>
+                  {error}
+                </div>
+              </div>
+            ) : (
+              <div style={{ padding: "var(--space-3xl) var(--space-md)", textAlign: "center", fontFamily: "var(--font-primary)", color: "var(--text-secondary)" }}>
+                No natal data available
+              </div>
+            )}
         </motion.div>
       </AnimatePresence>
     </div>
