@@ -364,7 +364,13 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                                         </TabsContent>
 
                                         <TabsContent value="what-shifts" className="mt-0 outline-none data-[state=inactive]:hidden">
-                                            <WhatShiftsTab vm={vm} isDark={isDark} relocatedWheel={relocatedWheel} copiedTab={copiedTab} />
+                                            <WhatShiftsTab
+                                                vm={vm}
+                                                isDark={isDark}
+                                                natalWheel={natalWheel}
+                                                relocatedWheel={relocatedWheel}
+                                                copiedTab={copiedTab}
+                                            />
                                         </TabsContent>
 
                                         <TabsContent value="timing" className="mt-0 outline-none data-[state=inactive]:hidden">
