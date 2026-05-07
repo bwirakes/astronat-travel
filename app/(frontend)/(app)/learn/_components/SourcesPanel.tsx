@@ -20,8 +20,8 @@ type SourcesPanelProps = {
 export function SourcesPanel({ sources }: SourcesPanelProps) {
   if (!sources.length) return null;
   return (
-    <section className="px-6 md:px-12 lg:px-20 py-16 max-w-7xl mx-auto">
-      <div className="border-t border-[var(--surface-border)] pt-10 max-w-4xl">
+    <section className="px-6 md:px-12 lg:px-20 py-16 max-w-[1600px] mx-auto">
+      <div className="border-t border-[var(--surface-border)] pt-10 max-w-3xl">
         <div className="font-mono text-[10px] md:text-xs uppercase tracking-[0.3em] opacity-60 mb-6">
           Further reading
         </div>
@@ -39,7 +39,7 @@ export function SourcesPanel({ sources }: SourcesPanelProps) {
                   <span className="opacity-50 ml-2 font-mono text-sm">({s.year})</span>
                 </div>
                 {s.note && (
-                  <div className="mt-1 font-body text-sm opacity-60 leading-relaxed max-w-2xl">
+                  <div className="mt-1 font-body text-sm opacity-60 leading-relaxed">
                     {s.note}
                   </div>
                 )}

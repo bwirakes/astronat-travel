@@ -11,7 +11,7 @@ type RecapProps = {
  */
 export function Recap({ items }: RecapProps) {
   return (
-    <section className="px-6 md:px-12 lg:px-20 py-16 md:py-20 max-w-7xl mx-auto">
+    <section className="px-6 md:px-12 lg:px-20 py-16 md:py-20 max-w-[1600px] mx-auto">
       <div className="max-w-3xl border-t border-[var(--surface-border)] pt-10">
         <div
           className="font-mono text-[10px] uppercase tracking-[0.3em] mb-6"

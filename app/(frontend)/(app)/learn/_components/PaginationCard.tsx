@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { AstronatCard } from "@/app/components/ui/astronat-card";
-import { getModule, type Lesson } from "./curriculum";
+import type { Lesson } from "./curriculum";
 
 type PaginationCardProps = {
   prev?: Lesson | null;
@@ -22,7 +22,7 @@ type PaginationCardProps = {
  */
 export function PaginationCard({ prev, next, bridge }: PaginationCardProps) {
   return (
-    <section className="px-6 md:px-12 lg:px-20 py-20 md:py-32 max-w-7xl mx-auto">
+    <section className="px-6 md:px-12 lg:px-20 py-20 md:py-32 max-w-[1600px] mx-auto">
       <div className="grid md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-6 md:gap-10 items-stretch">
         {/* Previous */}
         {prev ? (
@@ -38,7 +38,7 @@ export function PaginationCard({ prev, next, bridge }: PaginationCardProps) {
               </div>
               <div>
                 <div className="font-mono text-[10px] uppercase tracking-[0.25em] opacity-50 mb-2">
-                  {getModule(prev.module).label} · Lesson {prev.number}
+                  {String(prev.number).padStart(2, "0")}
                 </div>
                 <h3 className="font-primary text-2xl md:text-3xl leading-tight tracking-tight uppercase">
                   {prev.shortTitle}
@@ -83,7 +83,7 @@ export function PaginationCard({ prev, next, bridge }: PaginationCardProps) {
                   className="font-mono text-[10px] uppercase tracking-[0.3em] mb-3"
                   style={{ color: "var(--lesson-accent)" }}
                 >
-                  Next · {getModule(next.module).label} · Lesson {next.number}
+                  Next · {String(next.number).padStart(2, "0")}
                 </div>
                 <div className="flex items-end justify-between gap-6 flex-wrap">
                   <h3 className="font-primary text-4xl md:text-6xl leading-[0.9] tracking-tight uppercase">

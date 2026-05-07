@@ -1,8 +1,12 @@
 /**
  * The single source of truth for the Academy curriculum.
- * LessonShell, ProgressRail, PaginationCard, the index page, and the glossary
- * all read from this list. Reordering or renaming a lesson should require
- * changing exactly one file: this one.
+ * LessonShell, PaginationCard, the index page, and the glossary all read from
+ * this list. Reordering or renaming a lesson should require changing exactly
+ * one file: this one.
+ *
+ * No "module" concept — lessons stand on their own with simple ordinal numbers.
+ * Curriculum order matters (it's the teaching sequence) but readers don't need
+ * to see chapter labels to follow it.
  */
 
 export type LessonId =
@@ -17,16 +21,13 @@ export type LessonId =
   | "astrocartography"
   | "geodetic-astrology";
 
-export type ModuleId = "module-0" | "module-1" | "module-2" | "module-3";
-
 export type Lesson = {
   id: LessonId;
-  module: ModuleId;
-  /** 0 for Module 0 (Start Here); otherwise 1..9 across the curriculum. */
+  /** 0 for the orientation page; otherwise 1..9 across the curriculum. */
   number: number;
   /** Two-line lesson title; framework treats lines as separate <span>s. */
   title: [string, string] | [string];
-  /** Short label used in chips and pagination. */
+  /** Short label used in pagination + glossary cross-links. */
   shortTitle: string;
   href: string;
   /** Single-sentence "what this lesson is about" — used in pagination bridges. */
@@ -36,17 +37,9 @@ export type Lesson = {
   readingTime: string;
 };
 
-export const MODULES: { id: ModuleId; label: string; title: string }[] = [
-  { id: "module-0", label: "Module 0", title: "Start Here" },
-  { id: "module-1", label: "Module 1", title: "Foundations" },
-  { id: "module-2", label: "Module 2", title: "The Natal Chart" },
-  { id: "module-3", label: "Module 3", title: "Place & World" },
-];
-
 export const CURRICULUM: Lesson[] = [
   {
     id: "start",
-    module: "module-0",
     number: 0,
     title: ["Start", "Here"],
     shortTitle: "Start Here",
@@ -58,7 +51,6 @@ export const CURRICULUM: Lesson[] = [
   },
   {
     id: "viewing-the-stars",
-    module: "module-1",
     number: 1,
     title: ["Viewing", "The Stars"],
     shortTitle: "Viewing the Stars",
@@ -70,7 +62,6 @@ export const CURRICULUM: Lesson[] = [
   },
   {
     id: "zodiac",
-    module: "module-1",
     number: 2,
     title: ["The", "Zodiac"],
     shortTitle: "The Zodiac",
@@ -82,7 +73,6 @@ export const CURRICULUM: Lesson[] = [
   },
   {
     id: "constellations",
-    module: "module-1",
     number: 3,
     title: ["The", "Constellations"],
     shortTitle: "Constellations",
@@ -94,7 +84,6 @@ export const CURRICULUM: Lesson[] = [
   },
   {
     id: "natal-chart",
-    module: "module-2",
     number: 4,
     title: ["The Natal", "Chart"],
     shortTitle: "Natal Chart",
@@ -106,7 +95,6 @@ export const CURRICULUM: Lesson[] = [
   },
   {
     id: "houses",
-    module: "module-2",
     number: 5,
     title: ["The 12", "Houses"],
     shortTitle: "Houses",
@@ -118,7 +106,6 @@ export const CURRICULUM: Lesson[] = [
   },
   {
     id: "aspects",
-    module: "module-2",
     number: 6,
     title: ["Planetary", "Aspects"],
     shortTitle: "Aspects",
@@ -130,7 +117,6 @@ export const CURRICULUM: Lesson[] = [
   },
   {
     id: "malefic-benefic",
-    module: "module-2",
     number: 7,
     title: ["Benefics &", "Malefics"],
     shortTitle: "Benefics & Malefics",
@@ -142,7 +128,6 @@ export const CURRICULUM: Lesson[] = [
   },
   {
     id: "astrocartography",
-    module: "module-3",
     number: 8,
     title: ["Astro", "Cartography"],
     shortTitle: "Astrocartography",
@@ -154,7 +139,6 @@ export const CURRICULUM: Lesson[] = [
   },
   {
     id: "geodetic-astrology",
-    module: "module-3",
     number: 9,
     title: ["Geodetic", "Astrology"],
     shortTitle: "Geodetic",
@@ -170,12 +154,6 @@ export function getLesson(id: LessonId): Lesson {
   const lesson = CURRICULUM.find((l) => l.id === id);
   if (!lesson) throw new Error(`Unknown lesson id: ${id}`);
   return lesson;
-}
-
-export function getModule(id: ModuleId) {
-  const m = MODULES.find((mod) => mod.id === id);
-  if (!m) throw new Error(`Unknown module id: ${id}`);
-  return m;
 }
 
 /** Lesson immediately preceding `id` in curriculum order, or null at the start. */
