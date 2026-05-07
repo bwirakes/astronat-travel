@@ -997,20 +997,17 @@ function GeoRow({ who, ascSign, ascDeg, mcSign, mcDeg, note, first }: {
 }) {
   return (
     <div
+      className="geo-row"
       style={{
-        display: "grid",
-        gridTemplateColumns: "minmax(90px, auto) minmax(160px, auto) 1fr",
-        gap: "clamp(20px, 3vw, 40px)",
-        alignItems: "baseline",
         padding: "clamp(20px, 3vw, 32px) 0",
         borderTop: first ? "1px solid var(--surface-border)" : "none",
         borderBottom: "1px solid var(--surface-border)",
       }}
     >
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>
+      <span className="geo-who" style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>
         {who}
       </span>
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+      <div className="geo-angles" style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: "0.6rem" }}>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", color: "var(--text-tertiary)" }}>ASC</span>
           <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.2rem", color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
@@ -1024,9 +1021,25 @@ function GeoRow({ who, ascSign, ascDeg, mcSign, mcDeg, note, first }: {
           </span>
         </div>
       </div>
-      <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--text-secondary)", lineHeight: 1.6, maxWidth: "75ch" }}>
+      <p className="geo-note" style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--text-secondary)", lineHeight: 1.6, maxWidth: "75ch" }}>
         {note}
       </p>
+
+      <style jsx>{`
+        .geo-row {
+          display: flex;
+          flex-direction: column;
+          gap: clamp(12px, 2vw, 20px);
+        }
+        @media (min-width: 720px) {
+          .geo-row {
+            display: grid;
+            grid-template-columns: minmax(90px, auto) minmax(160px, auto) 1fr;
+            gap: clamp(20px, 3vw, 40px);
+            align-items: baseline;
+          }
+        }
+      `}</style>
     </div>
   );
 }
