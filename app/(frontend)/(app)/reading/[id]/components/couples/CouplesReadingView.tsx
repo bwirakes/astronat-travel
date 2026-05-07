@@ -703,22 +703,24 @@ function DeepDive({
             <button
               key={t.id}
               onClick={() => onTab(t.id)}
+              aria-pressed={active}
               style={{
-                background: "transparent",
-                border: "none",
-                padding: 0,
+                background: active ? "color-mix(in oklab, var(--color-y2k-blue) 10%, transparent)" : "transparent",
+                border: `1px solid ${active ? "var(--color-y2k-blue)" : "var(--surface-border)"}`,
+                borderRadius: "999px",
+                padding: "0.55rem 1rem",
                 cursor: "pointer",
-                display: "flex",
+                display: "inline-flex",
                 alignItems: "baseline",
-                gap: "0.6rem",
-                color: active ? "var(--text-primary)" : "var(--text-tertiary)",
-                transition: "color 0.2s",
+                gap: "0.55rem",
+                color: active ? "var(--text-primary)" : "var(--text-secondary)",
+                transition: "background 0.2s, border-color 0.2s, color 0.2s",
               }}
             >
               <span
                 style={{
                   fontFamily: "var(--font-mono)",
-                  fontSize: "0.62rem",
+                  fontSize: "0.6rem",
                   letterSpacing: "0.22em",
                   color: active ? "var(--color-y2k-blue)" : "var(--text-tertiary)",
                 }}
@@ -728,9 +730,10 @@ function DeepDive({
               <span
                 style={{
                   fontFamily: "var(--font-body)",
-                  fontSize: "0.95rem",
+                  fontSize: "0.92rem",
                   fontWeight: active ? 500 : 400,
                   letterSpacing: "-0.005em",
+                  textTransform: "uppercase",
                 }}
               >
                 {t.label}
@@ -790,102 +793,15 @@ function ChartTab({ tab, lead }: { tab: ChartTabVM; destination: string; lead?: 
           <Divider />
           <FlatStat label="MODALITY" value={tab.modality} />
         </div>
-
-        <div>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)", marginBottom: "var(--space-md)", paddingBottom: "0.5rem", borderBottom: "1px solid var(--surface-border)" }}>
-            YOUR FOUR CORNERS
-          </div>
-          <div className="four-corners-grid" style={{ display: "grid", gap: "var(--space-md)", gridTemplateColumns: "1fr" }}>
-            {tab.angles.map((a, i) => (
-              <AngleCard key={i} angle={a} />
-            ))}
-          </div>
-        </div>
       </div>
 
       <style jsx>{`
-        @media (min-width: 600px) {
-          .four-corners-grid { grid-template-columns: 1fr 1fr !important; }
-        }
         @media (min-width: 880px) {
           .dd-grid { grid-template-columns: minmax(320px, 1fr) 1fr !important; align-items: start; }
         }
       `}</style>
     </div>
   );
-}
-
-function AngleCard({ angle: a }: { angle: ChartTabVM["angles"][number] }) {
-  const moved = a.natal !== "—" && signOfFormatted(a.natal) !== signOfFormatted(a.relocated);
-  return (
-    <article
-      style={{
-        padding: "20px 22px",
-        border: "1px solid var(--surface-border)",
-        borderLeftWidth: moved ? "3px" : "1px",
-        borderRadius: "8px",
-        background: "var(--bg)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "14px",
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "12px", flexWrap: "wrap" }}>
-        <div
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: "0.66rem",
-            letterSpacing: "0.18em",
-            textTransform: "uppercase",
-            color: moved ? "var(--color-spiced-life)" : "var(--color-y2k-blue)",
-          }}
-        >
-          {a.name}
-        </div>
-        <div style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", fontStyle: "italic", fontWeight: 300, color: "var(--text-secondary)" }}>
-          {a.plain}
-        </div>
-      </div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 20px 1fr",
-          alignItems: "center",
-          gap: "8px",
-          padding: "12px",
-          borderRadius: "4px",
-          background: "var(--surface)",
-          minWidth: 0,
-        }}
-      >
-        <div>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.56rem", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>
-            Natally
-          </div>
-          <div style={{ fontFamily: "var(--font-primary)", fontSize: "1.05rem", lineHeight: 1.1, marginTop: "2px", color: "var(--text-primary)" }}>
-            {a.natal}
-          </div>
-        </div>
-        <div style={{ textAlign: "center", fontFamily: "var(--font-mono)", color: "var(--text-tertiary)" }}>→</div>
-        <div>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.56rem", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>
-            Here
-          </div>
-          <div style={{ fontFamily: "var(--font-primary)", fontSize: "1.05rem", lineHeight: 1.1, marginTop: "2px", color: moved ? "var(--color-spiced-life)" : "var(--text-primary)" }}>
-            {a.relocated}
-          </div>
-        </div>
-      </div>
-      <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "0.82rem", lineHeight: 1.55, fontWeight: 300, color: "var(--text-secondary)" }}>
-        {a.delta}
-      </p>
-    </article>
-  );
-}
-
-function signOfFormatted(formatted: string): string {
-  const m = formatted.match(/[A-Z][a-z]+$/);
-  return m ? m[0] : formatted;
 }
 
 function FlatStat({ label, value, accent }: { label: string; value: string; accent?: string }) {
