@@ -1,3 +1,31 @@
+import bundleAnalyzer from "@next/bundle-analyzer";
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
+
+const supabaseHost = (() => {
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    return url ? new URL(url).hostname : undefined;
+  } catch {
+    return undefined;
+  }
+})();
+
+const s3Host = (() => {
+  try {
+    const endpoint = process.env.S3_ENDPOINT;
+    return endpoint ? new URL(endpoint).hostname : undefined;
+  } catch {
+    return undefined;
+  }
+})();
+
+const remotePatterns: { protocol: "https"; hostname: string }[] = [];
+if (supabaseHost) remotePatterns.push({ protocol: "https", hostname: supabaseHost });
+if (s3Host) remotePatterns.push({ protocol: "https", hostname: s3Host });
+
 const nextConfig = {
   // Build currently ignores TS errors because of pre-existing errors; tracked for follow-up.
   typescript: {
@@ -7,6 +35,22 @@ const nextConfig = {
   // swisseph-wasm uses createRequire("module") which webpack can't bundle.
   // Keep it external so Node resolves it at runtime on the server.
   serverExternalPackages: ["swisseph-wasm", "geo-tz"],
+
+  experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "framer-motion",
+      "@radix-ui/react-accordion",
+      "@radix-ui/react-hover-card",
+      "@base-ui/react",
+    ],
+  },
+
+  images: {
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 31536000,
+    remotePatterns,
+  },
 
   async rewrites() {
     return [
@@ -44,4 +88,4 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

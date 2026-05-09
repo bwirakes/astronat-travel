@@ -1,5 +1,5 @@
-import { AstroAppLoader } from "@/app/components/ui/app-loader-shell";
+import { RouteSkeleton } from "@/app/components/ui/route-skeleton";
 
 export default function DashboardLoading() {
-  return <AstroAppLoader label="Loading dashboard..." />;
+  return <RouteSkeleton variant="default" label="Loading dashboard…" />;
 }

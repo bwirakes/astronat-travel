@@ -90,22 +90,21 @@ test-houses.ts
 fast-notion-push.mjs
 update-notion.mjs
 
-# Research binaries — keep source .md alongside code, not the rendered artifacts
-docs/**/*.ttf
-docs/**/*.otf
-docs/**/*.woff
-docs/**/*.woff2
-docs/**/uploads/
+# docs/ is local-only — research, prompts, and notes stay on disk but never
+# ship to deploys or get reviewed in PRs. See plan: act-as-a-react-nextjs-cozy-swing.
+/docs/
 
 # Video / reel artifacts — block instaloader/SnapInsta dumps and any large
 # raw video that gets dropped into the repo for reference. The 3 marketing
-# reel gifs in public/reels/ remain tracked (production assets referenced
-# by the marketing + blog pages); only video files and the instaloader dump
-# directory are blocked.
+# reels (mp4 versions) are exempted below since they're production assets
+# referenced by the marketing + blog pages.
 reel_video/
 *.mp4
 *.mov
 *.m4v
+!/public/reels/reel1.mp4
+!/public/reels/reel2.mp4
+!/public/reels/reel3.mp4
 
 # Unused public assets
 public/test.gif
@@ -126,9 +125,6 @@ public/reels/Screen Recording 2026-04-17 at 1.49.13 PM.mov
 public/reels/reel2.webp
 public/reels/reel1_trimmed.webp
 public/reels/8c6269c2b5cf54f0e3aa768fffa8b1ce.webm
-public/reels/reel3.mp4
-public/reels/reel2.mp4
-public/reels/reel1.mp4
 public/reels/reel1.webp
 public/reels/reel1.webm
 public/reels/Screen Recording 2026-04-17 at 1.49.43 PM.mov
