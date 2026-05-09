@@ -1,5 +1,5 @@
-import { AstroLoader } from "@/app/components/ui/astro-loader";
+import { AstroAppLoader } from "@/app/components/ui/app-loader-shell";
 
 export default function ReadingsLoading() {
-  return <AstroLoader label="Loading readings..." />;
+  return <AstroAppLoader label="Loading readings..." />;
 }

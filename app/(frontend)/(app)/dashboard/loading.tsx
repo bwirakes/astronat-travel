@@ -1,5 +1,5 @@
-import { AstroLoader } from "@/app/components/ui/astro-loader";
+import { AstroAppLoader } from "@/app/components/ui/app-loader-shell";
 
 export default function DashboardLoading() {
-  return <AstroLoader label="Loading dashboard..." />;
+  return <AstroAppLoader label="Loading dashboard..." />;
 }

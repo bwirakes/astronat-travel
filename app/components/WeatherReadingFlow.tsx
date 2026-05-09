@@ -159,7 +159,7 @@ export default function WeatherReadingFlow() {
     };
 
     if (loading) {
-        return <AstroLoader label={`Computing ${windowDays} day weather forecast...`} minHeight="75vh" />;
+        return <AstroLoader label={`Computing ${windowDays} day weather forecast...`} />;
     }
 
     return (
