@@ -6,18 +6,18 @@ import { useEffect, useMemo, useState, Suspense, type ReactElement } from "react
 import { createClient } from "@/lib/supabase/client";
 import { MOCK_READING_DETAILS } from "@/lib/astro/mock-readings";
 import { hasV4TeacherReading } from "@/app/lib/reading-viewmodel";
-import { AstroLoader } from "@/app/components/ui/astro-loader";
+import { AstroAppLoader } from "@/app/components/ui/app-loader-shell";
 
 function LoadingWeatherReading(): ReactElement {
-  return <AstroLoader label="Loading weather reading..." minHeight="75vh" />;
+  return <AstroAppLoader label="Loading weather reading..." />;
 }
 
 function LoadingReading(): ReactElement {
-  return <AstroLoader label="Loading reading..." minHeight="75vh" />;
+  return <AstroAppLoader label="Loading reading..." />;
 }
 
 function LoadingCouplesReading(): ReactElement {
-  return <AstroLoader label="Loading couples reading..." minHeight="75vh" />;
+  return <AstroAppLoader label="Loading couples reading..." />;
 }
 
 function normalizeRouteId(rawId: string | string[] | undefined): string {
@@ -282,7 +282,7 @@ function ReadingContent(): ReactElement | null {
   }, [loading, notFound, reading, router]);
 
   if (loading) {
-    return <AstroLoader label="Computing chart matrix..." />;
+    return <AstroAppLoader label="Computing chart matrix..." />;
   }
 
   if (notFound || !reading) {

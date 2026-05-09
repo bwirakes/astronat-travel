@@ -203,7 +203,7 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
   };
 
   if (loading) {
-    return <AstroLoader label={type === "couples" ? "Generating your couples reading..." : "Generating your reading..."} minHeight="75vh" />;
+    return <AstroLoader label={type === "couples" ? "Generating your couples reading..." : "Generating your reading..."} />;
   }
 
   return (

@@ -1,11 +1,11 @@
 import { Suspense } from "react";
 import ChartClient from "./ChartClient";
-import { AstroLoader } from "@/app/components/ui/astro-loader";
+import { AstroAppLoader } from "@/app/components/ui/app-loader-shell";
 
 export default function ChartPage() {
     return (
         <Suspense fallback={
-            <AstroLoader label="Loading chart..." />
+            <AstroAppLoader label="Loading chart..." />
         }>
             <ChartClient />
         </Suspense>

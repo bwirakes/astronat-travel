@@ -1,6 +1,7 @@
 import ReadingFlow from "@/app/components/ReadingFlow";
 import WeatherReadingFlow from "@/app/components/WeatherReadingFlow";
 import LockedReadingView from "@/app/components/LockedReadingView";
+import { AppLoaderShell } from "@/app/components/ui/app-loader-shell";
 import { PageHeader } from "@/components/app/page-header-context";
 import { createClient } from "@/lib/supabase/server";
 import { getReadingAccess } from "@/lib/access";
@@ -13,22 +14,13 @@ export default async function NewReadingPage({ searchParams }: { searchParams: P
     const { type } = await searchParams;
     const isWeather = type === "weather";
     const title = isWeather ? "Sky Weather" : "New Reading";
-    const containerStyle = {
-        maxWidth: "960px",
-        margin: "0 auto",
-        width: "100%",
-        padding: "var(--space-lg) var(--space-md) var(--space-3xl)",
-        display: "flex",
-        flexDirection: "column" as const,
-    };
-
     if (access && !access.canRead) {
         return (
             <>
                 <PageHeader title={title} />
-                <div style={containerStyle}>
+                <AppLoaderShell>
                     <LockedReadingView returnTo={isWeather ? "/reading/new?type=weather" : "/reading/new"} />
-                </div>
+                </AppLoaderShell>
             </>
         );
     }
@@ -36,11 +28,11 @@ export default async function NewReadingPage({ searchParams }: { searchParams: P
     return (
         <>
             <PageHeader title={title} />
-            <div style={containerStyle}>
+            <AppLoaderShell>
                 <Suspense fallback={null}>
                     {isWeather ? <WeatherReadingFlow /> : <ReadingFlow />}
                 </Suspense>
-            </div>
+            </AppLoaderShell>
         </>
     );
 }

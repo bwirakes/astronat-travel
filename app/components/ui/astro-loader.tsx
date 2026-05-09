@@ -10,6 +10,8 @@ interface AstroLoaderProps {
   minHeight?: string;
 }
 
+export const APP_SHELL_LOADER_MIN_HEIGHT = "75vh";
+
 type FloatItem = {
   key: string;
   kind: "planet" | "sign" | "star";
@@ -45,7 +47,7 @@ const CORE_FLOATS: FloatItem[] = [
 
 export function AstroLoader({
   label = "Generating your reading...",
-  minHeight = "100vh",
+  minHeight = APP_SHELL_LOADER_MIN_HEIGHT,
 }: AstroLoaderProps) {
   const phases = useMemo(
     () => [
@@ -157,68 +159,84 @@ export function AstroLoader({
         );
       })}
 
-      <section style={{ width: "100%", maxWidth: "620px", margin: "0 auto", textAlign: "center", position: "relative", zIndex: 2 }}>
-        <div style={{ position: "relative", width: "220px", height: "190px", margin: "0 auto var(--space-md)" }}>
-          <div style={{ ...coreOrbBase, width: "24px", height: "24px", top: "18px", left: "8px" }} />
-          <div style={{ ...coreOrbBase, width: "20px", height: "20px", top: "114px", right: "16px", animationDelay: "-1.3s" }} />
-          <div style={{ ...coreStarBase, top: "24px", right: "24px" }}>✦</div>
-          <div style={{ ...coreStarBase, bottom: "18px", left: "20px", color: "var(--color-spiced-life)", animationDelay: "-2s" }}>✦</div>
-          {CORE_FLOATS.map((item) => (
-            <div
-              key={item.key}
-              style={{
-                ...coreFloatBase,
-                top: item.top,
-                right: item.right,
-                bottom: item.bottom,
-                left: item.left,
-                animationDelay: item.delay,
-              }}
-            >
-              {renderFloatGlyph(item, 24)}
-            </div>
-          ))}
+      <div
+        style={{
+          position: "relative",
+          width: "220px",
+          height: "190px",
+          zIndex: 2,
+        }}
+      >
+        <div style={{ ...coreOrbBase, width: "24px", height: "24px", top: "18px", left: "8px" }} />
+        <div style={{ ...coreOrbBase, width: "20px", height: "20px", top: "114px", right: "16px", animationDelay: "-1.3s" }} />
+        <div style={{ ...coreStarBase, top: "24px", right: "24px" }}>✦</div>
+        <div style={{ ...coreStarBase, bottom: "18px", left: "20px", color: "var(--color-spiced-life)", animationDelay: "-2s" }}>✦</div>
+        {CORE_FLOATS.map((item) => (
           <div
+            key={item.key}
             style={{
-              width: "148px",
-              height: "148px",
-              margin: "18px auto 0",
-              borderRadius: "9999px",
-              border: "1px solid var(--surface-border)",
-              display: "grid",
-              placeItems: "center",
-              background: "color-mix(in srgb, var(--surface) 88%, transparent)",
-              position: "relative",
-              zIndex: 2,
+              ...coreFloatBase,
+              top: item.top,
+              right: item.right,
+              bottom: item.bottom,
+              left: item.left,
+              animationDelay: item.delay,
             }}
           >
-            <Image
-              src="/avatar/saturn-monogram.svg"
-              alt="Astronat loading"
-              width={110}
-              height={110}
-              style={{ animation: "astro-spin 5.8s linear infinite", filter: "none" }}
-            />
+            {renderFloatGlyph(item, 24)}
           </div>
-        </div>
-
-        <p
+        ))}
+        <div
           style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: "0.62rem",
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-            color: "var(--text-tertiary)",
-            marginBottom: "0.5rem",
+            width: "148px",
+            height: "148px",
+            margin: "18px auto 0",
+            borderRadius: "9999px",
+            border: "1px solid var(--surface-border)",
+            display: "grid",
+            placeItems: "center",
+            background: "color-mix(in srgb, var(--surface) 88%, transparent)",
+            position: "relative",
+            zIndex: 2,
           }}
         >
-          {phaseLabel}
-        </p>
-        <h3 style={{ fontFamily: "var(--font-secondary)", fontSize: "clamp(1.35rem, 3.4vw, 1.8rem)", marginBottom: "0.45rem" }}>
-          {phases[phaseIndex]}
-        </h3>
-        <span style={{ color: "var(--text-secondary)", fontSize: "1rem" }}>{label}</span>
-      </section>
+          <Image
+            src="/avatar/saturn-monogram.svg"
+            alt="Astronat loading"
+            width={110}
+            height={110}
+            style={{ animation: "astro-spin 5.8s linear infinite", filter: "none" }}
+          />
+        </div>
+
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + var(--space-md))",
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "min(620px, calc(100vw - 2rem))",
+            textAlign: "center",
+          }}
+        >
+          <p
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.62rem",
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: "var(--text-tertiary)",
+              marginBottom: "0.5rem",
+            }}
+          >
+            {phaseLabel}
+          </p>
+          <h3 style={{ fontFamily: "var(--font-secondary)", fontSize: "clamp(1.35rem, 3.4vw, 1.8rem)", marginBottom: "0.45rem" }}>
+            {phases[phaseIndex]}
+          </h3>
+          <span style={{ color: "var(--text-secondary)", fontSize: "1rem" }}>{label}</span>
+        </div>
+      </div>
 
       <style jsx>{`
         @keyframes loader-float {
