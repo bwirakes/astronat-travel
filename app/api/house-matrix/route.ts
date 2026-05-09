@@ -27,6 +27,7 @@ import {
 } from "@/app/lib/house-matrix";
 import { houseFromLongitude } from "@/app/lib/geodetic";
 import { computeEventScores, type OccupancyPlanet } from "@/app/lib/scoring-engine";
+import { computeUniversalSky } from "@/app/lib/universal-sky";
 import { determineSect } from "@/app/lib/arabic-parts";
 
 export async function POST(req: NextRequest) {
@@ -40,6 +41,7 @@ export async function POST(req: NextRequest) {
             parans = [],
             destLat = 0,
             destLon = 0,
+            refDate: refDateInput,
         } = body;
 
         if (!natalPlanets.length || !relocatedCusps.length) {
@@ -80,10 +82,16 @@ export async function POST(req: NextRequest) {
             house: houseFromLongitude(p.longitude, ascLon),
         }));
 
-        // Execute Memo Part 2: Vectorizing Life Events
-        const eventScores = computeEventScores(matrixResult, relocatedPlanets);
+        // Universal sky state — optional refDate from body, defaults to now.
+        // Adds a global sky modifier (current retrogrades, eclipses, node hits)
+        // to E_Final scores. Same data drives the V4 view's PlaceFieldTab §03.
+        const refDate = refDateInput ? new Date(refDateInput) : new Date();
+        const universalSky = await computeUniversalSky(refDate);
 
-        return NextResponse.json({ ...matrixResult, eventScores });
+        // Execute Memo Part 2: Vectorizing Life Events
+        const eventScores = computeEventScores(matrixResult, relocatedPlanets, universalSky);
+
+        return NextResponse.json({ ...matrixResult, eventScores, universalSky });
     } catch (err) {
         console.error("[/api/house-matrix]", err);
         return NextResponse.json(

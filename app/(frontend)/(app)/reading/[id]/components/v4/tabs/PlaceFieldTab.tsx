@@ -15,6 +15,7 @@ import type { PersonalGeodeticHit } from "@/app/lib/reading-tabs";
 import type { V4EclipseHit, V4GeoTransit, V4LunationHit, V4Paran, V4ProgressedBand } from "@/app/lib/reading-viewmodel";
 import SectionHead from "../../shared/SectionHead";
 import TabSection from "../../shared/TabSection";
+import UniversalSkySection from "./UniversalSkySection";
 import type { V4VM } from "./types";
 
 interface Props {
@@ -407,10 +408,15 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
 
             <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
 
-            {/* ── §03 The frame (geodetic house wheel) ─────────────────── */}
+            {/* ── §03 Universal sky weather (location-agnostic) ────────── */}
+            {vm.universalSky && (
+                <UniversalSkySection sky={vm.universalSky} sectionIndex="03" />
+            )}
+
+            {/* ── §04 The frame (geodetic house wheel) ─────────────────── */}
             {vm.geodeticHouseFrame.cusps.length === 12 && (
                 <>
-                    <SectionHead index="03" title="Where your chart lands on this longitude"  flush />
+                    <SectionHead index="04" title="Where your chart lands on this longitude"  flush />
                     <p style={BODY}>
                         If you swapped your birthplace&rsquo;s clock for {city}&rsquo;s, your natal
                         planets would re-house themselves like this. House 1 starts at the sign of
@@ -432,10 +438,10 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
                 </>
             )}
 
-            {/* ── §04 Life areas through the city's geodetic frame ─────── */}
+            {/* ── §05 Life areas through the city's geodetic frame ─────── */}
             {interpretations.length > 0 && (
                 <>
-                    <SectionHead index="04" title={`Life areas through ${city}'s geodetic frame`}  flush />
+                    <SectionHead index="05" title={`Life areas through ${city}'s geodetic frame`}  flush />
                     <p style={BODY}>
                         Re-domained by longitude — which house each natal planet lands in when{" "}
                         {city}&rsquo;s coordinates set the clock. A <em>≠ natal H{"{n}"}</em> chip
@@ -516,8 +522,8 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
                 </>
             )}
 
-            {/* ── §05 Where [city] sits — two-column: sticky map + scrolling prose ─ */}
-            <SectionHead index="05" title={`Where ${city} sits in the zodiac`} flush />
+            {/* ── §06 Where [city] sits — two-column: sticky map + scrolling prose ─ */}
+            <SectionHead index="06" title={`Where ${city} sits in the zodiac`} flush />
 
             <div className="grid grid-cols-1 lg:grid-cols-[5fr_6fr] gap-8 lg:gap-10 mt-6">
                 <div className="lg:sticky lg:top-20 lg:self-start">
@@ -558,7 +564,7 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
             {vm.parans.length > 0 && (
                 <>
                     <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
-                    <SectionHead index="06" title="Latitude crossings" flush />
+                    <SectionHead index="07" title="Latitude crossings" flush />
                     <ParansDisclosure
                         parans={vm.parans}
                         city={city}

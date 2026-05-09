@@ -197,6 +197,12 @@ function ReadingContent(): ReactElement | null {
             avoidWindows: d.avoidWindows,
             bestWindowScores: d.bestWindowScores,
             avoidWindowScores: d.avoidWindowScores,
+            // Universal sky — pass through so PlaceFieldTab §03 and the
+            // TimingTab Gantt sky rows can render. Optional for back-compat
+            // with cached readings that predate these fields.
+            universalSky: d.universalSky,
+            universalSkySpans: d.universalSkySpans,
+            eventScores: d.eventScores,
          });
       } else {
          console.warn("Failed to fetch reading:", error);

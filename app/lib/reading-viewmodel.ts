@@ -541,6 +541,16 @@ export interface V4ReadingVM {
     /** A5: progressed-Sun / progressed-Moon longitude bands. Null when
      *  birth date isn't available (e.g. cached readings missing it). */
     progressions: V4ProgressionsView | null;
+    /** Universal sky state at the reading's reference date — what the sky
+     *  is doing for *everyone* (location-agnostic). Drives PlaceFieldTab's
+     *  §03 "Sky weather right now" panel. Optional for cached readings that
+     *  predate this field. */
+    universalSky?: import("./universal-sky").UniversalSkyState;
+    /** Universal-sky Gantt rows spanning the timing window — current and
+     *  upcoming retrograde periods, eclipse activation windows, station
+     *  markers, imminent ingresses. Rendered by TimingTab beneath the
+     *  personal Gantt on the same date scale. Optional for back-compat. */
+    universalSkySpans?: import("./window-scoring").UniversalSkySpan[];
 }
 
 // ─── Constants and dictionaries ──────────────────────────────────────
@@ -2291,6 +2301,13 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
         geodeticHouseFrame: deriveGeodeticHouseFrame(reading),
         parans: deriveParans(reading),
         progressions: deriveProgressions(reading),
+        // Universal sky — pass through from reading.details. Cached readings
+        // that predate this field simply get `undefined`; PlaceFieldTab and
+        // TimingTab gracefully omit the sky panel/rows when absent.
+        ...(reading?.universalSky ? { universalSky: reading.universalSky } : {}),
+        ...(Array.isArray(reading?.universalSkySpans) && reading.universalSkySpans.length
+            ? { universalSkySpans: reading.universalSkySpans }
+            : {}),
     };
 }
 

@@ -20,6 +20,13 @@
  * window AND which of those touch the user's goals.
  */
 import type { TransitHit } from "@/lib/astro/transit-solver";
+import {
+    STATIONS,
+    ECLIPSES,
+    type StationEvent,
+} from "./geodetic/geodetic-events";
+import type { UniversalSkyState } from "./universal-sky";
+import { essentialDignityLabel } from "./dignity";
 
 const HALF_WIDTH_DAYS = 5;          // window is centred ± this many days
 const TRANSIT_SCALE = 6;            // each tight benefic ≈ +6 to baseline
@@ -770,4 +777,305 @@ export function pickArrivalWindowsToNarrate(
         .slice(0, 3);
 
     return [anchor, ...alternates];
+}
+
+// ─── Universal Sky Spans ──────────────────────────────────────────────────────
+//
+// Sibling of `solveTransitSpans` that returns a Gantt-shaped representation of
+// what's happening overhead for everyone — retrograde windows, eclipse
+// activation windows, station-direct/retrograde markers, and (when a
+// pre-computed UniversalSkyState is supplied) imminent sign ingresses.
+//
+// Read by TimingTab to render a "Universal sky over this window" section
+// beneath the personal-transit Gantt, sharing the same date scale.
+//
+// Sources are the curated `STATIONS` and `ECLIPSES` tables in
+// geodetic-events.ts. When the window falls outside the curated range
+// (currently 2005–2027), affected categories are silently skipped — caller
+// gets fewer/empty spans rather than an error.
+
+export interface UniversalSkySpan {
+    kind: "retrograde" | "ingress" | "sky-aspect" | "eclipse" | "node-aspect" | "station";
+    /** Human-readable label for the row, e.g. "Mercury retrograde in Pisces". */
+    label: string;
+    /** Primary planet driving the span. Lowercase canonical name. */
+    planet: string;
+    /** For sky-aspect / node-aspect spans, the second planet (or "north node"). */
+    secondaryPlanet?: string;
+    sign?: string;
+    /** Dignity tier of the planet during the span. Drives row prominence. */
+    dignity?: string;
+    /** Aspect type for sky-aspect / node-aspect spans. */
+    aspectType?: string;
+    entryISO: string;
+    exactISO: string;
+    exitISO: string;
+    /** Days from travelDateISO to entry/exact/exit (negative if span starts before D0). */
+    entryDay: number;
+    exactDay: number;
+    exitDay: number;
+    /** Color signal for the Gantt — true = supportive, false = challenging/dampening. */
+    benefic: boolean;
+    /** 0–1 prominence weight; debilitated dignity → higher severity. */
+    severity: number;
+}
+
+/** Map essentialDignityLabel output to our 5-tier display set. */
+function rxDignityTier(planetCap: string, sign: string): string {
+    const label = essentialDignityLabel(planetCap, sign);
+    if (label === "Domicile")  return "domicile";
+    if (label === "Exalted")   return "exalted";
+    if (label === "Detriment") return "detriment";
+    if (label === "Fall")      return "fall";
+    return "neutral";
+}
+
+const RX_SEVERITY_BY_DIGNITY: Record<string, number> = {
+    domicile: 0.25,
+    exalted:  0.30,
+    neutral:  0.55,
+    detriment: 0.85,
+    fall:     1.00,
+};
+
+const INNER_PLANETS_CAP = new Set(["Sun", "Moon", "Mercury", "Venus", "Mars"]);
+
+function isoDay(time: number): string {
+    return new Date(time).toISOString().slice(0, 10);
+}
+
+function dayOffset(time: number, anchorTime: number): number {
+    return Math.round((time - anchorTime) / 86_400_000);
+}
+
+/**
+ * Build universal-sky Gantt rows around the travel date.
+ *
+ * Pure synchronous function — pulls only from the curated event tables and
+ * (optionally) a pre-computed UniversalSkyState for ingress markers.
+ *
+ * @param travelDateISO  Anchor date for entryDay/exactDay/exitDay offsets.
+ * @param horizonDays    How far forward to search (typical: 90 for trip,
+ *                       365 for relocation).
+ * @param skyState       Optional snapshot from `computeUniversalSky(refDate)`;
+ *                       when provided, imminent ingresses (within 30 days)
+ *                       are added as zero-width markers.
+ */
+export function solveUniversalSkySpans(
+    travelDateISO: string,
+    horizonDays: number,
+    skyState?: UniversalSkyState,
+): UniversalSkySpan[] {
+    const anchorTime = new Date(travelDateISO).getTime();
+    if (!isFinite(anchorTime)) return [];
+    const MS_DAY = 86_400_000;
+    const horizonEnd = anchorTime + horizonDays * MS_DAY;
+    // Look back enough to catch a retrograde period that's still in progress.
+    const lookbackTime = anchorTime - 120 * MS_DAY;
+
+    const spans: UniversalSkySpan[] = [];
+
+    // Helper — capitalize a lowercase planet name for the label.
+    const capPlanet = (p: string) => p ? p[0].toUpperCase() + p.slice(1) : p;
+    const isInnerPlanet = (p: string) =>
+        p === "sun" || p === "moon" || p === "mercury" || p === "venus" || p === "mars";
+
+    // (1) Retrograde windows — read from skyState if available (preferred:
+    //     comes from a daily ephemeris scan that catches inner-planet Rx).
+    //     Fall back to the curated STATIONS table only when no skyState is
+    //     supplied (legacy code paths) or the supplied skyState is from an
+    //     older schema that lacks retrogradeWindows.
+    const hasNewSchemaSky = !!skyState && Array.isArray(skyState.retrogradeWindows);
+    if (hasNewSchemaSky && skyState) {
+        for (const w of skyState.retrogradeWindows) {
+            const startTime = new Date(w.entryISO).getTime();
+            const endTime = new Date(w.exitISO).getTime();
+            if (endTime < lookbackTime) continue;
+            if (startTime > horizonEnd) continue;
+
+            const midTime = (startTime + endTime) / 2;
+            const severityBase = RX_SEVERITY_BY_DIGNITY[w.dignity] ?? 0.5;
+            const severity = severityBase * (isInnerPlanet(w.planet) ? 1.0 : 0.6);
+
+            spans.push({
+                kind: "retrograde",
+                label: `${capPlanet(w.planet)} retrograde in ${w.sign}`,
+                planet: w.planet,
+                sign: w.sign,
+                dignity: w.dignity,
+                entryISO: w.entryISO,
+                exactISO: w.midISO,
+                exitISO: w.exitISO,
+                entryDay: dayOffset(startTime, anchorTime),
+                exactDay: dayOffset(new Date(w.midISO).getTime(), anchorTime),
+                exitDay: dayOffset(endTime, anchorTime),
+                benefic: false,
+                severity,
+            });
+        }
+
+        // Station markers (zero-width pins) — derived from the same scan,
+        // both Rx-station entries and direct-station exits, for every window.
+        for (const w of skyState.retrogradeWindows) {
+            const startTime = new Date(w.entryISO).getTime();
+            const endTime = new Date(w.exitISO).getTime();
+            const innerSeverity = isInnerPlanet(w.planet) ? 0.5 : 0.35;
+            if (startTime >= anchorTime && startTime <= horizonEnd) {
+                spans.push({
+                    kind: "station",
+                    label: `${capPlanet(w.planet)} stations retrograde in ${w.sign}`,
+                    planet: w.planet,
+                    sign: w.sign,
+                    entryISO: w.entryISO,
+                    exactISO: w.entryISO,
+                    exitISO: w.entryISO,
+                    entryDay: dayOffset(startTime, anchorTime),
+                    exactDay: dayOffset(startTime, anchorTime),
+                    exitDay: dayOffset(startTime, anchorTime),
+                    benefic: false,
+                    severity: innerSeverity,
+                });
+            }
+            if (endTime >= anchorTime && endTime <= horizonEnd) {
+                spans.push({
+                    kind: "station",
+                    label: `${capPlanet(w.planet)} stations direct in ${w.sign}`,
+                    planet: w.planet,
+                    sign: w.sign,
+                    entryISO: w.exitISO,
+                    exactISO: w.exitISO,
+                    exitISO: w.exitISO,
+                    entryDay: dayOffset(endTime, anchorTime),
+                    exactDay: dayOffset(endTime, anchorTime),
+                    exitDay: dayOffset(endTime, anchorTime),
+                    benefic: true,
+                    severity: innerSeverity,
+                });
+            }
+        }
+    } else {
+        // Fallback path — curated STATIONS table. Used when the caller
+        // doesn't pass a skyState OR the skyState predates the
+        // retrogradeWindows field. Note: this table is intentionally
+        // incomplete (only outer-planet stations + a handful of inners),
+        // so Mercury/Venus/Mars Rx will be invisible here.
+        const stationsByPlanet = new Map<string, StationEvent[]>();
+        for (const s of STATIONS) {
+            const arr = stationsByPlanet.get(s.planet);
+            if (arr) arr.push(s);
+            else stationsByPlanet.set(s.planet, [s]);
+        }
+        for (const arr of stationsByPlanet.values()) {
+            arr.sort((a, b) => new Date(a.dateUtc).getTime() - new Date(b.dateUtc).getTime());
+        }
+        for (const [planetCap, stations] of stationsByPlanet) {
+            for (let i = 0; i < stations.length; i++) {
+                const start = stations[i];
+                if (start.type !== "retrograde") continue;
+                const startTime = new Date(start.dateUtc).getTime();
+                let endTime: number | null = null;
+                for (let j = i + 1; j < stations.length; j++) {
+                    if (stations[j].type === "direct") {
+                        endTime = new Date(stations[j].dateUtc).getTime();
+                        break;
+                    }
+                }
+                if (endTime == null) endTime = startTime + 80 * MS_DAY;
+                if (endTime < lookbackTime) continue;
+                if (startTime > horizonEnd) continue;
+
+                const midTime = (startTime + endTime) / 2;
+                const dignity = rxDignityTier(planetCap, start.sign);
+                const severityBase = RX_SEVERITY_BY_DIGNITY[dignity] ?? 0.5;
+                const severity = severityBase * (INNER_PLANETS_CAP.has(planetCap) ? 1.0 : 0.6);
+                spans.push({
+                    kind: "retrograde",
+                    label: `${planetCap} retrograde in ${start.sign}`,
+                    planet: planetCap.toLowerCase(),
+                    sign: start.sign,
+                    dignity,
+                    entryISO: isoDay(startTime),
+                    exactISO: isoDay(midTime),
+                    exitISO: isoDay(endTime),
+                    entryDay: dayOffset(startTime, anchorTime),
+                    exactDay: dayOffset(midTime, anchorTime),
+                    exitDay: dayOffset(endTime, anchorTime),
+                    benefic: false,
+                    severity,
+                });
+            }
+        }
+        for (const s of STATIONS) {
+            const t = new Date(s.dateUtc).getTime();
+            if (t < anchorTime || t > horizonEnd) continue;
+            spans.push({
+                kind: "station",
+                label: `${s.planet} stations ${s.type === "retrograde" ? "retrograde" : "direct"} in ${s.sign}`,
+                planet: s.planet.toLowerCase(),
+                sign: s.sign,
+                entryISO: isoDay(t),
+                exactISO: isoDay(t),
+                exitISO: isoDay(t),
+                entryDay: dayOffset(t, anchorTime),
+                exactDay: dayOffset(t, anchorTime),
+                exitDay: dayOffset(t, anchorTime),
+                benefic: s.type === "direct",
+                severity: INNER_PLANETS_CAP.has(s.planet) ? 0.5 : 0.35,
+            });
+        }
+    }
+
+    // (3) Eclipse windows — solar 14d-before to 180d-after,
+    //                      lunar 7d-before to 30d-after.
+    for (const e of ECLIPSES) {
+        const t = new Date(e.dateUtc).getTime();
+        const isSolar = e.kind === "solar";
+        const before = (isSolar ? 14 : 7) * MS_DAY;
+        const after  = (isSolar ? 180 : 30) * MS_DAY;
+        const eEntry = t - before;
+        const eExit  = t + after;
+        if (eExit < lookbackTime) continue;
+        if (eEntry > horizonEnd) continue;
+        spans.push({
+            kind: "eclipse",
+            label: `${isSolar ? "Solar" : "Lunar"} eclipse in ${e.sign}`,
+            planet: isSolar ? "sun" : "moon",
+            sign: e.sign,
+            entryISO: isoDay(eEntry),
+            exactISO: isoDay(t),
+            exitISO: isoDay(eExit),
+            entryDay: dayOffset(eEntry, anchorTime),
+            exactDay: dayOffset(t, anchorTime),
+            exitDay: dayOffset(eExit, anchorTime),
+            benefic: false,
+            severity: isSolar ? 0.9 : 0.6,
+        });
+    }
+
+    // (4) Imminent ingresses (zero-width) — only when the snapshot is provided.
+    //     The snapshot only carries the next ingress per planet (within 30d),
+    //     which is the most useful slice for the timeline anyway.
+    if (skyState) {
+        for (const ing of skyState.ingresses) {
+            const t = new Date(`${ing.dateISO}T12:00:00Z`).getTime();
+            if (!isFinite(t) || t < anchorTime || t > horizonEnd) continue;
+            spans.push({
+                kind: "ingress",
+                label: `${ing.planet[0].toUpperCase()}${ing.planet.slice(1)} enters ${ing.toSign}`,
+                planet: ing.planet,
+                sign: ing.toSign,
+                entryISO: ing.dateISO,
+                exactISO: ing.dateISO,
+                exitISO: ing.dateISO,
+                entryDay: dayOffset(t, anchorTime),
+                exactDay: dayOffset(t, anchorTime),
+                exitDay: dayOffset(t, anchorTime),
+                benefic: true,  // ingresses are neutral/positive markers
+                severity: 0.4,
+            });
+        }
+    }
+
+    spans.sort((a, b) => a.exactDay - b.exactDay);
+    return spans;
 }

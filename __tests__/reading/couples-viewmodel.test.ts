@@ -25,6 +25,7 @@ function fakeFinalEventScores(scores: number[]) {
     eventName,
     baseVolume: scores[i] - 5,
     affinityModifier: 5,
+    skyModifier: 0,
     finalScore: scores[i],
     verdict: "test",
   }));

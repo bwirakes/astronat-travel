@@ -5,7 +5,7 @@ import SectionHead from "../../shared/SectionHead";
 import TabSection from "../../shared/TabSection";
 import type { V4VM } from "./types";
 import { transitOneLiner } from "@/app/lib/transit-copy";
-import type { TransitSpan } from "@/app/lib/window-scoring";
+import type { TransitSpan, UniversalSkySpan } from "@/app/lib/window-scoring";
 import { PLANET_GLYPH } from "@/app/lib/geodetic-weather-types";
 import { WINDOW_LABELS, WINDOW_RATIONALES, verdictBand, verdictTone } from "@/app/lib/verdict";
 
@@ -659,6 +659,197 @@ function GanttRow({
     );
 }
 
+// ─── Universal sky row (location-agnostic) ───────────────────────────────────
+// Same date scale as GanttRow above, but visually distinguished so readers can
+// see at a glance what's happening overhead vs. their personal transits.
+//
+//   - Muted accent (slate/violet for sky vs sage/spiced for personal)
+//   - Dashed left border on the label cell
+//   - Zero-width spans (ingresses, stations) render as a thin pin instead of a pill
+//   - Tooltip shows the universal-sky-span shape (entry/exact/exit + dignity/sign)
+
+function fmtSkyKindLabel(kind: UniversalSkySpan["kind"]): string {
+    switch (kind) {
+        case "retrograde":  return "Retrograde";
+        case "ingress":     return "Ingress";
+        case "station":     return "Station";
+        case "eclipse":     return "Eclipse";
+        case "sky-aspect":  return "Aspect";
+        case "node-aspect": return "Node aspect";
+    }
+}
+
+function SkyGanttRow({
+    span,
+    windowStart,
+    windowEnd,
+    todayDay,
+}: {
+    span: UniversalSkySpan;
+    windowStart: number;
+    windowEnd: number;
+    todayDay: number | null;
+}) {
+    const [hovered, setHovered] = useState(false);
+    const range = windowEnd - windowStart;
+    const toPct = (day: number) => ((day - windowStart) / range) * 100;
+
+    const clampedEntry = Math.max(windowStart, span.entryDay);
+    const clampedExit  = Math.min(windowEnd, span.exitDay);
+    if (clampedEntry > clampedExit) return null;
+
+    const isZeroWidth = span.entryDay === span.exitDay;
+    const entryPct = toPct(clampedEntry);
+    const widthPct = isZeroWidth ? 0 : toPct(clampedExit) - entryPct;
+
+    // Sky rows use a distinct palette so they don't compete with personal transits.
+    // Benefic = soft sage tint (mirrors personal scheme); challenging = violet/slate.
+    const accent = span.benefic
+        ? "color-mix(in oklab, var(--sage) 70%, var(--text-tertiary))"
+        : "color-mix(in oklab, var(--color-spiced-life) 50%, var(--text-tertiary))";
+
+    const centerPct = entryPct + widthPct / 2;
+    const tooltipLeft = Math.max(22, Math.min(78, centerPct));
+
+    const kindLabel = fmtSkyKindLabel(span.kind);
+
+    return (
+        <div
+            style={{
+                display: "grid",
+                gridTemplateColumns: "150px 1fr",
+                gap: "var(--space-sm)",
+                alignItems: "center",
+                padding: "0.55rem 0",
+            }}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+        >
+            {/* Row label — dashed left border marks this as a sky row */}
+            <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                minWidth: 0,
+                paddingLeft: "0.5rem",
+                borderLeft: `1px dashed color-mix(in oklab, ${accent} 60%, transparent)`,
+            }}>
+                <span style={{ fontSize: "1rem", color: accent, flexShrink: 0, opacity: 0.85 }}>
+                    {planetGlyph(span.planet)}
+                </span>
+                <div style={{ minWidth: 0 }}>
+                    <div style={{
+                        fontFamily: FB,
+                        fontSize: "0.78rem",
+                        fontWeight: 600,
+                        color: "var(--text-secondary)",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        textTransform: "capitalize",
+                    }}>
+                        {span.planet}
+                    </div>
+                    <div style={{
+                        fontFamily: FM,
+                        fontSize: "0.6rem",
+                        letterSpacing: "0.16em",
+                        textTransform: "uppercase",
+                        color: "var(--text-tertiary)",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                    }}>
+                        SKY · {kindLabel}
+                    </div>
+                </div>
+            </div>
+
+            {/* Bar track */}
+            <div style={{ position: "relative", height: 24, overflow: "visible" }}>
+                {/* TODAY line */}
+                {todayDay !== null && todayDay >= windowStart && todayDay <= windowEnd && (
+                    <div style={{
+                        position: "absolute",
+                        left: `${toPct(todayDay)}%`,
+                        top: -4,
+                        bottom: -4,
+                        width: 1,
+                        background: "var(--color-y2k-blue)",
+                        opacity: 0.55,
+                        zIndex: 2,
+                    }} />
+                )}
+
+                {isZeroWidth ? (
+                    /* Zero-width pin — for ingresses and station moments */
+                    <div style={{
+                        position: "absolute",
+                        left: `${entryPct}%`,
+                        top: "50%",
+                        transform: "translate(-50%, -50%)",
+                        width: 2,
+                        height: 18,
+                        background: accent,
+                        opacity: hovered ? 1 : 0.7,
+                        borderRadius: 1,
+                        transition: "opacity 150ms ease",
+                    }} />
+                ) : (
+                    /* Wide bar — dashed/striped pattern to distinguish from personal */
+                    <div style={{
+                        position: "absolute",
+                        left: `${entryPct}%`,
+                        width: `${widthPct}%`,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        height: 10,
+                        borderRadius: 5,
+                        background: `repeating-linear-gradient(135deg, ${accent} 0 6px, color-mix(in oklab, ${accent} 30%, transparent) 6px 12px)`,
+                        opacity: hovered ? 0.95 : 0.6,
+                        transition: "opacity 150ms ease",
+                    }} />
+                )}
+
+                {/* Hover tooltip */}
+                {hovered && (
+                    <div style={{
+                        position: "absolute",
+                        left: `${tooltipLeft}%`,
+                        bottom: "calc(100% + 10px)",
+                        transform: "translateX(-50%)",
+                        zIndex: 30,
+                        background: "var(--color-charcoal)",
+                        color: "var(--color-eggshell)",
+                        borderRadius: "var(--radius-sm)",
+                        padding: "0.6rem 0.85rem",
+                        minWidth: 240,
+                        maxWidth: 320,
+                        boxShadow: "0 6px 20px rgba(0,0,0,0.32)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.45rem",
+                        pointerEvents: "none",
+                    }}>
+                        <div style={{ fontFamily: FM, fontSize: "0.62rem", letterSpacing: "0.18em", textTransform: "uppercase", color: accent, fontWeight: 700 }}>
+                            SKY · {span.label}
+                        </div>
+                        <div style={{ fontFamily: FM, fontSize: "0.66rem", letterSpacing: "0.04em", color: "var(--color-eggshell)", opacity: 0.7 }}>
+                            {isZeroWidth
+                                ? fmtMonthDay(span.exactISO)
+                                : <>{fmtMonthDay(span.entryISO)} → <span style={{ color: accent, fontWeight: 700, opacity: 1 }}>{fmtMonthDay(span.exactISO)}</span> → {fmtMonthDay(span.exitISO)}</>}
+                            {span.dignity && span.dignity !== "neutral" && ` · ${span.dignity}`}
+                        </div>
+                        <div style={{ fontFamily: FB, fontSize: "0.78rem", lineHeight: 1.45, color: "var(--color-eggshell)", opacity: 0.85, fontStyle: "italic" }}>
+                            Affects everyone — independent of where you are.
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 // Trip-grain (week) gantt: -7d → +90d centered loosely on the anchor.
 const TRIP_WINDOW_START = -7;
 const TRIP_WINDOW_END = 90;
@@ -673,7 +864,8 @@ const RELO_DAY_MARKERS = [0, 60, 120, 180, 240, 300, 360];
 
 function TransitGantt({ vm }: { vm: V4VM }) {
     const { transitSpans, travelDateISO } = vm;
-    if (!transitSpans.length || !travelDateISO) return null;
+    const universalSkySpans = vm.universalSkySpans ?? [];
+    if ((!transitSpans.length && !universalSkySpans.length) || !travelDateISO) return null;
 
     const isRelocation = vm.timeline.grain === "month";
     const WINDOW_START = isRelocation ? RELO_WINDOW_START : TRIP_WINDOW_START;
@@ -755,11 +947,50 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                     </div>
                 </div>
 
-                {/* Rows */}
+                {/* Rows — personal transits first, universal sky beneath */}
                 <div style={{ display: "flex", flexDirection: "column" }}>
                     {transitSpans.map((span, i) => (
                         <GanttRow
                             key={`${span.transit_planet}|${span.natal_planet}|${span.aspect}|${i}`}
+                            span={span}
+                            windowStart={WINDOW_START}
+                            windowEnd={WINDOW_END}
+                            todayDay={todayDay}
+                        />
+                    ))}
+                    {universalSkySpans.length > 0 && transitSpans.length > 0 && (
+                        <div style={{
+                            display: "grid",
+                            gridTemplateColumns: "150px 1fr",
+                            gap: "var(--space-sm)",
+                            alignItems: "center",
+                            padding: "0.4rem 0 0.2rem",
+                            marginTop: "0.25rem",
+                            borderTop: "1px dashed var(--surface-border)",
+                        }}>
+                            <span style={{
+                                fontFamily: FM,
+                                fontSize: "0.58rem",
+                                letterSpacing: "0.18em",
+                                textTransform: "uppercase",
+                                color: "var(--text-tertiary)",
+                                paddingLeft: "0.5rem",
+                            }}>
+                                Universal sky
+                            </span>
+                            <span style={{
+                                fontFamily: FB,
+                                fontSize: "0.7rem",
+                                color: "var(--text-tertiary)",
+                                fontStyle: "italic",
+                            }}>
+                                What everyone&rsquo;s sky is doing across this window
+                            </span>
+                        </div>
+                    )}
+                    {universalSkySpans.map((span, i) => (
+                        <SkyGanttRow
+                            key={`sky|${span.kind}|${span.planet}|${span.exactISO}|${i}`}
                             span={span}
                             windowStart={WINDOW_START}
                             windowEnd={WINDOW_END}
@@ -791,6 +1022,18 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                         <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                             <span style={{ fontFamily: FM, fontSize: "0.7rem", color: "var(--text-tertiary)" }}>℞</span>
                             <span style={{ fontFamily: FM, fontSize: "0.66rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>Retrograde — a revisit</span>
+                        </div>
+                    )}
+                    {universalSkySpans.length > 0 && (
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                            <div style={{
+                                width: 20,
+                                height: 6,
+                                borderRadius: 3,
+                                background: "repeating-linear-gradient(135deg, var(--text-tertiary) 0 4px, transparent 4px 8px)",
+                                opacity: 0.7,
+                            }} />
+                            <span style={{ fontFamily: FM, fontSize: "0.66rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>Sky — affects everyone</span>
                         </div>
                     )}
                     <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
