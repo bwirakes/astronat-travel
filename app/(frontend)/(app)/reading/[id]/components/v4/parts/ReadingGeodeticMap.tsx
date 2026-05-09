@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useId, useMemo, useState } from "react";
 import { WORLD_MAP_PATH } from "@/app/components/worldMapPath";
 import {
     GEODETIC_ZONES,
@@ -11,8 +11,11 @@ import {
 import {
     geodeticASCLongitude,
     geodeticASCSign,
+    geodeticMCLongitude,
     geodeticMCSign,
 } from "@/app/lib/geodetic";
+import { SIGN_PATHS } from "@/app/components/SignIcon";
+import { PLANET_PATHS } from "@/app/components/PlanetIcon";
 
 const FONT_MONO = "var(--font-mono, monospace)";
 const FONT_PRIMARY = "var(--font-primary, serif)";
@@ -44,6 +47,10 @@ interface Props {
     /** Hide the legend strip below the map — useful when the parent already
      *  renders its own legend (e.g. in a two-column sticky layout). */
     showLegend?: boolean;
+    /** When provided, the unified legend renders an inline paran toggle. */
+    onToggleParans?: () => void;
+    /** Total paran count for the toggle's label. */
+    paransCount?: number;
 }
 
 function shortestDelta(a: number, b: number): number {
@@ -90,7 +97,16 @@ type HoveredAxis =
     | { kind: "MC"; westSign: string; eastSign: string; color: string }
     | { kind: "ASC"; southSign: string; northSign: string; color: string }
     | { kind: "PARAN"; p1: string; p2: string; aspect?: string; lat: number; contribution: number; color: string }
+    | { kind: "CITY"; mcLon: number; ascLon: number; mcSign: string; ascSign: string; color: string }
     | null;
+
+/** Format an ecliptic longitude as "DD.DD° Sign" (e.g., 174.76 → "24.76° Virgo"). */
+function formatZodiac(eclipticLon: number): string {
+    const lon = ((eclipticLon % 360) + 360) % 360;
+    const sign = SIGNS_ORDERED[Math.floor(lon / 30)];
+    const within = lon - Math.floor(lon / 30) * 30;
+    return `${within.toFixed(2)}° ${sign}`;
+}
 
 function paranTone(contribution: number): string {
     if (contribution > 0) return "var(--sage, #4a8a6a)";
@@ -102,7 +118,9 @@ function capitalize(s: string): string {
     return s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : s;
 }
 
-export default function ReadingGeodeticMap({ lat, lon, city, parans, showParans = true, showLegend = true }: Props) {
+export default function ReadingGeodeticMap({ lat, lon, city, parans, showParans = true, showLegend = true, onToggleParans, paransCount = 0 }: Props) {
+    const reactId = useId();
+    const clipId = `rg-map-clip-${reactId.replace(/:/g, "")}`;
     const [hovered, setHovered] = useState<HoveredAxis>(null);
     const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
     const handleMove = (e: React.MouseEvent) => setMousePos({ x: e.clientX, y: e.clientY });
@@ -123,7 +141,30 @@ export default function ReadingGeodeticMap({ lat, lon, city, parans, showParans 
     const cy = projectLat(lat);
     const vw = cropWidthDeg * (1000 / 360);
     const vh = cropHeightDeg * (500 / 180);
-    const viewBox = `${cx - vw / 2} ${cy - vh / 2} ${vw} ${vh}`;
+    // ── Antimeridian-safe projection ────────────────────────────────────
+    // The shared `projectLon` wraps at ±180° (modular). For cities near the
+    // dateline (Auckland, Suva, Anchorage…) the viewport straddles 180°,
+    // so any longitude on the "far side" of the seam projects to a tiny x
+    // and falls off the visible canvas. We re-express each longitude in the
+    // city-centered window (cityLon-180°, cityLon+180°] before projecting,
+    // giving a continuous x range across the seam. Equivalent to D3's
+    // `geoIdentity().clipAngle(null)` re-centered on the city.
+    const pX = (lonDeg: number) => {
+        const raw = projectLon(lonDeg);
+        if (raw < cx - 500) return raw + 1000;
+        if (raw > cx + 500) return raw - 1000;
+        return raw;
+    };
+    // Single ruler strip: MC along the top. The ASC axis is communicated by
+    // the gold ASC boundary curves drawn on-map; paran latitudes are
+    // labeled directly via planet glyphs sitting on each paran line.
+    const padTop = 26;
+    const padLeft = 0;
+    const xViewLeft = cx - vw / 2;
+    const yViewTop = cy - vh / 2;
+    const yViewBottom = cy + vh / 2;
+    const xViewRight = cx + vw / 2;
+    const viewBox = `${xViewLeft - padLeft} ${yViewTop - padTop} ${vw + padLeft} ${vh + padTop}`;
     const cropLonStart = lon - cropWidthDeg / 2 - 6;
     const cropLonEnd = lon + cropWidthDeg / 2 + 6;
 
@@ -135,22 +176,42 @@ export default function ReadingGeodeticMap({ lat, lon, city, parans, showParans 
         })),
         [cropLonStart, cropLonEnd],
     );
-    const lowerCurve = allCurves[ascSignIndex].points;
-    const upperCurve = allCurves[(ascSignIndex + 1) % 12].points;
-
-    const zonePolygon = useMemo(() => {
-        const xL = projectLon(bandStart);
-        const xR = projectLon(bandEnd);
-        const upperInBand = upperCurve.filter(([l]) => l >= bandStart - 0.5 && l <= bandEnd + 0.5);
-        const lowerInBand = lowerCurve.filter(([l]) => l >= bandStart - 0.5 && l <= bandEnd + 0.5);
-        if (upperInBand.length === 0 || lowerInBand.length === 0) return null;
-        const top = upperInBand.map(([l, la]) => `${projectLon(l)},${projectLat(la)}`);
-        const bottom = [...lowerInBand].reverse().map(([l, la]) => `${projectLon(l)},${projectLat(la)}`);
-        return `${xL},${projectLat(upperInBand[0][1])} ${top.join(" ")} ${xR},${projectLat(lowerInBand[lowerInBand.length - 1][1])} ${bottom.join(" ")}`;
-    }, [upperCurve, lowerCurve, bandStart, bandEnd]);
+const zonePolygon = (() => {
+        // Rasterize the MC × ASC region directly: at every longitude in the
+        // MC band, find the latitude range where geodeticASCSign() matches
+        // the city's ASC sign. This avoids the boundary-curve approach,
+        // which fails at the cardinal ASC degrees (0°, 90°, 180°, 270°)
+        // because those boundaries are mathematically degenerate — the
+        // ASC=180° "curve," for example, only exists at the single point
+        // (lon=90°, lat=0°) in the geodetic system. Going to lon=120° the
+        // boundary has no finite latitude; Libra extends asymptotically
+        // toward the pole. Sampling avoids this entirely: it just asks
+        // "at this lon, where IS my ASC sign?" and lets the polygon
+        // shape itself.
+        const top: string[] = [];
+        const bottom: string[] = [];
+        let valid = 0;
+        for (let l = bandStart; l <= bandEnd; l += 1) {
+            let minLat: number | null = null;
+            let maxLat: number | null = null;
+            for (let la = -84; la <= 84; la += 1) {
+                if (geodeticASCSign(l, la) === ascSign) {
+                    if (minLat === null) minLat = la;
+                    maxLat = la;
+                }
+            }
+            if (minLat !== null && maxLat !== null) {
+                valid++;
+                top.push(`${pX(l)},${projectLat(maxLat)}`);
+                bottom.push(`${pX(l)},${projectLat(minLat)}`);
+            }
+        }
+        if (valid < 2) return null;
+        return [...top, ...bottom.reverse()].join(" ");
+    })();
 
     const polylinePoints = (curve: Array<[number, number]>) =>
-        curve.map(([l, la]) => `${projectLon(l)},${projectLat(la)}`).join(" ");
+        curve.map(([l, la]) => `${pX(l)},${projectLat(la)}`).join(" ");
 
     return (
         <div className="relative w-full">
@@ -163,19 +224,61 @@ export default function ReadingGeodeticMap({ lat, lon, city, parans, showParans 
                     borderRadius: "var(--shape-asymmetric-sm, 8px)",
                 }}
             >
-                {/* Landmass — token-driven for theme awareness */}
-                <path
-                    d={WORLD_MAP_PATH}
-                    fill="color-mix(in oklab, var(--text-primary) 9%, transparent)"
-                    stroke="color-mix(in oklab, var(--text-primary) 22%, transparent)"
-                    strokeWidth={0.4}
-                    vectorEffect="non-scaling-stroke"
-                />
+                <defs>
+                    {/* Clip the map content to the unpadded viewport so the
+                     *  world path / curves / parans never bleed into the
+                     *  zodiac ruler strips drawn outside this region. */}
+                    <clipPath id={clipId}>
+                        <rect x={xViewLeft} y={yViewTop} width={vw} height={vh} />
+                    </clipPath>
+                </defs>
+
+                <g clipPath={`url(#${clipId})`}>
+                {/* Landmass — drawn at three offsets (-1000, 0, +1000 SVG-units,
+                 *  i.e. one full world-width). The clipPath above keeps each
+                 *  copy confined to the visible viewport, so for cities near
+                 *  the antimeridian (Auckland, Suva, Anchorage…) the dateline
+                 *  seam is bridged by whichever copy intersects the window. */}
+                {[-1000, 0, 1000].map((dx) => (
+                    <path
+                        key={`world-${dx}`}
+                        transform={dx ? `translate(${dx} 0)` : undefined}
+                        d={WORLD_MAP_PATH}
+                        fill="color-mix(in oklab, var(--text-primary) 9%, transparent)"
+                        stroke="color-mix(in oklab, var(--text-primary) 22%, transparent)"
+                        strokeWidth={0.4}
+                        vectorEffect="non-scaling-stroke"
+                    />
+                ))}
+
+                {/* MC band shading — full-height tinted strips per zone.
+                 *  Kept *below* the polygon in saturation so the eye reads
+                 *  MC × ASC intersection (the polygon) first, with the band
+                 *  tint acting as quiet contextual backdrop. */}
+                {GEODETIC_ZONES.map((z) => {
+                    const xL = pX(z.startLon);
+                    const xR = pX(z.startLon + 30);
+                    if (xR < xViewLeft || xL > xViewRight) return null;
+                    const elem = ELEMENT_COLORS[z.elem];
+                    const isCity = z.id === mcZone.id;
+                    return (
+                        <rect
+                            key={`mc-band-${z.id}`}
+                            x={xL}
+                            y={yViewTop}
+                            width={xR - xL}
+                            height={vh}
+                            fill={elem.fill}
+                            opacity={isCity ? 0.30 : 0.20}
+                            pointerEvents="none"
+                        />
+                    );
+                })}
 
                 {/* MC meridians — hover reveals both adjacent MC zones */}
                 {GEODETIC_ZONES.map((z, idx) => {
-                    const x = projectLon(z.startLon);
-                    if (z.startLon < cropLonStart - 30 || z.startLon > cropLonEnd) return null;
+                    const x = pX(z.startLon);
+                    if (x < xViewLeft - 30 || x > xViewRight + 30) return null;
                     const elem = ELEMENT_COLORS[z.elem];
                     const isCityBoundary = z.id === mcZone.id;
                     const westSign = GEODETIC_ZONES[(idx - 1 + GEODETIC_ZONES.length) % GEODETIC_ZONES.length].sign;
@@ -189,22 +292,16 @@ export default function ReadingGeodeticMap({ lat, lon, city, parans, showParans 
                             onMouseLeave={() => setHovered(null)}
                         >
                             <line
-                                x1={x}
-                                y1={cy - vh / 2}
-                                x2={x}
-                                y2={cy + vh / 2}
+                                x1={x} y1={yViewTop} x2={x} y2={yViewBottom}
                                 stroke="transparent"
                                 strokeWidth={5}
                                 pointerEvents="stroke"
                             />
                             <line
-                                x1={x}
-                                y1={cy - vh / 2}
-                                x2={x}
-                                y2={cy + vh / 2}
+                                x1={x} y1={yViewTop} x2={x} y2={yViewBottom}
                                 stroke={elem.stroke}
-                                strokeWidth={isCityBoundary ? 1 : 0.6}
-                                opacity={isCityBoundary ? 0.55 : 0.32}
+                                strokeWidth={isCityBoundary ? 1.8 : 1.2}
+                                opacity={isCityBoundary ? 0.85 : 0.6}
                                 vectorEffect="non-scaling-stroke"
                                 pointerEvents="none"
                             />
@@ -248,14 +345,18 @@ export default function ReadingGeodeticMap({ lat, lon, city, parans, showParans 
                     );
                 })}
 
-                {/* The shared zone polygon — only filled region on the map */}
+                {/* The shared zone polygon — the *primary* visual emphasis
+                 *  on the map. Uses the saturated element-stroke color as
+                 *  the fill (vs. the lighter element-fill used for the band
+                 *  shading), so MC × ASC intersection reads first. */}
                 {zonePolygon && (
                     <polygon
                         points={zonePolygon}
-                        fill={mcElem.fill}
+                        fill={mcElem.stroke}
                         stroke={mcElem.stroke}
-                        strokeWidth={1.4}
-                        opacity={0.95}
+                        strokeWidth={1.8}
+                        fillOpacity={0.55}
+                        strokeOpacity={0.95}
                         vectorEffect="non-scaling-stroke"
                     />
                 )}
@@ -263,9 +364,9 @@ export default function ReadingGeodeticMap({ lat, lon, city, parans, showParans 
                 {/* MC meridian for the city */}
                 <line
                     x1={cx}
-                    y1={cy - vh / 2}
+                    y1={yViewTop}
                     x2={cx}
-                    y2={cy + vh / 2}
+                    y2={yViewBottom}
                     stroke="var(--color-spiced-life)"
                     strokeWidth={1.4}
                     strokeDasharray="3 3"
@@ -273,11 +374,46 @@ export default function ReadingGeodeticMap({ lat, lon, city, parans, showParans 
                     vectorEffect="non-scaling-stroke"
                 />
 
+                {/* Degenerate cardinal ASC boundaries — ASC=0° and ASC=180°
+                 *  collapse to vertical meridians (lon=270°E and 90°E
+                 *  respectively) instead of curves. Rendered AFTER polygon +
+                 *  city MC line so the gold reads cleanly through the
+                 *  saturated polygon stroke that sits on the same x. */}
+                {[
+                    { targetDeg: 180, meridianLon: 90, southSign: "Virgo", northSign: "Libra" },
+                    { targetDeg: 0, meridianLon: -90, southSign: "Pisces", northSign: "Aries" },
+                ].map(({ targetDeg, meridianLon, southSign, northSign }) => {
+                    const x = pX(meridianLon);
+                    if (x < xViewLeft - 5 || x > xViewRight + 5) return null;
+                    const isBracket = targetDeg === ascSignIndex * 30
+                        || targetDeg === ((ascSignIndex + 1) % 12) * 30;
+                    return (
+                        <g
+                            key={`asc-cardinal-${targetDeg}`}
+                            style={{ cursor: "pointer" }}
+                            onMouseEnter={() => setHovered({ kind: "ASC", southSign, northSign, color: "var(--gold)" })}
+                            onMouseMove={handleMove}
+                            onMouseLeave={() => setHovered(null)}
+                        >
+                            <line x1={x} y1={yViewTop} x2={x} y2={yViewBottom}
+                                stroke="transparent" strokeWidth={5}
+                                pointerEvents="stroke" />
+                            <line x1={x} y1={yViewTop} x2={x} y2={yViewBottom}
+                                stroke="var(--gold)"
+                                strokeWidth={isBracket ? 1.8 : 0.8}
+                                strokeDasharray={isBracket ? undefined : "3 3"}
+                                opacity={isBracket ? 1 : 0.55}
+                                vectorEffect="non-scaling-stroke"
+                                pointerEvents="none" />
+                        </g>
+                    );
+                })}
+
                 {/* Equator (subtle reference) */}
                 <line
-                    x1={cx - vw / 2}
+                    x1={xViewLeft}
                     y1={projectLat(0)}
-                    x2={cx + vw / 2}
+                    x2={xViewRight}
                     y2={projectLat(0)}
                     stroke="color-mix(in oklab, var(--text-primary) 20%, transparent)"
                     strokeWidth={0.4}
@@ -293,8 +429,8 @@ export default function ReadingGeodeticMap({ lat, lon, city, parans, showParans 
                 {showParans && parans?.map((par, i) => {
                     const py = projectLat(par.lat);
                     const tone = paranTone(par.contribution);
-                    const xL = cx - vw / 2;
-                    const xR = cx + vw / 2;
+                    const xL = xViewLeft;
+                    const xR = xViewRight;
                     return (
                         <g
                             key={`paran-${i}`}
@@ -318,12 +454,29 @@ export default function ReadingGeodeticMap({ lat, lon, city, parans, showParans 
                                 vectorEffect="non-scaling-stroke"
                                 pointerEvents="none"
                             />
+                            {/* Planet glyphs sit at the line's endpoints with
+                             *  a small rounded swatch behind so they read
+                             *  against landmass and ocean equally. */}
+                            <PlanetGlyph planet={par.p1} cx={xL + 7} cy={py} size={9} color={tone} />
+                            <PlanetGlyph planet={par.p2} cx={xR - 7} cy={py} size={9} color={tone} />
                         </g>
                     );
                 })}
 
-                {/* City pin */}
-                <g>
+                {/* City pin — hover reveals geodetic MC + ASC in zodiac coords */}
+                <g
+                    style={{ cursor: "pointer" }}
+                    onMouseEnter={() => setHovered({
+                        kind: "CITY",
+                        mcLon: geodeticMCLongitude(lon),
+                        ascLon: geodeticASCLongitude(lon, lat),
+                        mcSign,
+                        ascSign,
+                        color: "var(--color-spiced-life)",
+                    })}
+                    onMouseMove={handleMove}
+                    onMouseLeave={() => setHovered(null)}
+                >
                     <circle
                         cx={cx}
                         cy={cy}
@@ -353,6 +506,59 @@ export default function ReadingGeodeticMap({ lat, lon, city, parans, showParans 
                         {city}
                     </text>
                 </g>
+                </g>
+
+                {/* ── Zodiac rulers (MC + ASC) ───────────────────────────
+                 *  Top edge labels the MC sign for each 30° meridian band;
+                 *  left edge labels the ASC sign for each ascending band
+                 *  (sliced at the city's longitude). Each segment is back-
+                 *  tinted with its zodiac element color so the rulers also
+                 *  serve as a fire/earth/air/water key.
+                 */}
+
+                {/* TOP ruler — element-tinted band per MC zone */}
+                {GEODETIC_ZONES.map((z) => {
+                    const xL = pX(z.startLon);
+                    const xR = pX(z.startLon + 30);
+                    if (xR < xViewLeft - padLeft || xL > xViewRight) return null;
+                    const elem = ELEMENT_COLORS[z.elem];
+                    const isCity = z.id === mcZone.id;
+                    return (
+                        <rect key={`mc-tint-${z.id}`}
+                            x={Math.max(xL, xViewLeft - padLeft)}
+                            y={yViewTop - padTop}
+                            width={Math.min(xR, xViewRight) - Math.max(xL, xViewLeft - padLeft)}
+                            height={padTop}
+                            fill={isCity ? elem.stroke : elem.fill}
+                            opacity={isCity ? 0.55 : 0.7} />
+                    );
+                })}
+
+                {/* Hairline separator between map and MC ruler */}
+                <line x1={xViewLeft} y1={yViewTop} x2={xViewRight} y2={yViewTop}
+                    stroke="color-mix(in oklab, var(--text-primary) 18%, transparent)"
+                    strokeWidth={0.5} vectorEffect="non-scaling-stroke" />
+
+                {/* TOP ruler — MC glyphs (active sign 1.4× larger, full color;
+                 *  neighbors ghosted so the city's MC anchor reads first) */}
+                {GEODETIC_ZONES.map((z) => {
+                    const x = pX(z.startLon + 15);
+                    if (x < xViewLeft + 6 || x > xViewRight - 6) return null;
+                    const isCity = z.id === mcZone.id;
+                    return (
+                        <GlyphMarker key={`mc-${z.id}`} sign={z.sign}
+                            x={x} y={yViewTop - padTop * 0.60}
+                            size={isCity ? 14 : 10}
+                            color={isCity ? "var(--color-spiced-life)" : "var(--text-secondary)"}
+                            opacity={isCity ? 1 : 0.45} />
+                    );
+                })}
+                <text x={cx} y={yViewTop - padTop * 0.18} textAnchor="middle"
+                    fontSize={4.2} fontFamily={FONT_MONO}
+                    letterSpacing={0.6} fill="var(--color-spiced-life)" opacity={0.9}>
+                    MC · {mcSign.toUpperCase()}
+                </text>
+
             </svg>
 
             {/* Floating hover card */}
@@ -386,9 +592,25 @@ export default function ReadingGeodeticMap({ lat, lon, city, parans, showParans 
                     >
                         {hovered.kind === "MC" ? "Midheaven boundary"
                             : hovered.kind === "ASC" ? "Ascendant boundary"
+                            : hovered.kind === "CITY" ? `${city} · geodetic position`
                             : "Paran line"}
                     </span>
-                    {hovered.kind === "PARAN" ? (
+                    {hovered.kind === "CITY" ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                                <span style={{ fontFamily: FONT_MONO, fontSize: "0.62rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--text-tertiary)", minWidth: 24 }}>MC</span>
+                                <span style={{ fontFamily: FONT_PRIMARY, fontSize: "1rem", color: "var(--color-spiced-life)", fontWeight: 500 }}>
+                                    {formatZodiac(hovered.mcLon)}
+                                </span>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                                <span style={{ fontFamily: FONT_MONO, fontSize: "0.62rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--text-tertiary)", minWidth: 24 }}>ASC</span>
+                                <span style={{ fontFamily: FONT_PRIMARY, fontSize: "1rem", color: "var(--gold)", fontWeight: 500 }}>
+                                    {formatZodiac(hovered.ascLon)}
+                                </span>
+                            </div>
+                        </div>
+                    ) : hovered.kind === "PARAN" ? (
                         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                             <div style={{ fontFamily: FONT_PRIMARY, fontSize: "0.95rem", color: hovered.color }}>
                                 {capitalize(hovered.p1)} {hovered.aspect ? hovered.aspect : "—"} {capitalize(hovered.p2)}
@@ -425,22 +647,106 @@ export default function ReadingGeodeticMap({ lat, lon, city, parans, showParans 
                 </div>
             )}
 
-            {/* Legend strip — hidden when the parent renders its own legend
-             *  (e.g. in a sticky sidebar layout where the toggle owns it). */}
+            {/* Trimmed legend — the four-edge ruler now self-labels the
+             *  chart angles, so the legend below carries only the things
+             *  the rulers cannot explain: the polygon's identity and the
+             *  paran-layer toggle. */}
             {showLegend && (
                 <div
-                    className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[10.5px] tracking-[0.12em] uppercase"
+                    className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[10.5px] tracking-[0.12em] uppercase"
                     style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}
                 >
-                    <LegendItem swatch="var(--color-spiced-life)" label={`${mcSign} MC overhead`} dashed />
-                    <LegendItem swatch="var(--gold)" label={`${ascSign} ASC rising`} />
-                    <LegendItem swatch={mcElem.stroke} label="Shared zone" filled fill={mcElem.fill} />
-                    {showParans && parans && parans.length > 0 && (
-                        <LegendItem swatch="var(--text-tertiary)" label={`${parans.length} paran ${parans.length === 1 ? "line" : "lines"}`} dashed />
+                    <LegendItem swatch={mcElem.stroke} label={`${mcSign} MC × ${ascSign} ASC`} filled fill={mcElem.fill} />
+                    {onToggleParans && paransCount > 0 ? (
+                        <button
+                            type="button"
+                            onClick={onToggleParans}
+                            aria-pressed={showParans}
+                            className="inline-flex items-center gap-2 cursor-pointer"
+                            style={{
+                                background: "transparent",
+                                border: "none",
+                                padding: 0,
+                                fontFamily: FONT_MONO,
+                                fontSize: "inherit",
+                                letterSpacing: "inherit",
+                                textTransform: "inherit",
+                                color: showParans ? "var(--text-secondary)" : "var(--text-tertiary)",
+                            }}
+                        >
+                            <span
+                                aria-hidden="true"
+                                className="inline-block w-[14px] h-[2px]"
+                                style={{
+                                    background: showParans
+                                        ? "repeating-linear-gradient(90deg, var(--text-secondary) 0 4px, transparent 4px 7px)"
+                                        : "color-mix(in oklab, var(--text-tertiary) 40%, transparent)",
+                                }}
+                            />
+                            <span>
+                                {showParans ? "Hide" : "Show"} {paransCount} paran {paransCount === 1 ? "line" : "lines"}
+                            </span>
+                        </button>
+                    ) : (
+                        showParans && parans && parans.length > 0 && (
+                            <LegendItem swatch="var(--text-tertiary)" label={`${parans.length} paran ${parans.length === 1 ? "line" : "lines"}`} dashed />
+                        )
                     )}
                 </div>
             )}
         </div>
+    );
+}
+
+function PlanetGlyph({ planet, cx, cy, size, color }: {
+    planet: string;
+    cx: number;
+    cy: number;
+    size: number;
+    color: string;
+}) {
+    const key = capitalize(planet?.split("-")[0] ?? "");
+    const path = PLANET_PATHS[key];
+    if (!path) return null;
+    const s = size / 20;
+    return (
+        <g pointerEvents="none">
+            {/* Token-aware swatch keeps the glyph legible against landmass
+             *  + ocean without forcing a hard background color. */}
+            <circle cx={cx} cy={cy} r={size / 1.6}
+                fill="var(--bg)" stroke={color}
+                strokeWidth={0.6} opacity={0.85}
+                vectorEffect="non-scaling-stroke" />
+            <g
+                transform={`translate(${cx - size / 2} ${cy - size / 2}) scale(${s})`}
+                style={{ color }}
+                aria-label={key}
+                dangerouslySetInnerHTML={{ __html: path }}
+            />
+        </g>
+    );
+}
+
+function GlyphMarker({ sign, x, y, size, color, opacity = 1 }: {
+    sign: string;
+    x: number;
+    y: number;
+    size: number;
+    color: string;
+    opacity?: number;
+}) {
+    const path = SIGN_PATHS[sign];
+    if (!path) return null;
+    // SIGN_PATHS use a 20×20 viewBox; translate to (x,y) then scale.
+    const s = size / 20;
+    return (
+        <g
+            transform={`translate(${x - size / 2} ${y - size / 2}) scale(${s})`}
+            style={{ color }}
+            opacity={opacity}
+            aria-label={`${sign} glyph`}
+            dangerouslySetInnerHTML={{ __html: path }}
+        />
     );
 }
 
