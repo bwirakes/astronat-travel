@@ -1,7 +1,7 @@
 import type { EditorialEvidence } from "@/app/lib/reading-tabs";
 import type { TransitHit } from "@/lib/astro/transit-solver";
 import type { Tone } from "@/lib/ai/schemas";
-import { signFromLongitude, houseFromLongitude, geodeticMCLongitude, geodeticASCLongitude } from "@/app/lib/geodetic";
+import { signFromLongitude, houseFromLongitude, houseFromCusps, geodeticMCLongitude, geodeticASCLongitude } from "@/app/lib/geodetic";
 import { acgLineRawScore } from "@/app/lib/house-matrix";
 import { houseTopic, spellAngle, closenessBand, houseVibe } from "./house-topics";
 import { buildEditorialEvidence, deriveScoreNarrative } from "@/app/lib/reading-tabs";
@@ -188,6 +188,11 @@ export function buildAIInput(args: {
   eventScores: Array<{ eventName: string; finalScore: number }>;
   natalPlanets: any[];
   relocatedCusps: number[];
+  /** Full 12-cusp Placidus array for the natal chart. Optional for back-compat
+   *  with older callers; when present, planet-house and chart-ruler lookups
+   *  use Placidus to match the UI. When absent, equal-house from natalAngles.ASC
+   *  is the fallback. */
+  natalCusps?: number[];
   natalAngles?: { ASC: number; IC: number; DSC: number; MC: number };
   travelType: "trip" | "relocation";
   goalIds: string[];
@@ -207,7 +212,7 @@ export function buildAIInput(args: {
   birthLat?: number;
   birthLon?: number;
 }): TeacherReadingInput {
-  const { destination, destinationLat, destinationLon, travelDate, matrixResult, acgLines, rawTransits, eventScores, natalPlanets, relocatedCusps, natalAngles, travelType, goalIds, transitPositions, progressedBands, birthDateUtc, parans: paranInput, birthLat, birthLon } = args;
+  const { destination, destinationLat, destinationLon, travelDate, matrixResult, acgLines, rawTransits, eventScores, natalPlanets, relocatedCusps, natalCusps, natalAngles, travelType, goalIds, transitPositions, progressedBands, birthDateUtc, parans: paranInput, birthLat, birthLon } = args;
 
   const start = travelDate ? new Date(travelDate) : new Date();
   const end = new Date(start);
@@ -319,14 +324,17 @@ export function buildAIInput(args: {
     : undefined;
 
   const planetHouseShifts = natalAngles
-    ? natalPlanets.slice(0, 7).map((p: any) => {
+    ? natalPlanets.slice(0, 10).map((p: any) => {
         const planet = p.name || p.planet;
         const lon = p.longitude;
-        return {
-          planet,
-          natalHouse: houseFromLongitude(lon, natalAngles.ASC),
-          relocatedHouse: houseFromLongitude(lon, ascLon),
-        };
+        // Prefer Placidus from real cusps so this matches the UI's
+        // PlanetShiftCard and the chart-ruler card. Fall back to equal-house
+        // from ASC only when full cusps aren't available.
+        const natalHouse = houseFromCusps(lon, natalCusps)
+            ?? houseFromLongitude(lon, natalAngles.ASC);
+        const relocatedHouse = houseFromCusps(lon, relocatedCusps)
+            ?? houseFromLongitude(lon, ascLon);
+        return { planet, natalHouse, relocatedHouse };
       })
     : undefined;
 
@@ -506,7 +514,7 @@ export function buildAIInput(args: {
         birthLat,
         birthLon,
         relocatedCusps,
-        null,
+        natalCusps ?? null,
       ) ?? undefined)
     : undefined;
 

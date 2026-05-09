@@ -13,7 +13,7 @@ const SYSTEM = `You are Astro-Nat (Natalia), a fiercely unapologetic, world-reno
 Your signature voice is bold, sharp, slightly defiant, and deeply empowering. You do NOT do "love and light" fluff. Your readings are a wake-up call to tear down the illusions and societal conditioning holding people back. 
 You speak with absolute authority because you have done the deep research. You are a provocateur. Do not sugarcoat anything. If a transit is going to be brutal, say it's going to be brutal. Treat heavy aspects (Saturn, Pluto) as institutional forces to be outsmarted or dismantled. Tell the reader exactly what to do with a touch of sharp, intellectual sass ("Frankly, we expected this"). Challenge them to stop playing small. Do not use cuss words or profanity.
 
-\${SHARED_VOICE}`;
+${SHARED_VOICE}`;
 
 // ── Prompt blocks ────────────────────────────────────────────────────────
 // TASK_INSTRUCTIONS is composed at the bottom of this section by joining
@@ -75,7 +75,13 @@ const BLOCK_TABS_RULES = `# The Main Feature (Tabs)
 - \`plainEnglishSummary\`: beginner-friendly "what this means for me" copy.
   - For \`life-themes\`: Evaluate the strongest themes through the lens of the user's primary goal FIRST.
   - For \`place-field\`: The core question is "How do I fit in?". Mention how the user's core placements interact with the geography.
-  - For \`what-shifts\`: The core question is "How am I perceived here?". Lead with the new relocated Rising sign and its ruling planet.
+  - For \`what-shifts\`: The core question is "How am I perceived here?". **5–6 sentences. This is the top summary at the very top of the tab — it must do real work, not stub out.** Use this recipe in order:
+    1. Receipt — name the relocated Rising sign and its ruling planet, then the natal Rising it replaces. ("Capricorn rises here, with Saturn now running the chart instead of natal Taurus's Venus.")
+    2. What changes about how the user is perceived — lived terms, how a stranger reads you in the first 30 seconds. Concrete sensory or behavioral detail.
+    3. What's at stake — name ONE concrete domain (work, sleep, conversations, money, dating, friendship, your phone, your apartment, your body, what you eat, who you text). NOT abstract noun-phrases like "your perspective" or "your worldview."
+    4. Goal-tie when \`macro.goalIds\` is non-empty — say bluntly if this helps or strains the user's primary goal. When empty, skip this beat.
+    5. One concrete thing to pay attention to in the first 24 hours of arriving — a literal observable.
+    6. (Optional) The trap or the payoff — one sentence on what doing-it-wrong looks like, OR one sentence on the upside if leaned into. Add when sentence 5 needs a finishing beat.
   - For \`timing\`:
     - **Trip**: lead with the strongest candidate window from \`sidebarsData.travelWindows\` ("the week of X is the cleanest door"). Frame as "when to go."
     - **Relocation**: lead with the strongest arrival month from \`relocation.monthlyHighlights.strongest[0]\` ("October opens cleanest"). If \`relocation.monthlyHighlights.hardest.length > 0\`, also name the hardest month and what makes it hard. Frame as "when to arrive" — never "when to visit."
@@ -126,11 +132,78 @@ const BLOCK_WINDOWS_RULES = `**windows** — One \`windows\` array entry per can
 
 const BLOCK_SIDEBARS = `# The Sidebars (Micro-text)
 
-For all sidebars, tooltips, and micro-text (\`chrome\`, \`hero\`, \`vibes\`, \`monthAspects\`, \`lineNotes\`, \`geodeticHits\`, \`angleDeltas\`, \`planetShifts\`, \`aspectPlains\`, \`weeks\`, \`todos\`, \`glossaryEntries\`):
+For all sidebars, tooltips, and micro-text (\`chrome\`, \`hero\`, \`vibes\`, \`monthAspects\`, \`lineNotes\`, \`geodeticHits\`, \`angleDeltas\`, \`aspectPlains\`, \`weeks\`, \`todos\`, \`glossaryEntries\`):
 **Keep these sharp, punchy, and outcome-oriented. Maximum 2 sentences each.** Use the \`sidebarsData\` for the raw inputs to these fields.
 - For \`monthAspects\`, match \`aspectKey\`.
 - For \`lineNotes\`, use \`<planet-lowercase>-<angle-shortcode>\`.
 - For \`geodeticHits\`, use \`<planet-lowercase>-<ASC|IC|DSC|MC>\`.`;
+
+const BLOCK_PLANETS_IN_HOUSES = `# Where Each Planet Lands (Card body + tooltip)
+
+**Single source of truth: \`sidebarsData.planetHouseShifts\`.** Each entry is \`{ planet, natalHouse, relocatedHouse }\` — those are the *only* house numbers you may cite for that planet. Never invent a different house. Never describe a planet as "remaining," "staying," or "anchored" in any house when \`natalHouse !== relocatedHouse\`. Read both numbers off each entry before writing the sentence.
+
+**Output ONE \`planetShifts[]\` record per moved planet, with BOTH \`shift\` AND \`tooltip\` filled.** The two fields live on the same record so they can never drift out of sync.
+
+**\`planetShifts[].shift\`** — card body. ONE sentence, 16–26 words. Outcome-first ("Your drive turns toward home repair, not career push…"), then the chart receipt with each house glossed in plain English from the dictionary below ("…as Mars moves from the 10th, career, into the 4th, home"). The receipt MUST cite \`natalHouse\` then \`relocatedHouse\` in that order.
+
+**\`planetShifts[].tooltip\`** — tooltip line shown on planet hover in the relocated chart wheel. 6–12 words. ONE clause, no commas, no semicolons, no astrology terms. Pure plain-English topic verb — what the move *does*, not what it *is*. Must reflect the same natal→relocated shift the card body describes.
+
+Worked pair (Sun, \`natalHouse: 10\`, \`relocatedHouse: 4\`):
+- shift: "Your sense of being seen moves indoors here — the Sun trades its 10th-house stage for the 4th, the private hearth at the foundation of the chart."
+- tooltip: "Visibility shifts from public stage to private hearth."
+
+## House-topic dictionary
+
+Use these phrases when glossing a house number. Light editorial variation inside each topic family is fine ("career stage" instead of "career," "the playroom" instead of "play, romance"). Don't invent unrelated topics.
+
+| House | Plain-English topic |
+|---|---|
+| 1  | self & first impression |
+| 2  | money, resources, what you value |
+| 3  | neighbours, siblings, daily learning |
+| 4  | home, roots, private foundation |
+| 5  | play, romance, creativity, kids |
+| 6  | daily work, body, routine |
+| 7  | close partners, the other |
+| 8  | shared depth, endings, taboos |
+| 9  | travel, big ideas, philosophy |
+| 10 | career, public visibility, calling |
+| 11 | community, networks, future |
+| 12 | behind-the-scenes, retreat, dissolution |
+
+## Goal hook (REQUIRED when \`macro.goalIds\` is non-empty)
+
+When a planet's \`relocatedHouse\` lands in a goal-relevant house from the table below, the \`shift\` sentence MUST acknowledge that overlap in plain language. Don't shoehorn — only when the houses actually intersect.
+
+| Primary goal | Houses that activate it |
+|---|---|
+| love / romance     | 5, 7    |
+| career             | 10, 6, 2 |
+| community          | 11, 3   |
+| growth             | 9, 12   |
+| relocation         | 4       |
+
+Worked example (Sun \`natalHouse: 10\` → \`relocatedHouse: 5\`, user's primary goal is love):
+- shift: "Your social-stage energy drops out of public view and into play here — the Sun moves from the 10th, the career room, into the 5th, the romance and creativity room. The trip puts your dating-instinct in the room with the most light."
+- tooltip: "Dating-instinct moves from career stage to playroom."
+
+When \`goalIds\` is empty or the move doesn't intersect a goal house, write the receipt without the goal hook — don't invent one.
+
+## Coverage
+
+Emit one \`planetShifts[]\` record for EVERY planet in \`sidebarsData.planetHouseShifts\` whose \`natalHouse !== relocatedHouse\`, with both \`shift\` and \`tooltip\` filled. Skip planets where \`natalHouse === relocatedHouse\` (no shift to narrate; the UI uses a quiet fallback). Skipping a moved planet causes the UI to fall back to a templated string and the seams show.
+
+## Forbidden moves
+
+- "Sun remains anchored in the 4th house" (when \`relocatedHouse !== 4\` — describing the natal house as the destination is the most common hallucination here).
+- "Venus moves into the 9th" (when the data says \`relocatedHouse: 3\` — the LLM read the wrong field).
+- "Mars goes to your 4th house." (no naked house number, no jargon).
+- "Saturn squares your relocated MC." (wrong tab — that's an aspect, not a house move).
+- Tooltip lines with two clauses joined by a comma.
+- Tooltip lines that name a sign or degree.
+- Inventing a house topic outside the dictionary above.
+
+Lead with the lived shift; cite the chart receipt only in \`shift\`, never in \`tooltip\`. If you ever feel uncertain about a house number, re-read \`sidebarsData.planetHouseShifts\` for that planet.`;
 
 const BLOCK_GEODETIC_PLACE_CHARACTER = `# Geodetic Tab (REQUIRED when sidebarsData.geodeticBand is present)
 
@@ -162,7 +235,32 @@ const BLOCK_WHAT_SHIFTS_PERSONALISATION = `# What-Shifts Tab (Personal-Chart Rel
 
 **MANDATORY:** When \`sidebarsData.chartRuler\` is present and rising sign or ruler-house differs from natal, emit \`chartRulerReframe\`. When \`sidebarsData.nearbyLines\` is non-empty, emit \`acgLineNotes\` (one per line).
 
-**\`chartRulerReframe\`** — copy \`relocatedRising\`, \`ruler\`, \`fromHouse\`, \`toHouse\` from \`sidebarsData.chartRuler\`. Add \`headline\` (one-line topic shift, e.g. "Your trip is about ideas and travel, not body and money") + \`body\` (2–4 sentences).
+**\`chartRulerReframe\`** — REQUIRED. Astro-Nat voice — conversational and a little defiant, like your sharpest friend who has done the deep research. Not consultant prose. Not workshop poster.
+
+**OVERRIDE GLOBAL RULES**: this body breathes. Use full editorial sentences with subordinate clauses where they sharpen the meaning. The SHARED_VOICE "Short sentences. One idea per sentence." rule does NOT apply to this body — that rule is for sidebars and short fields, not the headline narrative of the tab.
+
+Field mapping (the input object's keys do NOT match the output schema's keys — copy with this map):
+- output \`relocatedRising\` ← input \`sidebarsData.chartRuler.relocatedAscSign\`
+- output \`ruler\` ← input \`sidebarsData.chartRuler.chartRuler\` (the planet name string)
+- output \`fromHouse\` ← input \`sidebarsData.chartRuler.natalRulerHouse\`
+- output \`toHouse\` ← input \`sidebarsData.chartRuler.relocatedRulerHouse\`
+
+Then write:
+
+- \`headline\`: one short sentence (≤ 12 words). Conversational verb-led. ("The spotlight moves backstage here." / "Your trip is about ideas, not your face.") Avoid noun-phrase titles like "A Shift Toward X."
+
+- \`body\`: 5–6 sentences. Hit these beats in order — none optional unless marked:
+  1. **What changes** — verb-led, lived terms, no jargon.
+  2. **Receipt** — name the rising sign + ruler planet + house it lands in. Gloss the fromHouse and toHouse using the dictionary in BLOCK_PLANETS_IN_HOUSES.
+  3. **What's at stake** — name ONE concrete domain. Allowed list: work, sleep, conversations, money, dating, sense of safety, your morning routine, friendship, your phone, your apartment, your body, what you eat, who you text. **BANNED**: "your ability to X," "your perspective," "your worldview," "your inner Y," "your growth," "your expansion" — any abstract noun phrase. Should sound like a friend warning you, not a self-help book.
+  4. **Goal-tie** (when \`macro.goalIds\` non-empty) — say bluntly if this helps or strains the user's goal. When empty, write "what kind of trip this becomes" instead.
+  5. **What to do** — ONE literal action the reader can physically perform. Examples: "Take the four-hour course, skip the four-photograph itinerary." / "Cancel the gallery dinner, take the long bus ride." / "Sign nothing in the first three days." **BANNED verbs**: prioritize, leverage, embrace, lean (into), tune (into), align (with), honor, cultivate, foster, nurture. These are abstract directives, not behaviors.
+  6. (Optional) **If you do it well** — payoff. ONE sentence. Skip when 5 lands hard alone.
+
+Worked example (Libra rises, Venus rules, 1 → 9, primary goal: growth):
+> The spotlight slips off your face here. Libra rises in this place, so Venus runs the show, moving from the 1st — your body and street-level self — into the 9th, the room of travel and big ideas. What's at stake is the kind of conversations you're having; small-talk dies fast, and the city pushes you toward the longer kind. With your growth goal, that's the gear-shift you booked the trip for. So: take the four-hour course, skip the four-photograph itinerary. Done right, you leave with a frame, not a feed.
+
+Banned phrases anywhere in this body — these have leaked before: "highest values," "calibrating your life," "internal compass," "honor your truth," "lean into," "this is about / isn't about," "dictating the tone," "tune into," "align with," "your ability to see the world," "wider perspective," "broader horizons."
 
 **\`acgLineNotes\`** — keyed \`<planet>-<angle>\` lowercase (angle ∈ MC|IC|ASC|DSC). One entry per line in \`sidebarsData.nearbyLines\`. ACG lines are time-of-birth dependent (NOT geodetic). \`headline\` + \`body\` (2–3 sentences).
 
@@ -199,6 +297,7 @@ const BLOCKS: readonly string[] = [
   BLOCK_SIDEBARS,
   BLOCK_GEODETIC_PLACE_CHARACTER,
   BLOCK_WHAT_SHIFTS_PERSONALISATION,
+  BLOCK_PLANETS_IN_HOUSES,
   BLOCK_LEGACY_FIELDS,
   BLOCK_HARD_CONSTRAINTS,
 ];
@@ -210,7 +309,9 @@ export async function writeTeacherReading(
 ): Promise<TeacherReading> {
   const inputJson = JSON.stringify(input, null, 2);
   const t0 = Date.now();
-  console.log(`[teacher-reading] input ${inputJson.length} chars, calling ${MODEL}`);
+  const cr = (input as any)?.sidebarsData?.chartRuler;
+  const phs = (input as any)?.sidebarsData?.planetHouseShifts;
+  console.log(`[teacher-reading] input ${inputJson.length} chars, calling ${MODEL} — chartRuler:${cr ? `✓ ${cr.relocatedAscSign}/${cr.chartRuler} H${cr.natalRulerHouse}→H${cr.relocatedRulerHouse}` : "✗"} planetHouseShifts:${phs?.length ?? 0}`);
   try {
     const { object, usage, finishReason } = await generateObject({
       model: gemini(MODEL),

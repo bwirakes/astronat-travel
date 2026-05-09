@@ -418,6 +418,7 @@ export async function runAstrocarto(
     eventScores,
     natalPlanets,
     relocatedCusps,
+    natalCusps,
     natalAngles,
     travelType: travelType === "relocation" ? "relocation" : "trip",
     goalIds: goalIds ?? [],
