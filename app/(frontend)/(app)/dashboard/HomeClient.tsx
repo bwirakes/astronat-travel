@@ -18,38 +18,18 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
     const container = useRef<HTMLDivElement>(null);
 
     useGSAP(() => {
-        const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-
-        // Hero greeting
-        tl.fromTo(
-            ".dashboard-hero",
-            { opacity: 0, y: 20 },
-            { opacity: 1, y: 0, duration: 0.8 }
-        );
-
-        // Explore cards stagger
-        tl.fromTo(
-            ".editorial-btn",
-            { opacity: 0, y: 30 },
-            { opacity: 1, y: 0, duration: 0.8, stagger: 0.05 },
-            "-=0.6"
-        );
-
-        // Readings list
-        tl.fromTo(
-            ".dashboard-readings",
-            { opacity: 0, y: 20 },
-            { opacity: 1, y: 0, duration: 0.8 },
-            "-=0.6"
-        );
-
-        // Inline action button
-        tl.fromTo(
-            ".dashboard-fab",
-            { opacity: 0, y: 20 },
-            { opacity: 1, y: 0, duration: 0.8 },
-            "-=0.6"
-        );
+        // Letter-by-letter reveal on the name — signals "you've arrived"
+        const letters = container.current?.querySelectorAll(`.${styles.greetingName} .letter`);
+        if (letters && letters.length) {
+            gsap.from(letters, {
+                opacity: 0,
+                y: 14,
+                duration: 0.45,
+                stagger: 0.06,
+                ease: "power3.out",
+                delay: 0.1,
+            });
+        }
 
         // ── Interactive Hover state for Explore cards ──
         const exploreCards = gsap.utils.toArray(".editorial-btn") as HTMLElement[];
@@ -71,7 +51,7 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
 
             <div className={styles.content}>
                 {/* Global Hero Greeting */}
-                <div className={`${styles.hero} dashboard-hero`} style={{ opacity: 0 }}>
+                <div className={`${styles.hero} dashboard-hero`}>
                     <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center", marginBottom: "0.35rem" }}>
                         <span className={styles.pill}>{sunSignData?.emoji} {sunSignData?.name} Sun</span>
                         {access && (
@@ -79,8 +59,17 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
                         )}
                     </div>
                     <h1 className={styles.greeting}>
-                        Hello, <em className={styles.greetingName}>
-                            {profile.first_name}
+                        Hello, <em className={styles.greetingName} aria-label={profile.first_name}>
+                            {Array.from(String(profile.first_name ?? "")).map((ch, i) => (
+                                <span
+                                    key={i}
+                                    className="letter"
+                                    aria-hidden="true"
+                                    style={{ display: "inline-block", whiteSpace: "pre" }}
+                                >
+                                    {ch === " " ? " " : ch}
+                                </span>
+                            ))}
                         </em>
                     </h1>
                 </div>
@@ -103,10 +92,7 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
                     </section>
                     <section className={styles.readingsSection}>
                         <h4 className={styles.sectionKicker}>YOUR READINGS</h4>
-                        <div
-                            className={`${styles.readingsList} dashboard-readings`}
-                            style={{ opacity: 0 }}
-                        >
+                        <div className={`${styles.readingsList} dashboard-readings`}>
                             {recentSearches.length > 0 ? (
                                 <>
                                 {recentSearches.slice(0, 3).map((s: any) => {
@@ -187,7 +173,6 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
             {/* Floating CTA */}
             <button
                 className="dashboard-fab"
-                style={{ opacity: 0 }}
                 onClick={() => router.push("/reading/new")}
             >
                 + New Reading
