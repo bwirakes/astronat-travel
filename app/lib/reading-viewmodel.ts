@@ -98,6 +98,10 @@ export interface V4ChartPlanet {
     degree?: string;
     natalHouse?: number;
     relocatedHouse?: number;
+    /** AI-authored 6–12 word tooltip line for the relocated wheel hover.
+     *  Undefined on cached pre-migration readings — wheelFromVm falls back
+     *  to the templated `House X here · ${plain}` string in that case. */
+    relocatedTooltip?: string;
 }
 
 export interface V4ChartAspect {
@@ -1083,6 +1087,21 @@ function deriveChartAngles(reading: any): V4ChartAngle[] {
 function deriveChartNatal(reading: any): V4ChartPlanet[] {
     const planets = reading?.natalPlanets || [];
     const lons = getAngleLons(reading);
+    // Tooltip lookup: prefer the new combined `planetShifts[].tooltip` field;
+    // fall back to the legacy `planetTooltips[].line` shape for cached readings
+    // written before the schema collapse.
+    const tooltips: Record<string, string> = {};
+    for (const ps of (reading?.teacherReading?.planetShifts || [])) {
+        if (ps?.planet && typeof ps.tooltip === "string" && ps.tooltip.trim()) {
+            tooltips[ps.planet.toLowerCase()] = ps.tooltip;
+        }
+    }
+    for (const t of (reading?.teacherReading?.planetTooltips || [])) {
+        const key = t?.planet?.toLowerCase();
+        if (key && typeof t.line === "string" && !tooltips[key]) {
+            tooltips[key] = t.line;
+        }
+    }
     return planets
       .map((p: any) => {
         const name = (p.name || p.planet || "").toString();
@@ -1100,6 +1119,7 @@ function deriveChartNatal(reading: any): V4ChartPlanet[] {
             degree: `${Math.floor(((deg % 30) + 30) % 30)}°`,
             natalHouse,
             relocatedHouse,
+            relocatedTooltip: tooltips[name.toLowerCase()],
         };
       })
       .filter((p: V4ChartPlanet) => p.p && Number.isFinite(p.deg));
@@ -1393,7 +1413,7 @@ function derivePlanetsInHouses(reading: any): V4PlanetHouseRow[] {
     }
 
     if (!natalPlanets.length || !lons) {
-        return natalPlanets.slice(0, 7).map((p: any) => {
+        return natalPlanets.slice(0, 10).map((p: any) => {
             const name = (p.name || p.planet || "").toString();
             return {
                 planet: name,
@@ -1405,7 +1425,7 @@ function derivePlanetsInHouses(reading: any): V4PlanetHouseRow[] {
         });
     }
     const natalAngles = reading?.natalAngles;
-    return natalPlanets.slice(0, 7).map((p: any) => {
+    return natalPlanets.slice(0, 10).map((p: any) => {
         const name = (p.name || p.planet || "").toString();
         // Prefer a persisted natal house, else derive it from natalAngles.ASC
         // (the natal Ascendant longitude). Cached readings may have neither —
@@ -1432,22 +1452,30 @@ function derivePlanetsInHouses(reading: any): V4PlanetHouseRow[] {
 
 function shiftCopy(name: string, from: number | undefined, to: number): string {
     const lower = name.toLowerCase();
-    const planetWord = PLANET_PLAIN[lower] ? lower : "this planet";
-    const toLabel = HOUSE_LABEL[to]?.split(" · ")[1] ?? "a different area of life";
-    const verbs: Record<string, string> = {
-        sun: "Your core identity moves into",
-        moon: "Your emotional life moves into",
-        mercury: "Your thinking/talking moves into",
-        venus: "Love and pleasure move into",
-        mars: "Your drive moves into",
-        jupiter: "Your luck and growth move into",
-        saturn: "Discipline turns toward",
-        uranus: "Disruption shows up in",
-        neptune: "Dreams settle into",
-        pluto: "Power and change concentrate in",
+    const subjects: Record<string, string> = {
+        sun: "Your core identity",
+        moon: "Your emotional life",
+        mercury: "Your thinking and conversation",
+        venus: "Your taste for love and pleasure",
+        mars: "Your drive",
+        jupiter: "Your luck and growth",
+        saturn: "Your sense of discipline",
+        uranus: "Your appetite for disruption",
+        neptune: "Your dreaming and longing",
+        pluto: "Your edge and power",
     };
-    const verb = verbs[planetWord] || `Your ${name} moves into`;
-    return `${verb} ${toLabel}.${from ? ` (Natally in ${HOUSE_LABEL[from]?.split(" · ")[1] ?? "another house"}.)` : ""}`;
+    const subject = subjects[lower] ?? `Your ${name}`;
+    const topicOf = (h: number | undefined) =>
+        h ? (HOUSE_TOPIC[h] ?? "another life area") : null;
+    const fromTopic = topicOf(from);
+    const toTopic = topicOf(to) ?? "a different area of life";
+    if (from === to) {
+        return `${subject} stays in ${toTopic} here — your house structure didn't rotate this planet.`;
+    }
+    if (!fromTopic) {
+        return `${subject} settles into ${toTopic} here.`;
+    }
+    return `${subject} moves from ${fromTopic} into ${toTopic} here.`;
 }
 
 function deriveAspectsToAngles(reading: any): V4AspectToAngle[] {
@@ -1494,15 +1522,33 @@ function deriveAspectsToAngles(reading: any): V4AspectToAngle[] {
 
 function aspectPlain(planet: string, angle: "ASC"|"IC"|"DSC"|"MC", aspectName: string): string {
     const angleWord = { ASC: "first impression", IC: "home point", DSC: "close partners", MC: "calling" }[angle];
-    const aspectVerb: Record<string, string> = {
-        conjunct: "sits directly on",
-        sextile: "supportively angles to",
-        square: "presses on",
-        trine: "flows easily into",
-        opposition: "sits across from",
+    const planetQuality: Record<string, string> = {
+        Sun: "warmth and presence",
+        Moon: "moodiness and rhythm",
+        Mercury: "quick thinking and conversation",
+        Venus: "ease and charm",
+        Mars: "heat and assertion",
+        Jupiter: "expansiveness and luck",
+        Saturn: "weight and structure",
+        Uranus: "a flicker of the unexpected",
+        Neptune: "softness and longing",
+        Pluto: "intensity and undertow",
     };
-    const verb = aspectVerb[aspectName] || "relates to";
-    return `${planet} ${verb} your ${angleWord}.`;
+    const q = planetQuality[planet] || "its own particular tone";
+    switch (aspectName) {
+        case "conjunct":
+            return `${planet} sits right on your ${angleWord}, amplifying ${q} in how it shows up here.`;
+        case "trine":
+            return `${planet} lends ${q} that flows easily into your ${angleWord}.`;
+        case "sextile":
+            return `${planet} offers ${q} as a supportive nudge to your ${angleWord}.`;
+        case "square":
+            return `${planet} presses ${q} against your ${angleWord} — a productive friction to work with, not around.`;
+        case "opposition":
+            return `${planet} pulls ${q} opposite your ${angleWord}, asking you to balance the two ends of the seesaw.`;
+        default:
+            return `${planet} relates to your ${angleWord} with ${q}.`;
+    }
 }
 
 // ─── Geodetic band (Sepharial) ───────────────────────────────────────

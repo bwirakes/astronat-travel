@@ -39,9 +39,22 @@ const AngleDeltaSchema = z.object({
 });
 
 // V4 Step 7B — per-planet house shift.
+// `shift` is the card-body sentence (16–26 words). `tooltip` is the 6–12 word
+// hover line on the relocated chart wheel. Both live on one record so the AI
+// emits them together — separate arrays caused drift (a planet had a card but
+// no tooltip, or vice versa).
 const PlanetShiftSchema = z.object({
   planet: z.string(),
-  shift: z.string(),      // plain-English description of the life-area shift
+  shift: z.string(),
+  tooltip: z.string().optional(),
+});
+
+// Legacy — kept so cached pre-migration readings (which wrote tooltips into a
+// separate array) still validate. New readings should put `tooltip` on the
+// `PlanetShiftSchema` record above. Remove after a full regeneration cycle.
+const PlanetTooltipSchema = z.object({
+  planet: z.string(),
+  line: z.string(),
 });
 
 // V4 Step 7C — per-aspect prose for the aspects-to-angles cards.
@@ -311,6 +324,7 @@ export const TeacherReadingSchema = z.object({
   monthAspects: z.array(MonthAspectSchema).max(24).optional(),
   angleDeltas: z.array(AngleDeltaSchema).max(8).optional(),
   planetShifts: z.array(PlanetShiftSchema).max(20).optional(),
+  planetTooltips: z.array(PlanetTooltipSchema).max(20).optional(),
   aspectPlains: z.array(AspectPlainSchema).max(20).optional(),
   weeks: z.array(WeekSchema).max(26).optional(),
   todos: z.array(TodoSchema).max(10).optional(),
@@ -332,7 +346,11 @@ export const TeacherReadingSchema = z.object({
   liveLinesLead: z.string().optional(),
 
   // What-shifts tab — personal-chart relocation copy.
-  chartRulerReframe: ChartRulerReframeSchema.optional(),
+  // chartRulerReframe is REQUIRED — it's the headline of the what-shifts tab.
+  // The optional() pattern was leaking; the model dropped it under prompt
+  // pressure when other optional fields were also dropped. Forced emission
+  // via structured outputs is more reliable than mandatory wording in the prompt.
+  chartRulerReframe: ChartRulerReframeSchema,
   acgLineNotes: z.array(AcgLineNoteSchema).max(20).optional(),
   modalityHits: z.array(ModalityHitSchema).max(12).optional(),
 });

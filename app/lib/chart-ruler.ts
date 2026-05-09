@@ -3,7 +3,7 @@
  * Determines how the chart ruler shifts houses when relocating.
  */
 import { SIGN_RULERS } from "./astro-constants";
-import { computeRelocatedAscLon, signFromLongitude, houseFromLongitude } from "./geodetic";
+import { computeRelocatedAscLon, signFromLongitude, houseFromLongitude, houseFromCusps } from "./geodetic";
 
 export interface ChartRulerContext {
     natalAscSign: string;
@@ -50,8 +50,14 @@ export function computeChartRulerContext(
     );
     if (!rulerPlanet || rulerPlanet.longitude === undefined) return null;
 
-    const natalRulerHouse = houseFromLongitude(rulerPlanet.longitude, ascNatalLon);
-    const relocatedRulerHouse = houseFromLongitude(rulerPlanet.longitude, ascDestLon);
+    // Prefer Placidus from real cusps; fall back to equal-house from ASC.
+    // The UI's PlanetShiftCard uses Placidus, so the chart-ruler card has to
+    // match — otherwise the same planet shows up in two different house pairs
+    // across the page.
+    const natalRulerHouse = houseFromCusps(rulerPlanet.longitude, natalCusps)
+        ?? houseFromLongitude(rulerPlanet.longitude, ascNatalLon);
+    const relocatedRulerHouse = houseFromCusps(rulerPlanet.longitude, relocatedCusps)
+        ?? houseFromLongitude(rulerPlanet.longitude, ascDestLon);
 
     return {
         natalAscSign,

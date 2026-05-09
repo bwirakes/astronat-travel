@@ -121,6 +121,15 @@ export interface NatalMockupWheelProps {
   planets: NatalPlanet[];
   cusps: number[]; // Array of 12 elements
   onPlanetClick?: (planetName: string) => void;
+  /**
+   * Controls degree formatting on planet labels and tooltips.
+   * "natal" (default) → degree-within-sign (e.g. "24°" for 24° Capricorn).
+   * "relocated" → degree-within-house (e.g. "9°" if Sun is 9° past the 5th cusp).
+   * Use "relocated" for the relocated panel so the displayed degree reflects
+   * the planet's position relative to the rotated cusps, not its unchanging
+   * sign-degree (which is identical to the natal value).
+   */
+  mode?: "natal" | "relocated";
 }
 
 interface AspectLine {
@@ -136,7 +145,7 @@ interface AspectLine {
   length: number;
 }
 
-export default function NatalMockupWheel({ isDark, planets, cusps, onPlanetClick }: NatalMockupWheelProps) {
+export default function NatalMockupWheel({ isDark, planets, cusps, onPlanetClick, mode = "natal" }: NatalMockupWheelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredPlanet, setHoveredPlanet] = useState<{
     planet: NatalPlanet;
@@ -405,7 +414,16 @@ export default function NatalMockupWheel({ isDark, planets, cusps, onPlanetClick
       {renderPlanets.map((p) => {
         const pt    = svgXY(p.lonAdj, R.planets, asc);
         const pinPt = svgXY(p.longitude, R.zodiacInner - 5, asc);
-        const deg   = Math.floor(p.longitude % 30);
+        const normLon = ((p.longitude % 360) + 360) % 360;
+        const signDeg = Math.floor(((normLon % 30) + 30) % 30);
+        const houseDeg = (() => {
+          if (mode !== "relocated") return null;
+          if (typeof p.house !== "number" || p.house < 1 || p.house > 12) return null;
+          const cuspLon = cusps[p.house - 1];
+          if (!Number.isFinite(cuspLon)) return null;
+          return Math.floor((((p.longitude - cuspLon) % 360) + 360) % 360);
+        })();
+        const deg = houseDeg ?? signDeg;
         const color = PLANET_COLORS[p.planet] || "#FFF";
         const glyphStr = PLANET_GLYPHS[p.planet] || p.planet.charAt(0);
 
@@ -486,8 +504,17 @@ export default function NatalMockupWheel({ isDark, planets, cusps, onPlanetClick
           planet={hoveredPlanet.planet.planet}
           sign={hoveredPlanet.planet.sign}
           house={hoveredPlanet.planet.house}
-          degree={hoveredPlanet.planet.degree}
+          degree={(() => {
+            if (mode !== "relocated") return hoveredPlanet.planet.degree;
+            const h = hoveredPlanet.planet.house;
+            if (typeof h !== "number" || h < 1 || h > 12) return hoveredPlanet.planet.degree;
+            const cuspLon = cusps[h - 1];
+            if (!Number.isFinite(cuspLon)) return hoveredPlanet.planet.degree;
+            const intoHouse = (((hoveredPlanet.planet.longitude - cuspLon) % 360) + 360) % 360;
+            return `${Math.floor(intoHouse)}° into H${h}`;
+          })()}
           implication={hoveredPlanet.planet.implication}
+          context={mode}
         />
       </div>
     ) : null}

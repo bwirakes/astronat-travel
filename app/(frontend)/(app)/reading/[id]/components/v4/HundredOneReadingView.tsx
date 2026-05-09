@@ -51,8 +51,9 @@ function wheelFromVm(
         const house = mode === "relocated"
             ? (cp.relocatedHouse ?? cp.natalHouse)
             : (cp.natalHouse ?? cp.relocatedHouse);
-        const implication = mode === "relocated" && cp.relocatedHouse
-            ? `House ${cp.relocatedHouse} here · ${cp.plain}`
+        const implication = mode === "relocated"
+            ? (cp.relocatedTooltip
+                ?? (cp.relocatedHouse ? `House ${cp.relocatedHouse} here · ${cp.plain}` : cp.plain))
             : cp.plain;
         return {
             planet: cp.p,

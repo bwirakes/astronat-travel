@@ -74,6 +74,24 @@ export function houseFromLongitude(planetLon: number, ascLon: number): number {
     return Math.floor(offset / 30) + 1;
 }
 
+/** Placidus / quadrant house lookup using a full 12-cusp array.
+ *  Returns the house (1–12) whose arc contains `planetLon`, or `undefined`
+ *  when the cusp array is malformed. Prefer this over `houseFromLongitude`
+ *  whenever real cusps are available — equal-house diverges meaningfully at
+ *  high latitudes and near house cusps. */
+export function houseFromCusps(planetLon: number, cusps: unknown): number | undefined {
+    if (!Array.isArray(cusps) || cusps.length !== 12) return undefined;
+    for (let i = 0; i < 12; i++) {
+        const cusp = Number(cusps[i]);
+        const next = Number(cusps[(i + 1) % 12]);
+        if (!Number.isFinite(cusp) || !Number.isFinite(next)) return undefined;
+        const span = ((next - cusp) + 360) % 360;
+        const dist = ((planetLon - cusp) + 360) % 360;
+        if (dist < span || (i === 11 && dist === span)) return i + 1;
+    }
+    return undefined;
+}
+
 // ─ Geodetic House Wheel ──────────────────────────────────────────────────
 // The geodetic frame has its own 12-house wheel anchored on geo-ASC (the
 // rising point at the destination's longitude treated as local sidereal
