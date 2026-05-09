@@ -7,6 +7,13 @@ import type { V4VM } from "./types";
 import { transitOneLiner } from "@/app/lib/transit-copy";
 import type { TransitSpan, UniversalSkySpan } from "@/app/lib/window-scoring";
 import { PLANET_GLYPH } from "@/app/lib/geodetic-weather-types";
+import { templateForSpanShape } from "@/app/lib/universal-sky-templates";
+import TimingDateTabs, {
+    TRIP_TIMING_TABS,
+    RELOCATION_TIMING_TABS,
+    rowInTab,
+    type TimingTab as TimingDateTab,
+} from "./TimingDateTabs";
 import { WINDOW_LABELS, WINDOW_RATIONALES, verdictBand, verdictTone } from "@/app/lib/verdict";
 
 interface Props {
@@ -712,6 +719,14 @@ function SkyGanttRow({
     const tooltipLeft = Math.max(22, Math.min(78, centerPct));
 
     const kindLabel = fmtSkyKindLabel(span.kind);
+    const layCopy = templateForSpanShape({
+        kind: span.kind,
+        planet: span.planet,
+        sign: span.sign,
+        dignity: span.dignity,
+        aspectType: span.aspectType,
+        secondaryPlanet: span.secondaryPlanet,
+    });
 
     return (
         <div
@@ -719,48 +734,60 @@ function SkyGanttRow({
                 display: "grid",
                 gridTemplateColumns: "150px 1fr",
                 gap: "var(--space-sm)",
-                alignItems: "center",
-                padding: "0.55rem 0",
+                alignItems: "start",
+                padding: "0.6rem 0",
             }}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
         >
-            {/* Row label — dashed left border marks this as a sky row */}
+            {/* Row label — dashed left border marks this as a sky row.
+                Plain-English title replaces the "SKY · Retrograde" pattern;
+                the SKY prefix moves to a smaller eyebrow. Italic body line
+                gives the lived takeaway in <12 words. */}
             <div style={{
                 display: "flex",
-                alignItems: "center",
+                alignItems: "flex-start",
                 gap: "0.4rem",
                 minWidth: 0,
                 paddingLeft: "0.5rem",
                 borderLeft: `1px dashed color-mix(in oklab, ${accent} 60%, transparent)`,
             }}>
-                <span style={{ fontSize: "1rem", color: accent, flexShrink: 0, opacity: 0.85 }}>
+                <span style={{ fontSize: "1rem", color: accent, flexShrink: 0, opacity: 0.85, lineHeight: 1.5 }}>
                     {planetGlyph(span.planet)}
                 </span>
                 <div style={{ minWidth: 0 }}>
                     <div style={{
-                        fontFamily: FB,
-                        fontSize: "0.78rem",
-                        fontWeight: 600,
-                        color: "var(--text-secondary)",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        textTransform: "capitalize",
-                    }}>
-                        {span.planet}
-                    </div>
-                    <div style={{
                         fontFamily: FM,
-                        fontSize: "0.6rem",
-                        letterSpacing: "0.16em",
+                        fontSize: "0.55rem",
+                        letterSpacing: "0.18em",
                         textTransform: "uppercase",
                         color: "var(--text-tertiary)",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
+                        fontWeight: 700,
+                        marginBottom: "0.15rem",
                     }}>
                         SKY · {kindLabel}
+                    </div>
+                    <div style={{
+                        fontFamily: FB,
+                        fontSize: "0.84rem",
+                        fontWeight: 500,
+                        color: "var(--text-primary)",
+                        whiteSpace: "normal",
+                        wordBreak: "break-word",
+                        lineHeight: 1.25,
+                    }}>
+                        {layCopy.title}
+                    </div>
+                    <div style={{
+                        fontFamily: FB,
+                        fontSize: "0.72rem",
+                        fontStyle: "italic",
+                        color: "var(--text-tertiary)",
+                        whiteSpace: "normal",
+                        marginTop: "0.15rem",
+                        lineHeight: 1.35,
+                    }}>
+                        {layCopy.body}
                     </div>
                 </div>
             </div>
@@ -865,9 +892,29 @@ const RELO_DAY_MARKERS = [0, 60, 120, 180, 240, 300, 360];
 function TransitGantt({ vm }: { vm: V4VM }) {
     const { transitSpans, travelDateISO } = vm;
     const universalSkySpans = vm.universalSkySpans ?? [];
+    const isRelocation = vm.timeline.grain === "month";
+
+    // Date-bucket tabs above the Gantt. Filter rows by overlap with the
+    // active bucket. Default to "Now" / "Mo 1-3" so users see the most
+    // imminent items first; "All" stays available for the wide view.
+    const dateTabs: TimingDateTab[] = isRelocation ? RELOCATION_TIMING_TABS : TRIP_TIMING_TABS;
+    const [activeTabId, setActiveTabId] = useState<string>(dateTabs[0].id);
+    const activeTab = dateTabs.find((t) => t.id === activeTabId) ?? dateTabs[dateTabs.length - 1];
+
     if ((!transitSpans.length && !universalSkySpans.length) || !travelDateISO) return null;
 
-    const isRelocation = vm.timeline.grain === "month";
+    const filteredTransitSpans = transitSpans.filter((s) => rowInTab(s.entryDay, s.exitDay, activeTab));
+    const filteredSkySpans = universalSkySpans.filter((s) => rowInTab(s.entryDay, s.exitDay, activeTab));
+
+    // Per-tab counts for the segment-control labels — gives users a sense
+    // of where the action is before they switch.
+    const tabCounts: Record<string, number> = {};
+    for (const tab of dateTabs) {
+        const personal = transitSpans.filter((s) => rowInTab(s.entryDay, s.exitDay, tab)).length;
+        const sky = universalSkySpans.filter((s) => rowInTab(s.entryDay, s.exitDay, tab)).length;
+        tabCounts[tab.id] = personal + sky;
+    }
+
     const WINDOW_START = isRelocation ? RELO_WINDOW_START : TRIP_WINDOW_START;
     const WINDOW_END = isRelocation ? RELO_WINDOW_END : TRIP_WINDOW_END;
     const WINDOW_RANGE = WINDOW_END - WINDOW_START;
@@ -896,6 +943,14 @@ function TransitGantt({ vm }: { vm: V4VM }) {
             paddingTop: "calc(var(--space-md) + 36px)", // headroom for the small tooltip on top row
             overflow: "visible",
         }}>
+                {/* Date-range tabs — filter rows by overlap with the active bucket */}
+                <TimingDateTabs
+                    tabs={dateTabs}
+                    activeTabId={activeTabId}
+                    onTabChange={setActiveTabId}
+                    counts={tabCounts}
+                />
+
                 {/* Day-marker header */}
                 <div style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: "var(--space-sm)", marginBottom: "var(--space-sm)" }}>
                     <div />
@@ -949,7 +1004,7 @@ function TransitGantt({ vm }: { vm: V4VM }) {
 
                 {/* Rows — personal transits first, universal sky beneath */}
                 <div style={{ display: "flex", flexDirection: "column" }}>
-                    {transitSpans.map((span, i) => (
+                    {filteredTransitSpans.map((span, i) => (
                         <GanttRow
                             key={`${span.transit_planet}|${span.natal_planet}|${span.aspect}|${i}`}
                             span={span}
@@ -958,7 +1013,19 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                             todayDay={todayDay}
                         />
                     ))}
-                    {universalSkySpans.length > 0 && transitSpans.length > 0 && (
+                    {filteredTransitSpans.length === 0 && filteredSkySpans.length === 0 && (
+                        <div style={{
+                            padding: "var(--space-md) 0",
+                            fontFamily: FB,
+                            fontSize: "0.85rem",
+                            color: "var(--text-tertiary)",
+                            fontStyle: "italic",
+                            textAlign: "center",
+                        }}>
+                            Nothing notable in this window. Try another tab.
+                        </div>
+                    )}
+                    {filteredSkySpans.length > 0 && filteredTransitSpans.length > 0 && (
                         <div style={{
                             display: "grid",
                             gridTemplateColumns: "150px 1fr",
@@ -988,9 +1055,9 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                             </span>
                         </div>
                     )}
-                    {universalSkySpans.map((span, i) => (
+                    {filteredSkySpans.map((span, i) => (
                         <SkyGanttRow
-                            key={`sky|${span.kind}|${span.planet}|${span.exactISO}|${i}`}
+                            key={span.key ?? `sky|${span.kind}|${span.planet}|${span.exactISO}|${i}`}
                             span={span}
                             windowStart={WINDOW_START}
                             windowEnd={WINDOW_END}
@@ -1018,13 +1085,13 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                             <span style={{ fontFamily: FM, fontSize: "0.66rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--color-y2k-blue)" }}>Today</span>
                         </div>
                     )}
-                    {transitSpans.some(s => s.retrograde) && (
+                    {filteredTransitSpans.some(s => s.retrograde) && (
                         <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                             <span style={{ fontFamily: FM, fontSize: "0.7rem", color: "var(--text-tertiary)" }}>℞</span>
                             <span style={{ fontFamily: FM, fontSize: "0.66rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>Retrograde — a revisit</span>
                         </div>
                     )}
-                    {universalSkySpans.length > 0 && (
+                    {filteredSkySpans.length > 0 && (
                         <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                             <div style={{
                                 width: 20,

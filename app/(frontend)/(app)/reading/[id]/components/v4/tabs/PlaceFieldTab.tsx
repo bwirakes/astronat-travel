@@ -410,7 +410,22 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
 
             {/* ── §03 Universal sky weather (location-agnostic) ────────── */}
             {vm.universalSky && (
-                <UniversalSkySection sky={vm.universalSky} sectionIndex="03" />
+                <UniversalSkySection
+                    sky={vm.universalSky}
+                    sectionIndex="03"
+                    goalIds={vm.goalIds ?? []}
+                    travelStartISO={vm.travelDateISO ?? undefined}
+                    travelEndISO={
+                        vm.travelDateISO
+                            ? new Date(
+                                  new Date(`${vm.travelDateISO.slice(0, 10)}T00:00:00Z`).getTime()
+                                      + (vm.travelType === "relocation" ? 365 : 7) * 86_400_000,
+                              )
+                                  .toISOString()
+                                  .slice(0, 10)
+                            : undefined
+                    }
+                />
             )}
 
             {/* ── §04 The frame (geodetic house wheel) ─────────────────── */}

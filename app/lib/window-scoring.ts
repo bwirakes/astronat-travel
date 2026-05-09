@@ -795,6 +795,11 @@ export function pickArrivalWindowsToNarrate(
 // gets fewer/empty spans rather than an error.
 
 export interface UniversalSkySpan {
+    /** Stable identifier used to look up AI-authored or templated lay-copy
+     *  for this span. Format: `<kind>-<planet>-<exactISO>`. Same span
+     *  rendered across regenerations gets the same key, so caching and
+     *  per-row prose stay aligned. */
+    key: string;
     kind: "retrograde" | "ingress" | "sky-aspect" | "eclipse" | "node-aspect" | "station";
     /** Human-readable label for the row, e.g. "Mercury retrograde in Pisces". */
     label: string;
@@ -898,6 +903,7 @@ export function solveUniversalSkySpans(
             const severity = severityBase * (isInnerPlanet(w.planet) ? 1.0 : 0.6);
 
             spans.push({
+                key: `retrograde-${w.planet}-${w.midISO}`,
                 kind: "retrograde",
                 label: `${capPlanet(w.planet)} retrograde in ${w.sign}`,
                 planet: w.planet,
@@ -922,6 +928,7 @@ export function solveUniversalSkySpans(
             const innerSeverity = isInnerPlanet(w.planet) ? 0.5 : 0.35;
             if (startTime >= anchorTime && startTime <= horizonEnd) {
                 spans.push({
+                    key: `station-rx-${w.planet}-${w.entryISO}`,
                     kind: "station",
                     label: `${capPlanet(w.planet)} stations retrograde in ${w.sign}`,
                     planet: w.planet,
@@ -938,6 +945,7 @@ export function solveUniversalSkySpans(
             }
             if (endTime >= anchorTime && endTime <= horizonEnd) {
                 spans.push({
+                    key: `station-direct-${w.planet}-${w.exitISO}`,
                     kind: "station",
                     label: `${capPlanet(w.planet)} stations direct in ${w.sign}`,
                     planet: w.planet,
@@ -989,6 +997,7 @@ export function solveUniversalSkySpans(
                 const severityBase = RX_SEVERITY_BY_DIGNITY[dignity] ?? 0.5;
                 const severity = severityBase * (INNER_PLANETS_CAP.has(planetCap) ? 1.0 : 0.6);
                 spans.push({
+                    key: `retrograde-${planetCap.toLowerCase()}-${isoDay(midTime)}`,
                     kind: "retrograde",
                     label: `${planetCap} retrograde in ${start.sign}`,
                     planet: planetCap.toLowerCase(),
@@ -1008,14 +1017,16 @@ export function solveUniversalSkySpans(
         for (const s of STATIONS) {
             const t = new Date(s.dateUtc).getTime();
             if (t < anchorTime || t > horizonEnd) continue;
+            const tagDate = isoDay(t);
             spans.push({
+                key: `station-${s.type === "retrograde" ? "rx" : "direct"}-${s.planet.toLowerCase()}-${tagDate}`,
                 kind: "station",
                 label: `${s.planet} stations ${s.type === "retrograde" ? "retrograde" : "direct"} in ${s.sign}`,
                 planet: s.planet.toLowerCase(),
                 sign: s.sign,
-                entryISO: isoDay(t),
-                exactISO: isoDay(t),
-                exitISO: isoDay(t),
+                entryISO: tagDate,
+                exactISO: tagDate,
+                exitISO: tagDate,
                 entryDay: dayOffset(t, anchorTime),
                 exactDay: dayOffset(t, anchorTime),
                 exitDay: dayOffset(t, anchorTime),
@@ -1037,6 +1048,7 @@ export function solveUniversalSkySpans(
         if (eExit < lookbackTime) continue;
         if (eEntry > horizonEnd) continue;
         spans.push({
+            key: `eclipse-${isSolar ? "solar" : "lunar"}-${isoDay(t)}`,
             kind: "eclipse",
             label: `${isSolar ? "Solar" : "Lunar"} eclipse in ${e.sign}`,
             planet: isSolar ? "sun" : "moon",
@@ -1060,6 +1072,7 @@ export function solveUniversalSkySpans(
             const t = new Date(`${ing.dateISO}T12:00:00Z`).getTime();
             if (!isFinite(t) || t < anchorTime || t > horizonEnd) continue;
             spans.push({
+                key: `ingress-${ing.planet}-${ing.dateISO}`,
                 kind: "ingress",
                 label: `${ing.planet[0].toUpperCase()}${ing.planet.slice(1)} enters ${ing.toSign}`,
                 planet: ing.planet,
