@@ -1,19 +1,17 @@
 import SignIcon from "@/app/components/SignIcon";
 import {
   LessonShell,
-  LessonIntro,
+  GuideHeader,
   ProseSection,
   ConceptCard,
   ElementSection,
-  Recap,
   SourcesPanel,
-  PaginationCard,
+  RelatedGuides,
   Plate,
   KeyStrip,
   GlossaryTerm,
   getLesson,
-  getNext,
-  getPrev,
+  getGuides,
 } from "../_components";
 
 type Modality = "Cardinal" | "Fixed" | "Mutable";
@@ -356,24 +354,22 @@ function SignConceptCard({ sign }: { sign: Sign }) {
 
 export default function ZodiacLessonPage() {
   const lesson = getLesson("zodiac");
-  const prev = getPrev("zodiac");
-  const next = getNext("zodiac");
 
   return (
     <LessonShell lessonId="zodiac">
-      <LessonIntro
-        lesson={lesson}
+      <GuideHeader
+        guide={lesson}
         title="The"
         titleItalic="Zodiac"
+        byline="By Astro-Nat · Astrocartographer"
         lede="You&rsquo;ve been told you&rsquo;re a Pisces, a Capricorn, a Sagittarius — and chances are nobody told you what the words actually mean. The zodiac is not a personality test. It is a coordinate system: twelve 30° slices of the sky used by every working astrologer for two thousand years, and the foundation every other lesson in this Academy stands on."
-        objectives={[
-          "Read the zodiac as 360° of ecliptic longitude, divided into 12 equal sectors.",
-          "Tell signs apart from constellations — and know why they drifted.",
-          "Place every sign in the 3×4 grid of modality × element.",
-        ]}
       />
 
-      <ProseSection id="s01" kicker="§ 01" title="The system in one breath">
+      <ProseSection
+        id="s01"
+        kicker="§ 01"
+        title="The system in one breath"
+      >
         <p>
           If you know your sign and not much else, you are holding the
           smallest piece of a system that maps the entire sky. Here is the
@@ -495,14 +491,6 @@ export default function ZodiacLessonPage() {
         </p>
       </ProseSection>
 
-      <Recap
-        items={[
-          "The zodiac is 360° of ecliptic longitude divided into twelve 30° signs.",
-          "Signs and constellations share names but no longer share positions — the difference is precession.",
-          "Every sign sits at one intersection of modality (Cardinal / Fixed / Mutable) and element (Fire / Earth / Air / Water).",
-        ]}
-      />
-
       <SourcesPanel
         sources={[
           {
@@ -520,13 +508,9 @@ export default function ZodiacLessonPage() {
         ]}
       />
 
-      <PaginationCard
-        prev={prev}
-        next={next}
-        bridge={
-          next?.bridge ??
-          "Now meet the actual star groups behind the signs — and the precession story in full."
-        }
+      <RelatedGuides
+        label="Read next"
+        guides={getGuides(["viewing-the-stars", "constellations", "natal-chart"])}
       />
     </LessonShell>
   );

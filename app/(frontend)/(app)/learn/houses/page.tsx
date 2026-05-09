@@ -1,18 +1,21 @@
 "use client";
 
-import React, { useRef, useState, useEffect } from "react";
-import gsap from "gsap";
-import { useGSAP } from "@gsap/react";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { NatalWheelSVG } from "@/app/components/natal/NatalWheelSVG";
-import { AstronatCard } from "@/app/components/ui/astronat-card";
-import { LearnOutroCard } from "@/app/components/learn/ScrollytellingCards";
+import React from "react";
+import {
+  LessonShell,
+  GuideHeader,
+  ProseSection,
+  PullQuote,
+  RelatedGuides,
+  Plate,
+  NatalWheel,
+  ConceptCard,
+  ConceptStack,
+  GlossaryTerm,
+  getLesson,
+  getGuides,
+} from "../_components";
 import SignIcon from "@/app/components/SignIcon";
-
-import { PageHeader } from "@/components/app/page-header-context";
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(useGSAP, ScrollTrigger);
-}
 
 // ═══════════════════════════════════════════════════════════════
 // HOUSES DATA
@@ -141,367 +144,81 @@ const HOUSES_DATA = [
   },
 ];
 
-// ═══════════════════════════════════════════════════════════════
-// PAGE
-// ═══════════════════════════════════════════════════════════════
-
-export default function HousesLearnPage() {
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const [isDark, setIsDark] = useState(true);
-  const [activeHouse, setActiveHouse] = useState<number | null>(null);
-
-  // Sync with global data-theme
-  useEffect(() => {
-    const checkTheme = () => {
-      const theme = document.documentElement.getAttribute("data-theme");
-      setIsDark(theme !== "light");
-    };
-    checkTheme();
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((m) => {
-        if (m.attributeName === "data-theme") checkTheme();
-      });
-    });
-    observer.observe(document.documentElement, { attributes: true });
-    return () => observer.disconnect();
-  }, []);
-
-  useGSAP(() => {
-    if (!wrapperRef.current) return;
-
-    // Wheel fade-in
-    gsap.fromTo("#bg-wheel", { opacity: 0 }, { opacity: 0.6, duration: 2.5, ease: "power2.out" });
-
-    // Intro card
-    gsap.set("#intro-card", { autoAlpha: 0, y: 40 });
-    ScrollTrigger.create({
-      trigger: "#section-intro",
-      start: "top 80%",
-      onEnter:     () => gsap.to("#intro-card", { autoAlpha: 1, y: 0,  duration: 0.8, ease: "power3.out" }),
-      onLeave:     () => gsap.to("#intro-card", { autoAlpha: 0, y: -30, duration: 0.4 }),
-      onEnterBack: () => gsap.to("#intro-card", { autoAlpha: 1, y: 0,  duration: 0.6 }),
-      onLeaveBack: () => gsap.to("#intro-card", { autoAlpha: 0, y: 30, duration: 0.4 }),
-    });
-
-    // Per-house scroll triggers
-    HOUSES_DATA.forEach((h, i) => {
-      const section = document.getElementById(`section-house-${h.id}`);
-      const card    = document.getElementById(`card-house-${h.id}`);
-      if (!section || !card) return;
-
-      gsap.set(card, { autoAlpha: 0, y: 50 });
-
-      ScrollTrigger.create({
-        trigger: section,
-        start: "top 62%",
-        end: "bottom 20%",
-
-        onEnter: () => {
-          setActiveHouse(h.id);
-          gsap.to(card, { autoAlpha: 1, y: 0, duration: 0.6, ease: "power2.out" });
-        },
-        onLeave: () => {
-          gsap.to(card, { autoAlpha: 0, y: -30, duration: 0.4, ease: "power2.in" });
-        },
-        onEnterBack: () => {
-          setActiveHouse(h.id);
-          gsap.to(card, { autoAlpha: 1, y: 0, duration: 0.6, ease: "power2.out" });
-        },
-        onLeaveBack: () => {
-          setActiveHouse(i > 0 ? HOUSES_DATA[i - 1].id : null);
-          gsap.to(card, { autoAlpha: 0, y: 30, duration: 0.4, ease: "power2.in" });
-        },
-      });
-    });
-
-    // Outro card
-    gsap.set("#outro-card", { autoAlpha: 0, y: 40 });
-    ScrollTrigger.create({
-      trigger: "#section-outro",
-      start: "top 60%",
-      onEnter:     () => gsap.to("#outro-card", { autoAlpha: 1, y: 0, duration: 0.8, ease: "power3.out" }),
-      onEnterBack: () => gsap.to("#outro-card", { autoAlpha: 1, y: 0, duration: 0.6 }),
-      onLeaveBack: () => {
-        setActiveHouse(HOUSES_DATA[HOUSES_DATA.length - 1].id);
-        gsap.to("#outro-card", { autoAlpha: 0, y: 30, duration: 0.4 });
-      },
-    });
-
-  }, { scope: wrapperRef });
+export default function HousesLessonPage() {
+  const lesson = getLesson("houses");
 
   return (
-    <div
-      ref={wrapperRef}
-      className="relative"
-      style={{
-        backgroundColor: isDark ? "#000000" : "var(--color-eggshell)",
-        transition: "background-color 0.6s ease",
-      }}
-    >
-      <PageHeader backTo="/learn" backLabel="Academy" />
-      {/* ═══ FIXED BACKGROUND WHEEL ═══ */}
-      <div className="fixed inset-0 z-0 flex items-center justify-center pointer-events-none">
-        <div style={{ width: "min(80vh, 720px, 90vw)", aspectRatio: "1" }}>
-          <NatalWheelSVG isDark={isDark} activeHouse={activeHouse} />
-        </div>
-      </div>
+    <LessonShell lessonId="houses">
+      <GuideHeader
+        guide={lesson}
+        title="The 12"
+        titleItalic="Houses"
+        lede="While signs dictate how a planet behaves, the 12 houses tell you exactly where that energy will manifest in your life. They divide the physical sky surrounding you into 12 distinct arenas — from your immediate physical body (House 1) to the deep unconscious (House 12). If signs are the adjectives, houses are the nouns."
+      />
 
+      <ProseSection id="s01" kicker="§ 01" title="Physical Geometry">
+        <p>
+          Unlike the zodiac, which is a wheel of stars far out in space, the houses are anchored to the Earth. The line separating House 1 and House 12 is the eastern horizon at the exact moment of your birth. The line at the very top of the chart separating House 9 and House 10 is the highest point the sun reached that day. 
+        </p>
 
-      {/* ═══ SCROLLING CONTENT ═══ */}
-      <div className="relative z-20">
+        <Plate number="01" title="The 12 Houses">
+          <NatalWheel accent="var(--sage)" showPlanets={false} showAspects={false} mode="houses" />
+        </Plate>
+      </ProseSection>
 
-        {/* INTRO */}
-        <section id="section-intro" className="relative h-screen flex items-center justify-center px-6">
-          <div id="intro-card" className="max-w-2xl text-center">
-            <div className="inline-block font-mono text-[10px] md:text-xs uppercase tracking-[0.2em] text-[var(--color-y2k-blue)] mb-6 px-4 py-2 border border-[var(--color-y2k-blue)]/30 rounded-full backdrop-blur-md bg-white/5">
-              Physical Geometry
-            </div>
-            <h1
-              className="font-primary text-5xl md:text-[6rem] lg:text-[7rem] leading-[0.85] tracking-tight uppercase mb-8"
-              style={{ color: "var(--text-primary)" }}
-            >
-              The 12<br />Houses.
-            </h1>
-            <div
-              className="p-6 md:p-8 rounded-[var(--shape-asymmetric-lg)] backdrop-blur-xl max-w-xl mx-auto"
-              style={{
-                background: isDark ? "rgba(0,0,0,0.60)" : "rgba(255,255,255,0.70)",
-                border: "1px solid var(--surface-border)",
-              }}
-            >
-              <p
-                className="font-body text-base md:text-lg leading-relaxed"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                While signs are <em>how</em> energy moves, the 12 houses are <em>where</em> it happens. They divide the sky into the 12 distinct arenas of your existence — from identity to solitude.
-              </p>
-              <div className="mt-6 animate-bounce opacity-40 text-[var(--text-tertiary)] font-mono text-[9px] uppercase tracking-[0.4em]">
-                Scroll to Begin
-              </div>
-            </div>
-          </div>
-        </section>
+      <ProseSection id="s02" kicker="§ 02" title="The Mechanics">
+        <p>
+          An empty house is not a dead house. Just because there are no planets sitting in your 7th House of Relationships or your 2nd House of Finances does not mean you are destined to die alone or broke. 
+        </p>
+        <p>
+          Think of an empty house like an empty room in an apartment. The room still exists, and you still use it. To understand what happens in that room, you must look at the <em>landlord</em> of the room. In astrology, the landlord is the ruling <GlossaryTerm term="Planet">planet</GlossaryTerm> of the sign on the cusp of that house. If the landlord is in a strong position, the affairs of that house run smoothly. If the landlord is struggling, there is a leak in the ceiling of that house that you will have to deal with—even if the room is empty.
+        </p>
+      </ProseSection>
 
-        {/* HOUSE SECTIONS */}
-        {HOUSES_DATA.map((h, i) => {
-          const isLeft = i % 2 === 0;
-          return (
-            <section
+      <ProseSection id="s03" kicker="§ 03" title="The Twelve Arenas">
+        <ConceptStack layout="grid">
+          {HOUSES_DATA.map((h) => (
+            <ConceptCard
               key={h.id}
-              id={`section-house-${h.id}`}
-              className="relative min-h-screen flex items-center px-6 md:px-12 lg:px-20 py-20"
+              badge={h.name}
+              title={`House ${h.id}`}
+              kicker={h.keyword}
+              subtitle={h.ruling}
+              meta={[
+                {
+                  label: "Natural Sign",
+                  value: (
+                    <span className="flex items-center gap-1.5">
+                      <SignIcon sign={h.naturalSign} size={12} color="currentColor" />
+                      {h.naturalSign}
+                    </span>
+                  ),
+                },
+                {
+                  label: "Natural Ruler",
+                  value: (
+                    <span className="flex items-center gap-1.5">
+                      <span style={{ fontSize: "12px", lineHeight: 1 }}>{h.rulerGlyph}</span>
+                      {h.naturalRuler}
+                    </span>
+                  ),
+                },
+              ]}
             >
-              <div
-                id={`card-house-${h.id}`}
-                className={`w-full max-w-lg ${isLeft ? "mr-auto" : "ml-auto"}`}
-              >
-                <AstronatCard
-                  variant="black"
-                  shape="cut-md"
-                  className="p-8 md:p-12 relative overflow-hidden"
-                  style={{
-                    boxShadow: isDark
-                      ? "0 20px 60px rgba(0,0,0,0.8), 0 0 40px rgba(4,86,251,0.08)"
-                      : "0 20px 60px rgba(0,0,0,0.10)",
-                    border: isDark
-                      ? "1px solid rgba(255,255,255,0.10)"
-                      : "1px solid rgba(27,27,27,0.12)",
-                  }}
-                >
-                  {/* Watermark number */}
-                  <span
-                    style={{
-                      position: "absolute",
-                      fontFamily: "var(--font-primary)",
-                      fontSize: "14rem",
-                      color: "rgba(4,86,251,1)",
-                      opacity: 0.04,
-                      top: "-15%",
-                      right: isLeft ? "-5%" : "auto",
-                      left: isLeft ? "auto" : "-5%",
-                      lineHeight: 1,
-                      pointerEvents: "none",
-                      zIndex: 0,
-                    }}
-                  >
-                    {h.id}
-                  </span>
+              {h.desc}
+            </ConceptCard>
+          ))}
+        </ConceptStack>
+      </ProseSection>
 
-                  <div className="relative z-10">
-                    {/* Header */}
-                    <div className="flex items-center gap-4 mb-5">
-                      {/* House symbol glyph badge */}
-                      <div
-                        className="shrink-0 flex items-center justify-center rounded-full"
-                        style={{
-                          width: "52px",
-                          height: "52px",
-                          border: "1.5px solid rgba(4,86,251,0.8)",
-                          backgroundColor: "rgba(4,86,251,0.10)",
-                          boxShadow: "0 0 18px rgba(4,86,251,0.25)",
-                        }}
-                      >
-                        <span
-                          className="font-secondary leading-none"
-                          style={{
-                            color: "rgba(4,86,251,1)",
-                            fontSize: h.name.length > 3 ? "0.7rem" : h.name.length > 2 ? "0.85rem" : "1rem",
-                            fontWeight: 700,
-                            letterSpacing: "0.05em",
-                          }}
-                        >
-                          {h.name}
-                        </span>
-                      </div>
-                      <h2
-                        className="font-primary text-5xl md:text-6xl uppercase tracking-tight leading-none"
-                        style={{ color: "var(--color-eggshell)" }}
-                      >
-                        House {h.id}
-                      </h2>
-                    </div>
+      <PullQuote attribution="— Astro-Nat">
+        Every chart has 12 houses. Some are active and full of planets, while others are silent stages waiting for transits to pass through and activate them.
+      </PullQuote>
 
-                    {/* Tags */}
-                    <div className="flex flex-wrap gap-2 mb-6">
-                      <span
-                        className="font-mono text-[10px] uppercase tracking-widest px-3 py-1 rounded-full"
-                        style={{
-                          backgroundColor: "var(--color-y2k-blue)",
-                          color: "#fff",
-                        }}
-                      >
-                        {h.keyword}
-                      </span>
-                      <span
-                        className="font-mono text-[10px] uppercase tracking-widest px-3 py-1 rounded-full border flex items-center gap-1.5"
-                        style={{
-                          borderColor: "rgba(255,255,255,0.15)",
-                          color: "rgba(255,255,255,0.65)",
-                        }}
-                      >
-                        <SignIcon sign={h.naturalSign} size={10} color="currentColor" />
-                        {h.naturalSign}
-                      </span>
-                      <span
-                        className="font-mono text-[10px] uppercase tracking-widest px-3 py-1 rounded-full border flex items-center gap-1.5"
-                        style={{
-                          borderColor: "rgba(255,255,255,0.15)",
-                          color: "rgba(255,255,255,0.65)",
-                        }}
-                      >
-                        <span style={{ fontSize: "11px", lineHeight: 1 }}>{h.rulerGlyph}</span>
-                        {h.naturalRuler}
-                      </span>
-                    </div>
-
-                    {/* Ruling domains */}
-                    <p
-                      className="font-mono text-[10px] uppercase tracking-[0.15em] mb-4"
-                      style={{ color: "rgba(255,255,255,0.35)" }}
-                    >
-                      {h.ruling}
-                    </p>
-
-                    {/* Description */}
-                    <p
-                      className="font-body text-base leading-relaxed"
-                      style={{ color: "rgba(248,245,236,0.75)" }}
-                    >
-                      {h.desc}
-                    </p>
-                  </div>
-                </AstronatCard>
-              </div>
-            </section>
-          );
-        })}
-
-        {/* EDITORIAL BLOG / FAQ SECTION */}
-        <section 
-          className="relative w-full py-32 px-6 md:px-12 lg:px-20 z-30 shadow-[0_-20px_50px_rgba(0,0,0,0.3)] transition-colors duration-500"
-          style={{ 
-            backgroundColor: "var(--bg)", 
-            color: "var(--text-primary)",
-            borderTop: "1px solid var(--surface-border)"
-          }}
-        >
-          <div className="max-w-3xl mx-auto">
-            {/* Header */}
-            <div className="mb-20">
-              <div className="inline-block font-mono text-[10px] uppercase tracking-[0.2em] mb-4 text-[var(--color-y2k-blue)]">
-                Applied Astrology
-              </div>
-              <h2 className="font-primary text-5xl md:text-7xl uppercase tracking-tight leading-[0.9]">
-                The Mechanics of the Houses
-              </h2>
-            </div>
-
-            {/* FAQ 1: Empty Houses */}
-            <div className="mb-20 pt-10" style={{ borderTop: "1px solid var(--surface-border)" }}>
-              <h3 className="font-secondary text-2xl md:text-3xl mb-6">1. The Empty House Myth</h3>
-              <p className="font-body text-lg md:text-xl leading-relaxed mb-6" style={{ color: "var(--text-secondary)" }}>
-                An empty house is not a dead house. Just because there are no planets sitting in your 7th House of Relationships or your 2nd House of Finances doesn't mean you're destined to die alone or broke. 
-              </p>
-              <p className="font-body text-lg md:text-xl leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                Think of an empty house like an empty room in an apartment. The room still exists, and you still use it. To understand what happens in that room, you have to look at the <em>landlord</em> of the room. In astrology, the landlord is the ruling planet of the sign on the cusp.
-              </p>
-            </div>
-
-            {/* FAQ 2: House Rulers */}
-            <div className="mb-20 pt-10" style={{ borderTop: "1px solid var(--surface-border)" }}>
-              <h3 className="font-secondary text-2xl md:text-3xl mb-6">2. Follow the Landlord</h3>
-              <p className="font-body text-lg md:text-xl leading-relaxed mb-6" style={{ color: "var(--text-secondary)" }}>
-                Every house is governed by a zodiac sign, and every sign has a ruling planet. If your 10th House starts in Aries, then Mars is the landlord. The affairs of the 10th House (career, legacy, reputation) are entirely outsourced to wherever Mars is living in your chart.
-              </p>
-              <p className="font-body text-lg md:text-xl leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                If the landlord is in a strong, cozy position, the affairs of that house run smoothly. If the landlord is struggling, there's a leak in the ceiling of that house that you'll have to deal with—even if the room is empty.
-              </p>
-            </div>
-
-            {/* Persona Case Study */}
-            <div className="mb-10 pt-10" style={{ borderTop: "1px solid var(--surface-border)" }}>
-              <h3 className="font-secondary text-2xl md:text-3xl mb-6">3. Case Study: Alex's Career</h3>
-              <div 
-                className="p-8 rounded-[var(--shape-asymmetric-md)] mb-8 shadow-sm transition-colors duration-500"
-                style={{ 
-                  backgroundColor: "var(--bg-raised)",
-                  border: "1px solid var(--surface-border)"
-                }}
-              >
-                <p className="font-body text-lg leading-relaxed" style={{ color: "var(--text-primary)" }}>
-                  Let's say <strong>Alex</strong> has an empty 10th House (Career & Public Life) with Aries on the cusp.
-                </p>
-                <ul className="list-disc list-inside mt-4 font-body text-base space-y-2 ml-2" style={{ color: "var(--text-secondary)" }}>
-                  <li><strong>The House:</strong> 10th House (Career)</li>
-                  <li><strong>The Sign:</strong> Aries (Action, Conflict)</li>
-                  <li><strong>The Ruler:</strong> Mars (The Warrior)</li>
-                </ul>
-              </div>
-              <p className="font-body text-lg md:text-xl leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                To understand Alex's career path, we must find their Mars. Next, we locate Mars sitting in their <strong>3rd House of Communication</strong>. What does this mean? 
-              </p>
-              <p className="font-body text-lg md:text-xl leading-relaxed mt-6" style={{ color: "var(--text-secondary)" }}>
-                It means Alex's public reputation (10th) is inexorably linked to how they speak, write, or debate (3rd) with aggressive, pioneering force (Aries). They might be a controversial journalist, a fiercely local politician, or a viral podcaster. The house was empty, but the career is loud. You just had to trace the thread.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* OUTRO / CTA */}
-        <section 
-          id="section-outro" 
-          className="relative min-h-[70vh] flex items-center justify-center px-6 transition-colors duration-500"
-          style={{ backgroundColor: "var(--bg)" }}
-        >
-          <LearnOutroCard
-            title={<>The Sky<br />Sections</>}
-            description="Every chart has 12 houses. Some are active and full of planets, while others are silent stages waiting for transits to pass through and activate them."
-            buttonHref="/learn/natal-chart"
-            buttonText="Learn: Your Natal Chart"
-          />
-        </section>
-
-      </div>
-    </div>
+      <RelatedGuides
+        label="Read next"
+        guides={getGuides(["aspects", "natal-chart", "malefic-benefic"])}
+      />
+    </LessonShell>
   );
 }
