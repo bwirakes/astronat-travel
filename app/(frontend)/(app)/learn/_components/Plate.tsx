@@ -30,9 +30,11 @@ type PlateProps = {
  *
  *   {children — the figure body}
  *
- * The kicker + title + caption form a 12-column header (3 / 4 / 5). The body
- * is centered at `max-w-5xl` so the figure is sized to its content rather than
- * stretched to the page grid — print figures don't fill margins.
+ * The kicker + title + caption form a 12-column header (3 / 4 / 5),
+ * left-anchored at the prose width. The body breaks out to the full
+ * 1600px inner frame so figures (matrices, charts, wide tables) get the
+ * room they need — the editorial breakout pattern from longform
+ * journalism (NYT, Atlantic): prose stays narrow, figures go wide.
  *
  * For lightweight inline figures (small SVGs with a caption), use
  * <DiagramFigure> instead. Plate is for full-section artifacts.
@@ -45,7 +47,7 @@ export function Plate({ number, title, caption, children }: PlateProps) {
 
   return (
     <section className="px-6 md:px-12 lg:px-20 py-16 md:py-24 max-w-[1600px] mx-auto">
-      {/* ─── Header: kicker + title + caption ───────────────────────── */}
+      {/* ─── Header: kicker + title + caption (left-anchored at prose width) */}
       <SectionHeader
         kicker={`Fig. ${figNum}`}
         title={title}
@@ -53,11 +55,11 @@ export function Plate({ number, title, caption, children }: PlateProps) {
         titleSize="figure"
         titleClassName="md:max-w-[12ch]"
         layout="inline"
-        className="max-w-5xl mx-auto mb-10 md:mb-14"
+        className="max-w-[990px] mb-10 md:mb-14"
       />
 
-      {/* ─── Body — sized to content, centered ───────────────────────── */}
-      <div className="max-w-5xl mx-auto">{children}</div>
+      {/* ─── Body — full-bleed within the 1600px frame ────────────────── */}
+      <div>{children}</div>
     </section>
   );
 }

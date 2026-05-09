@@ -1,8 +1,8 @@
 import React from "react";
 import Link from "next/link";
-import styles from "./guide-button.module.css";
+import styles from "./editorial-button.module.css";
 
-export type GuideButtonVariant =
+export type EditorialButtonVariant =
   | "signs"
   | "chart"
   | "chartDark"
@@ -13,11 +13,13 @@ export type GuideButtonVariant =
   | "practice"
   | "welcome";
 
-type GuideButtonProps = {
-  /** Where the button links to. */
-  href: string;
+type EditorialButtonProps = {
+  /** Where the button links to (renders as Link). */
+  href?: string;
+  /** Action on click (renders as button). */
+  onClick?: () => void;
   /** Color palette key — drives bg + ink + accent via the CSS module. */
-  variant: GuideButtonVariant;
+  variant: EditorialButtonVariant;
   /** Top-left mono kicker (e.g. "01 · START HERE", "TRADITION"). */
   kicker: string;
   /**
@@ -41,22 +43,22 @@ type GuideButtonProps = {
    */
   decoration?: React.ReactNode;
   /**
-   * Optional background image URL (a `/public/...` asset). Rendered with
+   * Optional background image URL. Rendered with
    * `mix-blend-mode: multiply` and reduced opacity so the type stays
-   * readable. Pair with one of the lighter variants (signs, chart,
-   * tradition, relocation, practice) for best results.
+   * readable.
    */
   bgImage?: string;
+  /** Optional className for additional layout control. */
+  className?: string;
 };
 
 /**
- * Editorial typographic lockup for /learn hub cards. Mirrors the
- * ExploreButtons grammar (mono kicker · script · big serif main · italic
- * sub · optional decoration / bg image) so the hub feels like Chani's
- * astro-101 instead of a docs index.
+ * Editorial typographic lockup for dashboard and hub cards. 
+ * Shared component following the Astronat editorial design system.
  */
-export function GuideButton({
+export function EditorialButton({
   href,
+  onClick,
   variant,
   kicker,
   meta,
@@ -66,12 +68,10 @@ export function GuideButton({
   sub,
   decoration,
   bgImage,
-}: GuideButtonProps) {
-  return (
-    <Link
-      href={href}
-      className={`${styles.btn} ${styles[variant]} editorial-btn`}
-    >
+  className = "",
+}: EditorialButtonProps) {
+  const content = (
+    <>
       {bgImage && (
         <div
           aria-hidden
@@ -103,6 +103,22 @@ export function GuideButton({
           {decoration}
         </div>
       )}
-    </Link>
+    </>
+  );
+
+  const classes = `${styles.btn} ${styles[variant]} editorial-btn ${className}`;
+
+  if (href) {
+    return (
+      <Link href={href} className={classes}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <button onClick={onClick} className={classes}>
+      {content}
+    </button>
   );
 }

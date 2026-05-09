@@ -24,14 +24,9 @@ export { LessonDisclaimer } from "./LessonDisclaimer";
 
 // Guide-shaped primitives (the new direction — magazine guides, not lessons)
 export { GuideHeader } from "./GuideHeader";
-export { GuideButton, type GuideButtonVariant } from "./GuideButton";
+export { EditorialButton, type EditorialButtonVariant } from "@/app/components/EditorialButton";
 export { PullQuote } from "./PullQuote";
 export { RelatedGuides } from "./RelatedGuides";
-
-// Lesson-shaped primitives (legacy — still consumed by un-migrated pages)
-export { LessonIntro } from "./LessonIntro";
-export { Recap } from "./Recap";
-export { PaginationCard } from "./PaginationCard";
 
 // Body / teaching primitives — used by both shapes
 export { ConceptZero } from "./ConceptZero";
@@ -52,6 +47,7 @@ export { Aside } from "./Aside";
 export { DiagramFigure } from "./DiagramFigure";
 export { Plate } from "./Plate";
 export { KeyStrip } from "./KeyStrip";
+export { NatalWheel } from "./NatalWheel";
 
 // Glossary infrastructure
 export { Glossify, NoGloss } from "./Glossify";

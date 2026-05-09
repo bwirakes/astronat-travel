@@ -2,7 +2,6 @@ import {
   LessonShell,
   GuideHeader,
   ProseSection,
-  PullQuote,
   RelatedGuides,
   SourcesPanel,
   Aside,
@@ -27,6 +26,7 @@ export default function WelcomeLetterPage() {
         guide={guide}
         title="Start"
         titleItalic="Here"
+        byline="By Astro-Nat · Astrocartographer"
         lede="If you came here looking for your weekly horoscope, this is not that website. This is a working library of how astrology actually works — what it measures, what it interprets, and where the line between the two sits. Read this first only if you want to know what you&rsquo;re looking at before you start clicking around."
       />
 
@@ -119,11 +119,6 @@ export default function WelcomeLetterPage() {
           the contract. Nothing more.
         </p>
       </ProseSection>
-
-      <PullQuote attribution="— Astro-Nat">
-        Astronomy where it&rsquo;s astronomy, astrology where it&rsquo;s astrology,
-        and we never let one wear the other&rsquo;s clothing.
-      </PullQuote>
 
       <SourcesPanel
         sources={[

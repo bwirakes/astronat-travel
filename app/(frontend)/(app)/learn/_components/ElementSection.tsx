@@ -67,15 +67,15 @@ export function ElementSection({
         title={title}
         caption={caption}
         meta={members}
-        className="max-w-3xl mb-10 md:mb-14"
+        className="max-w-[990px] mb-10 md:mb-14"
       />
 
-      {/* ─── Body — 2-col grid for cards ─────────────────────────────── */}
-      {/* Two cards per row (with the third in a group of three sitting on
-          its own row, magazine-pacing style). [&>*]:max-w-none lets each
-          ConceptCard fill its grid column instead of holding to its
-          built-in max-w-2xl. */}
-      <div className="grid md:grid-cols-2 gap-6 md:gap-8 [&>*]:max-w-none [&>*]:w-full">
+      {/* ─── Body — 3-up at lg+, full-bleed within the 1600px frame ──── */}
+      {/* Each element group has 3 signs (Aries · Leo · Sagittarius for
+          Fire), so 3-up renders one element as a single magazine row.
+          [&>*]:max-w-none lets each ConceptCard fill its grid column
+          instead of holding to its built-in max-w-2xl. */}
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 [&>*]:max-w-none [&>*]:w-full">
         {items}
       </div>
     </section>

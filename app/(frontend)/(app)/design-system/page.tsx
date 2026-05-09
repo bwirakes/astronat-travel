@@ -2,6 +2,25 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { 
+  Y2KCyclone, 
+  AsteriskStarburst, 
+  WireframeGlobe, 
+  MonolineStar, 
+  AbstractSaturn, 
+  VintageCrosshairs, 
+  ChromaticRing, 
+  GeodeticGrid,
+  ConcentricDiamonds,
+  WireframeCube,
+  OrbitalPaths,
+  Sunburst,
+  BarcodeDecal,
+  PhaseMoon,
+  TargetReticle
+} from '@/app/components/ui/svg-shapes';
+import PlanetIcon from '@/app/components/PlanetIcon';
+import SignIcon from '@/app/components/SignIcon';
 
 export default function DesignSystemPage() {
   const [theme, setTheme] = useState('dark');
@@ -114,6 +133,101 @@ export default function DesignSystemPage() {
           <div style={{ padding: 'var(--space-md)', background: 'var(--color-black)', borderRadius: '50%', display: 'flex', justifyContent: 'center' }}>
             <Image src="/avatar/saturn-o.svg" alt="Saturn O" width={80} height={80} style={{ filter: theme === 'dark' ? 'invert(1)' : 'invert(1)' }}/>
           </div>
+        </div>
+      </section>
+
+      <hr style={{ border: 'none', borderTop: '1px solid var(--surface-border)', margin: 'var(--space-xl) 0' }} />
+
+      <section style={{ marginBottom: 'var(--space-2xl)' }}>
+        <h2 style={{ marginBottom: 'var(--space-xs)' }}>Shape Library (SVG Components)</h2>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 'var(--space-lg)' }}>Generated geometric vectors for the /learn section and beyond.</p>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 'var(--space-md)', textAlign: 'center' }}>
+          <div style={{ padding: 'var(--space-xl)', background: 'var(--surface)', border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-md)' }}>
+             <Y2KCyclone size={60} style={{ color: 'var(--color-y2k-blue)', margin: '0 auto var(--space-md)' }} />
+             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>Y2K Cyclone</div>
+          </div>
+          <div style={{ padding: 'var(--space-xl)', background: 'var(--surface)', border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-md)' }}>
+             <AsteriskStarburst size={60} style={{ color: 'inherit', margin: '0 auto var(--space-md)' }} />
+             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>Asterisk Starburst</div>
+          </div>
+          <div style={{ padding: 'var(--space-xl)', background: 'var(--surface)', border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-md)' }}>
+             <WireframeGlobe size={60} style={{ color: 'var(--color-acqua)', margin: '0 auto var(--space-md)' }} />
+             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>Wireframe Globe</div>
+          </div>
+          <div style={{ padding: 'var(--space-xl)', background: 'var(--surface)', border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-md)' }}>
+             <MonolineStar size={60} style={{ color: 'var(--gold)', margin: '0 auto var(--space-md)' }} />
+             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>Monoline Star</div>
+          </div>
+          <div style={{ padding: 'var(--space-xl)', background: 'var(--color-black)', border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-md)', color: 'var(--color-eggshell)' }}>
+             <AbstractSaturn size={60} style={{ color: 'var(--color-eggshell)', margin: '0 auto var(--space-md)' }} />
+             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>Abstract Saturn</div>
+          </div>
+          <div style={{ padding: 'var(--space-xl)', background: 'var(--surface)', border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-md)' }}>
+             <VintageCrosshairs size={60} style={{ color: 'var(--sage)', margin: '0 auto var(--space-md)' }} />
+             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>Vintage Crosshairs</div>
+          </div>
+          <div style={{ padding: 'var(--space-xl)', background: 'var(--surface)', border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-md)' }}>
+             <ChromaticRing size={60} style={{ margin: '0 auto var(--space-md)' }} />
+             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>Chromatic Ring</div>
+          </div>
+          <div style={{ padding: 'var(--space-xl)', background: 'var(--color-y2k-blue)', border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-md)', color: 'white' }}>
+             <GeodeticGrid size={60} style={{ color: 'white', margin: '0 auto var(--space-md)' }} />
+             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>Geodetic Grid</div>
+          </div>
+          <div style={{ padding: 'var(--space-xl)', background: 'var(--color-black)', border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-md)', color: 'var(--color-eggshell)' }}>
+             <ConcentricDiamonds size={60} style={{ margin: '0 auto var(--space-md)' }} />
+             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>Concentric Diamonds</div>
+          </div>
+          <div style={{ padding: 'var(--space-xl)', background: 'var(--surface)', border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-md)' }}>
+             <WireframeCube size={60} style={{ color: 'var(--color-acqua)', margin: '0 auto var(--space-md)' }} />
+             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>Wireframe Cube</div>
+          </div>
+          <div style={{ padding: 'var(--space-xl)', background: 'var(--surface)', border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-md)' }}>
+             <OrbitalPaths size={60} style={{ color: 'var(--color-spiced-life)', margin: '0 auto var(--space-md)' }} />
+             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>Orbital Paths</div>
+          </div>
+          <div style={{ padding: 'var(--space-xl)', background: 'var(--surface)', border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-md)' }}>
+             <Sunburst size={60} style={{ color: 'inherit', margin: '0 auto var(--space-md)' }} />
+             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>Sunburst</div>
+          </div>
+          <div style={{ padding: 'var(--space-xl)', background: 'var(--surface)', border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-md)' }}>
+             <BarcodeDecal size={60} style={{ color: 'inherit', margin: '0 auto var(--space-md)' }} />
+             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>Barcode Decal</div>
+          </div>
+          <div style={{ padding: 'var(--space-xl)', background: 'var(--color-y2k-blue)', border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-md)', color: 'white' }}>
+             <PhaseMoon size={60} style={{ margin: '0 auto var(--space-md)' }} />
+             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>Phase Moon</div>
+          </div>
+          <div style={{ padding: 'var(--space-xl)', background: 'var(--surface)', border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-md)' }}>
+             <TargetReticle size={60} style={{ color: 'var(--sage)', margin: '0 auto var(--space-md)' }} />
+             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>Target Reticle</div>
+          </div>
+        </div>
+      </section>
+
+      <hr style={{ border: 'none', borderTop: '1px solid var(--surface-border)', margin: 'var(--space-xl) 0' }} />
+
+      <section style={{ marginBottom: 'var(--space-2xl)' }}>
+        <h2 style={{ marginBottom: 'var(--space-xs)' }}>Planets & Zodiac System</h2>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 'var(--space-lg)' }}>Canonical glyph components for astrological entities.</p>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 'var(--space-md)', textAlign: 'center', marginBottom: 'var(--space-xl)' }}>
+           {['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto'].map(planet => (
+              <div key={planet} style={{ padding: 'var(--space-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-md)' }}>
+                 <PlanetIcon planet={planet as any} size={40} className={`text-planet-${planet.toLowerCase()}`} style={{ margin: '0 auto var(--space-sm)' }} />
+                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.6rem' }}>{planet}</div>
+              </div>
+           ))}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 'var(--space-md)', textAlign: 'center' }}>
+           {['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'].map(sign => (
+              <div key={sign} style={{ padding: 'var(--space-lg)', background: 'var(--surface)', border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-md)' }}>
+                 <SignIcon sign={sign as any} size={40} className="text-[var(--text-primary)]" style={{ margin: '0 auto var(--space-sm)' }} />
+                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.6rem' }}>{sign}</div>
+              </div>
+           ))}
         </div>
       </section>
 

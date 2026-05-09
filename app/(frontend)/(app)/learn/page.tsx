@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import SignIcon from "@/app/components/SignIcon";
+import { Sunburst } from "@/app/components/ui/svg-shapes";
 import { PageHeader } from "@/components/app/page-header-context";
 import {
-  GuideButton,
-  type GuideButtonVariant,
+  EditorialButton,
+  type EditorialButtonVariant,
   getLesson,
   type LessonId,
 } from "./_components";
@@ -20,7 +21,7 @@ import {
 
 type GuideContent = {
   id: LessonId;
-  variant: GuideButtonVariant;
+  variant: EditorialButtonVariant;
   kicker: string;
   /** Optional top-right counter — used as the big serif "01 / 04" on the
    *  Start Here cards. */
@@ -29,6 +30,7 @@ type GuideContent = {
   main: string;
   sub: string;
   decoration?: React.ReactNode;
+  bgImage?: string;
 };
 
 /* ── 101 — Start Here (in path order) ─────────────────────────────────── */
@@ -42,6 +44,7 @@ const ASTRO_101: GuideContent[] = [
     main: "Zodiac",
     sub: "Coordinates, not personalities.",
     decoration: <SignIcon sign="Aries" size={56} />,
+    bgImage: "/learn-bg/learn_zodiac_bg_v2_1778307601254.png",
   },
   {
     id: "houses",
@@ -51,6 +54,7 @@ const ASTRO_101: GuideContent[] = [
     script: "Twelve",
     main: "Houses",
     sub: "Sectors of life. Where the work happens.",
+    bgImage: "/learn-bg/learn_houses_bg_v2_1778307614956.png",
   },
   {
     id: "aspects",
@@ -60,6 +64,7 @@ const ASTRO_101: GuideContent[] = [
     script: "Geometry",
     main: "Aspects",
     sub: "How planets talk across the chart.",
+    bgImage: "/learn-bg/learn_aspects_bg_v3_1778307979278.png",
   },
   {
     id: "natal-chart",
@@ -69,6 +74,7 @@ const ASTRO_101: GuideContent[] = [
     script: "Your",
     main: "Chart",
     sub: "The synthesis — everything else lands here.",
+    bgImage: "/learn-bg/learn_natal_chart_bg_v3_1778308016068.png",
   },
 ];
 
@@ -81,6 +87,7 @@ const GUIDES: GuideContent[] = [
     script: "the stars",
     main: "Viewing",
     sub: "Where the planets are tonight.",
+    bgImage: "/learn-bg/learn_viewing_the_stars_bg_v2_1778307720286.png",
   },
   {
     id: "constellations",
@@ -89,6 +96,7 @@ const GUIDES: GuideContent[] = [
     script: "actual",
     main: "Constellations",
     sub: "The drift, in full.",
+    bgImage: "/learn-bg/learn_constellations_bg_v3_1778307997595.png",
   },
   {
     id: "malefic-benefic",
@@ -97,6 +105,7 @@ const GUIDES: GuideContent[] = [
     script: "& benefics",
     main: "Malefics",
     sub: "Not all planets are nice.",
+    bgImage: "/learn-bg/learn_malefic_benefic_bg_v2_1778307760977.png",
   },
   {
     id: "astrocartography",
@@ -105,6 +114,7 @@ const GUIDES: GuideContent[] = [
     script: "carto",
     main: "Astro",
     sub: "Your chart on the map.",
+    bgImage: "/learn-bg/learn_astrocartography_bg_v2_1778307777779.png",
   },
   {
     id: "geodetic-astrology",
@@ -113,6 +123,7 @@ const GUIDES: GuideContent[] = [
     script: "places",
     main: "Geodetic",
     sub: "Cities have weather too.",
+    bgImage: "/learn-bg/learn_geodetic_bg_v2_1778307792428.png",
   },
 ];
 
@@ -124,12 +135,20 @@ export default function LearnHubPage() {
       <PageHeader title="Astronat Hub" />
 
       {/* ─── Hero — tight, single-stance ──────────────────────────────── */}
-      <section className="px-6 md:px-12 lg:px-20 pt-10 md:pt-16 pb-8 md:pb-12 max-w-[1600px] mx-auto">
-        <div className="max-w-3xl">
-          <span className="font-mono text-[10px] md:text-xs uppercase tracking-[0.3em] opacity-70">
-            The Astronat Hub
-          </span>
-          <h1 className="mt-4 md:mt-6 font-primary text-[clamp(2rem,3.6vw,3rem)] leading-[1.05] tracking-tight">
+      <section className="px-6 md:px-12 lg:px-20 pt-10 md:pt-16 pb-8 md:pb-12 max-w-[1600px] mx-auto relative">
+        {/* Massive background sunburst watermark positioned close to header */}
+        <Sunburst 
+          size={800} 
+          className="absolute -top-[15rem] -right-[10rem] text-[var(--color-y2k-blue)] opacity-5 pointer-events-none hidden md:block" 
+        />
+        <div className="max-w-3xl relative z-10">
+          <div className="flex items-center gap-3 mb-4 md:mb-6">
+            <Sunburst size={18} className="text-[var(--color-spiced-life)]" />
+            <span className="font-mono text-[10px] md:text-xs uppercase tracking-[0.3em] opacity-70">
+              The Astronat Hub
+            </span>
+          </div>
+          <h1 className="font-primary text-[clamp(2rem,3.6vw,3rem)] leading-[1.05] tracking-tight">
             How astrology{" "}
             <span
               className="italic"
@@ -161,7 +180,7 @@ export default function LearnHubPage() {
         kicker="Astro 101 — Start Here"
         caption="The four foundations every chart reading sits on. Read in path order if you're new — or skip around."
         items={ASTRO_101}
-        gridCols="grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
+        gridCols="grid-cols-1 md:grid-cols-2"
         useCounter
       />
 
@@ -216,7 +235,7 @@ function Shelf({
         {items.map((item) => {
           const guide = getLesson(item.id);
           return (
-            <GuideButton
+            <EditorialButton
               key={item.id}
               href={guide.href}
               variant={item.variant}
@@ -227,6 +246,7 @@ function Shelf({
               main={item.main}
               sub={item.sub}
               decoration={item.decoration}
+              bgImage={item.bgImage}
             />
           );
         })}
