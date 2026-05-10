@@ -27,6 +27,7 @@ import {
 } from "@/app/lib/house-matrix";
 import { houseFromLongitude } from "@/app/lib/geodetic";
 import { computeEventScores, type OccupancyPlanet } from "@/app/lib/scoring-engine";
+import { computeUniversalSky } from "@/app/lib/universal-sky";
 import { determineSect } from "@/app/lib/arabic-parts";
 
 export async function POST(req: NextRequest) {
@@ -40,6 +41,7 @@ export async function POST(req: NextRequest) {
             parans = [],
             destLat = 0,
             destLon = 0,
+            refDate: refDateInput,
         } = body;
 
         if (!natalPlanets.length || !relocatedCusps.length) {
@@ -80,10 +82,31 @@ export async function POST(req: NextRequest) {
             house: houseFromLongitude(p.longitude, ascLon),
         }));
 
-        // Execute Memo Part 2: Vectorizing Life Events
-        const eventScores = computeEventScores(matrixResult, relocatedPlanets);
+        // Universal sky state — optional refDate from body, defaults to now.
+        // Adds a global sky modifier (current retrogrades, eclipses, node hits)
+        // to E_Final scores. Same data drives the V4 view's PlaceFieldTab §03.
+        // Reject malformed refDate inputs early — `new Date("banana")` parses
+        // to Invalid Date, which would propagate NaN through the 395-day
+        // ephemeris scan inside computeUniversalSky.
+        let refDate: Date;
+        if (refDateInput == null) {
+            refDate = new Date();
+        } else {
+            const parsed = new Date(refDateInput);
+            if (!Number.isFinite(parsed.getTime())) {
+                return NextResponse.json(
+                    { error: "refDate must be a valid ISO-8601 date string or omitted" },
+                    { status: 400 },
+                );
+            }
+            refDate = parsed;
+        }
+        const universalSky = await computeUniversalSky(refDate);
 
-        return NextResponse.json({ ...matrixResult, eventScores });
+        // Execute Memo Part 2: Vectorizing Life Events
+        const eventScores = computeEventScores(matrixResult, relocatedPlanets, universalSky);
+
+        return NextResponse.json({ ...matrixResult, eventScores, universalSky });
     } catch (err) {
         console.error("[/api/house-matrix]", err);
         return NextResponse.json(

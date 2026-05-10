@@ -72,6 +72,17 @@ export interface AstrocartoReadingResult {
    *  (marker missing). Datestamp form so future bumps are diffable. */
   geodeticEngineVersion?: string;
 
+  /** Universal sky snapshot at refDate — what the sky is doing for everyone
+   *  (location-agnostic). Drives the §03 "Sky weather right now" panel in
+   *  PlaceFieldTab and feeds the universal-sky modifier in scoring-engine.
+   *  Optional for back-compat with cached readings. */
+  universalSky?: import("@/app/lib/universal-sky").UniversalSkyState;
+  /** Gantt-shaped universal-sky events spanning the timing window — current
+   *  and upcoming retrograde periods, eclipse activation windows, station
+   *  markers, imminent ingresses. Rendered by TimingTab beneath the personal
+   *  transit Gantt on the same date scale. Optional for back-compat. */
+  universalSkySpans?: import("@/app/lib/window-scoring").UniversalSkySpan[];
+
   // Synastry add-ons (only present when readingCategory === "synastry")
   partnerNatalPlanets?: any[];
   synastryAspects?: any[];

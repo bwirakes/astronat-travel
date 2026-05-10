@@ -52,6 +52,8 @@ import {
 import { computeHouseNumber } from "./house-system";
 import { isOuterPlanet, computeOuterPlanetScore } from "./outer-planet-scoring";
 import { scoreAngleTransits, type AngleName, type AngleTransitContribution } from "./geodetic/angle-transits";
+import { scoreStations, type StationContribution } from "./geodetic/station-scoring";
+import type { StationEvent } from "./geodetic/geodetic-events";
 import { scoreNatalWorldPoints, type NatalWorldPointsResult } from "./geodetic/natal-world-points";
 import { scorePersonalEclipses, type PersonalEclipsesResult, type PersonalEclipseHit } from "./geodetic/personal-eclipses";
 import { scorePersonalLunations, type PersonalLunationsResult, type PersonalLunationHit } from "./geodetic/personal-lunations";
@@ -144,11 +146,21 @@ export interface HouseBreakdown {
      *  new moons add (+), full moons subtract (−). Same gating as A4
      *  (zone + natal contact both required). Per-house cap ±6. */
     lunation: number;
-    /** A5: secondary-progressions soft alignment. +5 when the destination
-     *  longitude falls in the progressed-Sun band, +2 when it also falls
-     *  in the progressed-Moon band. Identical across all 12 houses (the
-     *  signal is a global background field, not per-house). */
+    /** A5: combined progression bias. Sum of the sign-band aggregate
+     *  (uniform across houses) and the per-angle degree-precise hit (this
+     *  house only — fires when a progressed planet sits ±3° from a geo
+     *  angle, capped ±8). Captures both the slow background field and the
+     *  framework's "progressed Mars on geo-ASC" signal. */
     progression: number;
+    /** A5b: just the per-angle degree-precise progression hit on the
+     *  angular house this row owns (subset of `progression`). Surfaced for
+     *  transparency. */
+    progressionAngleHit: number;
+    /** A11: retrograde-station proximity to the destination's geo angle
+     *  (van Dam). Routed to angular houses (ASC→1, IC→4, DSC→7, MC→10);
+     *  per-house cap ±22. Negative for malefic stations, positive for
+     *  Venus/Jupiter. */
+    stationContribution: number;
     transits: number;
     retrograde: number;
     transitRx: number;
@@ -529,6 +541,12 @@ export function computeHouseMatrix(params: {
     /** A5: precomputed secondary-progression bands. Async by nature, so
      *  the caller resolves them and hands them to the sync engine. */
     progressedBands?: ProgressionsResult;
+    /** A11: live-detected stations from `universal-sky.ts:scanStationsAndRetrogradeWindows`.
+     *  When provided, `scoreStations` uses these instead of the curated
+     *  `STATIONS` table — which omits Mercury/Venus entirely and is sparse
+     *  for 2026+. Pass `universalSky.stations` adapted to `StationEvent`
+     *  shape from the caller. */
+    stations?: StationEvent[];
 }): HouseMatrixResult {
     const {
         natalPlanets,
@@ -547,6 +565,7 @@ export function computeHouseMatrix(params: {
         transitPositions,
         refDate,
         progressedBands,
+        stations,
     } = params;
 
     // Determine house system
@@ -732,6 +751,51 @@ export function computeHouseMatrix(params: {
             targetHouse,
             (lunationByHouse.get(targetHouse) ?? 0) + hit.severity,
         );
+    }
+
+    // ── A11: retrograde-station proximity to geodetic angles ─────────────
+    // Per van Dam: when a planet stations RX/direct within ~3° of a city's
+    // geodetic angle, that station defines the period for that location.
+    // STATION_BASE per planet: malefics −22 to −30, mercury −10, venus +6,
+    // jupiter +12. Decays with both date-distance (Gaussian, σ varies by
+    // planet) and orb (Gaussian σ²×2 = 4.5). Equal weighting of direct vs
+    // retrograde stations (DIRECT_MULT = 1.0) per van Dam's skipping rule.
+    // Routed to angular houses via STATION_ANGLE_TO_HOUSE.
+    const STATION_ANGLE_TO_HOUSE: Record<AngleName, number> = {
+        ASC: 1, IC: 4, DSC: 7, MC: 10,
+    };
+    const PER_HOUSE_STATION_CAP = 22;
+    const stationsResult = refDate
+        ? scoreStations({ dateUtc: refDate, geoMC, geoASC, stations })
+        : { raw: 0, contributions: [] as StationContribution[] };
+    const stationByHouse = new Map<number, number>();
+    for (const c of stationsResult.contributions) {
+        const targetHouse = STATION_ANGLE_TO_HOUSE[c.closestAngle];
+        stationByHouse.set(
+            targetHouse,
+            (stationByHouse.get(targetHouse) ?? 0) + c.severity,
+        );
+    }
+
+    // ── A5b: progressed-planet degree-precise hits to geodetic angles ────
+    // Sign-band aggregate stays uniform (legacy `progressionAggregate`); the
+    // angle-precise hits are per-angular-house and capture the framework's
+    // "progressed Mars 1° from geo-ASC" signal that gets washed out in a
+    // 30°-wide sign-band check. Routed via the same ASC→1, IC→4, DSC→7,
+    // MC→10 mapping as the station term.
+    const PROG_ANGLE_TO_HOUSE: Record<"ASC" | "IC" | "DSC" | "MC", number> = {
+        ASC: 1, IC: 4, DSC: 7, MC: 10,
+    };
+    const PER_HOUSE_PROG_ANGLE_CAP = 8;
+    const progressionsByHouse = new Map<number, number>();
+    if (progressedBands?.angleHits) {
+        for (const hit of progressedBands.angleHits) {
+            const targetHouse = PROG_ANGLE_TO_HOUSE[hit.angle];
+            progressionsByHouse.set(
+                targetHouse,
+                (progressionsByHouse.get(targetHouse) ?? 0) + hit.severity,
+            );
+        }
     }
 
     // ── A10: geodetic house wheel for the destination ───────────────────
@@ -951,21 +1015,39 @@ export function computeHouseMatrix(params: {
         }
 
         // ── Step 5e: Personal eclipse penalty (A4) ───────────────────────────
+        // Eclipse activations require a geodetic-angle hit AND a natal contact,
+        // so this is fundamentally a place-bound signal — routed into
+        // bucketGeodetic alongside the other geodetic terms.
         const rawEclipsePenalty = eclipsePenaltyByHouse.get(h) ?? 0;
         const eclipsePenalty = Math.max(PER_HOUSE_ECLIPSE_CAP, Math.min(0, Math.round(rawEclipsePenalty)));
 
         // ── Step 5e2: Personal lunation modifier (A9) ────────────────────────
-        // Same routing as eclipse, but bidirectional (new = positive,
-        // full = negative) and tighter cap. Folded into bucketTransit
-        // alongside eclipsePenalty so the transit bucket carries the
-        // "what's stirring this season" signal.
+        // Same routing as eclipse: place-bound (geodetic-angle + natal
+        // contact required). Bidirectional (new = positive, full = negative)
+        // with a tighter cap.
         const rawLunation = lunationByHouse.get(h) ?? 0;
         const lunationContribution = Math.max(-PER_HOUSE_LUNATION_CAP, Math.min(PER_HOUSE_LUNATION_CAP, Math.round(rawLunation)));
 
+        // ── Step 5e3: Geodetic retrograde station (A11) ──────────────────────
+        // van Dam: planet stations RX/direct within ±3° of geo-angle define
+        // the period for that location. STATION_BASE per-planet drives
+        // direction (malefics negative, jupiter/venus positive). Routed to
+        // angular houses (ASC→1, IC→4, DSC→7, MC→10).
+        const rawStation = stationByHouse.get(h) ?? 0;
+        const stationContribution = Math.max(-PER_HOUSE_STATION_CAP, Math.min(PER_HOUSE_STATION_CAP, Math.round(rawStation)));
+
         // ── Step 5f: Progression bias (A5) ────────────────────────────────────
-        // Identical for every house — it's a global background field, not
-        // angle-specific. Applied to bucketGeodetic.
-        const progression = progressionAggregate;
+        // Sum of: (1) sign-band match aggregate (uniform across houses,
+        // legacy), (2) per-angle degree-precise hits (this house only,
+        // matches the framework's "progressed planet on geodetic angle"
+        // signal). The angle-precise hits are what catch progressed Mars
+        // 1° from geo-ASC etc. — washed out in the sign-band aggregate.
+        const rawProgressionAngle = progressionsByHouse.get(h) ?? 0;
+        const progressionAngleHit = Math.max(
+            -PER_HOUSE_PROG_ANGLE_CAP,
+            Math.min(PER_HOUSE_PROG_ANGLE_CAP, Math.round(rawProgressionAngle)),
+        );
+        const progression = progressionAggregate + progressionAngleHit;
 
         // ── Step 6: Transits & Astrodynes (P3-A: Aspect-specific weights) ────
         let transitPts = 0;
@@ -1061,10 +1143,21 @@ export function computeHouseMatrix(params: {
         //   Transits (dynamic, time-dep)    30%   ⇒ natal+transits = 55%+30% = 85%
         //   Geodetic (background field)     15%   ⇒ background = 15%
         //
+        // Bucket composition:
+        //   Natal     — static chart quality (place-invariant, time-invariant)
+        //   Occupants — relocated planets in houses + chart-bridge effects
+        //   Transit   — dynamic time-only signals (transits, parans)
+        //   Geodetic  — place-bound signals: ACG lines, geo-angle proximity,
+        //               live transits to geo-angles, progressions to geo-angles,
+        //               retrograde stations on geo-angles, eclipses/lunations
+        //               on geo-zones. All require the destination's geometry.
+        // Eclipses + lunations moved here from bucketTransit since they're
+        // gated on geodetic-angle activation (not just calendar timing).
         const rawNatal     = base + dignity + lotBonus + worldPoints + chartRulerContribution + chartRulerGlobalLift;
         const rawOccupants = occupants + natalBridge + retrograde + transitRx + 50;
-        const rawTransit   = transitPts + paranPts + eclipsePenalty + lunationContribution + 50;
-        const rawGeodetic  = acgLine + geodetic + geodeticTransit + progression + 50;
+        const rawTransit   = transitPts + paranPts + 50;
+        const rawGeodetic  = acgLine + geodetic + geodeticTransit + progression
+                           + stationContribution + eclipsePenalty + lunationContribution + 50;
 
         // Min-Max Normalize Per Bucket (Symmetrically bounded around 50)
         // We use tight, real-world observable standard deviation bounds rather than
@@ -1076,7 +1169,12 @@ export function computeHouseMatrix(params: {
         // headroom. Combined with the lower penalty cap, this lifts the
         // bucketTransit mean from ~37 toward 50 (the neutral midline).
         const bucketTransit   = normalizeBucket(rawTransit, 10, 90); // original: 0, 100
-        const bucketGeodetic  = normalizeBucket(rawGeodetic, 15, 85); // original: -10, 110
+        // Widened from 15-85 → 10-90 because bucketGeodetic now absorbs
+        // station, eclipse, and lunation contributions in addition to the
+        // original acgLine + geodetic + geodeticTransit + progression.
+        // The wider bounds preserve resolution; without them the extra
+        // terms would saturate the upper/lower normalization slope.
+        const bucketGeodetic  = normalizeBucket(rawGeodetic, 10, 90);
 
         // WIDE_SCORING_V1: lift geodetic bucket weight 15% -> 22% so place
         // (ACG lines, geodetic angles) carries more signal. Pull from natal/
@@ -1104,6 +1202,8 @@ export function computeHouseMatrix(params: {
             breakdown: {
                 base, globalPenalty, dignity, occupants, acgLine, geodetic,
                 geodeticTransit,
+                stationContribution,
+                progressionAngleHit,
                 worldPoints,
                 chartRuler: chartRulerContribution,
                 eclipsePenalty,
