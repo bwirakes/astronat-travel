@@ -366,11 +366,14 @@ export async function runAstrocarto(
     eventScores = fused.eventScores;
     fusedMacroScore = fused.readingScore;
     fusedMacroVerdict = EVENT_LABELS[verdictBand(fused.readingScore)] ?? matrixMacroVerdict;
-    // Overwrite the matrix's macroScore/Verdict on the local matrixResult
-    // reference so downstream consumers (buildAIInput) see fused numbers
-    // in prompt context. We keep matrixMacroScore for baseline use.
-    (matrixResult as any).macroScore = fusedMacroScore;
-    (matrixResult as any).macroVerdict = fusedMacroVerdict;
+    // Intentional in-place mutation: matrixResult is local to this function
+    // and not reused after buildAIInput. Overwriting macroScore/Verdict here
+    // makes the AI prompt see fused numbers (matching UI), while
+    // matrixMacroScore preserves the place-only baseline for downstream
+    // helpers that must not double-count transits.
+    matrixResult.macroScore = fusedMacroScore;
+    matrixResult.macroVerdict = fusedMacroVerdict;
+    matrixResult.matrixMacroScore = matrixMacroScore;
   }
 
   // 6. Partner matrix (synastry only) — mirrors the user pipeline at the same destination

@@ -737,7 +737,7 @@ export function buildAIInput(args: {
         // macro so we don't stack transits on a fused macroScore. When
         // matrixMacroScore is missing, the matrixResult predates fusion and
         // its macroScore is still place-only — falling back is safe.
-        const matrixBaseline = (matrixResult as any).matrixMacroScore ?? matrixResult.macroScore;
+        const matrixBaseline = matrixResult.matrixMacroScore ?? matrixResult.macroScore;
         const heroScored = buildScoredWindows(dateRange.start, rawTransits, matrixBaseline, goalIds)[0];
         const rangeHighlights = buildRangeHighlights(dateRange.start, rawTransits, matrixBaseline, goalIds);
         const tw = [];
