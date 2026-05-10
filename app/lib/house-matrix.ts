@@ -766,25 +766,36 @@ export function computeHouseMatrix(params: {
         ? computeModalityCohorts({ transitPositions: harmonicSafeTransits })
         : [];
 
-    // ── CLUSTER_SCORING_V1: stellium amplifier ──────────────────────────
+    // ── CLUSTER_SCORING_V1: stellium amplifier + leader / MR ────────────
     //
-    // Plan: docs/implementation_plans/cluster-scoring.md §4.
+    // Plan: docs/implementation_plans/cluster-scoring.md §4 + §5.
     //
-    // Detect house / sign / orb stelliums once per chart, then build a
-    // planet → multiplier map so the occupant loop below can do an O(1)
-    // lookup. When CLUSTER_SCORING_V1 is off the map stays empty and the
-    // loop returns bit-for-bit identical occupant totals.
+    // Detect house / sign / orb stelliums once per chart, then build three
+    // planet-keyed maps so the occupant loop below does O(1) lookups:
     //
-    // Multiplier formulas (all monotonic in cluster size, all capped):
-    //   house cluster:  1 + 0.10 × (size − 2)   capped 1.5
-    //   sign cluster:   1 + 0.05 × (size − 2)   capped 1.3
-    //   orb cluster:    1 + 0.07 × (size − 2)   capped 1.4
+    //   ampMultByPlanet     — Phase 1 size amplifier (max of house/sign/orb)
+    //                          house: 1 + 0.10·(size−2) cap 1.5
+    //                          sign:  1 + 0.05·(size−2) cap 1.3
+    //                          orb:   1 + 0.07·(size−2) cap 1.4
+    //                          When planet belongs to multiple kinds we take
+    //                          the MAX, never the product, so the amplifier
+    //                          doesn't compound on itself.
+    //   leaderMultByPlanet  — Phase 2 within-cluster redistribution
+    //                          ×1.25 if the planet is the sole dignified
+    //                          leader of any cluster it belongs to;
+    //                          ×0.92 if it's a non-leader member of a
+    //                          cluster with a clear leader; ×1.0 otherwise
+    //                          (no cluster, or cluster has tied leaders so
+    //                          no redistribution applies).
+    //   mrBonusByPlanet     — Phase 2 mutual-reception flat bonus
+    //                          +8 to each planet that participates in a
+    //                          mutual-reception pair within its cluster.
     //
-    // When a planet is a member of multiple cluster kinds (the common case
-    // for a tight stellium that registers as house + sign + orb all at
-    // once), we take the MAX of the candidate multipliers — not the
-    // product — so the amplifier doesn't compound on itself.
-    const clusterMultByPlanet = new Map<string, number>();
+    // When CLUSTER_SCORING_V1 is off all three maps stay empty and the loop
+    // returns bit-for-bit identical occupant totals to legacy behavior.
+    const ampMultByPlanet = new Map<string, number>();
+    const leaderMultByPlanet = new Map<string, number>();
+    const mrBonusByPlanet = new Map<string, number>();
     if (isClusterScoringEnabled()) {
         const clusterPlanets = natalPlanets
             .map((p) => {
@@ -801,35 +812,90 @@ export function computeHouseMatrix(params: {
             .filter((x): x is { name: string; longitude: number; sign: string; house: number } => x !== null);
 
         const clusterSet = detectClusters(clusterPlanets);
-        const apply = (planet: string, candidate: number) => {
-            const cur = clusterMultByPlanet.get(planet) ?? 1.0;
-            if (candidate > cur) clusterMultByPlanet.set(planet, candidate);
+
+        // ── Amplifier (max-of-three) ────────────────────────────────────
+        const applyAmp = (planet: string, candidate: number) => {
+            const cur = ampMultByPlanet.get(planet) ?? 1.0;
+            if (candidate > cur) ampMultByPlanet.set(planet, candidate);
         };
         for (const c of clusterSet.houseClusters) {
             const m = Math.min(1.5, 1 + 0.10 * (c.size - 2));
-            for (const mem of c.members) apply(mem.planet, m);
+            for (const mem of c.members) applyAmp(mem.planet, m);
         }
         for (const c of clusterSet.signClusters) {
             const m = Math.min(1.3, 1 + 0.05 * (c.size - 2));
-            for (const mem of c.members) apply(mem.planet, m);
+            for (const mem of c.members) applyAmp(mem.planet, m);
         }
         for (const c of clusterSet.orbClusters) {
             const m = Math.min(1.4, 1 + 0.07 * (c.size - 2));
-            for (const mem of c.members) apply(mem.planet, m);
+            for (const mem of c.members) applyAmp(mem.planet, m);
+        }
+
+        // ── Leader arbitration ──────────────────────────────────────────
+        //
+        // Walk every cluster; for clusters with a single dignified leader,
+        // record ×1.25 for the leader and ×0.92 for every other member.
+        // When a planet appears in multiple clusters with conflicting
+        // statuses we take the MAX (×1.25 wins over ×0.92 wins over ×1.0)
+        // so leadership in any one cluster guarantees the leader bonus.
+        // Tied-leader clusters skip this step entirely.
+        const applyLeader = (planet: string, candidate: number) => {
+            const cur = leaderMultByPlanet.get(planet) ?? 1.0;
+            if (candidate > cur) leaderMultByPlanet.set(planet, candidate);
+        };
+        const allClusters = [
+            ...clusterSet.houseClusters,
+            ...clusterSet.signClusters,
+            ...clusterSet.orbClusters,
+        ];
+        for (const c of allClusters) {
+            if (c.dignifiedLeaders.length !== 1) continue; // tie or all-combust → skip
+            const leader = c.dignifiedLeaders[0];
+            for (const mem of c.members) {
+                if (mem.planet === leader) applyLeader(mem.planet, 1.25);
+                else applyLeader(mem.planet, 0.92);
+            }
+        }
+
+        // ── Mutual reception ────────────────────────────────────────────
+        //
+        // +8 flat to each member of a mutual-reception pair (within any
+        // cluster). Stacks if a planet is in multiple MR pairs across
+        // clusters — but capped at +16 to keep the additive in scale with
+        // the multiplicative path.
+        for (const c of allClusters) {
+            for (const [a, b] of c.mutualReceptionPairs) {
+                mrBonusByPlanet.set(a, Math.min(16, (mrBonusByPlanet.get(a) ?? 0) + 8));
+                mrBonusByPlanet.set(b, Math.min(16, (mrBonusByPlanet.get(b) ?? 0) + 8));
+            }
         }
     }
-    // O(1) lookup: returns 1.0 when the flag is off, when the planet isn't
-    // in any cluster, or when the planet name isn't recognised.
-    function clusterAmplifier(planetName: string): number {
-        if (clusterMultByPlanet.size === 0) return 1.0;
-        if (!planetName) return 1.0;
-        // Canonicalize to title case to match the keys produced by
-        // clusters.ts (which canonicalizes member names the same way).
-        const canon = planetName
+
+    // ── O(1) lookup helpers ─────────────────────────────────────────────
+    //
+    // Each returns the neutral identity (×1.0 / +0) when the flag is off,
+    // when the planet isn't in any cluster, or when the planet name isn't
+    // recognised. Canonicalize names to title case to match clusters.ts.
+    function canonName(planetName: string): string {
+        return planetName
             .split(/\s+/)
             .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
             .join(" ");
-        return clusterMultByPlanet.get(canon) ?? 1.0;
+    }
+    function clusterAmplifier(planetName: string): number {
+        if (ampMultByPlanet.size === 0) return 1.0;
+        if (!planetName) return 1.0;
+        return ampMultByPlanet.get(canonName(planetName)) ?? 1.0;
+    }
+    function clusterLeaderMult(planetName: string): number {
+        if (leaderMultByPlanet.size === 0) return 1.0;
+        if (!planetName) return 1.0;
+        return leaderMultByPlanet.get(canonName(planetName)) ?? 1.0;
+    }
+    function clusterMrBonus(planetName: string): number {
+        if (mrBonusByPlanet.size === 0) return 0;
+        if (!planetName) return 0;
+        return mrBonusByPlanet.get(canonName(planetName)) ?? 0;
     }
 
     const houses: HouseScore[] = [];
@@ -898,9 +964,13 @@ export function computeHouseMatrix(params: {
                     natalPlanets,
                     speed:        p.speed,
                 });
-                // CLUSTER_SCORING_V1: amplify outer-planet contribution when
-                // the planet is part of a stellium. No-op when the flag is off.
-                occupants += Math.round(outerScore * clusterAmplifier(pName));
+                // CLUSTER_SCORING_V1: leader → amplifier → mutual reception.
+                // Multipliers compose; MR is a flat additive applied last.
+                // No-op when the flag is off.
+                const adjOuter = Math.round(
+                    outerScore * clusterLeaderMult(pName) * clusterAmplifier(pName),
+                ) + clusterMrBonus(pName);
+                occupants += adjOuter;
             } else {
                 // Traditional planets: base mod → sect → combustion/cazimi → joy → hayz
                 let mod = getOccupantModifier(pName, h);
@@ -946,13 +1016,17 @@ export function computeHouseMatrix(params: {
                     if (inHayz) mod += 36; // Hayz bonus: maximum contextual strength
                 }
 
-                // CLUSTER_SCORING_V1: stellium amplifier on the traditional
-                // path. Multiplier is ≥1.0, so amplifies both positive (well-
-                // dignified, in-sect) and negative (debilitated, combust)
-                // contributions — a stellium of debilitated planets is meant
-                // to be even more dramatic than a single debilitated planet.
+                // CLUSTER_SCORING_V1: leader → amplifier → mutual reception.
+                // Leader multiplier (×1.25 leader, ×0.92 non-leader, ×1.0
+                // otherwise) redistributes weight WITHIN a cluster toward
+                // the dignified planet — approximately preserving the
+                // cluster total before the amplifier scales it up. The MR
+                // additive (+8) lands last as a flat bonus; mutual
+                // reception is a small but qualitatively distinct signal
+                // that shouldn't scale with cluster size.
                 // No-op when the flag is off.
-                mod = Math.round(mod * clusterAmplifier(pName));
+                mod = Math.round(mod * clusterLeaderMult(pName) * clusterAmplifier(pName))
+                    + clusterMrBonus(pName);
 
                 occupants += mod;
             }
