@@ -13,6 +13,7 @@ import { HouseMatrixResult } from "./house-matrix";
 import { W_EVENTS, M_AFFINITY, PLANETS, NUM_HOUSES, LIFE_EVENTS } from "./planet-library";
 import { EVENT_LABELS, verdictBand } from "./verdict";
 import { softCapScore } from "./scoring-flags";
+import { computeStationEventModifier } from "./geodetic/station-event-affinity";
 import type {
     UniversalSkyState,
     DignityTier,
@@ -34,6 +35,15 @@ export interface FinalEventScore {
     baseVolume: number;
     affinityModifier: number;
     skyModifier: number;
+    /** Per-event contribution from geodetic station signals — fires when a
+     *  planet stations within ±30d of refDate AND within ~3° of one of the
+     *  destination's geodetic angles. Driven by `STATION_EVENT_AFFINITY`
+     *  in `app/lib/geodetic/station-event-affinity.ts`. Adds the planet's
+     *  intrinsic significator weight to each event, on top of the
+     *  per-house→W_EVENTS channel that already routes station severity
+     *  into bucketGeodetic. Defaults to 0 when stationsResult is not
+     *  supplied or has no contributions. */
+    stationEventModifier: number;
     finalScore: number;
     verdict: string;
 }
@@ -308,15 +318,24 @@ export function computeEventScores(
         ? computeSkyModifier(skyState)
         : new Array(LIFE_EVENTS.length).fill(0);
 
+    // 4c. Layer D Execution: Station-Event Modifier (place-specific)
+    // Per-event distribution of geodetic station severities using the planet's
+    // intrinsic significator weight. Complementary to the per-house channel
+    // that already feeds bucketGeodetic — see station-event-affinity.ts header.
+    const stationEventModifiers = computeStationEventModifier(
+        matrixResult.stationsResult?.contributions,
+    );
+
     // 5. Final Synthesis Matrix Loop
     const results: FinalEventScore[] = [];
     for (let i = 0; i < LIFE_EVENTS.length; i++) {
         const baseVolume = baseEventVolumes[i];
         const affinityModifier = affinityModifiers[i];
         const skyModifier = skyModifiers[i];
+        const stationEventModifier = stationEventModifiers[i];
 
-        // E_Final = Base Volume + Affinity Modifiers + Sky Modifier
-        const rawScore = baseVolume + affinityModifier + skyModifier;
+        // E_Final = Base Volume + Affinity + Sky + Station-Event
+        const rawScore = baseVolume + affinityModifier + skyModifier + stationEventModifier;
         const finalScore = softCapScore(rawScore);
 
         results.push({
@@ -324,6 +343,7 @@ export function computeEventScores(
             baseVolume: Math.round(baseVolume),
             affinityModifier: Math.round(affinityModifier),
             skyModifier: Math.round(skyModifier),
+            stationEventModifier: Math.round(stationEventModifier),
             finalScore,
             verdict: getEventVerdict(finalScore)
         });

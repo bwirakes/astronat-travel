@@ -52,7 +52,7 @@ import {
 import { computeHouseNumber } from "./house-system";
 import { isOuterPlanet, computeOuterPlanetScore } from "./outer-planet-scoring";
 import { scoreAngleTransits, type AngleName, type AngleTransitContribution } from "./geodetic/angle-transits";
-import { scoreStations, type StationContribution } from "./geodetic/station-scoring";
+import { scoreStations, type StationContribution, type StationsResult } from "./geodetic/station-scoring";
 import type { StationEvent } from "./geodetic/geodetic-events";
 import { scoreNatalWorldPoints, type NatalWorldPointsResult } from "./geodetic/natal-world-points";
 import { scorePersonalEclipses, type PersonalEclipsesResult, type PersonalEclipseHit } from "./geodetic/personal-eclipses";
@@ -242,6 +242,14 @@ export interface HouseMatrixResult {
      *  but with smaller magnitudes — aggregate capped ±10. Empty when
      *  refDate is not provided. */
     personalLunations?: PersonalLunationsResult;
+    /** A11: retrograde-station contributions in effect at refDate, with
+     *  per-planet severity already encoding time/orb/angle decay. Empty
+     *  contributions array when no stations are within window or when
+     *  refDate is not provided. Surfaced so `computeEventScores` can read
+     *  the per-station data and apply the per-event affinity channel
+     *  (`computeStationEventModifier`) on top of the per-house bucket
+     *  channel that already feeds bucketGeodetic. */
+    stationsResult?: StationsResult;
     /** A10: per-natal-planet whole-sign geodetic house assignment for the
      *  destination. Surfaces "natal Mercury falls in geodetic H10 here" so
      *  the UI can build a geodetic house wheel. Cusps are also exposed. */
@@ -1309,6 +1317,7 @@ export function computeHouseMatrix(params: {
         ...(chartRuler ? { chartRuler } : {}),
         personalEclipses,
         personalLunations,
+        stationsResult,
         ...(progressedBands ? { progressedBands } : {}),
         midpointTriggers,
         harmonic45Hits,
