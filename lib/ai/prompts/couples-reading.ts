@@ -3,6 +3,7 @@ import { gemini, MODEL } from "@/lib/ai/client";
 import { SHARED_VOICE } from "@/lib/ai/voice";
 import { CouplesReadingSchema, type CouplesReading } from "@/lib/ai/schemas";
 import type { CouplesReadingInput } from "@/lib/readings/ai-couples-input-builder";
+import { backfillCouplesChartStructureCommentary } from "@/lib/readings/chart-structure-backfill";
 
 export type { CouplesReadingInput };
 
@@ -133,6 +134,23 @@ export async function writeCouplesReading(
       },
     });
     console.log(`[couples-reading] ok in ${Date.now() - t0}ms — finish=${finishReason}, usage=${JSON.stringify(usage)}`);
+
+    // Defensive backfill: same Gemini-skips-optional-arrays issue as the
+    // teacher reading. Synthesize per-partner cluster + pattern commentary
+    // entries from the engine's structured data when the LLM omits them.
+    const report = backfillCouplesChartStructureCommentary(
+        object,
+        input.chartStructureYou,
+        input.chartStructurePartner,
+    );
+    if (
+        report.youClustersBackfilled.length > 0
+        || report.youPatternsBackfilled.length > 0
+        || report.partnerClustersBackfilled.length > 0
+        || report.partnerPatternsBackfilled.length > 0
+    ) {
+        console.log(`[couples-reading] chart-structure backfill — youClusters:[${report.youClustersBackfilled.join(",")}] youPatterns:[${report.youPatternsBackfilled.join(",")}] partnerClusters:[${report.partnerClustersBackfilled.join(",")}] partnerPatterns:[${report.partnerPatternsBackfilled.join(",")}]`);
+    }
     return object;
   } catch (err: any) {
     console.error(`[couples-reading] failed after ${Date.now() - t0}ms — finish=${err?.finishReason ?? "?"}, textLen=${err?.text?.length ?? 0}, usage=${JSON.stringify(err?.usage ?? {})}`);

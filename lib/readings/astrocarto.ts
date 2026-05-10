@@ -475,6 +475,8 @@ export async function runAstrocarto(
   let couplesAvoidWindows: string[] = [];
   let couplesBestWindowScores: number[] = [];
   let couplesAvoidWindowScores: number[] = [];
+  let couplesChartStructureYou: any = undefined;
+  let couplesChartStructurePartner: any = undefined;
   if (readingCategory === "synastry" && partnerMatrix && synastryDerived) {
     try {
       const { buildCouplesAIInput } = await import("./ai-couples-input-builder");
@@ -550,6 +552,8 @@ export async function runAstrocarto(
         natalPlanetsYou: natalPlanets,
         natalPlanetsPartner: partnerNatalPlanets ?? [],
       });
+      couplesChartStructureYou = couplesInput.chartStructureYou;
+      couplesChartStructurePartner = couplesInput.chartStructurePartner;
 
       couplesReading = await writeCouplesReading(couplesInput);
     } catch (err: any) {
@@ -636,6 +640,8 @@ export async function runAstrocarto(
       : {}),
     ...(teacherReading ? { teacherReading } : {}),
     ...(aiInput.chartStructure ? { chartStructure: aiInput.chartStructure } : {}),
+    ...(couplesChartStructureYou ? { chartStructureYou: couplesChartStructureYou } : {}),
+    ...(couplesChartStructurePartner ? { chartStructurePartner: couplesChartStructurePartner } : {}),
     ...(couplesReading ? { couplesReading } : {}),
     ...(couplesBestWindows.length ? { bestWindows: couplesBestWindows } : {}),
     ...(couplesAvoidWindows.length ? { avoidWindows: couplesAvoidWindows } : {}),

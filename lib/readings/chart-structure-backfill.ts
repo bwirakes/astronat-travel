@@ -78,6 +78,52 @@ function backfillCluster(c: ChartStructureStellium): { clusterKey: string; headl
     };
 }
 
+export interface CouplesBackfillablePartial {
+    clusterCommentaryYou?: Array<{ clusterKey: string; headline: string; body: string }>;
+    clusterCommentaryPartner?: Array<{ clusterKey: string; headline: string; body: string }>;
+    patternCommentaryYou?: Array<{ patternKey: string; headline: string; body: string }>;
+    patternCommentaryPartner?: Array<{ patternKey: string; headline: string; body: string }>;
+}
+
+/**
+ * Couples variant. Same logic as backfillChartStructureCommentary but applied
+ * twice — once for the user's chart, once for the partner's — into the four
+ * matching fields on a CouplesReading output.
+ */
+export function backfillCouplesChartStructureCommentary<T extends CouplesBackfillablePartial>(
+    output: T,
+    chartStructureYou: ChartStructure | undefined,
+    chartStructurePartner: ChartStructure | undefined,
+): {
+    youClustersBackfilled: string[];
+    youPatternsBackfilled: string[];
+    partnerClustersBackfilled: string[];
+    partnerPatternsBackfilled: string[];
+} {
+    const youView = {
+        clusterCommentary: output.clusterCommentaryYou,
+        patternCommentary: output.patternCommentaryYou,
+    };
+    const youReport = backfillChartStructureCommentary(youView, chartStructureYou);
+    output.clusterCommentaryYou = youView.clusterCommentary;
+    output.patternCommentaryYou = youView.patternCommentary;
+
+    const partnerView = {
+        clusterCommentary: output.clusterCommentaryPartner,
+        patternCommentary: output.patternCommentaryPartner,
+    };
+    const partnerReport = backfillChartStructureCommentary(partnerView, chartStructurePartner);
+    output.clusterCommentaryPartner = partnerView.clusterCommentary;
+    output.patternCommentaryPartner = partnerView.patternCommentary;
+
+    return {
+        youClustersBackfilled: youReport.clustersBackfilled,
+        youPatternsBackfilled: youReport.patternsBackfilled,
+        partnerClustersBackfilled: partnerReport.clustersBackfilled,
+        partnerPatternsBackfilled: partnerReport.patternsBackfilled,
+    };
+}
+
 /**
  * Backfill missing clusterCommentary / patternCommentary entries on the AI
  * output, in place. Mutates and returns the same object for caller convenience.
