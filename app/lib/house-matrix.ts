@@ -51,6 +51,8 @@ import {
 } from "./geodetic";
 import { computeHouseNumber } from "./house-system";
 import { isOuterPlanet, computeOuterPlanetScore } from "./outer-planet-scoring";
+import { detectClusters } from "./clusters";
+import { isClusterScoringEnabled } from "./scoring-flags";
 import { scoreAngleTransits, type AngleName, type AngleTransitContribution } from "./geodetic/angle-transits";
 import { scoreNatalWorldPoints, type NatalWorldPointsResult } from "./geodetic/natal-world-points";
 import { scorePersonalEclipses, type PersonalEclipsesResult, type PersonalEclipseHit } from "./geodetic/personal-eclipses";
@@ -764,6 +766,72 @@ export function computeHouseMatrix(params: {
         ? computeModalityCohorts({ transitPositions: harmonicSafeTransits })
         : [];
 
+    // ── CLUSTER_SCORING_V1: stellium amplifier ──────────────────────────
+    //
+    // Plan: docs/implementation_plans/cluster-scoring.md §4.
+    //
+    // Detect house / sign / orb stelliums once per chart, then build a
+    // planet → multiplier map so the occupant loop below can do an O(1)
+    // lookup. When CLUSTER_SCORING_V1 is off the map stays empty and the
+    // loop returns bit-for-bit identical occupant totals.
+    //
+    // Multiplier formulas (all monotonic in cluster size, all capped):
+    //   house cluster:  1 + 0.10 × (size − 2)   capped 1.5
+    //   sign cluster:   1 + 0.05 × (size − 2)   capped 1.3
+    //   orb cluster:    1 + 0.07 × (size − 2)   capped 1.4
+    //
+    // When a planet is a member of multiple cluster kinds (the common case
+    // for a tight stellium that registers as house + sign + orb all at
+    // once), we take the MAX of the candidate multipliers — not the
+    // product — so the amplifier doesn't compound on itself.
+    const clusterMultByPlanet = new Map<string, number>();
+    if (isClusterScoringEnabled()) {
+        const clusterPlanets = natalPlanets
+            .map((p) => {
+                const name = (p.planet ?? (p as any).name ?? "").trim();
+                if (!name) return null;
+                const lon = p.longitude;
+                return {
+                    name,
+                    longitude: lon,
+                    sign: signFromLongitude(lon),
+                    house: getHouseNum(lon),
+                };
+            })
+            .filter((x): x is { name: string; longitude: number; sign: string; house: number } => x !== null);
+
+        const clusterSet = detectClusters(clusterPlanets);
+        const apply = (planet: string, candidate: number) => {
+            const cur = clusterMultByPlanet.get(planet) ?? 1.0;
+            if (candidate > cur) clusterMultByPlanet.set(planet, candidate);
+        };
+        for (const c of clusterSet.houseClusters) {
+            const m = Math.min(1.5, 1 + 0.10 * (c.size - 2));
+            for (const mem of c.members) apply(mem.planet, m);
+        }
+        for (const c of clusterSet.signClusters) {
+            const m = Math.min(1.3, 1 + 0.05 * (c.size - 2));
+            for (const mem of c.members) apply(mem.planet, m);
+        }
+        for (const c of clusterSet.orbClusters) {
+            const m = Math.min(1.4, 1 + 0.07 * (c.size - 2));
+            for (const mem of c.members) apply(mem.planet, m);
+        }
+    }
+    // O(1) lookup: returns 1.0 when the flag is off, when the planet isn't
+    // in any cluster, or when the planet name isn't recognised.
+    function clusterAmplifier(planetName: string): number {
+        if (clusterMultByPlanet.size === 0) return 1.0;
+        if (!planetName) return 1.0;
+        // Canonicalize to title case to match the keys produced by
+        // clusters.ts (which canonicalizes member names the same way).
+        const canon = planetName
+            .split(/\s+/)
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+            .join(" ");
+        return clusterMultByPlanet.get(canon) ?? 1.0;
+    }
+
     const houses: HouseScore[] = [];
 
     for (let h = 1; h <= 12; h++) {
@@ -819,7 +887,7 @@ export function computeHouseMatrix(params: {
 
             if (isOuterPlanet(pName)) {
                 // P1-A: Outer planets — angularity-based path
-                occupants += computeOuterPlanetScore({
+                const outerScore = computeOuterPlanetScore({
                     planetName:   pName,
                     sign:         signFromLongitude(p.longitude),
                     houseNum:     h,
@@ -830,6 +898,9 @@ export function computeHouseMatrix(params: {
                     natalPlanets,
                     speed:        p.speed,
                 });
+                // CLUSTER_SCORING_V1: amplify outer-planet contribution when
+                // the planet is part of a stellium. No-op when the flag is off.
+                occupants += Math.round(outerScore * clusterAmplifier(pName));
             } else {
                 // Traditional planets: base mod → sect → combustion/cazimi → joy → hayz
                 let mod = getOccupantModifier(pName, h);
@@ -874,6 +945,14 @@ export function computeHouseMatrix(params: {
                     }
                     if (inHayz) mod += 36; // Hayz bonus: maximum contextual strength
                 }
+
+                // CLUSTER_SCORING_V1: stellium amplifier on the traditional
+                // path. Multiplier is ≥1.0, so amplifies both positive (well-
+                // dignified, in-sect) and negative (debilitated, combust)
+                // contributions — a stellium of debilitated planets is meant
+                // to be even more dramatic than a single debilitated planet.
+                // No-op when the flag is off.
+                mod = Math.round(mod * clusterAmplifier(pName));
 
                 occupants += mod;
             }
