@@ -14,7 +14,6 @@
  */
 import { buildScoredWindows } from "./window-scoring";
 import {
-    buildFusedScoredWindows,
     buildNatalPlanetRelocatedHouseMap,
     buildOccupancyPlanets,
 } from "./scoring-engine";
@@ -70,8 +69,9 @@ export function computeHeroScore(
     }
 
     // 3. Hit-shape transit windows + travel date → run fused scoring engine
-    //    when full chart payload is present, else fall back to the legacy
-    //    buildScoredWindows (macro + transit-delta).
+    //    via buildScoredWindows. When the chart payload is missing (legacy
+    //    rows), we have no engine to run and must fall back to the place-only
+    //    macro score.
     const tw = details?.transitWindows;
     if (Array.isArray(tw) && tw.length && travelDateISO) {
         const isHitShape = tw[0] && typeof tw[0] === "object" && "transit_planet" in tw[0];
@@ -98,25 +98,19 @@ export function computeHeroScore(
                         natalPlanets,
                         relocatedCusps,
                     );
-                    const fused = buildFusedScoredWindows({
-                        travelDateISO,
+                    const scored = buildScoredWindows(travelDateISO, {
                         matrixResult,
                         relocatedPlanets,
                         transits: tw as TransitHit[],
                         goalIds,
                         natalPlanetHouse,
                     });
-                    if (fused.length && isFiniteNumber(fused[0].score)) {
-                        return { score: Math.round(fused[0].score), source: "transit-window" };
+                    if (scored.length && isFiniteNumber(scored[0].score)) {
+                        return { score: Math.round(scored[0].score), source: "transit-window" };
                     }
                 } catch {
-                    // Fall through to legacy path on any unexpected shape
+                    // Fall through to macro fallback on any unexpected shape
                 }
-            }
-
-            const scored = buildScoredWindows(travelDateISO, tw as TransitHit[], macroScore, goalIds);
-            if (scored.length && isFiniteNumber(scored[0].score)) {
-                return { score: scored[0].score, source: "transit-window" };
             }
         }
     }

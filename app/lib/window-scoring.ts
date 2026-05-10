@@ -27,12 +27,48 @@ import {
 } from "./geodetic/geodetic-events";
 import type { UniversalSkyState } from "./universal-sky";
 import { essentialDignityLabel } from "./dignity";
-import { softCapScore } from "./scoring-flags";
+import {
+    computePlaceAffinityLayers,
+    scoreAtAnchor,
+    type OccupancyPlanet,
+    type PlaceAffinityLayers,
+} from "./scoring-engine";
+import type { HouseMatrixResult } from "./house-matrix";
+
+/** Single input bundle threaded through every window/day/month scoring helper.
+ *  All call sites compose this once per reading and pass it into all helpers
+ *  so every surface scores through the same fused engine. */
+export interface FusedWindowInputs {
+    matrixResult: HouseMatrixResult;
+    relocatedPlanets: OccupancyPlanet[];
+    transits: TransitHit[];
+    goalIds: string[];
+    selectedGoalIndices?: number[] | null;
+    natalPlanetHouse: Map<string, number>;
+    skyState?: UniversalSkyState | null;
+}
+
+/** Internal: dedupe transits by (transit_planet × natal_planet × aspect),
+ *  keeping the tightest-orb sample. Used by monthly aggregations so weekly
+ *  samples of the same slow transit don't multi-count. */
+function dedupTightestByCombo(transits: TransitHit[]): TransitHit[] {
+    const tightestByCombo = new Map<string, TransitHit>();
+    for (const t of transits) {
+        const key = `${t.transit_planet}|${t.natal_planet}|${t.aspect}`;
+        const existing = tightestByCombo.get(key);
+        if (!existing || (t.orb ?? 99) < (existing.orb ?? 99)) {
+            tightestByCombo.set(key, t);
+        }
+    }
+    return [...tightestByCombo.values()];
+}
+
+/** Internal: derive the contributions list once. */
+function stationContribs(inputs: FusedWindowInputs) {
+    return inputs.matrixResult.stationsResult?.contributions ?? null;
+}
 
 const HALF_WIDTH_DAYS = 5;          // window is centred ± this many days
-const TRANSIT_SCALE = 6;            // each tight benefic ≈ +6 to baseline
-const MAX_DELTA = 25;               // cap so baseline still dominates
-const GOAL_BOOST = 1.6;             // multiplier for goal-relevant transits
 
 // /reading/new goal IDs → natal planets that act as the "target" for that
 // goal's transits. A user picking `love` cares more about transits hitting
@@ -64,87 +100,12 @@ export interface ScoredWindow {
     drivers: string[];              // top transits explaining the score
 }
 
-/** Build the set of natal targets a transit can hit to count as "goal-relevant".
- *  Returns null if there are no goal-relevant targets (i.e. all transits weighted
- *  equally — used for the timing-only / no-goals case). */
-function goalTargetSet(goalIds: string[]): Set<string> | null {
-    if (!goalIds.length) return null;
-    const set = new Set<string>();
-    let hadAny = false;
-    for (const g of goalIds) {
-        const targets = GOAL_NATAL_TARGETS[g];
-        if (targets && targets.length) {
-            hadAny = true;
-            for (const t of targets) set.add(t);
-        }
-    }
-    return hadAny ? set : null;
-}
-
-/** Score a single date by sampling transits within ±halfWidth days. */
-export function scoreDate(
-    centerISO: string,
-    transits: TransitHit[],
-    baselineMacro: number,
-    goalIds: string[] = [],
-    halfWidth = HALF_WIDTH_DAYS,
-): { score: number; drivers: string[] } {
-    if (!centerISO) return { score: baselineMacro, drivers: [] };
-    const center = new Date(centerISO).getTime();
-    if (!isFinite(center)) return { score: baselineMacro, drivers: [] };
-
-    const halfMs = halfWidth * 86_400_000;
-    const goalTargets = goalTargetSet(goalIds);
-    let benefic = 0;
-    let malefic = 0;
-    const driversTop: Array<{ note: string; weight: number; goalHit: boolean }> = [];
-
-    for (const t of transits) {
-        const tTime = new Date(t.date).getTime();
-        if (!isFinite(tTime)) continue;
-        if (Math.abs(tTime - center) > halfMs) continue;
-
-        const natalKey = (t.natal_planet || "").toLowerCase();
-        const goalHit = goalTargets ? goalTargets.has(natalKey) : false;
-        const goalMul = goalHit ? GOAL_BOOST : 1;
-
-        // Strength: tighter orb = stronger; |orb| in degrees, max ~3 for our window.
-        // Retrograde transits externalize less — same theme, but lower visible weight.
-        const retroMul = t.retrograde ? 0.7 : 1;
-        const tightness = Math.max(0.2, 1 - (t.orb ?? 3) / 3) * goalMul * retroMul;
-        if (t.benefic) benefic += tightness;
-        else            malefic += tightness;
-        driversTop.push({
-            note: `${t.transit_planet}${t.retrograde ? " ℞" : ""} ${t.aspect} natal ${t.natal_planet}${goalHit ? " ★" : ""}`,
-            weight: tightness * (t.benefic ? 1 : -1),
-            goalHit,
-        });
-    }
-
-    let delta = (benefic - malefic) * TRANSIT_SCALE;
-    if (delta >  MAX_DELTA) delta =  MAX_DELTA;
-    if (delta < -MAX_DELTA) delta = -MAX_DELTA;
-
-    // Route through softCapScore (knee 85, slope 0.4, cap 95) so the upper
-    // tail compresses instead of clipping at 100. macroScore already uses
-    // softCapScore in house-matrix.ts; the hero used to re-apply a hard
-    // Math.min(100, ...) which produced ~3% scores pinned at exactly 100.
-    // Routing through softCapScore makes 100 a tail-end event.
-    const score = softCapScore(baselineMacro + delta);
-    const drivers = driversTop
-        .sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight))
-        .slice(0, 3)
-        .map(d => d.note);
-
-    return { score, drivers };
-}
-
-/** Build the hero window + alternates anchored on travelDate. */
+/** Build the hero window + alternates anchored on travelDate. Every offset
+ *  scores through the fused engine — same path as the macro/hero — so the
+ *  sidebar windows can never disagree with the headline. */
 export function buildScoredWindows(
     travelDateISO: string | null,
-    transits: TransitHit[],
-    baselineMacro: number,
-    goalIds: string[] = [],
+    inputs: FusedWindowInputs,
 ): ScoredWindow[] {
     if (!travelDateISO) return [];
     const center = new Date(travelDateISO);
@@ -157,11 +118,25 @@ export function buildScoredWindows(
         { days:  28, label: "A month later" },
     ];
 
+    // Place affinity layers don't depend on the date — compute once.
+    const layers = computePlaceAffinityLayers(inputs.matrixResult, inputs.relocatedPlanets);
+    const stations = stationContribs(inputs);
+
     return offsets.map(({ days, label }) => {
         const c = new Date(center.getTime() + days * 86_400_000);
         const start = new Date(c.getTime() - HALF_WIDTH_DAYS * 86_400_000);
         const end = new Date(c.getTime() + HALF_WIDTH_DAYS * 86_400_000);
-        const { score, drivers } = scoreDate(c.toISOString(), transits, baselineMacro, goalIds);
+        const { score, drivers } = scoreAtAnchor({
+            layers,
+            transits: inputs.transits,
+            centerISO: c.toISOString(),
+            goalIds: inputs.goalIds,
+            selectedGoalIndices: inputs.selectedGoalIndices ?? null,
+            natalPlanetHouse: inputs.natalPlanetHouse,
+            halfWidthDays: HALF_WIDTH_DAYS,
+            skyState: inputs.skyState ?? null,
+            stationContributions: stations,
+        });
         return {
             label,
             centerISO: c.toISOString(),
@@ -184,9 +159,7 @@ export interface DailyScore {
 
 export function buildDailySeries(
     travelDateISO: string | null,
-    transits: TransitHit[],
-    baselineMacro: number,
-    goalIds: string[] = [],
+    inputs: FusedWindowInputs,
     daysBefore = 21,
     daysAfter = 79,
 ): DailyScore[] {
@@ -195,11 +168,27 @@ export function buildDailySeries(
     if (isNaN(anchor.getTime())) return [];
     const anchorDay = anchor.toISOString().slice(0, 10);
 
+    // Layers + stations are date-independent; compute once and reuse for every
+    // day. Only computeTransitModifiersAtAnchor + finalize + headline run per
+    // day. Daily halfWidth = 2 to keep the day-to-day signal tight.
+    const layers = computePlaceAffinityLayers(inputs.matrixResult, inputs.relocatedPlanets);
+    const stations = stationContribs(inputs);
+
     const out: DailyScore[] = [];
     for (let d = -daysBefore; d <= daysAfter; d++) {
         const day = new Date(anchor.getTime() + d * 86_400_000);
         const iso = day.toISOString().slice(0, 10);
-        const { score } = scoreDate(day.toISOString(), transits, baselineMacro, goalIds, 2);
+        const { score } = scoreAtAnchor({
+            layers,
+            transits: inputs.transits,
+            centerISO: day.toISOString(),
+            goalIds: inputs.goalIds,
+            selectedGoalIndices: inputs.selectedGoalIndices ?? null,
+            natalPlanetHouse: inputs.natalPlanetHouse,
+            halfWidthDays: 2,
+            skyState: inputs.skyState ?? null,
+            stationContributions: stations,
+        });
         out.push({ iso, score, isAnchor: iso === anchorDay });
     }
     return out;
@@ -227,9 +216,7 @@ export interface RangeHighlights {
  */
 export function buildRangeHighlights(
     travelDateISO: string | null,
-    transits: TransitHit[],
-    baselineMacro: number,
-    goalIds: string[] = [],
+    inputs: FusedWindowInputs,
     windowDays = 90,
     spanDays = 5,
     minGapDays = 10,
@@ -241,6 +228,11 @@ export function buildRangeHighlights(
     const MS_DAY = 86_400_000;
     const halfSpan = Math.floor(spanDays / 2);
 
+    // Layers + stations + goal target set are date-independent; compute once.
+    const layers = computePlaceAffinityLayers(inputs.matrixResult, inputs.relocatedPlanets);
+    const stations = stationContribs(inputs);
+    const goalTargets = new Set(inputs.goalIds.flatMap(g => GOAL_NATAL_TARGETS[g] ?? []));
+
     // Build a candidate window for every center-day in [D0, D{windowDays}]
     const candidates: Array<{ centerDay: number; centerISO: string; startISO: string; endISO: string; score: number; topHits: TransitHit[] }> = [];
 
@@ -249,19 +241,29 @@ export function buildRangeHighlights(
         const start  = new Date(center.getTime() - halfSpan * MS_DAY);
         const end    = new Date(center.getTime() + halfSpan * MS_DAY);
         const cISO   = center.toISOString();
-        const { score, drivers } = scoreDate(cISO, transits, baselineMacro, goalIds);
+        const { score } = scoreAtAnchor({
+            layers,
+            transits: inputs.transits,
+            centerISO: cISO,
+            goalIds: inputs.goalIds,
+            selectedGoalIndices: inputs.selectedGoalIndices ?? null,
+            natalPlanetHouse: inputs.natalPlanetHouse,
+            halfWidthDays: HALF_WIDTH_DAYS,
+            skyState: inputs.skyState ?? null,
+            stationContributions: stations,
+        });
 
-        // Collect the TransitHit objects whose date falls in [start, end]
+        // Collect the TransitHit objects whose date falls in [start, end] for
+        // the topHits surface (used by WindowsList to render driver pills).
         const hitMap = new Map<string, { hit: TransitHit; weight: number }>();
         const startT = start.getTime();
         const endT   = end.getTime();
-        for (const t of transits) {
+        for (const t of inputs.transits) {
             const tT = new Date(t.date).getTime();
             if (!isFinite(tT) || tT < startT || tT > endT) continue;
             const key = `${t.transit_planet}|${t.natal_planet}|${t.aspect}`;
             if (!hitMap.has(key)) {
                 const natalKey = (t.natal_planet ?? "").toLowerCase();
-                const goalTargets = new Set(goalIds.flatMap(g => GOAL_NATAL_TARGETS[g] ?? []));
                 const goalHit = goalTargets.has(natalKey);
                 const tightness = Math.max(0.2, 1 - (t.orb ?? 3) / 3) * (goalHit ? 1.6 : 1);
                 hitMap.set(key, { hit: t, weight: tightness * (t.benefic ? 1 : -1) });
@@ -273,7 +275,6 @@ export function buildRangeHighlights(
             .map(v => v.hit);
 
         candidates.push({ centerDay: d, centerISO: cISO, startISO: start.toISOString(), endISO: end.toISOString(), score, topHits });
-        void drivers; // already derived via scoreDate, topHits replaces it
     }
 
     // Pick top-2 non-overlapping peaks, then bottom-2 non-overlapping valleys.
@@ -493,61 +494,58 @@ export function solveTransitSpans(
 // natal_planet × aspect) keeping the tightest sample so the 4 weekly samples
 // of e.g. Saturn-Sun-square don't count 4× toward the month's score.
 
-/** Internal: score the unique transits whose dates fall in `[rangeStart, rangeEnd]`.
- *  Dedupes by combo (tightest-orb wins) so monthly aggregations don't multi-count
- *  weekly samples of the same slow transit. */
-function scoreHitsInRange(
-    hits: TransitHit[],
-    baselineMacro: number,
-    goalIds: string[],
+/** Internal: score a calendar month through the fused engine. The engine
+ *  filters transits to ±halfWidth around `centerISO`; for monthly grain the
+ *  caller passes the mid-month date and a halfWidth wide enough to cover the
+ *  whole month. Hits are deduped by combo (tightest-orb wins) before
+ *  scoring so weekly samples of the same slow transit don't multi-count. */
+function scoreMonthFused(
+    layers: PlaceAffinityLayers,
+    inputs: FusedWindowInputs,
+    stations: ReturnType<typeof stationContribs>,
     rangeStartMs: number,
     rangeEndMs: number,
 ): { score: number; drivers: string[] } {
-    const tightestByCombo = new Map<string, TransitHit>();
-    for (const t of hits) {
+    // Filter to the calendar month, then dedupe.
+    const inMonth: TransitHit[] = [];
+    for (const t of inputs.transits) {
         const tTime = new Date(t.date).getTime();
         if (!isFinite(tTime) || tTime < rangeStartMs || tTime > rangeEndMs) continue;
-        const key = `${t.transit_planet}|${t.natal_planet}|${t.aspect}`;
-        const existing = tightestByCombo.get(key);
-        if (!existing || (t.orb ?? 99) < (existing.orb ?? 99)) {
-            tightestByCombo.set(key, t);
-        }
+        inMonth.push(t);
     }
-
-    const goalTargets = goalTargetSet(goalIds);
-    let benefic = 0;
-    let malefic = 0;
-    const driversTop: Array<{ note: string; weight: number }> = [];
-
-    for (const t of tightestByCombo.values()) {
-        const natalKey = (t.natal_planet || "").toLowerCase();
-        const goalHit = goalTargets ? goalTargets.has(natalKey) : false;
-        const goalMul = goalHit ? GOAL_BOOST : 1;
-        const retroMul = t.retrograde ? 0.7 : 1;
-        const tightness = Math.max(0.2, 1 - (t.orb ?? 3) / 3) * goalMul * retroMul;
-        if (t.benefic) benefic += tightness;
-        else            malefic += tightness;
-        driversTop.push({
-            note: `${t.transit_planet}${t.retrograde ? " ℞" : ""} ${t.aspect} natal ${t.natal_planet}${goalHit ? " ★" : ""}`,
-            weight: tightness * (t.benefic ? 1 : -1),
+    const deduped = dedupTightestByCombo(inMonth);
+    if (deduped.length === 0) {
+        // No hits in this month → score the place itself (layers + sky + station)
+        // through the same finalize path.
+        const { score } = scoreAtAnchor({
+            layers,
+            transits: [],
+            centerISO: new Date((rangeStartMs + rangeEndMs) / 2).toISOString(),
+            goalIds: inputs.goalIds,
+            selectedGoalIndices: inputs.selectedGoalIndices ?? null,
+            natalPlanetHouse: inputs.natalPlanetHouse,
+            halfWidthDays: 31,
+            skyState: inputs.skyState ?? null,
+            stationContributions: stations,
         });
+        return { score, drivers: [] };
     }
 
-    let delta = (benefic - malefic) * TRANSIT_SCALE;
-    if (delta >  MAX_DELTA) delta =  MAX_DELTA;
-    if (delta < -MAX_DELTA) delta = -MAX_DELTA;
-
-    // Route through softCapScore (knee 85, slope 0.4, cap 95) so the upper
-    // tail compresses instead of clipping at 100. macroScore already uses
-    // softCapScore in house-matrix.ts; the hero used to re-apply a hard
-    // Math.min(100, ...) which produced ~3% scores pinned at exactly 100.
-    // Routing through softCapScore makes 100 a tail-end event.
-    const score = softCapScore(baselineMacro + delta);
-    const drivers = driversTop
-        .sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight))
-        .slice(0, 3)
-        .map(d => d.note);
-
+    // Anchor at mid-month; halfWidth wide enough to capture every day in the
+    // month (31 days both sides is generous but cheap — the deduped/in-month
+    // filter above already bounded the hit set).
+    const centerMs = (rangeStartMs + rangeEndMs) / 2;
+    const { score, drivers } = scoreAtAnchor({
+        layers,
+        transits: deduped,
+        centerISO: new Date(centerMs).toISOString(),
+        goalIds: inputs.goalIds,
+        selectedGoalIndices: inputs.selectedGoalIndices ?? null,
+        natalPlanetHouse: inputs.natalPlanetHouse,
+        halfWidthDays: 31,
+        skyState: inputs.skyState ?? null,
+        stationContributions: stations,
+    });
     return { score, drivers };
 }
 
@@ -565,9 +563,7 @@ export interface MonthlyScore {
  *  whole-month proper nouns ("September") rather than rolling 30-day spans. */
 export function buildMonthlySeries(
     anchorISO: string | null,
-    transits: TransitHit[],
-    baselineMacro: number,
-    goalIds: string[] = [],
+    inputs: FusedWindowInputs,
     monthCount = 12,
 ): MonthlyScore[] {
     if (!anchorISO) return [];
@@ -576,6 +572,9 @@ export function buildMonthlySeries(
 
     const startYear = anchor.getUTCFullYear();
     const startMonth = anchor.getUTCMonth();
+
+    const layers = computePlaceAffinityLayers(inputs.matrixResult, inputs.relocatedPlanets);
+    const stations = stationContribs(inputs);
 
     const out: MonthlyScore[] = [];
     for (let i = 0; i < monthCount; i++) {
@@ -586,8 +585,8 @@ export function buildMonthlySeries(
         // (any hour, UTC) is included; a hit on the 1st of the next month is not.
         const rangeEndMs = nextMonthStart.getTime() - 1;
 
-        const { score, drivers } = scoreHitsInRange(
-            transits, baselineMacro, goalIds, rangeStartMs, rangeEndMs,
+        const { score, drivers } = scoreMonthFused(
+            layers, inputs, stations, rangeStartMs, rangeEndMs,
         );
 
         out.push({
@@ -674,15 +673,13 @@ export interface ArrivalCandidate {
  *  every candidate has a full M+2 lookahead. */
 export function buildArrivalScores(
     anchorISO: string | null,
-    transits: TransitHit[],
-    baselineMacro: number,
-    goalIds: string[] = [],
+    inputs: FusedWindowInputs,
     candidateCount = 12,
 ): ArrivalCandidate[] {
     if (!anchorISO || candidateCount < 1) return [];
 
     const months = buildMonthlySeries(
-        anchorISO, transits, baselineMacro, goalIds, candidateCount + 2,
+        anchorISO, inputs, candidateCount + 2,
     );
     if (months.length < 3) return [];
 
@@ -694,7 +691,7 @@ export function buildArrivalScores(
     // actually have. Result: a legacy reading with 9 months of forward hits
     // surfaces at most 7 candidates (M / M+1 / M+2 must all sit within the
     // 9-month coverage), not 12 phantom ones.
-    const lastHitTime = transits.reduce((max, t) => {
+    const lastHitTime = inputs.transits.reduce((max, t) => {
         const tT = new Date(t.date).getTime();
         return isFinite(tT) && tT > max ? tT : max;
     }, -Infinity);

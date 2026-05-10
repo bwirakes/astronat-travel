@@ -596,17 +596,26 @@ export async function runAstrocarto(
       const { writeCouplesReading } = await import("@/lib/ai/prompts/couples-reading");
       const { toCouplesViewModel } = await import("@/app/lib/couples-viewmodel");
       const { buildRangeHighlights } = await import("@/app/lib/window-scoring");
-      const { jointScore } = await import("@/app/lib/verdict");
+      const {
+        buildNatalPlanetRelocatedHouseMap: _buildNphMap,
+        buildOccupancyPlanets: _buildOccupancyPlanets,
+      } = await import("@/app/lib/scoring-engine");
 
       // Joint timing windows. Stack both partners' transit hits and score
-      // against the joint baseline so a hard transit on either chart drags
-      // the window down. Mirrors the teacher path's window derivation.
+      // them through the user's fused engine inputs — every surface (single
+      // and joint) goes through the same engine, just with the union of
+      // transit hits. The user's place-affinity matrix carries the place fit;
+      // the partner's transits add to the date-specific transit signal.
       if (travelDate) {
-        // Joint baseline uses matrix-only macros so buildRangeHighlights's
-        // scoreDate doesn't stack transits twice.
-        const jointBaseline = jointScore(matrixMacroScore, partnerMatrix.matrixMacroScore ?? partnerMatrix.macroScore);
         const jointTransits = [...rawTransits, ...partnerMatrix.rawTransits];
-        const ranges = buildRangeHighlights(travelDate, jointTransits, jointBaseline, goalIds ?? []);
+        const jointInputs = {
+          matrixResult,
+          relocatedPlanets: _buildOccupancyPlanets(natalPlanets, relocatedCusps, acgLines),
+          transits: jointTransits,
+          goalIds: goalIds ?? [],
+          natalPlanetHouse: _buildNphMap(natalPlanets, relocatedCusps),
+        };
+        const ranges = buildRangeHighlights(travelDate, jointInputs);
         const shortDate = (iso: string) => {
           const d = new Date(iso);
           return `${d.toLocaleString("en-US", { month: "short" })} ${d.getUTCDate()}`;
