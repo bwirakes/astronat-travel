@@ -27,6 +27,7 @@ import type { ProgressionsResult } from "@/app/lib/progressions";
 import type { ParanResult } from "@/lib/astro/acg-lines";
 import { computeChartRulerContext, type ChartRulerContext } from "@/app/lib/chart-ruler";
 import { computeModalityCohorts, type ModalityCohort } from "@/app/lib/geodetic/harmonic-triggers";
+import { buildChartStructure, type ChartStructure } from "./chart-structure";
 
 export interface TeacherReadingInput {
   macro: {
@@ -122,6 +123,15 @@ export interface TeacherReadingInput {
      *  reframes how the destination should be evaluated. */
     personalCycle: PersonalCycleContext;
   };
+
+  /** Cluster + dispositor + aspect-pattern structure for the AI prompts to
+   *  cite. Produced by `buildChartStructure(natalPlanets, houseOf)` from
+   *  the engine output. Optional — present when the natal chart actually
+   *  has stelliums or aspect patterns; omitted when the chart is
+   *  structurally simple. House numbers are RELOCATED (anchored to the
+   *  destination's relocated ASC) so cluster commentary lines up with the
+   *  rest of the relocation reading. */
+  chartStructure?: ChartStructure;
 }
 
 function geodeticBandForLon(lon: number): { sign: string; longitudeRange: string } {
@@ -604,6 +614,24 @@ export function buildAIInput(args: {
       .map((h) => ({ ...h, withinActivationOrb: h.orbAtClosest <= 3 }));
   })();
 
+  // Cluster + dispositor + aspect-pattern structure for the AI prompt's
+  // chartStructure field. Houses are RELOCATED (anchored to relocatedCusps[0])
+  // so the prompt's cluster commentary references the same house numbers as
+  // the rest of the relocation reading. Omitted from the return when the
+  // chart has neither stelliums nor patterns.
+  const relocAscLon = relocatedCusps[0] ?? 0;
+  const chartStructure: ChartStructure = buildChartStructure(
+    natalPlanets.map((p: any) => ({
+      name: p.name ?? p.planet ?? "",
+      longitude: p.longitude ?? 0,
+      sign: p.sign ?? signFromLongitude(p.longitude ?? 0),
+    })),
+    (lon: number) => houseFromLongitude(lon, relocAscLon),
+  );
+  const hasStructure = chartStructure.stelliums.length > 0
+    || chartStructure.patterns.length > 0
+    || !!chartStructure.finalDispositor;
+
   return {
     macro: {
       destination,
@@ -615,6 +643,7 @@ export function buildAIInput(args: {
     },
     editorialEvidence,
     ...(relocation ? { relocation } : {}),
+    ...(hasStructure ? { chartStructure } : {}),
     sidebarsData: {
       travelWindows: (() => {
         if (travelType === "relocation" || !travelDate) return [];
