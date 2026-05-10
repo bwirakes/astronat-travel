@@ -148,13 +148,22 @@ function elementMultiplier(planet: string, element: ElementName): number {
 /** Sky-aspect contribution per type. Trines/sextiles add small positive lift
  *  to all events; squares/oppositions subtract. Conjunctions are context-
  *  dependent — treated as neutral here. Magnitudes are intentionally small
- *  so the universal sky never overwhelms the chart-specific affinity layer. */
+ *  so the universal sky never overwhelms the chart-specific affinity layer.
+ *
+ *  Cut 4× from the original ±1.5/±2.0 to ±0.4/±0.5. Reason: each aspect was
+ *  applied uniformly across all 9 events, so a single trine added +18 total
+ *  lift while a single outer-planet retrograde dampener added only ~−5
+ *  total drag. The trine overwhelmed the dampener, producing positive sky
+ *  modifiers on retrograde-active dates (5 of 17 dates in the v4 audit).
+ *  At ±0.4/±0.5, the per-aspect total (4-5 across 9 events) balances the
+ *  outer-Rx dampener so retrogrades reliably move scores down — matches
+ *  Astro-Nat's "all planets have impacts" stance. */
 const SKY_ASPECT_BONUS: Record<AspectKind, number> = {
     conjunction:  0,
-    sextile:     +1.5,
-    trine:       +2.0,
-    square:      -2.0,
-    opposition:  -1.5,
+    sextile:     +0.4,
+    trine:       +0.5,
+    square:      -0.5,
+    opposition:  -0.4,
 };
 
 const ECLIPSE_WINDOW_DAMPENER = 2;     // applied uniformly per active window

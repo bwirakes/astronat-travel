@@ -27,6 +27,7 @@ import {
 } from "./geodetic/geodetic-events";
 import type { UniversalSkyState } from "./universal-sky";
 import { essentialDignityLabel } from "./dignity";
+import { softCapScore } from "./scoring-flags";
 
 const HALF_WIDTH_DAYS = 5;          // window is centred ± this many days
 const TRANSIT_SCALE = 6;            // each tight benefic ≈ +6 to baseline
@@ -116,7 +117,12 @@ export function scoreDate(
     if (delta >  MAX_DELTA) delta =  MAX_DELTA;
     if (delta < -MAX_DELTA) delta = -MAX_DELTA;
 
-    const score = Math.max(0, Math.min(100, Math.round(baselineMacro + delta)));
+    // Route through softCapScore (knee 85, slope 0.4, cap 95) so the upper
+    // tail compresses instead of clipping at 100. macroScore already uses
+    // softCapScore in house-matrix.ts; the hero used to re-apply a hard
+    // Math.min(100, ...) which produced ~3% scores pinned at exactly 100.
+    // Routing through softCapScore makes 100 a tail-end event.
+    const score = softCapScore(baselineMacro + delta);
     const drivers = driversTop
         .sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight))
         .slice(0, 3)
@@ -523,7 +529,12 @@ function scoreHitsInRange(
     if (delta >  MAX_DELTA) delta =  MAX_DELTA;
     if (delta < -MAX_DELTA) delta = -MAX_DELTA;
 
-    const score = Math.max(0, Math.min(100, Math.round(baselineMacro + delta)));
+    // Route through softCapScore (knee 85, slope 0.4, cap 95) so the upper
+    // tail compresses instead of clipping at 100. macroScore already uses
+    // softCapScore in house-matrix.ts; the hero used to re-apply a hard
+    // Math.min(100, ...) which produced ~3% scores pinned at exactly 100.
+    // Routing through softCapScore makes 100 a tail-end event.
+    const score = softCapScore(baselineMacro + delta);
     const drivers = driversTop
         .sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight))
         .slice(0, 3)

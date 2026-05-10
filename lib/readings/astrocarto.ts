@@ -250,11 +250,14 @@ export async function runAstrocarto(
   const globalPenalty = isCurrentSkyPenaltyEnabled()
     ? computeCurrentSkyPenalty(transitPositionsAtRef, natalPlanets)
     : computeGlobalPenalty(mappedTransits);
-  // A5: progressed Sun/Moon bands at refDate (async, day-for-a-year).
+  // A5: progressed bands + per-angle hits at refDate (async, day-for-a-year).
+  // destLat now passed so we can compute degree-precise hits to geo-ASC and
+  // geo-DSC, not just MC/IC.
   const progressedBands = await computeProgressedBands({
     birthDateUtc: dtUtcBirth,
     refDate,
     destLon: targetLon,
+    destLat: targetLat,
   });
 
   // 4. Sect, Arabic parts, parans
