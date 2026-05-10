@@ -42,16 +42,24 @@ let _currentSkyPenalty = readFlag("CURRENT_SKY_PENALTY_V1", true);
 // 95 instead of 100, so 100 outcomes become rare/impossible without making
 // mid-range scores look worse.
 let _softCapTop = readFlag("SOFT_CAP_TOP_V1", true);
+// CLUSTER_SCORING_V1 — surface stelliums (house/sign/orb), dispositor chains,
+// dignified cluster leaders, mutual reception pairs, and downstream amplifier
+// hooks. Default OFF; clusters.ts detection is pure (no side effects), but
+// integration points in house-matrix gate their amplifier behind this flag so
+// scores stay bit-for-bit identical when off.
+let _clusterScoring = readFlag("CLUSTER_SCORING_V1", false);
 
 export function isSolarTiersV2Enabled(): boolean { return _solarTiersV2; }
 export function isDegreeTheoryEnabled(): boolean { return _degreeTheory; }
 export function isCurrentSkyPenaltyEnabled(): boolean { return _currentSkyPenalty; }
 export function isSoftCapTopEnabled(): boolean { return _softCapTop; }
+export function isClusterScoringEnabled(): boolean { return _clusterScoring; }
 
 export function setSolarTiersV2Enabled(v: boolean): void { _solarTiersV2 = v; }
 export function setDegreeTheoryEnabled(v: boolean): void { _degreeTheory = v; }
 export function setCurrentSkyPenaltyEnabled(v: boolean): void { _currentSkyPenalty = v; }
 export function setSoftCapTopEnabled(v: boolean): void { _softCapTop = v; }
+export function setClusterScoringEnabled(v: boolean): void { _clusterScoring = v; }
 
 /**
  * Soft-cap upper-tail compression for scores. Hard-clamped to [0, 95] when

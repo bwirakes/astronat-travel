@@ -353,6 +353,22 @@ export const TeacherReadingSchema = z.object({
   chartRulerReframe: ChartRulerReframeSchema,
   acgLineNotes: z.array(AcgLineNoteSchema).max(20).optional(),
   modalityHits: z.array(ModalityHitSchema).max(12).optional(),
+
+  // Chart structure — cluster + dispositor + aspect-pattern commentary.
+  // Populated only when `chartStructure` is present in the input. Each entry's
+  // key MUST match a `chartStructure.stelliums[].key` or `chartStructure.patterns[].key`
+  // verbatim so the view can look them up without inventing IDs.
+  clusterCommentary: z.array(z.object({
+    clusterKey: z.string(),    // matches a chartStructure.stelliums[].key
+    headline: z.string(),      // ≤ 80 chars, lived-outcome opener
+    body: z.string(),          // 2-4 sentences in Astro-Nat voice
+  })).max(8).optional(),
+
+  patternCommentary: z.array(z.object({
+    patternKey: z.string(),    // matches a chartStructure.patterns[].key
+    headline: z.string(),
+    body: z.string(),
+  })).max(8).optional(),
 });
 export type TeacherReading = z.infer<typeof TeacherReadingSchema>;
 
@@ -458,5 +474,29 @@ export const CouplesReadingSchema = z.object({
    *  angle (no paraphrase of leads above). Length(3) is intentional: the
    *  trio is a fixed editorial format, not a flexible list. */
   takeaways: z.array(z.string()).length(3),
+  /** Per-partner cluster commentary. Each entry's `clusterKey` matches a
+   *  `chartStructureYou.stelliums[].key` (or `chartStructurePartner...`).
+   *  Skip clusters flagged generational. */
+  clusterCommentaryYou: z.array(z.object({
+    clusterKey: z.string(),
+    headline: z.string(),
+    body: z.string(),
+  })).max(8).optional(),
+  clusterCommentaryPartner: z.array(z.object({
+    clusterKey: z.string(),
+    headline: z.string(),
+    body: z.string(),
+  })).max(8).optional(),
+  /** Per-partner pattern commentary (Grand Trine / T-Square / etc.). */
+  patternCommentaryYou: z.array(z.object({
+    patternKey: z.string(),
+    headline: z.string(),
+    body: z.string(),
+  })).max(8).optional(),
+  patternCommentaryPartner: z.array(z.object({
+    patternKey: z.string(),
+    headline: z.string(),
+    body: z.string(),
+  })).max(8).optional(),
 });
 export type CouplesReading = z.infer<typeof CouplesReadingSchema>;

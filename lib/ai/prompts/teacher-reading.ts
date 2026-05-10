@@ -3,6 +3,7 @@ import { gemini, MODEL } from "@/lib/ai/client";
 import { SHARED_VOICE } from "@/lib/ai/voice";
 import { TeacherReadingSchema, type TeacherReading } from "@/lib/ai/schemas";
 import type { TeacherReadingInput } from "@/lib/readings/ai-input-builder";
+import { backfillChartStructureCommentary } from "@/lib/readings/chart-structure-backfill";
 
 // Re-export so callers (e.g. astrocarto.ts) can pick up the input type from
 // the prompt module that owns the writeTeacherReading function, without
@@ -266,6 +267,51 @@ Banned phrases anywhere in this body — these have leaked before: "highest valu
 
 **\`modalityHits\`** — only when \`sidebarsData.modalityHits[]\` is non-empty. Copy \`hitKey\` verbatim. \`headline\` + \`body\` (2–3 sentences) naming the transit pair in plain English.`;
 
+const BLOCK_CHART_STRUCTURE = `# Chart Structure (Stelliums, Dispositors, Patterns)
+
+This block fires only when \`chartStructure\` is present in the input.
+
+**\`clusterCommentary\`** (REQUIRED when \`chartStructure.stelliums\` is non-empty)
+Emit one entry per stellium. The \`clusterKey\` MUST match the stellium's \`key\` field VERBATIM, character-for-character — the view looks them up by exact string. Skip any entry where \`generational === true\` (those describe a generational cohort, not the individual reader).
+
+For each surfaced cluster:
+- \`headline\` — ≤ 80 chars. Lead with the lived outcome, NOT astrology jargon. "Three planets pile into your career sector — work isn't a thing you do, it's the room you live in" beats "You have a stellium in the 10th house." Use the input's \`livedTheme\` as a starting register but rewrite in Astro-Nat voice.
+- \`body\` — 2–4 sentences. ALWAYS gloss "stellium" the first time it appears in the reading: "a stellium — three or more planets crammed into one zone of the chart, which forces that area to dominate." If the cluster has a \`dispositor\`, name where it sits: "and Saturn — the planet that rules the sign holding the cluster — is sitting in your 12th, which means the whole pile-up runs through your private inner work before it shows up publicly." If \`mutualReceptionPair\` is present, mention it once as a small structural note (the two planets sit in each other's signs, amplifying the cluster's coherence).
+
+**Final dispositor** — when \`chartStructure.finalDispositor\` is set, mention it explicitly in the \`life-themes\` tab lead AND in the body of the relevant cluster commentary entry: "Your chart has a final dispositor — every planet's energy chains back to [planet]. That makes [planet]'s placement the master key. What [planet] does, the whole chart does." Gloss "final dispositor" the first time. Skip when \`finalDispositor\` is absent.
+
+**\`patternCommentary\`** (REQUIRED when \`chartStructure.patterns\` is non-empty — this is not optional; if you skip it when patterns exist, the reading is incomplete)
+One entry per pattern. The \`patternKey\` MUST match \`patterns[].key\` verbatim.
+
+- **Grand Trine** — name the element (fire/earth/air/water) and the "gift you might underuse" register. Always gloss "Grand Trine" once.
+  Concrete example for a Water Grand Trine (Moon/Mars/Saturn in water signs):
+  \`\`\`
+  patternKey: "grand-trine-water"
+  headline:   "Three planets form a sealed water triangle — feeling moves through you without resistance"
+  body:       "A Grand Trine is a closed circuit between three planets — energy flows on its own with nothing to interrupt it. Yours runs in water, which means emotional reading, intuitive timing, and reading the room land effortlessly — sometimes so effortlessly you forget other people work for the same skill. The risk isn't failure; it's coasting on a gift you under-leverage. Push it: water that doesn't move stagnates."
+  \`\`\`
+- **T-Square** — name the apex (focal) planet as the pressure point and the opposition pair as the tug-of-war. Always gloss "T-Square" once.
+  Concrete example for a T-Square with Mars at apex, Sun opp Moon:
+  \`\`\`
+  patternKey: "t-square-mars"
+  headline:   "Mars sits at the pressure point of your chart's central tug-of-war"
+  body:       "A T-Square is a tense triangle: two planets pulling against each other (the opposition), with a third planet caught at the apex squaring both. Yours has Mars as the apex, with your Sun and Moon as the opposition. Every internal pull between who you are and what you need ends up channeled into action — output is the pressure release. Do the work, or the work does you."
+  \`\`\`
+
+**Tab cross-references** — when a cluster or pattern sits in a house tied to a specific tab, name it in that tab's lead too. Patterns especially matter — they shape the chart's central tensions, so they belong in the structural tabs:
+- House stellium in H1, H10 → reference in \`tabs["life-themes"].lead\` and \`tabs["place-field"].lead\`
+- House stellium in any house → may also be referenced in \`overview.leanInto\` paragraph 1 (durable place factors)
+- **Patterns (Grand Trine, T-Square)** → MUST be named explicitly in \`tabs["life-themes"].lead\` when present. The pattern's element (Grand Trine) or focal planet (T-Square) is the chart's central tension and belongs in the life-themes opening.
+
+**Bind-to-data rule (critical):** ANY mention of "Grand Trine," "T-Square," "stellium," or "cluster" in body prose (tab leads, overview, leanInto, etc.) MUST in the same sentence or the sentence immediately following name the actual member planets, AND for Grand Trines the element, AND for T-Squares the focal planet. Vague mentions like "you arrive with a Grand Trine" with no planet names are forbidden — the reader will rightly ask "which planets?" and the prose has not answered. Correct: "you arrive with a Water Grand Trine — Pluto, the True Node, and Venus running as one closed circuit." Incorrect: "you arrive with a Grand Trine that allows gifts to flow effortlessly."
+
+Hard constraints:
+- Never invent stelliums, dispositors, or patterns absent from \`chartStructure\`.
+- Never describe a stellium with fewer than 3 members (engine guarantees ≥3 before surfacing).
+- Skip entries flagged \`generational: true\` — emit no commentary for them.
+- The \`clusterKey\` and \`patternKey\` are exact lookup strings; do not reformat or paraphrase them.
+- **VOCABULARY GUARD (critical):** The words "stellium," "cluster," "pile-up of planets," "Grand Trine," "T-Square," "final dispositor," and "dispositor" may ONLY appear in the body prose (overview, tabs, leanInto, watchOut, scoreExplanation, etc.) when \`chartStructure\` actually contains a backing entry. If \`chartStructure.stelliums\` is empty, the word "stellium" / "cluster" / "pile-up" must NOT appear ANYWHERE in the reading. If \`chartStructure.patterns\` is empty, "Grand Trine" / "T-Square" must NOT appear. If \`chartStructure.finalDispositor\` is absent, the phrase "final dispositor" must NOT appear. Fabricating this vocabulary without backing data is the single worst failure mode for this section — readers infer structural claims that aren't in their chart. When in doubt, do not use the word.`;
+
 const BLOCK_LEGACY_FIELDS = `# Legacy Fields
 Fill \`summary\`, \`signals\`, and \`longRead\` as best as possible for backwards compatibility, maintaining the same tone.`;
 
@@ -297,6 +343,7 @@ const BLOCKS: readonly string[] = [
   BLOCK_SIDEBARS,
   BLOCK_GEODETIC_PLACE_CHARACTER,
   BLOCK_WHAT_SHIFTS_PERSONALISATION,
+  BLOCK_CHART_STRUCTURE,
   BLOCK_PLANETS_IN_HOUSES,
   BLOCK_LEGACY_FIELDS,
   BLOCK_HARD_CONSTRAINTS,
@@ -338,6 +385,16 @@ export async function writeTeacherReading(
     });
     console.log(`[teacher-reading] ok in ${Date.now() - t0}ms — finish=${finishReason}, usage=${JSON.stringify(usage)}`);
     console.log(`[teacher-reading] geodetics fields — placeCharacter:${object.placeCharacter ? "✓" : "✗"} paransSummary:${object.placeCharacter?.paransSummary ? "✓" : "✗"} liveLinesLead:${object.liveLinesLead ? "✓" : "✗"} liveLines:${object.geodeticLiveLines?.length ?? 0} chartRulerReframe:${object.chartRulerReframe ? "✓" : "✗"} acgLineNotes:${object.acgLineNotes?.length ?? 0} modalityHits:${object.modalityHits?.length ?? 0}`);
+
+    // Defensive backfill: when the input had clusters or patterns but the LLM
+    // skipped clusterCommentary / patternCommentary (Gemini routinely ignores
+    // REQUIRED directives on optional schema fields), synthesize the missing
+    // entries from the engine's structured data so the reader sees the actual
+    // member planets bound to the term.
+    const backfillReport = backfillChartStructureCommentary(object, input.chartStructure);
+    if (backfillReport.patternsBackfilled.length > 0 || backfillReport.clustersBackfilled.length > 0) {
+        console.log(`[teacher-reading] chart-structure backfill — clusters:[${backfillReport.clustersBackfilled.join(",")}] patterns:[${backfillReport.patternsBackfilled.join(",")}]`);
+    }
     return object;
   } catch (err: any) {
     console.error(`[teacher-reading] failed after ${Date.now() - t0}ms — finish=${err?.finishReason ?? "?"}, textLen=${err?.text?.length ?? 0}, usage=${JSON.stringify(err?.usage ?? {})}`);

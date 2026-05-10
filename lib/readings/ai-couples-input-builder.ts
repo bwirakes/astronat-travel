@@ -1,7 +1,8 @@
 import type { CouplesVM } from "@/app/lib/couples-viewmodel";
 import type { TransitHit } from "@/lib/astro/transit-solver";
-import { signFromLongitude } from "@/app/lib/geodetic";
+import { signFromLongitude, houseFromLongitude } from "@/app/lib/geodetic";
 import { formatTransitDates, transitTone, aspectSentence } from "./ai-input-helpers";
+import { buildChartStructure, type ChartStructure } from "./chart-structure";
 
 /**
  * Joint editorial spine — the single arc the AI writes the whole reading
@@ -53,6 +54,13 @@ export interface CouplesReadingInput {
         topTransitsYou: Array<{ aspect: string; dateRange: string; tone: string; aspectKey: string; planets: { a: string; b: string } }>;
         topTransitsPartner: Array<{ aspect: string; dateRange: string; tone: string; aspectKey: string; planets: { a: string; b: string } }>;
     };
+    /** Per-partner cluster + dispositor + aspect-pattern structure. House
+     *  numbers are RELOCATED (anchored to each partner's relocated ASC) so
+     *  the prompt's cluster commentary lines up with the rest of the
+     *  couples reading. Each side is optional — omitted when that partner's
+     *  natal chart has no stelliums and no patterns. */
+    chartStructureYou?: ChartStructure;
+    chartStructurePartner?: ChartStructure;
 }
 
 function buildEditorialSpine(vm: CouplesVM): CouplesEditorialSpine {
@@ -159,6 +167,27 @@ export function buildCouplesAIInput(args: {
     const nearbyLinesYou = mapLines(acgLinesYou);
     const nearbyLinesPartner = mapLines(acgLinesPartner);
 
+    // Cluster + dispositor + pattern structure per partner. Each partner's
+    // relocated ASC is `viewmodel.deepDive.{you|partner}.cusps[0]`. Omitted
+    // when the partner's chart yields no structure to surface.
+    const buildPartnerStructure = (
+        natalPlanets: any[],
+        ascLon: number,
+    ): ChartStructure | undefined => {
+        const planets = natalPlanets.map((p: any) => ({
+            name: p.name ?? p.planet ?? "",
+            longitude: p.longitude ?? 0,
+            sign: p.sign ?? signFromLongitude(p.longitude ?? 0),
+        }));
+        const cs = buildChartStructure(planets, (lon: number) => houseFromLongitude(lon, ascLon));
+        const has = cs.stelliums.length > 0 || cs.patterns.length > 0 || !!cs.finalDispositor;
+        return has ? cs : undefined;
+    };
+    const youAsc = viewmodel.deepDive.you.cusps[0] ?? 0;
+    const partnerAsc = viewmodel.deepDive.partner.cusps[0] ?? 0;
+    const chartStructureYou = buildPartnerStructure(natalPlanetsYou ?? [], youAsc);
+    const chartStructurePartner = buildPartnerStructure(natalPlanetsPartner ?? [], partnerAsc);
+
     return {
         viewmodel,
         editorialSpine: buildEditorialSpine(viewmodel),
@@ -199,5 +228,7 @@ export function buildCouplesAIInput(args: {
             topTransitsYou,
             topTransitsPartner,
         },
+        ...(chartStructureYou ? { chartStructureYou } : {}),
+        ...(chartStructurePartner ? { chartStructurePartner } : {}),
     };
 }

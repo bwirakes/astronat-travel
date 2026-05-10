@@ -51,6 +51,9 @@ import {
 } from "./geodetic";
 import { computeHouseNumber } from "./house-system";
 import { isOuterPlanet, computeOuterPlanetScore } from "./outer-planet-scoring";
+import { detectClusters } from "./clusters";
+import { detectAspectPatterns, type ElementName } from "./aspect-patterns";
+import { isClusterScoringEnabled } from "./scoring-flags";
 import { scoreAngleTransits, type AngleName, type AngleTransitContribution } from "./geodetic/angle-transits";
 import { scoreStations, type StationContribution, type StationsResult } from "./geodetic/station-scoring";
 import type { StationEvent } from "./geodetic/geodetic-events";
@@ -836,6 +839,260 @@ export function computeHouseMatrix(params: {
         ? computeModalityCohorts({ transitPositions: harmonicSafeTransits })
         : [];
 
+    // ── CLUSTER_SCORING_V1: stellium amplifier + leader / MR ────────────
+    //
+    // Plan: docs/implementation_plans/cluster-scoring.md §4 + §5.
+    //
+    // Detect house / sign / orb stelliums once per chart, then build three
+    // planet-keyed maps so the occupant loop below does O(1) lookups:
+    //
+    //   ampMultByPlanet     — Phase 1 size amplifier (max of house/sign/orb)
+    //                          house: 1 + 0.10·(size−2) cap 1.5
+    //                          sign:  1 + 0.05·(size−2) cap 1.3
+    //                          orb:   1 + 0.07·(size−2) cap 1.4
+    //                          When planet belongs to multiple kinds we take
+    //                          the MAX, never the product, so the amplifier
+    //                          doesn't compound on itself.
+    //   leaderMultByPlanet  — Phase 2 within-cluster redistribution
+    //                          ×1.25 if the planet is the sole dignified
+    //                          leader of any cluster it belongs to;
+    //                          ×0.92 if it's a non-leader member of a
+    //                          cluster with a clear leader; ×1.0 otherwise
+    //                          (no cluster, or cluster has tied leaders so
+    //                          no redistribution applies).
+    //   mrBonusByPlanet     — Phase 2 mutual-reception flat bonus
+    //                          +8 to each planet that participates in a
+    //                          mutual-reception pair within its cluster.
+    //
+    // When CLUSTER_SCORING_V1 is off all three maps stay empty and the loop
+    // returns bit-for-bit identical occupant totals to legacy behavior.
+    const ampMultByPlanet = new Map<string, number>();
+    const leaderMultByPlanet = new Map<string, number>();
+    const mrBonusByPlanet = new Map<string, number>();
+    const dispositorClusterCount = new Map<string, number>();
+    let finalDispositorPlanet: string | undefined;
+
+    // Aspect-pattern bonus maps (Phase 4 / §7). Two channels:
+    //   patternHouseBonus  — additive shift to the house's occupants total
+    //   patternPlanetBonus — additive shift to a specific planet's mod
+    // Both are summed across patterns and rounded at apply time.
+    const patternHouseBonus = new Map<number, number>();
+    const patternPlanetBonus = new Map<string, number>();
+
+    if (isClusterScoringEnabled()) {
+        const clusterPlanets = natalPlanets
+            .map((p) => {
+                const name = (p.planet ?? (p as any).name ?? "").trim();
+                if (!name) return null;
+                const lon = p.longitude;
+                return {
+                    name,
+                    longitude: lon,
+                    sign: signFromLongitude(lon),
+                    house: getHouseNum(lon),
+                };
+            })
+            .filter((x): x is { name: string; longitude: number; sign: string; house: number } => x !== null);
+
+        const clusterSet = detectClusters(clusterPlanets);
+
+        // ── Amplifier (max-of-three) ────────────────────────────────────
+        const applyAmp = (planet: string, candidate: number) => {
+            const cur = ampMultByPlanet.get(planet) ?? 1.0;
+            if (candidate > cur) ampMultByPlanet.set(planet, candidate);
+        };
+        for (const c of clusterSet.houseClusters) {
+            const m = Math.min(1.5, 1 + 0.10 * (c.size - 2));
+            for (const mem of c.members) applyAmp(mem.planet, m);
+        }
+        for (const c of clusterSet.signClusters) {
+            const m = Math.min(1.3, 1 + 0.05 * (c.size - 2));
+            for (const mem of c.members) applyAmp(mem.planet, m);
+        }
+        for (const c of clusterSet.orbClusters) {
+            const m = Math.min(1.4, 1 + 0.07 * (c.size - 2));
+            for (const mem of c.members) applyAmp(mem.planet, m);
+        }
+
+        // ── Leader arbitration ──────────────────────────────────────────
+        //
+        // Walk every cluster; for clusters with a single dignified leader,
+        // record ×1.25 for the leader and ×0.92 for every other member.
+        // When a planet appears in multiple clusters with conflicting
+        // statuses we take the MAX (×1.25 wins over ×0.92 wins over ×1.0)
+        // so leadership in any one cluster guarantees the leader bonus.
+        // Tied-leader clusters skip this step entirely.
+        const applyLeader = (planet: string, candidate: number) => {
+            const cur = leaderMultByPlanet.get(planet) ?? 1.0;
+            if (candidate > cur) leaderMultByPlanet.set(planet, candidate);
+        };
+        const allClusters = [
+            ...clusterSet.houseClusters,
+            ...clusterSet.signClusters,
+            ...clusterSet.orbClusters,
+        ];
+        for (const c of allClusters) {
+            if (c.dignifiedLeaders.length !== 1) continue; // tie or all-combust → skip
+            const leader = c.dignifiedLeaders[0];
+            for (const mem of c.members) {
+                if (mem.planet === leader) applyLeader(mem.planet, 1.25);
+                else applyLeader(mem.planet, 0.92);
+            }
+        }
+
+        // ── Mutual reception ────────────────────────────────────────────
+        //
+        // +8 flat to each member of a mutual-reception pair (within any
+        // cluster). Stacks if a planet is in multiple MR pairs across
+        // clusters — but capped at +16 to keep the additive in scale with
+        // the multiplicative path.
+        for (const c of allClusters) {
+            for (const [a, b] of c.mutualReceptionPairs) {
+                mrBonusByPlanet.set(a, Math.min(16, (mrBonusByPlanet.get(a) ?? 0) + 8));
+                mrBonusByPlanet.set(b, Math.min(16, (mrBonusByPlanet.get(b) ?? 0) + 8));
+            }
+        }
+
+        // ── Dispositor / domicile (Phase 3 / §6) ────────────────────────
+        //
+        // For every sign cluster, the cluster's dispositor (the ruler of
+        // the sign holding the cluster) carries the cluster's themes
+        // wherever the dispositor sits. Two effects:
+        //
+        //   (a) Step 2 dignity boost — when the dispositor is the cusp
+        //       ruler of some house, that house's baseline dignityPts
+        //       gets +5 per cluster disposited (cap +15).
+        //   (b) Step 3 occupant multiplier — wherever the dispositor sits
+        //       as an occupant, its own mod gets ×(1 + 0.08 × clusterCount),
+        //       capped ×1.24.
+        //
+        // We track the UNIQUE set of clusters each planet disposits so
+        // Saturn ruling both Capricorn AND Aquarius — both holding
+        // stelliums — gets credit for 2 clusters, not 4.
+        const clustersBySign = new Map<string, Set<string>>(); // sign → set of cluster keys
+        for (const c of clusterSet.signClusters) {
+            if (!c.dispositor || !c.anchorSign) continue;
+            const set = clustersBySign.get(c.dispositor) ?? new Set<string>();
+            set.add(c.anchorSign);
+            clustersBySign.set(c.dispositor, set);
+        }
+        for (const [planet, signSet] of clustersBySign) {
+            dispositorClusterCount.set(planet, signSet.size);
+        }
+
+        // Final dispositor (§3.4 + plan §6): a single planet at the
+        // terminus of every dispositor chain. Promoted to a chart-level
+        // attribute. When set, that planet's occupant mod gets +10 flat.
+        finalDispositorPlanet = clusterSet.finalDispositor;
+
+        // ── Aspect patterns (Phase 4a / §7) ─────────────────────────────
+        //
+        // Detect Grand Trine + T-Square. Both effects route through the
+        // occupants channel — Grand Trine adds +6 (× tightness) uniformly
+        // to the three houses tied to the trine's element; T-Square adds
+        // -4 (× tightness) to the focal planet's house AND +2 to the focal
+        // planet's mod. PR #5b will add Yod / Grand Cross / Kite / Mystic
+        // Rectangle to the same map.
+        const ELEMENT_HOUSES: Record<ElementName, number[]> = {
+            Fire:  [1, 5, 9],
+            Earth: [2, 6, 10],
+            Air:   [3, 7, 11],
+            Water: [4, 8, 12],
+        };
+        const patterns = detectAspectPatterns(
+            clusterPlanets.map((p) => ({ name: p.name, longitude: p.longitude, sign: p.sign })),
+        );
+        for (const pat of patterns) {
+            if (pat.type === "grand-trine" && pat.element) {
+                for (const h of ELEMENT_HOUSES[pat.element]) {
+                    patternHouseBonus.set(h, (patternHouseBonus.get(h) ?? 0) + 6 * pat.tightness);
+                }
+            } else if (pat.type === "t-square" && pat.focal) {
+                const focalCanon = pat.focal
+                    .split(/\s+/)
+                    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                    .join(" ");
+                const focalPlanet = clusterPlanets.find((cp) =>
+                    cp.name
+                        .split(/\s+/)
+                        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                        .join(" ") === focalCanon,
+                );
+                if (focalPlanet) {
+                    patternHouseBonus.set(
+                        focalPlanet.house,
+                        (patternHouseBonus.get(focalPlanet.house) ?? 0) - 4 * pat.tightness,
+                    );
+                }
+                patternPlanetBonus.set(
+                    focalCanon,
+                    (patternPlanetBonus.get(focalCanon) ?? 0) + 2 * pat.tightness,
+                );
+            }
+        }
+    }
+
+    // ── O(1) lookup helpers ─────────────────────────────────────────────
+    //
+    // Each returns the neutral identity (×1.0 / +0) when the flag is off,
+    // when the planet isn't in any cluster, or when the planet name isn't
+    // recognised. Canonicalize names to title case to match clusters.ts.
+    function canonName(planetName: string): string {
+        return planetName
+            .split(/\s+/)
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+            .join(" ");
+    }
+    function clusterAmplifier(planetName: string): number {
+        if (ampMultByPlanet.size === 0) return 1.0;
+        if (!planetName) return 1.0;
+        return ampMultByPlanet.get(canonName(planetName)) ?? 1.0;
+    }
+    function clusterLeaderMult(planetName: string): number {
+        if (leaderMultByPlanet.size === 0) return 1.0;
+        if (!planetName) return 1.0;
+        return leaderMultByPlanet.get(canonName(planetName)) ?? 1.0;
+    }
+    function clusterMrBonus(planetName: string): number {
+        if (mrBonusByPlanet.size === 0) return 0;
+        if (!planetName) return 0;
+        return mrBonusByPlanet.get(canonName(planetName)) ?? 0;
+    }
+    /** Step 2 dignity bonus when the planet disposits at least one sign
+     *  cluster. +5 per disposited cluster, capped at +15. Returns 0 when
+     *  the flag is off or the planet doesn't disposit anything. */
+    function clusterDispositorDignityBonus(planetName: string): number {
+        if (dispositorClusterCount.size === 0) return 0;
+        if (!planetName) return 0;
+        const count = dispositorClusterCount.get(canonName(planetName)) ?? 0;
+        return Math.min(15, 5 * count);
+    }
+    /** Step 3 occupant multiplier when the planet disposits at least one
+     *  sign cluster. ×(1 + 0.08 × count), capped ×1.24. */
+    function clusterDispositorMult(planetName: string): number {
+        if (dispositorClusterCount.size === 0) return 1.0;
+        if (!planetName) return 1.0;
+        const count = dispositorClusterCount.get(canonName(planetName)) ?? 0;
+        if (count === 0) return 1.0;
+        return Math.min(1.24, 1 + 0.08 * count);
+    }
+    /** +10 flat when the planet is the chart's final dispositor; 0 otherwise. */
+    function clusterFinalDispositorBonus(planetName: string): number {
+        if (!finalDispositorPlanet || !planetName) return 0;
+        return canonName(planetName) === finalDispositorPlanet ? 10 : 0;
+    }
+    /** Per-house pattern bonus (Grand Trine element houses + T-Square focal
+     *  house penalty). Applied to occupants AFTER the per-planet loop. */
+    function patternHouseAdjust(house: number): number {
+        if (patternHouseBonus.size === 0) return 0;
+        return Math.round(patternHouseBonus.get(house) ?? 0);
+    }
+    /** Per-planet pattern bonus (T-Square focal planet's mod boost). */
+    function patternPlanetAdjust(planetName: string): number {
+        if (patternPlanetBonus.size === 0 || !planetName) return 0;
+        return Math.round(patternPlanetBonus.get(canonName(planetName)) ?? 0);
+    }
+
     const houses: HouseScore[] = [];
 
     for (let h = 1; h <= 12; h++) {
@@ -866,7 +1123,13 @@ export function computeHouseMatrix(params: {
         // Gap 3: Lilly additive accidental dignity points (replaces multiplier)
         // H1/H10 = +5, H4/H7 = +4, H11 = +3, H5/H9 = +2, H2/H3/H8 = +1, H6/H12 = -2
         const accidentalPts = LILLY_ACCIDENTAL[h] ?? 0;
-        const dignity = dignityPts + accidentalPts;
+        // Step 2.5 — CLUSTER_SCORING_V1 dispositor dignity boost.
+        // When this house's cusp ruler is also the dispositor of one or more
+        // sign stelliums, the cusp ruler carries that extra structural weight
+        // even before its occupants are counted. +5 per disposited cluster,
+        // capped +15. No-op when the flag is off.
+        const dispositorDignityBonus = clusterDispositorDignityBonus(ruler);
+        const dignity = dignityPts + accidentalPts + dispositorDignityBonus;
         const rulerCondition = essentialDignityLabel(ruler, rulerSign, rulerDegree, sect);
 
         // ── Step 3: Occupant Planets (sect + joys + combustion/cazimi + hayz) ──
@@ -891,7 +1154,7 @@ export function computeHouseMatrix(params: {
 
             if (isOuterPlanet(pName)) {
                 // P1-A: Outer planets — angularity-based path
-                occupants += computeOuterPlanetScore({
+                const outerScore = computeOuterPlanetScore({
                     planetName:   pName,
                     sign:         signFromLongitude(p.longitude),
                     houseNum:     h,
@@ -902,6 +1165,18 @@ export function computeHouseMatrix(params: {
                     natalPlanets,
                     speed:        p.speed,
                 });
+                // CLUSTER_SCORING_V1: leader → dispositor → amplifier → MR
+                // → final dispositor → T-Square focal. Multipliers compose;
+                // additives land last. T-Square focal bonus (+2) applies to
+                // the focal planet's individual mod regardless of which
+                // house we're scoring. No-op when the flag is off.
+                const adjOuter = Math.round(
+                    outerScore
+                        * clusterLeaderMult(pName)
+                        * clusterDispositorMult(pName)
+                        * clusterAmplifier(pName),
+                ) + clusterMrBonus(pName) + clusterFinalDispositorBonus(pName) + patternPlanetAdjust(pName);
+                occupants += adjOuter;
             } else {
                 // Traditional planets: base mod → sect → combustion/cazimi → joy → hayz
                 let mod = getOccupantModifier(pName, h);
@@ -947,9 +1222,29 @@ export function computeHouseMatrix(params: {
                     if (inHayz) mod += 36; // Hayz bonus: maximum contextual strength
                 }
 
+                // CLUSTER_SCORING_V1: leader → dispositor → amplifier → MR
+                // → final dispositor → T-Square focal. Multipliers compose;
+                // additives land after rounding. patternPlanetAdjust applies
+                // the +2 T-Square focal bonus to the focal planet's mod
+                // wherever it sits. The per-house Grand-Trine and T-Square
+                // house bonuses are applied AFTER the loop, against
+                // `occupants` directly. No-op when the flag is off.
+                mod = Math.round(
+                    mod
+                        * clusterLeaderMult(pName)
+                        * clusterDispositorMult(pName)
+                        * clusterAmplifier(pName),
+                ) + clusterMrBonus(pName) + clusterFinalDispositorBonus(pName) + patternPlanetAdjust(pName);
+
                 occupants += mod;
             }
         }
+        // CLUSTER_SCORING_V1: per-house pattern bonus. Grand Trine houses
+        // get +6 (× tightness); T-Square focal house gets -4 (× tightness).
+        // Applied AFTER the per-planet loop so it lifts/dampens the entire
+        // house uniformly, not per-occupant. No-op when the flag is off.
+        occupants += patternHouseAdjust(h);
+
         // Cap occupants to reasonable range (widened for inflation)
         occupants = Math.max(-100, Math.min(100, occupants));
 

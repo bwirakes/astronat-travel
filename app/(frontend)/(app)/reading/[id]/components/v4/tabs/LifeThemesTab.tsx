@@ -50,6 +50,11 @@ export default function LifeThemesTab({ vm, reading, copiedTab }: Props) {
             }
             : null;
 
+    const structureCards = buildStructureCards(
+        reading?.chartStructure,
+        reading?.teacherReading,
+    );
+
     return (
         <TabSection
             kicker="Life Themes"
@@ -133,6 +138,53 @@ export default function LifeThemesTab({ vm, reading, copiedTab }: Props) {
                 })}
             </div>
 
+            {/* Chart structure: stelliums + Grand Trine / T-Square — bound to engine data */}
+            {structureCards.length > 0 && (
+                <div className="mb-8">
+                    <SectionHead title="Chart structure" />
+                    <div className="flex flex-col gap-4">
+                        {structureCards.map((card) => (
+                            <div
+                                key={card.key}
+                                className="rounded-[10px] p-5 border"
+                                style={{
+                                    borderColor: "var(--surface-border)",
+                                    background: "var(--surface)",
+                                }}
+                            >
+                                <div
+                                    className="text-[0.55rem] tracking-[0.2em] uppercase font-semibold mb-2"
+                                    style={{ color: "var(--text-tertiary)", fontFamily: "var(--font-mono)" }}
+                                >
+                                    {card.kicker}
+                                </div>
+                                <div
+                                    className="text-base mb-2"
+                                    style={{ color: "var(--text-primary)", fontWeight: 500 }}
+                                >
+                                    {card.headline}
+                                </div>
+                                <div
+                                    className="text-sm leading-relaxed"
+                                    style={{ color: "var(--text-secondary)" }}
+                                >
+                                    {card.body}
+                                </div>
+                                <div
+                                    className="text-[0.7rem] mt-3"
+                                    style={{
+                                        color: "var(--text-tertiary)",
+                                        fontFamily: "var(--font-mono)",
+                                    }}
+                                >
+                                    Members: {card.members}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Receipts: full 12-house matrix */}
             {matrix && (
                 <details
@@ -160,6 +212,57 @@ export default function LifeThemesTab({ vm, reading, copiedTab }: Props) {
             )}
         </TabSection>
     );
+}
+
+interface StructureCard {
+    key: string;
+    kicker: string;
+    headline: string;
+    body: string;
+    members: string;
+}
+
+function buildStructureCards(chartStructure: any, teacher: any): StructureCard[] {
+    if (!chartStructure) return [];
+    const cards: StructureCard[] = [];
+
+    const patternEntries: Array<{ patternKey: string; headline: string; body: string }> =
+        Array.isArray(teacher?.patternCommentary) ? teacher.patternCommentary : [];
+    const patternByKey = new Map(patternEntries.map((e) => [e.patternKey, e]));
+
+    for (const p of (chartStructure.patterns ?? [])) {
+        const llm = patternByKey.get(p.key);
+        const memberRoster = (p.members ?? []).join(", ");
+        const kicker = p.type === "grand-trine"
+            ? `Grand Trine — ${p.element ?? "shared element"}`
+            : `T-Square — ${p.focal ?? p.members?.[0] ?? "apex"} at apex`;
+        cards.push({
+            key: `pattern-${p.key}`,
+            kicker,
+            headline: llm?.headline ?? `${kicker} (${memberRoster})`,
+            body: llm?.body ?? p.livedTheme ?? "",
+            members: memberRoster,
+        });
+    }
+
+    const clusterEntries: Array<{ clusterKey: string; headline: string; body: string }> =
+        Array.isArray(teacher?.clusterCommentary) ? teacher.clusterCommentary : [];
+    const clusterByKey = new Map(clusterEntries.map((e) => [e.clusterKey, e]));
+
+    for (const c of (chartStructure.stelliums ?? [])) {
+        const llm = clusterByKey.get(c.key);
+        const memberRoster = (c.members ?? []).join(", ");
+        const kicker = `Stellium — ${c.location}`;
+        cards.push({
+            key: `cluster-${c.key}`,
+            kicker,
+            headline: llm?.headline ?? `${kicker} (${memberRoster})`,
+            body: llm?.body ?? c.livedTheme ?? "",
+            members: memberRoster,
+        });
+    }
+
+    return cards;
 }
 
 function SummaryRow({ label, score, tone }: { label: string; score: number; tone: "lift" | "press" }) {

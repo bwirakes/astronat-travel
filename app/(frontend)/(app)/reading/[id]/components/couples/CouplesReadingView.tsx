@@ -964,6 +964,37 @@ function ChartTab({ tab, lead, isDark }: { tab: ChartTabVM; destination: string;
           <FlatStat label="MODALITY" value={tab.modality} />
         </div>
         {introLead && <AiLead>{introLead}</AiLead>}
+        {tab.structureCards && tab.structureCards.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "clamp(12px, 1.5vw, 20px)", marginTop: "clamp(8px, 1.5vw, 16px)" }}>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>
+              Chart structure
+            </div>
+            {tab.structureCards.map((card) => (
+              <div
+                key={card.key}
+                style={{
+                  borderRadius: 10,
+                  padding: "clamp(16px, 2vw, 20px)",
+                  border: "1px solid var(--surface-border)",
+                  background: "var(--surface)",
+                }}
+              >
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-tertiary)", marginBottom: "0.5rem" }}>
+                  {card.kicker}
+                </div>
+                <div style={{ fontFamily: "var(--font-primary)", fontSize: "1rem", color: "var(--text-primary)", fontWeight: 500, marginBottom: "0.5rem" }}>
+                  {card.headline}
+                </div>
+                <div style={{ fontFamily: "var(--font-primary)", fontSize: "0.9rem", lineHeight: 1.55, color: "var(--text-secondary)" }}>
+                  {card.body}
+                </div>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "0.75rem" }}>
+                  Members: {card.members}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <style jsx>{`

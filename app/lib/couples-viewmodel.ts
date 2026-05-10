@@ -94,6 +94,18 @@ export interface ChartTabVM {
   /** Four corner cards (ASC/IC/DSC/MC). When natal cusps are unavailable,
    *  `natal` falls back to "—" but `relocated` and `delta` still render. */
   angles: AngleVM[];
+  /** Per-partner chart structure (stelliums + Grand Trine / T-Square /
+   *  final dispositor). Sourced from `details.chartStructure{You,Partner}`,
+   *  paired with the couples reading's commentary entries when available
+   *  and backfilled deterministically when the LLM omitted them. Empty
+   *  array when the partner's chart has nothing to surface. */
+  structureCards: Array<{
+    key: string;
+    kicker: string;
+    headline: string;
+    body: string;
+    members: string;
+  }>;
 }
 
 export interface CouplesVM {
@@ -325,6 +337,11 @@ export function toCouplesViewModel(reading: any): CouplesVM {
     modality: dominantModality(youPlanets),
     lead: buildAngleLead(youAngles, destination),
     angles: youAngles,
+    structureCards: buildStructureCards(
+      reading?.chartStructureYou,
+      reading?.couplesReading?.clusterCommentaryYou,
+      reading?.couplesReading?.patternCommentaryYou,
+    ),
   };
   const ptnrDeep: ChartTabVM = {
     planets: enrichPlanetsForWheel(ptnrPlanets, ptnrCusps),
@@ -334,6 +351,11 @@ export function toCouplesViewModel(reading: any): CouplesVM {
     modality: dominantModality(ptnrPlanets),
     lead: buildAngleLead(ptnrAngles, destination),
     angles: ptnrAngles,
+    structureCards: buildStructureCards(
+      reading?.chartStructurePartner,
+      reading?.couplesReading?.clusterCommentaryPartner,
+      reading?.couplesReading?.patternCommentaryPartner,
+    ),
   };
 
   // ── Synastry aspects: split by tone, attach meanings ──────────
@@ -614,6 +636,59 @@ function normalizePlanets(raw: unknown): Array<{ planet: string; longitude: numb
       return { planet: capitalize(rawName), longitude };
     })
     .filter((x): x is { planet: string; longitude: number } => x !== null);
+}
+
+/** Build per-partner chart-structure cards. Mirrors the teacher path's
+ *  buildStructureCards in LifeThemesTab — pairs each engine-detected pattern
+ *  or stellium with the LLM's commentary entry (matched by key) and falls
+ *  back to the engine's livedTheme + member roster when the LLM omitted it.
+ *  The deterministic backfill in writeCouplesReading already populates the
+ *  commentary arrays, so this rarely lands on the fallback path; both layers
+ *  exist so the cards stay coherent for legacy readings persisted before the
+ *  backfill landed. */
+function buildStructureCards(
+  chartStructure: any,
+  clusterCommentary: any,
+  patternCommentary: any,
+): ChartTabVM["structureCards"] {
+  if (!chartStructure) return [];
+  const cards: ChartTabVM["structureCards"] = [];
+
+  const patternEntries: Array<{ patternKey: string; headline: string; body: string }> =
+    Array.isArray(patternCommentary) ? patternCommentary : [];
+  const patternByKey = new Map(patternEntries.map((e) => [e.patternKey, e]));
+  for (const p of (chartStructure.patterns ?? [])) {
+    const llm = patternByKey.get(p.key);
+    const memberRoster = (p.members ?? []).join(", ");
+    const kicker = p.type === "grand-trine"
+      ? `Grand Trine — ${p.element ?? "shared element"}`
+      : `T-Square — ${p.focal ?? p.members?.[0] ?? "apex"} at apex`;
+    cards.push({
+      key: `pattern-${p.key}`,
+      kicker,
+      headline: llm?.headline ?? `${kicker} (${memberRoster})`,
+      body: llm?.body ?? p.livedTheme ?? "",
+      members: memberRoster,
+    });
+  }
+
+  const clusterEntries: Array<{ clusterKey: string; headline: string; body: string }> =
+    Array.isArray(clusterCommentary) ? clusterCommentary : [];
+  const clusterByKey = new Map(clusterEntries.map((e) => [e.clusterKey, e]));
+  for (const c of (chartStructure.stelliums ?? [])) {
+    const llm = clusterByKey.get(c.key);
+    const memberRoster = (c.members ?? []).join(", ");
+    const kicker = `Stellium — ${c.location}`;
+    cards.push({
+      key: `cluster-${c.key}`,
+      kicker,
+      headline: llm?.headline ?? `${kicker} (${memberRoster})`,
+      body: llm?.body ?? c.livedTheme ?? "",
+      members: memberRoster,
+    });
+  }
+
+  return cards;
 }
 
 /** Adds `sign`, `house`, `degree` to each planet so NatalMockupWheel's hover
