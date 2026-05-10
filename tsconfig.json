@@ -34,7 +34,6 @@
     "app/**/*",
     "lib/**/*",
     "components/**/*",
-    "__tests__/**/*",
     "proxy.ts",
     ".next/dev/types/**/*.ts"
   ],
