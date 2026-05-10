@@ -111,18 +111,22 @@ describe("CLUSTER_SCORING_V1 amplifier — flag-on with stellium", () => {
         expect(on.houses[9].breakdown.occupants).not.toBe(off.houses[9].breakdown.occupants);
     });
 
-    it("does not amplify houses without a stellium", () => {
+    it("does not amplify houses without a stellium or a dispositor", () => {
         setClusterScoringEnabled(false);
         const off = score(capricornStelliumChart());
         setClusterScoringEnabled(true);
         const on = score(capricornStelliumChart());
 
-        // Houses 1–9 and 11–12 hold one or zero planets — no amplifier
-        // should fire on any of them.
-        const stelliumHouses = new Set([10]);
+        // Houses expected to move:
+        //   H10 — holds the Capricorn stellium (amp + leader logic)
+        //   H11 — Saturn sits there. Saturn disposits the Cap cluster
+        //         (×1.08) AND is the chart's final dispositor (+10), since
+        //         every chain in this fixture walks back to Saturn through
+        //         Capricorn or Aquarius.
+        const movingHouses = new Set([10, 11]);
         for (let i = 0; i < 12; i++) {
             const houseNum = i + 1;
-            if (stelliumHouses.has(houseNum)) continue;
+            if (movingHouses.has(houseNum)) continue;
             expect(on.houses[i].breakdown.occupants).toBe(off.houses[i].breakdown.occupants);
         }
     });
@@ -261,6 +265,66 @@ describe("CLUSTER_SCORING_V1 mutual reception bonus", () => {
         // come from different planets, but the no-MR baseline should NOT
         // have the +16 boost.
         expect(withMrH1).not.toBe(noMrH1);
+    });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Dispositor / domicile (Phase 3)
+// ═══════════════════════════════════════════════════════════════
+
+describe("CLUSTER_SCORING_V1 dispositor section", () => {
+    it("boosts the dispositor's house dignity (+5) when the cusp ruler disposits a cluster", () => {
+        // Capricorn stellium → Saturn is the dispositor. Saturn rules
+        // both Capricorn (cusp on H10 in this whole-sign fixture) and
+        // Aquarius (cusp on H11). On both H10 and H11, the cusp ruler is
+        // Saturn, so the dispositor dignity bonus (+5 per disposited
+        // cluster, count = 1 here) should fire on the dignity component.
+        setClusterScoringEnabled(false);
+        const off = score(capricornStelliumChart());
+        setClusterScoringEnabled(true);
+        const on = score(capricornStelliumChart());
+
+        // H10's cusp ruler is Saturn → +5 dignity from the dispositor bonus.
+        expect(on.houses[9].breakdown.dignity - off.houses[9].breakdown.dignity).toBe(5);
+        // H11's cusp ruler is also Saturn → also +5.
+        expect(on.houses[10].breakdown.dignity - off.houses[10].breakdown.dignity).toBe(5);
+        // H1 (Aries cusp, ruler Mars) — Mars is not a dispositor in this
+        // fixture, so no dignity change.
+        expect(on.houses[0].breakdown.dignity).toBe(off.houses[0].breakdown.dignity);
+    });
+
+    it("applies the +10 final-dispositor bonus to the master-key planet's occupants", () => {
+        // CAP_STELLIUM has every chain converging on Saturn (Saturn rules
+        // both Capricorn and Aquarius, both signs hold planets, every
+        // other planet's chain walks back through one of those signs).
+        // Saturn sits in Aquarius / H11. The +10 bonus must fire on H11
+        // occupants — it's the largest single component of the H11 shift.
+        //
+        // We can't isolate the +10 from the ×1.08 dispositor multiplier
+        // and other small changes without dissecting the mod arithmetic,
+        // but we can assert that H11 moves by AT LEAST 10 points (the
+        // floor set by the additive bonus, since Saturn's mod is the only
+        // occupant in H11).
+        setClusterScoringEnabled(false);
+        const off = score(capricornStelliumChart());
+        setClusterScoringEnabled(true);
+        const on = score(capricornStelliumChart());
+        const delta = on.houses[10].breakdown.occupants - off.houses[10].breakdown.occupants;
+        expect(delta).toBeGreaterThanOrEqual(10);
+    });
+
+    it("does not fire dispositor effects when no sign stelliums exist", () => {
+        // The even (no-stellium) fixture has no sign clusters → no
+        // dispositors → no Step 2.5 bonus → no Step 3 multiplier →
+        // no final dispositor → identical scores in either flag state.
+        setClusterScoringEnabled(false);
+        const off = score(evenChart());
+        setClusterScoringEnabled(true);
+        const on = score(evenChart());
+        for (let i = 0; i < 12; i++) {
+            expect(on.houses[i].breakdown.dignity).toBe(off.houses[i].breakdown.dignity);
+            expect(on.houses[i].breakdown.occupants).toBe(off.houses[i].breakdown.occupants);
+        }
     });
 });
 

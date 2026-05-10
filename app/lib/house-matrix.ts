@@ -796,6 +796,8 @@ export function computeHouseMatrix(params: {
     const ampMultByPlanet = new Map<string, number>();
     const leaderMultByPlanet = new Map<string, number>();
     const mrBonusByPlanet = new Map<string, number>();
+    const dispositorClusterCount = new Map<string, number>();
+    let finalDispositorPlanet: string | undefined;
     if (isClusterScoringEnabled()) {
         const clusterPlanets = natalPlanets
             .map((p) => {
@@ -869,6 +871,38 @@ export function computeHouseMatrix(params: {
                 mrBonusByPlanet.set(b, Math.min(16, (mrBonusByPlanet.get(b) ?? 0) + 8));
             }
         }
+
+        // ── Dispositor / domicile (Phase 3 / §6) ────────────────────────
+        //
+        // For every sign cluster, the cluster's dispositor (the ruler of
+        // the sign holding the cluster) carries the cluster's themes
+        // wherever the dispositor sits. Two effects:
+        //
+        //   (a) Step 2 dignity boost — when the dispositor is the cusp
+        //       ruler of some house, that house's baseline dignityPts
+        //       gets +5 per cluster disposited (cap +15).
+        //   (b) Step 3 occupant multiplier — wherever the dispositor sits
+        //       as an occupant, its own mod gets ×(1 + 0.08 × clusterCount),
+        //       capped ×1.24.
+        //
+        // We track the UNIQUE set of clusters each planet disposits so
+        // Saturn ruling both Capricorn AND Aquarius — both holding
+        // stelliums — gets credit for 2 clusters, not 4.
+        const clustersBySign = new Map<string, Set<string>>(); // sign → set of cluster keys
+        for (const c of clusterSet.signClusters) {
+            if (!c.dispositor || !c.anchorSign) continue;
+            const set = clustersBySign.get(c.dispositor) ?? new Set<string>();
+            set.add(c.anchorSign);
+            clustersBySign.set(c.dispositor, set);
+        }
+        for (const [planet, signSet] of clustersBySign) {
+            dispositorClusterCount.set(planet, signSet.size);
+        }
+
+        // Final dispositor (§3.4 + plan §6): a single planet at the
+        // terminus of every dispositor chain. Promoted to a chart-level
+        // attribute. When set, that planet's occupant mod gets +10 flat.
+        finalDispositorPlanet = clusterSet.finalDispositor;
     }
 
     // ── O(1) lookup helpers ─────────────────────────────────────────────
@@ -896,6 +930,29 @@ export function computeHouseMatrix(params: {
         if (mrBonusByPlanet.size === 0) return 0;
         if (!planetName) return 0;
         return mrBonusByPlanet.get(canonName(planetName)) ?? 0;
+    }
+    /** Step 2 dignity bonus when the planet disposits at least one sign
+     *  cluster. +5 per disposited cluster, capped at +15. Returns 0 when
+     *  the flag is off or the planet doesn't disposit anything. */
+    function clusterDispositorDignityBonus(planetName: string): number {
+        if (dispositorClusterCount.size === 0) return 0;
+        if (!planetName) return 0;
+        const count = dispositorClusterCount.get(canonName(planetName)) ?? 0;
+        return Math.min(15, 5 * count);
+    }
+    /** Step 3 occupant multiplier when the planet disposits at least one
+     *  sign cluster. ×(1 + 0.08 × count), capped ×1.24. */
+    function clusterDispositorMult(planetName: string): number {
+        if (dispositorClusterCount.size === 0) return 1.0;
+        if (!planetName) return 1.0;
+        const count = dispositorClusterCount.get(canonName(planetName)) ?? 0;
+        if (count === 0) return 1.0;
+        return Math.min(1.24, 1 + 0.08 * count);
+    }
+    /** +10 flat when the planet is the chart's final dispositor; 0 otherwise. */
+    function clusterFinalDispositorBonus(planetName: string): number {
+        if (!finalDispositorPlanet || !planetName) return 0;
+        return canonName(planetName) === finalDispositorPlanet ? 10 : 0;
     }
 
     const houses: HouseScore[] = [];
@@ -928,7 +985,13 @@ export function computeHouseMatrix(params: {
         // Gap 3: Lilly additive accidental dignity points (replaces multiplier)
         // H1/H10 = +5, H4/H7 = +4, H11 = +3, H5/H9 = +2, H2/H3/H8 = +1, H6/H12 = -2
         const accidentalPts = LILLY_ACCIDENTAL[h] ?? 0;
-        const dignity = dignityPts + accidentalPts;
+        // Step 2.5 — CLUSTER_SCORING_V1 dispositor dignity boost.
+        // When this house's cusp ruler is also the dispositor of one or more
+        // sign stelliums, the cusp ruler carries that extra structural weight
+        // even before its occupants are counted. +5 per disposited cluster,
+        // capped +15. No-op when the flag is off.
+        const dispositorDignityBonus = clusterDispositorDignityBonus(ruler);
+        const dignity = dignityPts + accidentalPts + dispositorDignityBonus;
         const rulerCondition = essentialDignityLabel(ruler, rulerSign, rulerDegree, sect);
 
         // ── Step 3: Occupant Planets (sect + joys + combustion/cazimi + hayz) ──
@@ -964,12 +1027,16 @@ export function computeHouseMatrix(params: {
                     natalPlanets,
                     speed:        p.speed,
                 });
-                // CLUSTER_SCORING_V1: leader → amplifier → mutual reception.
-                // Multipliers compose; MR is a flat additive applied last.
+                // CLUSTER_SCORING_V1: leader → dispositor → amplifier → MR
+                // → final dispositor. Multipliers compose left-to-right;
+                // additives (MR + final dispositor bonus) land last.
                 // No-op when the flag is off.
                 const adjOuter = Math.round(
-                    outerScore * clusterLeaderMult(pName) * clusterAmplifier(pName),
-                ) + clusterMrBonus(pName);
+                    outerScore
+                        * clusterLeaderMult(pName)
+                        * clusterDispositorMult(pName)
+                        * clusterAmplifier(pName),
+                ) + clusterMrBonus(pName) + clusterFinalDispositorBonus(pName);
                 occupants += adjOuter;
             } else {
                 // Traditional planets: base mod → sect → combustion/cazimi → joy → hayz
@@ -1016,17 +1083,20 @@ export function computeHouseMatrix(params: {
                     if (inHayz) mod += 36; // Hayz bonus: maximum contextual strength
                 }
 
-                // CLUSTER_SCORING_V1: leader → amplifier → mutual reception.
-                // Leader multiplier (×1.25 leader, ×0.92 non-leader, ×1.0
-                // otherwise) redistributes weight WITHIN a cluster toward
-                // the dignified planet — approximately preserving the
-                // cluster total before the amplifier scales it up. The MR
-                // additive (+8) lands last as a flat bonus; mutual
-                // reception is a small but qualitatively distinct signal
-                // that shouldn't scale with cluster size.
+                // CLUSTER_SCORING_V1: leader → dispositor → amplifier → MR
+                // → final dispositor. Multipliers compose; additives land
+                // after rounding. The dispositor multiplier (×1.08 per
+                // disposited cluster, cap ×1.24) fires for the dispositor
+                // wherever it sits — even when the dispositor is NOT in a
+                // cluster itself. The final-dispositor +10 fires on the
+                // chart's master-key planet wherever it sits.
                 // No-op when the flag is off.
-                mod = Math.round(mod * clusterLeaderMult(pName) * clusterAmplifier(pName))
-                    + clusterMrBonus(pName);
+                mod = Math.round(
+                    mod
+                        * clusterLeaderMult(pName)
+                        * clusterDispositorMult(pName)
+                        * clusterAmplifier(pName),
+                ) + clusterMrBonus(pName) + clusterFinalDispositorBonus(pName);
 
                 occupants += mod;
             }
