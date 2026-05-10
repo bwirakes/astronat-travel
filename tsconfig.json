@@ -25,9 +25,6 @@
     "paths": {
       "@/*": [
         "./*"
-      ],
-      "@payload-config": [
-        "./payload.config.ts"
       ]
     }
   },
@@ -37,7 +34,6 @@
     "app/**/*",
     "lib/**/*",
     "components/**/*",
-    "collections/**/*",
     "proxy.ts",
     ".next/dev/types/**/*.ts"
   ],

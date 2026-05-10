@@ -1,17 +1,26 @@
 import { getPostBySlug } from "@/lib/blog/api";
-import { notFound } from "next/navigation";
+import { LexicalRichText } from "@/lib/blog/lexical-rich-text";
+import { getStaticBlogSlugs } from "@/lib/blog/static-posts";
+import Footer from "@/app/components/Footer";
+import Navbar from "@/app/components/Navbar";
 import Image from "next/image";
 import Link from "next/link";
-import Navbar from "@/app/components/Navbar";
-import Footer from "@/app/components/Footer";
-import { RichText } from "@payloadcms/richtext-lexical/react";
+import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-
-console.log("IMPORTED RICHTEXT IS:", RichText, "from", require("@payloadcms/richtext-lexical/react"));
 
 export const revalidate = 60;
 
-export default async function BlogPost({ params }: { params: Promise<{ slug: string }> }) {
+export async function generateStaticParams() {
+  const slugs = new Set(getStaticBlogSlugs());
+  slugs.add("sample-post");
+  return [...slugs].map((slug) => ({ slug }));
+}
+
+export default async function BlogPost({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   const { slug } = await params;
   const post = await getPostBySlug(slug);
 
@@ -25,9 +34,11 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
 
       <main className="flex-1 pt-6 md:pt-8 pb-20 md:pb-32 px-6">
         <article className="max-w-5xl mx-auto">
-          
           <div className="mb-4 md:mb-6">
-            <Link href="/blog" className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-[var(--color-y2k-blue)] hover:opacity-70 transition-opacity">
+            <Link
+              href="/blog"
+              className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-[var(--color-y2k-blue)] hover:opacity-70 transition-opacity"
+            >
               <ArrowLeft size={14} /> Back to Journal
             </Link>
           </div>
@@ -36,7 +47,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
             <h1 className="font-primary text-[clamp(2.5rem,6vw,5rem)] leading-[0.85] text-[var(--text-primary)] uppercase tracking-tight mb-6">
               {post.title}
             </h1>
-            
+
             {post.excerpt && (
               <p className="font-secondary italic text-xl md:text-2xl text-[var(--text-secondary)] mb-8 border-l-2 border-[var(--color-y2k-blue)] pl-4 md:pl-6 leading-snug">
                 {post.excerpt}
@@ -53,9 +64,9 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
                   <span>·</span>
                   <time dateTime={post.publishedDate}>
                     {new Date(post.publishedDate).toLocaleDateString(undefined, {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
                     })}
                   </time>
                 </>
@@ -65,23 +76,26 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
 
           {post.heroImage?.url && (
             <div className="w-full relative mb-16 md:mb-20">
-              <div 
+              <div
                 className="w-full aspect-[16/9] md:aspect-[21/9] relative overflow-hidden"
-                style={{ clipPath: "var(--cut-lg, polygon(0% 0%, 100% 0%, 100% 90%, 95% 100%, 0% 100%))" }}
+                style={{
+                  clipPath:
+                    "var(--cut-lg, polygon(0% 0%, 100% 0%, 100% 90%, 95% 100%, 0% 100%))",
+                }}
               >
-                <Image 
-                  src={post.heroImage.url} 
-                  alt={post.heroImage.alt || post.title} 
-                  fill 
+                <Image
+                  src={post.heroImage.url}
+                  alt={post.heroImage.alt || post.title}
+                  fill
                   priority
-                  className="object-cover" 
+                  className="object-cover"
                 />
               </div>
             </div>
           )}
 
-          {/* Lexical Rich Text Content Wrapper with Styled Child Elements */}
-          <div className="prose prose-lg dark:prose-invert max-w-none 
+          <div
+            className="prose prose-lg dark:prose-invert max-w-none 
                           prose-headings:font-secondary prose-headings:font-normal prose-headings:leading-tight 
                           prose-h2:text-3xl md:prose-h2:text-4xl prose-h2:mt-16 prose-h2:mb-6
                           prose-h3:text-2xl md:prose-h3:text-3xl prose-h3:text-[var(--color-y2k-blue)]
@@ -92,16 +106,14 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
                           prose-ol:list-decimal prose-ol:font-body prose-ol:opacity-85
                           prose-blockquote:border-l-4 prose-blockquote:border-[var(--color-spiced-life)] prose-blockquote:pl-6 prose-blockquote:font-secondary prose-blockquote:italic
                           prose-img:rounded-2xl
-                          text-[var(--text-primary)]">
-            <RichText data={post.content} />
+                          text-[var(--text-primary)]"
+          >
+            <LexicalRichText data={post.content} />
           </div>
-
         </article>
       </main>
 
       <Footer />
-
-
     </div>
   );
 }
