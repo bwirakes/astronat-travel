@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getPostHogClient } from '@/lib/posthog-server'
+import { capturePostHogEvent } from '@/lib/posthog-server'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_fallback', {
   apiVersion: '2026-03-25.dahlia',
@@ -193,8 +193,7 @@ export async function POST(req: Request) {
       // Send welcome email — only after subscription is confirmed
       await sendWelcomeEmail(supabase, userId)
 
-      const posthogCheckout = getPostHogClient()
-      posthogCheckout.capture({
+      await capturePostHogEvent({
         distinctId: userId,
         event: 'subscription_activated',
         properties: {
@@ -202,7 +201,6 @@ export async function POST(req: Request) {
           product: 'subscription_pro',
         },
       })
-      await posthogCheckout.shutdown()
 
       console.log(`[webhook] Checkout completed for user ${userId}`)
       break
@@ -221,8 +219,7 @@ export async function POST(req: Request) {
       const subscription = event.data.object as Stripe.Subscription
       const resolvedUserId = await syncSubscriptionToProfile(supabase, subscription)
       if (resolvedUserId) {
-        const posthogCancel = getPostHogClient()
-        posthogCancel.capture({
+        await capturePostHogEvent({
           distinctId: resolvedUserId,
           event: 'subscription_cancelled',
           properties: {
@@ -230,7 +227,6 @@ export async function POST(req: Request) {
             subscription_status: subscription.status,
           },
         })
-        await posthogCancel.shutdown()
       }
       break
     }

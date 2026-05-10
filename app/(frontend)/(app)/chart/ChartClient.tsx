@@ -14,6 +14,7 @@ import MonocleSectionHeader from "@/app/components/editorial/MonocleSectionHeade
 import ThickRule from "@/app/components/editorial/ThickRule";
 import { essentialDignityLabel } from "@/app/lib/dignity";
 import { resolvePlacementImplication, HOUSE_DOMAINS } from "@/app/lib/astro-wording";
+import posthog from "posthog-js";
 
 
 const ZODIAC_SIGNS = [
@@ -140,6 +141,17 @@ export default function ChartPage({
 
   const [realAspects, setRealAspects] = useState<any[]>(initialNatalData ? (initialNatalData.aspects || []) : []);
 
+  // Fire chart_viewed once for pre-loaded (SSR) natal data
+  useEffect(() => {
+    if (!initialNatalData?.planets) return;
+    posthog.capture("chart_viewed", {
+      chart_type: isMundane ? "mundane" : "natal",
+      birth_city: initialNatalData.birth_city ?? null,
+      country_slug: countrySlug ?? null,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [interpretation, setInterpretation] = useState<Record<string, any> | null>(null);
   const [interpretLoading, setInterpretLoading] = useState(false);
   // Guard: only ever kick off one interpret fetch per page load
@@ -202,6 +214,11 @@ export default function ChartPage({
           };
         });
         setRealNatal(formatNatal);
+        posthog.capture("chart_viewed", {
+          chart_type: isMundane ? "mundane" : "natal",
+          birth_city: data.birth_city ?? null,
+          country_slug: countrySlug ?? null,
+        });
       } catch (err: any) {
         if (err?.name === "AbortError") return;
         console.error(err);

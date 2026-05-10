@@ -28,10 +28,15 @@ Write at a conversational level. Use rhetorical questions ("okay?", "and it's ru
 - Output ONLY the text of the script. Do not output markdown headers or formatting like "**Intro:**". Just the oral transcript.
 `;
 
-export function streamTeacherScript(payloadStr: string) {
+export function streamTeacherScript(payloadStr: string, userId?: string) {
   return streamText({
     model: gemini(MODEL),
     system: SYSTEM,
     prompt: `${TASK_INSTRUCTIONS}\n\n<natal_data>\n${payloadStr}\n</natal_data>\n\nWrite the teacher reading script. Stay strictly inside the data — do not invent.`,
+    experimental_telemetry: {
+      isEnabled: true,
+      functionId: "natal-script",
+      metadata: userId ? { posthog_distinct_id: userId } : undefined,
+    },
   });
 }

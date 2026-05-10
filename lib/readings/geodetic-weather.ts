@@ -354,10 +354,10 @@ export async function runGeodeticWeather(input: RunWeatherInput): Promise<{
 
   try {
     if (isMundane) {
-      const lead = await writeMundaneLead(aiInput);
+      const lead = await writeMundaneLead(aiInput, input.user.id);
       mundaneLead = lead.situationLead;
     } else {
-      interpretation = await writeWeatherReading(aiInput);
+      interpretation = await writeWeatherReading(aiInput, input.user.id);
       // Guard: the model can only label. Dates/nights/score come from the
       // deterministic window-proposer so we trust numbers end-to-end. If the
       // AI returned fewer labels than candidates, pad with defaults.

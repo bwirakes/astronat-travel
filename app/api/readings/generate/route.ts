@@ -5,6 +5,7 @@ import { runAstrocarto } from "@/lib/readings/astrocarto";
 import { runGeodeticWeather } from "@/lib/readings/geodetic-weather";
 import { persistReading, logSearch } from "@/lib/readings/persist";
 import { computeHeroScore } from "@/app/lib/hero-score";
+import { capturePostHogEvent } from "@/lib/posthog-server";
 
 /**
  * /api/readings/generate — thin dispatcher.
@@ -63,6 +64,16 @@ export async function POST(req: Request) {
         readingScore: hero.score,
         details: { ...result, heroWindowScore: hero.score, heroScoreSource: hero.source },
       });
+      await capturePostHogEvent({
+        distinctId: user.id,
+        event: "reading_generated",
+        properties: {
+          reading_id: readingId,
+          reading_category: "geodetic-weather",
+          destination,
+          macro_score: hero.score,
+        },
+      });
       return NextResponse.json({ success: true, readingId });
     }
 
@@ -113,6 +124,20 @@ export async function POST(req: Request) {
       houseScores: result.houses.map((h: any) => ({ house: h.house, score: h.score })),
       eventScores: result.eventScores,
       goals: result.goals,
+    });
+
+    await capturePostHogEvent({
+      distinctId: user.id,
+      event: "reading_generated",
+      properties: {
+        reading_id: readingId,
+        reading_category: readingCategory ?? "astrocartography",
+        destination: result.destination,
+        travel_type: travelType ?? "trip",
+        macro_score: result.macroScore,
+        has_partner: !!partnerId,
+        goals: goals ?? [],
+      },
     });
 
     return NextResponse.json({ success: true, readingId });

@@ -306,6 +306,7 @@ const TASK_INSTRUCTIONS = "\n" + BLOCKS.join("\n\n");
 
 export async function writeTeacherReading(
   input: TeacherReadingInput,
+  userId?: string,
 ): Promise<TeacherReading> {
   const inputJson = JSON.stringify(input, null, 2);
   const t0 = Date.now();
@@ -328,6 +329,11 @@ export async function writeTeacherReading(
           thinkingConfig: { thinkingLevel: "minimal" },
           structuredOutputs: true,
         },
+      },
+      experimental_telemetry: {
+        isEnabled: true,
+        functionId: "teacher-reading",
+        metadata: userId ? { posthog_distinct_id: userId } : undefined,
       },
     });
     console.log(`[teacher-reading] ok in ${Date.now() - t0}ms — finish=${finishReason}, usage=${JSON.stringify(usage)}`);
