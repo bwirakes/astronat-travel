@@ -85,7 +85,22 @@ export async function POST(req: NextRequest) {
         // Universal sky state — optional refDate from body, defaults to now.
         // Adds a global sky modifier (current retrogrades, eclipses, node hits)
         // to E_Final scores. Same data drives the V4 view's PlaceFieldTab §03.
-        const refDate = refDateInput ? new Date(refDateInput) : new Date();
+        // Reject malformed refDate inputs early — `new Date("banana")` parses
+        // to Invalid Date, which would propagate NaN through the 395-day
+        // ephemeris scan inside computeUniversalSky.
+        let refDate: Date;
+        if (refDateInput == null) {
+            refDate = new Date();
+        } else {
+            const parsed = new Date(refDateInput);
+            if (!Number.isFinite(parsed.getTime())) {
+                return NextResponse.json(
+                    { error: "refDate must be a valid ISO-8601 date string or omitted" },
+                    { status: 400 },
+                );
+            }
+            refDate = parsed;
+        }
         const universalSky = await computeUniversalSky(refDate);
 
         // Execute Memo Part 2: Vectorizing Life Events
