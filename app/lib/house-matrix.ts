@@ -53,6 +53,7 @@ import { computeHouseNumber } from "./house-system";
 import { isOuterPlanet, computeOuterPlanetScore } from "./outer-planet-scoring";
 import { scoreAngleTransits, type AngleName, type AngleTransitContribution } from "./geodetic/angle-transits";
 import { scoreStations, type StationContribution } from "./geodetic/station-scoring";
+import type { StationEvent } from "./geodetic/geodetic-events";
 import { scoreNatalWorldPoints, type NatalWorldPointsResult } from "./geodetic/natal-world-points";
 import { scorePersonalEclipses, type PersonalEclipsesResult, type PersonalEclipseHit } from "./geodetic/personal-eclipses";
 import { scorePersonalLunations, type PersonalLunationsResult, type PersonalLunationHit } from "./geodetic/personal-lunations";
@@ -540,6 +541,12 @@ export function computeHouseMatrix(params: {
     /** A5: precomputed secondary-progression bands. Async by nature, so
      *  the caller resolves them and hands them to the sync engine. */
     progressedBands?: ProgressionsResult;
+    /** A11: live-detected stations from `universal-sky.ts:scanStationsAndRetrogradeWindows`.
+     *  When provided, `scoreStations` uses these instead of the curated
+     *  `STATIONS` table — which omits Mercury/Venus entirely and is sparse
+     *  for 2026+. Pass `universalSky.stations` adapted to `StationEvent`
+     *  shape from the caller. */
+    stations?: StationEvent[];
 }): HouseMatrixResult {
     const {
         natalPlanets,
@@ -558,6 +565,7 @@ export function computeHouseMatrix(params: {
         transitPositions,
         refDate,
         progressedBands,
+        stations,
     } = params;
 
     // Determine house system
@@ -758,7 +766,7 @@ export function computeHouseMatrix(params: {
     };
     const PER_HOUSE_STATION_CAP = 22;
     const stationsResult = refDate
-        ? scoreStations({ dateUtc: refDate, geoMC, geoASC })
+        ? scoreStations({ dateUtc: refDate, geoMC, geoASC, stations })
         : { raw: 0, contributions: [] as StationContribution[] };
     const stationByHouse = new Map<number, number>();
     for (const c of stationsResult.contributions) {

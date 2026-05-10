@@ -281,6 +281,13 @@ export async function runAstrocarto(
   const goalIds: string[] | undefined = Array.isArray(goals)
     ? (goals.filter((g): g is string => typeof g === "string"))
     : undefined;
+  const liveStations = universalSky.stations.map((s) => ({
+    planet: s.planet,
+    type: s.direction,
+    dateUtc: `${s.dateISO}T12:00:00Z`,
+    longitude: s.longitude,
+    sign: s.sign,
+  }));
   const matrixResult = computeHouseMatrix({
     natalPlanets,
     relocatedCusps,
@@ -298,6 +305,7 @@ export async function runAstrocarto(
     transitPositions: transitPositionsAtRef,
     refDate,
     progressedBands,
+    stations: liveStations,
   });
 
   const ascLon = relocatedCusps[0] ?? 0;
@@ -360,6 +368,7 @@ export async function runAstrocarto(
       selectedGoals,
       transitPositions: transitPositionsAtRef,
       refDate,
+      stations: liveStations,
     });
 
     // Partner relocated planet states for the affinity matrix — same shape

@@ -355,13 +355,19 @@ export async function computeUniversalSky(
     const { stations: allStations, retrogradeWindows } =
         await scanStationsAndRetrogradeWindows(refDate, 30, scanLookaheadDays);
 
-    // The "Coming up" panel only wants stations within 30 days of refDate.
-    // The full set is surfaced via retrogradeWindows for the Gantt.
+    // Symmetric ±30 day window. Past stations are kept because (a) the
+    // geodetic scoring path needs them — a station that just fired is more
+    // active than one coming up, and the Gaussian time-decay in
+    // `scoreStations` (σ varies by planet, 5–25 days) handles the falloff,
+    // and (b) the UI's "Coming up" panel can filter forward on the consumer
+    // side. The full set spanning [refDate − 30, refDate + scanLookaheadDays]
+    // is surfaced via retrogradeWindows for the Gantt.
     const refTime = refDate.getTime();
+    const stationsWindowStart = refTime - 30 * MS_DAY;
     const stationsWindowEnd = refTime + 30 * MS_DAY;
     const stations: SkyStation[] = allStations.filter(s => {
         const t = new Date(s.dateISO).getTime();
-        return t >= refTime && t <= stationsWindowEnd;
+        return t >= stationsWindowStart && t <= stationsWindowEnd;
     });
 
     // 3. Ingresses within 30 days — analytic from current speed.
