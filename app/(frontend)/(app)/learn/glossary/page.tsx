@@ -7,6 +7,8 @@ import { TraditionChip } from "../_components/TraditionChip";
 import { GLOSSARY, getGlossaryEntry } from "../_components/glossary-data";
 import { getLesson } from "../_components/curriculum";
 
+export const revalidate = 3600;
+
 export const metadata: Metadata = {
   title: "Glossary — Astronat Academy",
   description:
