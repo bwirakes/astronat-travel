@@ -73,6 +73,30 @@ function tightnessDots(orb: number | string): number {
   return 1;
 }
 
+/** Split chartEssence content into the two paragraphs the prompt asks for.
+ *  The prompt instructs the LLM to emit `\n\n` between the lede and the
+ *  receipt+move, but Gemini frequently ignores whitespace directives and
+ *  returns one block. When that happens, fall back to splitting at the
+ *  midpoint sentence so the layout still breathes. Single-pass: O(n) on
+ *  content length. */
+function splitChartEssence(content: string): string[] {
+  const trimmed = (content || "").trim();
+  if (!trimmed) return [];
+  if (/\n{2,}/.test(trimmed)) {
+    return trimmed.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  }
+  // Match sentences as runs of non-terminator chars followed by ., ?, or !
+  // and any trailing whitespace. Conservative — won't break on abbreviations,
+  // but the LLM tends not to use them in this register.
+  const sentences = trimmed.match(/[^.!?]+[.!?]+\s*/g);
+  if (!sentences || sentences.length < 4) return [trimmed];
+  const mid = Math.ceil(sentences.length / 2);
+  return [
+    sentences.slice(0, mid).join("").trim(),
+    sentences.slice(mid).join("").trim(),
+  ];
+}
+
 // ── Main Page ─────────────────────────────────────────────────
 
 export default function ChartPage({ 
@@ -449,7 +473,7 @@ export default function ChartPage({
                         <>
                            {interpretation?.chartEssence ? (
                                <div className="flex flex-col gap-6 mb-8">
-                                 {interpretation.chartEssence.content.split(/\n{2,}/).map((paragraph: string, idx: number) => (
+                                 {splitChartEssence(interpretation.chartEssence.content).map((paragraph: string, idx: number) => (
                                    <p key={idx} style={{ fontFamily: "var(--font-body)", fontSize: "clamp(16px, 1.3vw, 18px)", lineHeight: 1.75, color: "var(--text-primary)", fontWeight: 300, maxWidth: "70ch" }}>
                                      {paragraph}
                                    </p>
@@ -778,7 +802,37 @@ export default function ChartPage({
                         </div>
                       </div>
                     )}
-                    
+
+                    {/* THE STRUCTURE — chartStructureNote (cluster scoring §8.3) */}
+                    {!isMundane && interpretation?.chartStructureNote && (
+                      <div className="mt-16 mb-12">
+                        <MonocleSectionHeader
+                          index="05"
+                          title={(interpretation.chartStructureNote as { title?: string; content?: string }).title ?? "The Structure"}
+                          sub={<>The chart's organising structure — stelliums, dispositors, and aspect patterns — synthesised in one place.</>}
+                        />
+                        <div className="flex flex-col gap-6 mt-6">
+                          {splitChartEssence(
+                            (interpretation.chartStructureNote as { content?: string }).content ?? "",
+                          ).map((paragraph: string, idx: number) => (
+                            <p
+                              key={idx}
+                              style={{
+                                fontFamily: "var(--font-body)",
+                                fontSize: "clamp(16px, 1.3vw, 18px)",
+                                lineHeight: 1.75,
+                                color: "var(--text-primary)",
+                                fontWeight: 300,
+                                maxWidth: "70ch",
+                              }}
+                            >
+                              {paragraph}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                 </div>
               </>
             ) : loading ? (

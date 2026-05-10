@@ -259,11 +259,20 @@ export function buildChartStructure(
         clusterSet.orbClusters,
     );
 
-    const stelliums: ChartStructureStellium[] = [
+    const allStelliums: ChartStructureStellium[] = [
         ...clusterSet.houseClusters.map((c) => renderCluster(c, "house")),
         ...clusterSet.signClusters.map((c) => renderCluster(c, "sign")),
         ...dedupedOrb.map((c) => renderCluster(c, "orb")),
     ];
+
+    // Filter generational clusters (≥2 outer members) out of the surfaced
+    // array so the LLM never gets the temptation to write commentary about a
+    // cohort millions of people share. Defensive — the prompt instructs
+    // "skip generational" but Gemini's prompt-compliance for negative
+    // directives is unreliable when the data is right there in the payload.
+    // The clusters are still detected by the scoring engine; this filter
+    // only affects what's surfaced to the AI input.
+    const stelliums = allStelliums.filter((s) => !s.generational);
 
     const finalDispositor: ChartStructureFinalDispositor | undefined = clusterSet.finalDispositor
         ? {

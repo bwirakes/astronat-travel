@@ -113,9 +113,13 @@ describe("buildChartStructure — Capricorn stellium", () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe("buildChartStructure — filter rules", () => {
-    it("flags ≥2 outer members as generational", () => {
-        // Saturn-Uranus-Pluto stellium in Capricorn / H10 — exactly the
-        // generational cohort case the plan §8.4 directs prompts to skip.
+    it("filters generational stelliums (≥2 outer members) out of the surfaced array", () => {
+        // Saturn-Uranus-Pluto stellium in Capricorn / H10 — generational
+        // cohort case. Per plan §8.4 the LLM should never see this cluster
+        // in the input payload (Gemini ignores negative-directive prompts
+        // when the data is right there). The cluster IS still detected by
+        // the scoring engine; this filter only affects what's surfaced to
+        // the AI commentary input.
         const fixture: ChartStructurePlanetInput[] = [
             planet("Saturn", 270),
             planet("Uranus", 273),
@@ -129,9 +133,31 @@ describe("buildChartStructure — filter rules", () => {
             planet("Neptune", 320),
         ];
         const out = buildChartStructure(fixture, houseOfWholeSignAries);
+        // The Capricorn cluster has 2 outer members (Uranus + Pluto) and so
+        // is filtered out. Should yield zero stelliums in the output.
+        const houseStellium = out.stelliums.find((s) => s.kind === "house");
+        expect(houseStellium).toBeUndefined();
+    });
+
+    it("keeps clusters with one or zero outer members", () => {
+        // Sun-Mercury-Pluto in Capricorn / H10 — only one outer (Pluto), so
+        // not generational; should remain in the surfaced output.
+        const fixture: ChartStructurePlanetInput[] = [
+            planet("Sun",     270),
+            planet("Mercury", 273),
+            planet("Pluto",   277),
+            planet("Moon",    45),
+            planet("Venus",   115),
+            planet("Mars",    200),
+            planet("Jupiter", 220),
+            planet("Saturn",  320),
+            planet("Uranus",  60),
+            planet("Neptune", 150),
+        ];
+        const out = buildChartStructure(fixture, houseOfWholeSignAries);
         const houseStellium = out.stelliums.find((s) => s.kind === "house");
         expect(houseStellium).toBeDefined();
-        expect(houseStellium!.generational).toBe(true);
+        expect(houseStellium!.generational).toBe(false);
     });
 
     it("suppresses T-Squares where Moon is a non-apex member", () => {

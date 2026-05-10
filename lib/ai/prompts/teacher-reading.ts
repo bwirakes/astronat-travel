@@ -181,22 +181,35 @@ For each surfaced cluster:
 
 **Final dispositor** — when \`chartStructure.finalDispositor\` is set, mention it explicitly in the \`life-themes\` tab lead AND in the body of the relevant cluster commentary entry: "Your chart has a final dispositor — every planet's energy chains back to [planet]. That makes [planet]'s placement the master key. What [planet] does, the whole chart does." Gloss "final dispositor" the first time. Skip when \`finalDispositor\` is absent.
 
-**\`patternCommentary\`** (REQUIRED when \`chartStructure.patterns\` is non-empty)
+**\`patternCommentary\`** (REQUIRED when \`chartStructure.patterns\` is non-empty — this is not optional; if you skip it when patterns exist, the reading is incomplete)
 One entry per pattern. The \`patternKey\` MUST match \`patterns[].key\` verbatim.
 
-- **Grand Trine** — name the element (fire/earth/air/water) and the "gift you might underuse" register. Example: "Three planets form a sealed triangle in earth signs — money, work, and body work in your favour even when you're not paying attention. The risk is laziness, not failure." Always gloss "Grand Trine" once.
-- **T-Square** — name the apex (focal) planet as the pressure point and the opposition pair as the tug-of-war. Example: "Mars sits at the apex of a T-Square between your Sun and Moon — every internal pull between who you are and what you need ends up channeled into action. Output is the pressure release." Always gloss "T-Square" once.
+- **Grand Trine** — name the element (fire/earth/air/water) and the "gift you might underuse" register. Always gloss "Grand Trine" once.
+  Concrete example for a Water Grand Trine (Moon/Mars/Saturn in water signs):
+  \`\`\`
+  patternKey: "grand-trine-water"
+  headline:   "Three planets form a sealed water triangle — feeling moves through you without resistance"
+  body:       "A Grand Trine is a closed circuit between three planets — energy flows on its own with nothing to interrupt it. Yours runs in water, which means emotional reading, intuitive timing, and reading the room land effortlessly — sometimes so effortlessly you forget other people work for the same skill. The risk isn't failure; it's coasting on a gift you under-leverage. Push it: water that doesn't move stagnates."
+  \`\`\`
+- **T-Square** — name the apex (focal) planet as the pressure point and the opposition pair as the tug-of-war. Always gloss "T-Square" once.
+  Concrete example for a T-Square with Mars at apex, Sun opp Moon:
+  \`\`\`
+  patternKey: "t-square-mars"
+  headline:   "Mars sits at the pressure point of your chart's central tug-of-war"
+  body:       "A T-Square is a tense triangle: two planets pulling against each other (the opposition), with a third planet caught at the apex squaring both. Yours has Mars as the apex, with your Sun and Moon as the opposition. Every internal pull between who you are and what you need ends up channeled into action — output is the pressure release. Do the work, or the work does you."
+  \`\`\`
 
-**Tab cross-references** — when a cluster sits in a house tied to a specific tab, name it in that tab's lead too:
+**Tab cross-references** — when a cluster or pattern sits in a house tied to a specific tab, name it in that tab's lead too. Patterns especially matter — they shape the chart's central tensions, so they belong in the structural tabs:
 - House stellium in H1, H10 → reference in \`tabs["life-themes"].lead\` and \`tabs["place-field"].lead\`
 - House stellium in any house → may also be referenced in \`overview.leanInto\` paragraph 1 (durable place factors)
-- Patterns → reference the focal/element in \`tabs["life-themes"].lead\` (these shape the chart's central tensions)
+- **Patterns (Grand Trine, T-Square)** → MUST be named explicitly in \`tabs["life-themes"].lead\` when present. The pattern's element (Grand Trine) or focal planet (T-Square) is the chart's central tension and belongs in the life-themes opening.
 
 Hard constraints:
 - Never invent stelliums, dispositors, or patterns absent from \`chartStructure\`.
 - Never describe a stellium with fewer than 3 members (engine guarantees ≥3 before surfacing).
 - Skip entries flagged \`generational: true\` — emit no commentary for them.
-- The \`clusterKey\` and \`patternKey\` are exact lookup strings; do not reformat or paraphrase them.`;
+- The \`clusterKey\` and \`patternKey\` are exact lookup strings; do not reformat or paraphrase them.
+- **VOCABULARY GUARD (critical):** The words "stellium," "cluster," "pile-up of planets," "Grand Trine," "T-Square," "final dispositor," and "dispositor" may ONLY appear in the body prose (overview, tabs, leanInto, watchOut, scoreExplanation, etc.) when \`chartStructure\` actually contains a backing entry. If \`chartStructure.stelliums\` is empty, the word "stellium" / "cluster" / "pile-up" must NOT appear ANYWHERE in the reading. If \`chartStructure.patterns\` is empty, "Grand Trine" / "T-Square" must NOT appear. If \`chartStructure.finalDispositor\` is absent, the phrase "final dispositor" must NOT appear. Fabricating this vocabulary without backing data is the single worst failure mode for this section — readers infer structural claims that aren't in their chart. When in doubt, do not use the word.`;
 
 const BLOCK_LEGACY_FIELDS = `# Legacy Fields
 Fill \`summary\`, \`signals\`, and \`longRead\` as best as possible for backwards compatibility, maintaining the same tone.`;
