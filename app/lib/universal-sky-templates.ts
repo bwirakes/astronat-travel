@@ -378,24 +378,27 @@ function bodyForEvent(event: RankedEvent): BodyTemplate {
     return { primary: "" };
 }
 
-/** Build a goal-tied verdict lead sentence for the §03 panel. */
+/** Build a goal-tied verdict lead sentence for the §03 panel.
+ *  Voice: Nat — direct, short, no fluff. One sharp sentence that names the
+ *  loudest event, then a goal-tied takeaway if a primary goal is set. */
 export function templateForVerdictLead(
     events: RankedEvent[],
     primaryGoalId: string | undefined,
 ): string {
     if (events.length === 0) {
-        return "The sky is unusually quiet — your own chart and the place's character take the lead.";
+        return "Sky is unusually quiet right now. Your chart and the place do the work.";
     }
     const lead = events[0];
-    const leadTitle = eventTitle(lead).toLowerCase();
+    const leadTitle = eventTitle(lead);
     const goalDef = primaryGoalId ? GOAL_DEFINITIONS[primaryGoalId as GoalId] : undefined;
-    const sentence1 = `${capitalizeFirst(leadTitle)} is the headline of the sky over your trip.`;
-    if (!goalDef) return sentence1;
-    return `${sentence1} With your ${goalDef.label.toLowerCase()} goal, ${goalActionShortened(lead, primaryGoalId)}`;
-}
 
-function capitalizeFirst(s: string): string {
-    return s ? s[0].toUpperCase() + s.slice(1) : s;
+    // "Loudest thing overhead: Mercury reverses in Cancer."
+    const sentence1 = `Loudest thing overhead: ${leadTitle.toLowerCase()}.`;
+    if (!goalDef) return sentence1;
+
+    // "For romance: text plans before you sign, not after."
+    const tail = goalActionShortened(lead, primaryGoalId);
+    return `${sentence1} For ${goalDef.label.toLowerCase()}: ${tail}`;
 }
 
 function goalActionShortened(event: RankedEvent, primaryGoalId: string | undefined): string {

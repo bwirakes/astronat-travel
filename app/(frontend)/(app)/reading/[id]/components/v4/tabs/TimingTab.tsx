@@ -16,6 +16,59 @@ import TimingDateTabs, {
 } from "./TimingDateTabs";
 import { WINDOW_LABELS, WINDOW_RATIONALES, verdictBand, verdictTone } from "@/app/lib/verdict";
 
+// ─── Importance ranking (signal vs noise) ────────────────────────────────────
+// Personal transits are sorted chronologically in the VM, so we re-rank by a
+// quick proxy of significance: outer-planet weight × tightness × goal hit ×
+// span width. Mirrors the picker in solveTransitSpans, just narrower.
+
+const PLANET_WEIGHT_LOCAL: Record<string, number> = {
+    pluto: 5, neptune: 5, uranus: 5, saturn: 5, jupiter: 4,
+    mars: 3, sun: 2, mercury: 1.5, venus: 1.5, moon: 0,
+};
+
+const GOAL_TARGETS_LOCAL: Record<string, string[]> = {
+    love: ["venus", "moon"],
+    career: ["sun", "mars", "saturn", "mc"],
+    community: ["mercury", "jupiter"],
+    growth: ["jupiter", "neptune"],
+    relocation: ["moon", "ic"],
+    timing: [],
+};
+
+function transitImportance(span: TransitSpan, goalIds: string[] = []): number {
+    const w = PLANET_WEIGHT_LOCAL[span.transit_planet.toLowerCase()] ?? 1;
+    const tightness = Math.max(0.2, 1 - span.peak_orb / 3);
+    const goalSet = new Set(goalIds.flatMap((g) => GOAL_TARGETS_LOCAL[g] ?? []));
+    const goalBoost = goalSet.has(span.natal_planet.toLowerCase()) ? 1.5 : 1;
+    const widthDays = Math.max(1, span.exitDay - span.entryDay);
+    const widthFactor = 0.5 + Math.min(1, widthDays / 30);
+    return w * tightness * goalBoost * widthFactor;
+}
+
+// ─── Plain-English copy for personal transits ───────────────────────────────
+// Mirrors the lay-language mapping in universal-sky-templates so the timing
+// view reads consistently across personal + sky rows. Voice: Nat — direct,
+// 7th-grade, gloss the astro term first.
+
+const ASPECT_VERB_LAY: Record<string, string> = {
+    conjunction: "sits on",
+    opposition:  "pulls against",
+    square:      "presses on",
+    trine:       "lifts",
+    sextile:     "opens",
+    quincunx:    "knocks against",
+};
+
+function capWord(s: string): string {
+    if (!s) return "";
+    return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+
+function plainTransitTitle(span: TransitSpan): string {
+    const verb = ASPECT_VERB_LAY[span.aspect.toLowerCase()] ?? span.aspect.toLowerCase();
+    return `${capWord(span.transit_planet)} ${verb} your natal ${capWord(span.natal_planet)}`;
+}
+
 interface Props {
     vm: V4VM;
     copiedTab?: {
@@ -99,6 +152,81 @@ function VerdictHeadline({ vm }: { vm: V4VM }) {
                     : <>{v.rationale.charAt(0).toUpperCase()}{v.rationale.slice(1)}.</>
                 }
             </p>
+        </div>
+    );
+}
+
+// ─── Window framing — Nat's voice, two short paragraphs ─────────────────────
+// Sits above the Gantt header. Para 1 explains what the bars are. Para 2
+// names the loudest 1–2 things shaping this period. Direct, no jargon.
+
+function WindowFraming({ vm }: { vm: V4VM }) {
+    const isRelocation = vm.timeline.grain === "month";
+
+    // Pick the heaviest personal transit (re-rank because vm.transitSpans
+    // is chronological, not by importance).
+    const topTransit = [...vm.transitSpans]
+        .map((s) => ({ s, score: transitImportance(s, vm.goalIds) }))
+        .sort((a, b) => b.score - a.score)[0]?.s;
+
+    // Pick the heaviest sky event that overlaps the window.
+    const universalSpans = vm.universalSkySpans ?? [];
+    const topSky = [...universalSpans]
+        .filter((s) => {
+            // Trip: prefer spans that overlap the −7→+30d "now" zone.
+            // Relocation: prefer spans inside the first 6 months.
+            const cutoff = isRelocation ? 180 : 30;
+            return s.entryDay <= cutoff && s.exitDay >= -7;
+        })
+        .sort((a, b) => (b.severity ?? 0) - (a.severity ?? 0))[0];
+
+    const topTransitTitle = topTransit ? plainTransitTitle(topTransit) : null;
+    const topTransitExact = topTransit ? fmtMonthDay(topTransit.exactISO) : null;
+    const topSkyCopy = topSky
+        ? templateForSpanShape({
+              kind: topSky.kind,
+              planet: topSky.planet,
+              sign: topSky.sign,
+              dignity: topSky.dignity,
+              aspectType: topSky.aspectType,
+              secondaryPlanet: topSky.secondaryPlanet,
+          })
+        : null;
+    const topSkyRange =
+        topSky && topSky.entryISO !== topSky.exitISO
+            ? `${fmtMonthDay(topSky.entryISO)} — ${fmtMonthDay(topSky.exitISO)}`
+            : topSky
+              ? fmtMonthDay(topSky.exactISO)
+              : null;
+
+    const para1 = isRelocation
+        ? "Here's the year ahead at this place. Outer planets — Saturn, Jupiter, the slow ones — move through your chart for months at a time. Most pass quietly. A few set the tone. Each bar shows when one transit enters, peaks, and clears."
+        : "Here's the next 90 days, slowed down. Outer planets sweep across your natal chart for weeks at a time, and a few set the tone for the whole stretch. Each bar is one transit — when it enters orb (close enough to count), when it's exact, when it clears.";
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem", maxWidth: "62ch", marginTop: "var(--space-xl)" }}>
+            <p style={{ fontFamily: FB, fontSize: "16px", lineHeight: 1.65, color: "var(--text-secondary)", margin: 0, fontWeight: 300 }}>
+                {para1}
+            </p>
+            {(topTransitTitle || topSkyCopy) && (
+                <p style={{ fontFamily: FB, fontSize: "16px", lineHeight: 1.65, color: "var(--text-secondary)", margin: 0, fontWeight: 300 }}>
+                    {topTransitTitle && (
+                        <>
+                            {isRelocation ? "The structural pressure of the year is " : "The loudest thing pressing on you is "}
+                            <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>{topTransitTitle}</strong>
+                            {topTransitExact && <>, exact around {topTransitExact}</>}
+                            {topSkyCopy ? ". " : "."}
+                        </>
+                    )}
+                    {topSkyCopy && (
+                        <>
+                            Above that — affecting everyone — <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>{topSkyCopy.title.toLowerCase()}</strong>
+                            {topSkyRange && <> runs {topSkyRange}</>}.{" "}
+                            <span style={{ color: "var(--text-tertiary)", fontStyle: "italic" }}>That's the assignment for this stretch.</span>
+                        </>
+                    )}
+                </p>
+            )}
         </div>
     );
 }
@@ -550,11 +678,15 @@ function GanttRow({
     windowStart,
     windowEnd,
     todayDay,
+    headline = false,
 }: {
     span: TransitSpan;
     windowStart: number;
     windowEnd: number;
     todayDay: number | null;
+    /** When true, render at full prominence (top tier). When false, render
+     *  smaller and muted — these are the "background" rows below the fold. */
+    headline?: boolean;
 }) {
     const [hovered, setHovered] = useState(false);
     const range = windowEnd - windowStart;
@@ -569,36 +701,59 @@ function GanttRow({
 
     const accent = span.benefic ? "var(--sage)" : "var(--color-spiced-life)";
     const meaning = transitOneLiner(span);
+    const titleLay = plainTransitTitle(span);
 
     // Tooltip horizontal anchor: center over the bar, but clamp so it doesn't
     // overflow the right edge of the track.
     const centerPct = entryPct + widthPct / 2;
     const tooltipLeft = Math.max(22, Math.min(78, centerPct));
 
+    // Row size scales with tier — headliners get the full treatment; backdrop
+    // rows shrink so the eye isn't fighting equal-weight noise.
+    const rowPad = headline ? "0.7rem 0" : "0.4rem 0";
+    const trackHeight = headline ? 26 : 18;
+    const barHeight = headline ? 12 : 8;
+    const titleSize = headline ? "0.92rem" : "0.78rem";
+    const subSize = headline ? "0.72rem" : "0.66rem";
+
     return (
         <div
-            style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: "var(--space-sm)", alignItems: "center", padding: "0.55rem 0" }}
+            style={{ display: "grid", gridTemplateColumns: "180px 1fr", gap: "var(--space-sm)", alignItems: "center", padding: rowPad }}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
         >
-            {/* Row label */}
-            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", minWidth: 0 }}>
-                <span style={{ fontSize: "1rem", color: accent, flexShrink: 0 }}>{planetGlyph(span.transit_planet)}</span>
+            {/* Row label — plain English first, chart-receipt second */}
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "0.45rem", minWidth: 0 }}>
+                <span style={{ fontSize: headline ? "1rem" : "0.85rem", color: accent, flexShrink: 0, lineHeight: 1.3 }}>
+                    {planetGlyph(span.transit_planet)}
+                </span>
                 <div style={{ minWidth: 0 }}>
-                    <div style={{ fontFamily: FB, fontSize: "0.78rem", fontWeight: 600, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {span.transit_planet}
+                    <div style={{
+                        fontFamily: FB,
+                        fontSize: titleSize,
+                        fontWeight: headline ? 600 : 500,
+                        color: headline ? "var(--text-primary)" : "var(--text-secondary)",
+                        lineHeight: 1.25,
+                    }}>
+                        {titleLay}
                         {span.retrograde && (
                             <span style={{ marginLeft: 4, fontFamily: FM, fontSize: "0.7rem", color: "var(--text-tertiary)", fontWeight: 500 }}>℞</span>
                         )}
                     </div>
-                    <div style={{ fontFamily: FM, fontSize: "0.66rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-tertiary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {span.aspect} {span.natal_planet}
+                    <div style={{
+                        fontFamily: FM,
+                        fontSize: subSize,
+                        letterSpacing: "0.06em",
+                        color: "var(--text-tertiary)",
+                        marginTop: "0.1rem",
+                    }}>
+                        {fmtMonthDay(span.entryISO)} → <span style={{ color: accent, fontWeight: 600 }}>{fmtMonthDay(span.exactISO)}</span> → {fmtMonthDay(span.exitISO)}
                     </div>
                 </div>
             </div>
 
             {/* Bar track — overflow visible so tooltip can extend out */}
-            <div style={{ position: "relative", height: 24, overflow: "visible" }}>
+            <div style={{ position: "relative", height: trackHeight, overflow: "visible" }}>
                 {/* TODAY line */}
                 {todayDay !== null && todayDay >= windowStart && todayDay <= windowEnd && (
                     <div style={{
@@ -620,10 +775,10 @@ function GanttRow({
                     width: `${widthPct}%`,
                     top: "50%",
                     transform: "translateY(-50%)",
-                    height: 12,
-                    borderRadius: 6,
+                    height: barHeight,
+                    borderRadius: barHeight / 2,
                     background: accent,
-                    opacity: hovered ? 1 : 0.65,
+                    opacity: hovered ? 1 : headline ? 0.75 : 0.45,
                     transition: "opacity 150ms ease, transform 150ms ease",
                     boxShadow: hovered ? `0 2px 8px color-mix(in oklab, ${accent} 40%, transparent)` : "none",
                 }} />
@@ -691,11 +846,13 @@ function SkyGanttRow({
     windowStart,
     windowEnd,
     todayDay,
+    headline = false,
 }: {
     span: UniversalSkySpan;
     windowStart: number;
     windowEnd: number;
     todayDay: number | null;
+    headline?: boolean;
 }) {
     const [hovered, setHovered] = useState(false);
     const range = windowEnd - windowStart;
@@ -728,22 +885,25 @@ function SkyGanttRow({
         secondaryPlanet: span.secondaryPlanet,
     });
 
+    const rowPad = headline ? "0.7rem 0" : "0.4rem 0";
+    const trackHeight = headline ? 26 : 18;
+    const barHeight = headline ? 10 : 7;
+    const titleSize = headline ? "0.92rem" : "0.78rem";
+
     return (
         <div
             style={{
                 display: "grid",
-                gridTemplateColumns: "150px 1fr",
+                gridTemplateColumns: "180px 1fr",
                 gap: "var(--space-sm)",
                 alignItems: "start",
-                padding: "0.6rem 0",
+                padding: rowPad,
             }}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
         >
             {/* Row label — dashed left border marks this as a sky row.
-                Plain-English title replaces the "SKY · Retrograde" pattern;
-                the SKY prefix moves to a smaller eyebrow. Italic body line
-                gives the lived takeaway in <12 words. */}
+                Plain-English title leads; chart-receipt comes last. */}
             <div style={{
                 display: "flex",
                 alignItems: "flex-start",
@@ -752,7 +912,7 @@ function SkyGanttRow({
                 paddingLeft: "0.5rem",
                 borderLeft: `1px dashed color-mix(in oklab, ${accent} 60%, transparent)`,
             }}>
-                <span style={{ fontSize: "1rem", color: accent, flexShrink: 0, opacity: 0.85, lineHeight: 1.5 }}>
+                <span style={{ fontSize: headline ? "1rem" : "0.85rem", color: accent, flexShrink: 0, opacity: 0.85, lineHeight: 1.4 }}>
                     {planetGlyph(span.planet)}
                 </span>
                 <div style={{ minWidth: 0 }}>
@@ -769,31 +929,33 @@ function SkyGanttRow({
                     </div>
                     <div style={{
                         fontFamily: FB,
-                        fontSize: "0.84rem",
-                        fontWeight: 500,
-                        color: "var(--text-primary)",
+                        fontSize: titleSize,
+                        fontWeight: headline ? 600 : 500,
+                        color: headline ? "var(--text-primary)" : "var(--text-secondary)",
                         whiteSpace: "normal",
                         wordBreak: "break-word",
                         lineHeight: 1.25,
                     }}>
                         {layCopy.title}
                     </div>
-                    <div style={{
-                        fontFamily: FB,
-                        fontSize: "0.72rem",
-                        fontStyle: "italic",
-                        color: "var(--text-tertiary)",
-                        whiteSpace: "normal",
-                        marginTop: "0.15rem",
-                        lineHeight: 1.35,
-                    }}>
-                        {layCopy.body}
-                    </div>
+                    {headline && (
+                        <div style={{
+                            fontFamily: FB,
+                            fontSize: "0.72rem",
+                            fontStyle: "italic",
+                            color: "var(--text-tertiary)",
+                            whiteSpace: "normal",
+                            marginTop: "0.15rem",
+                            lineHeight: 1.35,
+                        }}>
+                            {layCopy.body}
+                        </div>
+                    )}
                 </div>
             </div>
 
             {/* Bar track */}
-            <div style={{ position: "relative", height: 24, overflow: "visible" }}>
+            <div style={{ position: "relative", height: trackHeight, overflow: "visible" }}>
                 {/* TODAY line */}
                 {todayDay !== null && todayDay >= windowStart && todayDay <= windowEnd && (
                     <div style={{
@@ -816,9 +978,9 @@ function SkyGanttRow({
                         top: "50%",
                         transform: "translate(-50%, -50%)",
                         width: 2,
-                        height: 18,
+                        height: headline ? 18 : 14,
                         background: accent,
-                        opacity: hovered ? 1 : 0.7,
+                        opacity: hovered ? 1 : headline ? 0.7 : 0.45,
                         borderRadius: 1,
                         transition: "opacity 150ms ease",
                     }} />
@@ -830,10 +992,10 @@ function SkyGanttRow({
                         width: `${widthPct}%`,
                         top: "50%",
                         transform: "translateY(-50%)",
-                        height: 10,
-                        borderRadius: 5,
+                        height: barHeight,
+                        borderRadius: barHeight / 2,
                         background: `repeating-linear-gradient(135deg, ${accent} 0 6px, color-mix(in oklab, ${accent} 30%, transparent) 6px 12px)`,
-                        opacity: hovered ? 0.95 : 0.6,
+                        opacity: hovered ? 0.95 : headline ? 0.6 : 0.4,
                         transition: "opacity 150ms ease",
                     }} />
                 )}
@@ -906,6 +1068,22 @@ function TransitGantt({ vm }: { vm: V4VM }) {
     const filteredTransitSpans = transitSpans.filter((s) => rowInTab(s.entryDay, s.exitDay, activeTab));
     const filteredSkySpans = universalSkySpans.filter((s) => rowInTab(s.entryDay, s.exitDay, activeTab));
 
+    // Signal vs noise: rank by importance and split into tiers. Top 3 personal
+    // + top 2 sky get full prominence; the rest collapse under a disclosure.
+    const rankedTransits = [...filteredTransitSpans]
+        .map((s) => ({ s, score: transitImportance(s, vm.goalIds) }))
+        .sort((a, b) => b.score - a.score);
+    const headlineTransits = rankedTransits.slice(0, 3).map((x) => x.s);
+    const backdropTransits = rankedTransits.slice(3).map((x) => x.s);
+
+    const rankedSky = [...filteredSkySpans].sort(
+        (a, b) => (b.severity ?? 0) - (a.severity ?? 0),
+    );
+    const headlineSky = rankedSky.slice(0, 2);
+    const backdropSky = rankedSky.slice(2);
+
+    const hasBackdrop = backdropTransits.length + backdropSky.length > 0;
+
     // Per-tab counts for the segment-control labels — gives users a sense
     // of where the action is before they switch.
     const tabCounts: Record<string, number> = {};
@@ -952,7 +1130,7 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                 />
 
                 {/* Day-marker header */}
-                <div style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: "var(--space-sm)", marginBottom: "var(--space-sm)" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", gap: "var(--space-sm)", marginBottom: "var(--space-sm)" }}>
                     <div />
                     <div style={{ position: "relative", height: 32 }}>
                         {DAY_MARKERS.map((d, i) => {
@@ -1002,17 +1180,43 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                     </div>
                 </div>
 
-                {/* Rows — personal transits first, universal sky beneath */}
+                {/* Tier 1 — Headlines. The 3-5 most consequential rows in
+                    this window get full prominence. */}
                 <div style={{ display: "flex", flexDirection: "column" }}>
-                    {filteredTransitSpans.map((span, i) => (
+                    {(headlineTransits.length > 0 || headlineSky.length > 0) && (
+                        <div style={{
+                            fontFamily: FM,
+                            fontSize: "0.6rem",
+                            letterSpacing: "0.2em",
+                            textTransform: "uppercase",
+                            color: "var(--text-tertiary)",
+                            fontWeight: 700,
+                            marginBottom: "0.4rem",
+                        }}>
+                            What matters most here
+                        </div>
+                    )}
+                    {headlineTransits.map((span, i) => (
                         <GanttRow
-                            key={`${span.transit_planet}|${span.natal_planet}|${span.aspect}|${i}`}
+                            key={`hl-${span.transit_planet}|${span.natal_planet}|${span.aspect}|${i}`}
                             span={span}
                             windowStart={WINDOW_START}
                             windowEnd={WINDOW_END}
                             todayDay={todayDay}
+                            headline
                         />
                     ))}
+                    {headlineSky.map((span, i) => (
+                        <SkyGanttRow
+                            key={span.key ?? `hl-sky|${span.kind}|${span.planet}|${span.exactISO}|${i}`}
+                            span={span}
+                            windowStart={WINDOW_START}
+                            windowEnd={WINDOW_END}
+                            todayDay={todayDay}
+                            headline
+                        />
+                    ))}
+
                     {filteredTransitSpans.length === 0 && filteredSkySpans.length === 0 && (
                         <div style={{
                             padding: "var(--space-md) 0",
@@ -1025,87 +1229,75 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                             Nothing notable in this window. Try another tab.
                         </div>
                     )}
-                    {filteredSkySpans.length > 0 && filteredTransitSpans.length > 0 && (
-                        <div style={{
-                            display: "grid",
-                            gridTemplateColumns: "150px 1fr",
-                            gap: "var(--space-sm)",
-                            alignItems: "center",
-                            padding: "0.4rem 0 0.2rem",
-                            marginTop: "0.25rem",
-                            borderTop: "1px dashed var(--surface-border)",
-                        }}>
-                            <span style={{
+
+                    {/* Tier 2 — Backdrop. Lower-importance rows tucked into a
+                        disclosure so the headlines breathe. */}
+                    {hasBackdrop && (
+                        <details style={{ marginTop: "var(--space-sm)" }}>
+                            <summary style={{
                                 fontFamily: FM,
-                                fontSize: "0.58rem",
+                                fontSize: "0.65rem",
                                 letterSpacing: "0.18em",
                                 textTransform: "uppercase",
                                 color: "var(--text-tertiary)",
-                                paddingLeft: "0.5rem",
+                                fontWeight: 600,
+                                padding: "0.65rem 0",
+                                cursor: "pointer",
+                                listStyle: "none",
+                                borderTop: "1px dashed var(--surface-border)",
                             }}>
-                                Universal sky
-                            </span>
-                            <span style={{
-                                fontFamily: FB,
-                                fontSize: "0.7rem",
-                                color: "var(--text-tertiary)",
-                                fontStyle: "italic",
-                            }}>
-                                What everyone&rsquo;s sky is doing across this window
-                            </span>
-                        </div>
+                                Background ({backdropTransits.length + backdropSky.length} more) ▾
+                            </summary>
+                            <div style={{ paddingTop: "0.3rem" }}>
+                                {backdropTransits.map((span, i) => (
+                                    <GanttRow
+                                        key={`bd-${span.transit_planet}|${span.natal_planet}|${span.aspect}|${i}`}
+                                        span={span}
+                                        windowStart={WINDOW_START}
+                                        windowEnd={WINDOW_END}
+                                        todayDay={todayDay}
+                                    />
+                                ))}
+                                {backdropSky.map((span, i) => (
+                                    <SkyGanttRow
+                                        key={span.key ?? `bd-sky|${span.kind}|${span.planet}|${span.exactISO}|${i}`}
+                                        span={span}
+                                        windowStart={WINDOW_START}
+                                        windowEnd={WINDOW_END}
+                                        todayDay={todayDay}
+                                    />
+                                ))}
+                            </div>
+                        </details>
                     )}
-                    {filteredSkySpans.map((span, i) => (
-                        <SkyGanttRow
-                            key={span.key ?? `sky|${span.kind}|${span.planet}|${span.exactISO}|${i}`}
-                            span={span}
-                            windowStart={WINDOW_START}
-                            windowEnd={WINDOW_END}
-                            todayDay={todayDay}
-                        />
-                    ))}
                 </div>
 
-                <div style={{ marginTop: "var(--space-sm)", display: "flex", gap: "var(--space-md)", flexWrap: "wrap" }}>
+                <div style={{ marginTop: "var(--space-md)", display: "flex", gap: "var(--space-md)", flexWrap: "wrap", alignItems: "center" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                        <div style={{ width: 20, height: 6, borderRadius: 3, background: "var(--sage)", opacity: 0.7 }} />
-                        <span style={{ fontFamily: FM, fontSize: "0.66rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>Supportive</span>
+                        <div style={{ width: 16, height: 5, borderRadius: 3, background: "var(--sage)", opacity: 0.65 }} />
+                        <span style={{ fontFamily: FM, fontSize: "0.62rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>Lift</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                        <div style={{ width: 20, height: 6, borderRadius: 3, background: "var(--color-spiced-life)", opacity: 0.7 }} />
-                        <span style={{ fontFamily: FM, fontSize: "0.66rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>Friction</span>
+                        <div style={{ width: 16, height: 5, borderRadius: 3, background: "var(--color-spiced-life)", opacity: 0.65 }} />
+                        <span style={{ fontFamily: FM, fontSize: "0.62rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>Friction</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                        <div style={{ width: 2, height: 12, borderRadius: 1, background: "var(--text-tertiary)", opacity: 0.5 }} />
-                        <span style={{ fontFamily: FM, fontSize: "0.66rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>Exact</span>
+                        <div style={{
+                            width: 16,
+                            height: 5,
+                            borderRadius: 3,
+                            background: "repeating-linear-gradient(135deg, var(--text-tertiary) 0 3px, transparent 3px 6px)",
+                            opacity: 0.7,
+                        }} />
+                        <span style={{ fontFamily: FM, fontSize: "0.62rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>Sky (everyone)</span>
                     </div>
                     {todayDay !== null && todayDay >= WINDOW_START && todayDay <= WINDOW_END && (
                         <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                             <div style={{ width: 1, height: 12, background: "var(--color-y2k-blue)", opacity: 0.7 }} />
-                            <span style={{ fontFamily: FM, fontSize: "0.66rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--color-y2k-blue)" }}>Today</span>
+                            <span style={{ fontFamily: FM, fontSize: "0.62rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-y2k-blue)" }}>Today</span>
                         </div>
                     )}
-                    {filteredTransitSpans.some(s => s.retrograde) && (
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                            <span style={{ fontFamily: FM, fontSize: "0.7rem", color: "var(--text-tertiary)" }}>℞</span>
-                            <span style={{ fontFamily: FM, fontSize: "0.66rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>Retrograde — a revisit</span>
-                        </div>
-                    )}
-                    {filteredSkySpans.length > 0 && (
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                            <div style={{
-                                width: 20,
-                                height: 6,
-                                borderRadius: 3,
-                                background: "repeating-linear-gradient(135deg, var(--text-tertiary) 0 4px, transparent 4px 8px)",
-                                opacity: 0.7,
-                            }} />
-                            <span style={{ fontFamily: FM, fontSize: "0.66rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>Sky — affects everyone</span>
-                        </div>
-                    )}
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                        <span style={{ fontFamily: FB, fontSize: "0.66rem", fontStyle: "italic", color: "var(--text-tertiary)" }}>Hover a bar for detail</span>
-                    </div>
+                    <span style={{ fontFamily: FB, fontSize: "0.66rem", fontStyle: "italic", color: "var(--text-tertiary)", marginLeft: "auto" }}>Hover any bar for detail</span>
                 </div>
             </div>
     );
@@ -1192,16 +1384,23 @@ export default function TimingTab({ vm, copiedTab }: Props) {
                 </>
             )}
 
-            {/* §2 — Transit Gantt */}
-            <SectionHead
-                index={showAlternates ? "02" : "01"}
-                title={isRelocation
-                    ? "Slow transits across the year ahead"
-                    : "What's pressing on you during the window"}
-                tooltip={isRelocation
-                    ? "Outer-planet transits resolve over months, not days. Each bar is one transit's full active range; hover for the lived-experience reading."
-                    : "Slow-moving transits that actually shape this stretch. Hover any bar for the lived-experience reading and what to do with it."}
-            />
+            {/* §2 — Transit Gantt. Framing prose sits above the SectionHead
+                so readers know how to read the chart before they meet the
+                section title. SectionHead is flush so we don't stack two
+                vertical breaks on top of each other. */}
+            <WindowFraming vm={vm} />
+            <div style={{ marginTop: "var(--space-md)" }}>
+                <SectionHead
+                    index={showAlternates ? "02" : "01"}
+                    title={isRelocation
+                        ? "Slow transits across the year ahead"
+                        : "What's pressing on you during the window"}
+                    tooltip={isRelocation
+                        ? "Outer-planet transits resolve over months, not days. Each bar is one transit's full active range; hover for the lived-experience reading."
+                        : "Slow-moving transits that actually shape this stretch. Hover any bar for the lived-experience reading and what to do with it."}
+                    flush
+                />
+            </div>
             <TransitGantt vm={vm} />
 
             {/* §3 — 90-day field (trip) / 12-month forecast (relocation) */}
