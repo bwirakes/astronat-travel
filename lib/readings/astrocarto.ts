@@ -11,9 +11,14 @@ import { resolveACGFull, computeParans } from "@/lib/astro/acg-lines";
 import { solve12MonthTransits, type TransitHit } from "@/lib/astro/transit-solver";
 import { computeHouseMatrix, mapTransitsToMatrix, computeGlobalPenalty, computeCurrentSkyPenalty, acgLineRawScore } from "@/app/lib/house-matrix";
 import { isCurrentSkyPenaltyEnabled } from "@/app/lib/scoring-flags";
-import { computeEventScores } from "@/app/lib/scoring-engine";
+import {
+  computeEventScores,
+  computeFusedReadingPackage,
+  buildNatalPlanetRelocatedHouseMap,
+} from "@/app/lib/scoring-engine";
 import { computeUniversalSky } from "@/app/lib/universal-sky";
 import { solveUniversalSkySpans } from "@/app/lib/window-scoring";
+import { EVENT_LABELS, verdictBand } from "@/app/lib/verdict";
 import { houseFromLongitude, signFromLongitude } from "@/app/lib/geodetic";
 import { birthToUtc } from "@/lib/astro/birth-utc";
 import { determineSect, computeLotOfFortune, computeLotOfSpirit } from "@/app/lib/arabic-parts";
@@ -321,7 +326,52 @@ export async function runAstrocarto(
     dignityStatus: p.dignityStatus || p.dignity || p.essentialDignity,
     hasLine: activeLinePlanets.has(String(p.planet || p.name || "").toLowerCase()),
   }));
-  const eventScores = computeEventScores(matrixResult, relocatedPlanets, universalSky);
+  let eventScores = computeEventScores(matrixResult, relocatedPlanets, universalSky);
+
+  // Capture the matrix-only macro score before the fused transit headline
+  // overwrites it. Legacy range/daily/monthly helpers use this as the
+  // scoreDate baseline so they don't stack transits on top of an already-
+  // fused macro.
+  const matrixMacroScore = matrixResult.macroScore;
+  const matrixMacroVerdict = matrixResult.macroVerdict;
+  let fusedMacroScore: number | null = null;
+  let fusedMacroVerdict: string | null = null;
+
+  // Selected goal indices (0-8) for the fused headline weighting — same
+  // 65/35 / 50/30/20 blend used by house-matrix's macro-intent stretch.
+  const fusedSelectedGoalIndices: number[] | null =
+    Array.isArray(selectedGoals) && selectedGoals.length ? selectedGoals : null;
+
+  if (
+    travelDate &&
+    Array.isArray(rawTransits) &&
+    rawTransits.length > 0 &&
+    rawTransits[0] &&
+    typeof rawTransits[0] === "object" &&
+    "transit_planet" in (rawTransits[0] as object) &&
+    Array.isArray(relocatedCusps) &&
+    relocatedCusps.length >= 12
+  ) {
+    const natalPlanetHouse = buildNatalPlanetRelocatedHouseMap(natalPlanets, relocatedCusps);
+    const fused = computeFusedReadingPackage({
+      matrixResult,
+      relocatedPlanets,
+      transits: rawTransits as any,
+      centerISO: new Date(travelDate).toISOString(),
+      goalIds: goalIds ?? [],
+      selectedGoalIndices: fusedSelectedGoalIndices,
+      natalPlanetHouse,
+      skyState: universalSky,
+    });
+    eventScores = fused.eventScores;
+    fusedMacroScore = fused.readingScore;
+    fusedMacroVerdict = EVENT_LABELS[verdictBand(fused.readingScore)] ?? matrixMacroVerdict;
+    // Overwrite the matrix's macroScore/Verdict on the local matrixResult
+    // reference so downstream consumers (buildAIInput) see fused numbers
+    // in prompt context. We keep matrixMacroScore for baseline use.
+    (matrixResult as any).macroScore = fusedMacroScore;
+    (matrixResult as any).macroVerdict = fusedMacroVerdict;
+  }
 
   // 6. Partner matrix (synastry only) — mirrors the user pipeline at the same destination
   let partnerMatrix: any = null;
@@ -389,11 +439,45 @@ export async function runAstrocarto(
     }));
     // Both partners share the same universal sky — same refDate, same
     // location-agnostic snapshot.
-    const pEventScores = computeEventScores(pMatrixResult, pRelocatedPlanetStates, universalSky);
+    let pEventScores = computeEventScores(pMatrixResult, pRelocatedPlanetStates, universalSky);
+    const pMatrixMacroScore = pMatrixResult.macroScore;
+    const pMatrixMacroVerdict = pMatrixResult.macroVerdict;
+    let pFusedMacroScore: number | null = null;
+    let pFusedMacroVerdict: string | null = null;
+
+    if (
+      travelDate &&
+      Array.isArray(pRawTransits) &&
+      pRawTransits.length > 0 &&
+      pRawTransits[0] &&
+      typeof pRawTransits[0] === "object" &&
+      "transit_planet" in (pRawTransits[0] as object) &&
+      Array.isArray(pRelocatedCusps) &&
+      pRelocatedCusps.length >= 12
+    ) {
+      const pNatalPlanetHouse = buildNatalPlanetRelocatedHouseMap(partnerNatalPlanets, pRelocatedCusps);
+      const pFused = computeFusedReadingPackage({
+        matrixResult: pMatrixResult,
+        relocatedPlanets: pRelocatedPlanetStates,
+        transits: pRawTransits as any,
+        centerISO: new Date(travelDate).toISOString(),
+        goalIds: goalIds ?? [],
+        selectedGoalIndices: fusedSelectedGoalIndices,
+        natalPlanetHouse: pNatalPlanetHouse,
+        skyState: universalSky,
+      });
+      pEventScores = pFused.eventScores;
+      pFusedMacroScore = pFused.readingScore;
+      pFusedMacroVerdict = EVENT_LABELS[verdictBand(pFused.readingScore)] ?? pMatrixMacroVerdict;
+    }
 
     partnerMatrix = {
-      macroScore: pMatrixResult.macroScore,
-      macroVerdict: pMatrixResult.macroVerdict,
+      // Fused (or matrix-only fallback) macro for UI / prompts.
+      macroScore: pFusedMacroScore ?? pMatrixMacroScore,
+      macroVerdict: pFusedMacroVerdict ?? pMatrixMacroVerdict,
+      // Pre-fusion macro for synastryDerived deltas + legacy baselines.
+      matrixMacroScore: pMatrixMacroScore,
+      matrixMacroVerdict: pMatrixMacroVerdict,
       houses: pMatrixResult.houses.map((h) => ({ house: h.house, score: h.score })),
       acgLines: pAcgLines,
       relocatedCusps: pRelocatedCusps,
@@ -420,8 +504,13 @@ export async function runAstrocarto(
         bucket: classifyHouseBucket(u, p),
       };
     });
-    const scoreDelta = Math.abs(matrixResult.macroScore - partnerMatrix.macroScore);
-    const averageScore = (matrixResult.macroScore + partnerMatrix.macroScore) / 2;
+    // scoreDelta / averageScore are matrix-only (place fit) so the synastry
+    // delta isn't pulled around by date-specific transits — UI surfaces the
+    // fused macro elsewhere (userMacroScore / partnerMacroScore).
+    const userMatrixMacro = matrixMacroScore;
+    const partnerMatrixMacro = partnerMatrix.matrixMacroScore ?? partnerMatrix.macroScore;
+    const scoreDelta = Math.abs(userMatrixMacro - partnerMatrixMacro);
+    const averageScore = (userMatrixMacro + partnerMatrixMacro) / 2;
     const recommendation = computeRecommendation(houseComparison, scoreDelta);
     synastryDerived = { houseComparison, scoreDelta, averageScore, recommendation };
   }
@@ -510,7 +599,9 @@ export async function runAstrocarto(
       // against the joint baseline so a hard transit on either chart drags
       // the window down. Mirrors the teacher path's window derivation.
       if (travelDate) {
-        const jointBaseline = jointScore(matrixResult.macroScore, partnerMatrix.macroScore);
+        // Joint baseline uses matrix-only macros so buildRangeHighlights's
+        // scoreDate doesn't stack transits twice.
+        const jointBaseline = jointScore(matrixMacroScore, partnerMatrix.matrixMacroScore ?? partnerMatrix.macroScore);
         const jointTransits = [...rawTransits, ...partnerMatrix.rawTransits];
         const ranges = buildRangeHighlights(travelDate, jointTransits, jointBaseline, goalIds ?? []);
         const shortDate = (iso: string) => {
@@ -593,6 +684,7 @@ export async function runAstrocarto(
     ...(goalIds && goalIds.length ? { goalIds } : {}),
     macroScore: matrixResult.macroScore,
     macroVerdict: matrixResult.macroVerdict,
+    matrixMacroScore,
     scoreBreakdown: aiInput.macro.scoreBreakdown,
     scoreNarrative: {
       selectedGoals: aiInput.editorialEvidence.selectedGoals,

@@ -16,6 +16,12 @@ export interface AstrocartoReadingResult {
   goalIds?: string[];
   macroScore: number;
   macroVerdict: string;
+  /** Pre-fusion macro score (place-only, from house-matrix). When the
+   *  fused-transit pipeline runs, `macroScore` is overwritten with the
+   *  fused headline; this field preserves the matrix-only value so legacy
+   *  range/daily/monthly helpers can use it as the baseline without
+   *  double-counting transits. Optional only for legacy rows. */
+  matrixMacroScore?: number;
   /** Date+goal-adjusted hero score, persisted at reading-generation time so
    *  the readings list and the reading detail header agree. Computed by
    *  app/lib/hero-score.ts:computeHeroScore. Optional only for legacy rows

@@ -577,6 +577,7 @@ export interface FusedReadingInputs {
     selectedGoalIndices?: number[] | null;
     natalPlanetHouse: Map<string, number>;
     halfWidthDays?: number;
+    skyState?: UniversalSkyState;
 }
 
 export function computeFusedReadingPackage(inputs: FusedReadingInputs): FusedReadingPackage {
@@ -588,7 +589,13 @@ export function computeFusedReadingPackage(inputs: FusedReadingInputs): FusedRea
         inputs.natalPlanetHouse,
         inputs.halfWidthDays,
     );
-    const eventScores = finalizeEventScoresFromLayers(layers, tm);
+    const skyModifiers = inputs.skyState
+        ? computeSkyModifier(inputs.skyState)
+        : new Array(LIFE_EVENTS.length).fill(0);
+    const stationEventModifiers = computeStationEventModifier(
+        inputs.matrixResult.stationsResult?.contributions,
+    );
+    const eventScores = finalizeEventScoresFromLayers(layers, tm, skyModifiers, stationEventModifiers);
     const readingScore = computeFusedReadingHeadline(eventScores, inputs.selectedGoalIndices);
     const drivers = topDriversAtAnchor(inputs.transits, inputs.centerISO, inputs.goalIds, inputs.halfWidthDays ?? HALF_WIDTH_DAYS);
     return { eventScores, readingScore, drivers };
