@@ -733,8 +733,13 @@ export function buildAIInput(args: {
     sidebarsData: {
       travelWindows: (() => {
         if (travelType === "relocation" || !travelDate) return [];
-        const heroScored = buildScoredWindows(dateRange.start, rawTransits, matrixResult.macroScore, goalIds)[0];
-        const rangeHighlights = buildRangeHighlights(dateRange.start, rawTransits, matrixResult.macroScore, goalIds);
+        // Baseline for scoreDate-driven helpers must be the matrix-only
+        // macro so we don't stack transits on a fused macroScore. When
+        // matrixMacroScore is missing, the matrixResult predates fusion and
+        // its macroScore is still place-only — falling back is safe.
+        const matrixBaseline = (matrixResult as any).matrixMacroScore ?? matrixResult.macroScore;
+        const heroScored = buildScoredWindows(dateRange.start, rawTransits, matrixBaseline, goalIds)[0];
+        const rangeHighlights = buildRangeHighlights(dateRange.start, rawTransits, matrixBaseline, goalIds);
         const tw = [];
         const shortDate = (iso: string) => {
           const d = new Date(iso);

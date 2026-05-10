@@ -27,6 +27,11 @@ import {
     type MonthlyHighlights,
     type ArrivalCandidate,
 } from "./window-scoring";
+import {
+    buildFusedScoredWindows,
+    buildNatalPlanetRelocatedHouseMap,
+    buildOccupancyPlanets,
+} from "./scoring-engine";
 import { READING_TABS, READING_TAB_IDS, deriveScoreNarrative, type EvidencePoint, type ReadingTabDefinition, type ReadingTabId, type ScoreNarrative } from "./reading-tabs";
 import { HERO_BAND_LABEL, heroBand, verdictBand, verdictTone, type HeroBand } from "./verdict";
 
@@ -795,6 +800,48 @@ const FLAVORS: Array<{ flavor: string; flavorTitle: string; emoji: string }> = [
     { flavor: "Quiet window",  flavorTitle: "Commit to something",  emoji: "✷" },
 ];
 
+/** Try to build the fused-scoring hero window when the reading carries
+ *  the full chart payload (houses, natalPlanets, relocatedCusps,
+ *  planetaryLines). Returns null when inputs are missing or the engine
+ *  throws — caller falls back to the legacy buildScoredWindows path. */
+function tryBuildFusedHero(
+    reading: any,
+    travelDateISO: string | null,
+    tw: any[],
+    goalIdsArg: string[],
+): { score: number; centerISO: string; startISO: string; endISO: string; drivers: string[]; label: string } | null {
+    if (!travelDateISO) return null;
+    const houses = reading?.houses;
+    const natalPlanets = reading?.natalPlanets;
+    const relocatedCusps = reading?.relocatedCusps;
+    const planetaryLines = reading?.planetaryLines;
+    if (
+        !Array.isArray(houses) || houses.length !== 12 ||
+        !Array.isArray(natalPlanets) || natalPlanets.length === 0 ||
+        !Array.isArray(relocatedCusps) || relocatedCusps.length < 12
+    ) return null;
+    try {
+        const matrixResult = { houses } as any;
+        const relocatedPlanets = buildOccupancyPlanets(
+            natalPlanets,
+            relocatedCusps,
+            Array.isArray(planetaryLines) ? planetaryLines : [],
+        );
+        const natalPlanetHouse = buildNatalPlanetRelocatedHouseMap(natalPlanets, relocatedCusps);
+        const fused = buildFusedScoredWindows({
+            travelDateISO,
+            matrixResult,
+            relocatedPlanets,
+            transits: tw,
+            goalIds: goalIdsArg,
+            natalPlanetHouse,
+        });
+        return fused?.[0] ?? null;
+    } catch {
+        return null;
+    }
+}
+
 function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateISO: string | null, goalIdsArg: string[] = []): V4TravelWindow[] {
     const promptWindows: any[] | undefined = Array.isArray(reading?.teacherReading?.windows)
         ? reading.teacherReading.windows
@@ -810,7 +857,11 @@ function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateI
     // the engine's strongest alternates, excluding the anchor month so it
     // never appears twice.
     if (travelType === "relocation" && travelDateISO) {
-        const baseline = typeof reading?.macroScore === "number" ? reading.macroScore : 70;
+        // Use the matrix-only macro as the scoreDate baseline so the
+        // settling-arc helper doesn't stack transits on a fused macro.
+        const baseline = typeof reading?.matrixMacroScore === "number"
+            ? reading.matrixMacroScore
+            : (typeof reading?.macroScore === "number" ? reading.macroScore : 70);
         const tw: any[] = Array.isArray(reading?.transitWindows) ? reading.transitWindows : [];
         const isHitShape = tw[0] && "transit_planet" in tw[0];
         const candidates = isHitShape
@@ -902,8 +953,12 @@ function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateI
         const isHitShape = tw[0] && "transit_planet" in tw[0];
 
         if (isHitShape) {
-            const baselineMacro = reading?.macroScore ?? 70;
-            const hero = buildScoredWindows(travelDateISO, tw, baselineMacro, goalIdsArg)[0];
+            // Range highlights / fallback baseline use the matrix-only macro
+            // so the legacy scoreDate path does not stack transits onto an
+            // already-fused macroScore.
+            const baselineMacro = reading?.matrixMacroScore ?? reading?.macroScore ?? 70;
+            const fused = tryBuildFusedHero(reading, travelDateISO, tw, goalIdsArg);
+            const hero = fused ?? buildScoredWindows(travelDateISO, tw, baselineMacro, goalIdsArg)[0];
             const highlights = buildRangeHighlights(travelDateISO, tw, baselineMacro, goalIdsArg);
 
             const rawWindows: any[] = [];
@@ -2096,7 +2151,13 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
     // Daily series + derived timing structures — only for trips with transit hit data.
     const _tw = reading?.transitWindows;
     const _isHitShape = Array.isArray(_tw) && _tw[0] && "transit_planet" in _tw[0];
-    const _baseline = typeof reading?.macroScore === "number" ? reading.macroScore : 70;
+    // Use the matrix-only macro as the legacy scoreDate baseline. When the
+    // fused-transit pipeline ran, reading.macroScore is already fused;
+    // adding scoreDate's transit delta on top double-counts. matrixMacroScore
+    // preserves the place-only score for these helpers.
+    const _baseline = typeof reading?.matrixMacroScore === "number"
+        ? reading.matrixMacroScore
+        : (typeof reading?.macroScore === "number" ? reading.macroScore : 70);
 
     // Trip-grain (week) vs relocation-grain (month) timing series.
     // Trip readings populate dailySeries / rangeHighlights and run the gantt

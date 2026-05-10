@@ -13,6 +13,11 @@
  * consumer reads the same number.
  */
 import { buildScoredWindows } from "./window-scoring";
+import {
+    buildFusedScoredWindows,
+    buildNatalPlanetRelocatedHouseMap,
+    buildOccupancyPlanets,
+} from "./scoring-engine";
 import type { TransitHit } from "@/lib/astro/transit-solver";
 
 export type HeroScoreSource =
@@ -64,12 +69,51 @@ export function computeHeroScore(
         }
     }
 
-    // 3. Hit-shape transit windows + travel date → run buildScoredWindows.
+    // 3. Hit-shape transit windows + travel date → run fused scoring engine
+    //    when full chart payload is present, else fall back to the legacy
+    //    buildScoredWindows (macro + transit-delta).
     const tw = details?.transitWindows;
     if (Array.isArray(tw) && tw.length && travelDateISO) {
         const isHitShape = tw[0] && typeof tw[0] === "object" && "transit_planet" in tw[0];
         if (isHitShape) {
             const goalIds: string[] = Array.isArray(details?.goalIds) ? details.goalIds : [];
+            const houses = details?.houses;
+            const natalPlanets = details?.natalPlanets;
+            const relocatedCusps = details?.relocatedCusps;
+            const planetaryLines = details?.planetaryLines;
+            const haveFusedInputs =
+                Array.isArray(houses) && houses.length === 12 &&
+                Array.isArray(natalPlanets) && natalPlanets.length > 0 &&
+                Array.isArray(relocatedCusps) && relocatedCusps.length >= 12;
+
+            if (haveFusedInputs) {
+                try {
+                    const matrixResult = { houses } as any;
+                    const relocatedPlanets = buildOccupancyPlanets(
+                        natalPlanets,
+                        relocatedCusps,
+                        Array.isArray(planetaryLines) ? planetaryLines : [],
+                    );
+                    const natalPlanetHouse = buildNatalPlanetRelocatedHouseMap(
+                        natalPlanets,
+                        relocatedCusps,
+                    );
+                    const fused = buildFusedScoredWindows({
+                        travelDateISO,
+                        matrixResult,
+                        relocatedPlanets,
+                        transits: tw as TransitHit[],
+                        goalIds,
+                        natalPlanetHouse,
+                    });
+                    if (fused.length && isFiniteNumber(fused[0].score)) {
+                        return { score: Math.round(fused[0].score), source: "transit-window" };
+                    }
+                } catch {
+                    // Fall through to legacy path on any unexpected shape
+                }
+            }
+
             const scored = buildScoredWindows(travelDateISO, tw as TransitHit[], macroScore, goalIds);
             if (scored.length && isFiniteNumber(scored[0].score)) {
                 return { score: scored[0].score, source: "transit-window" };
