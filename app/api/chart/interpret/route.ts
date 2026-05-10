@@ -332,6 +332,11 @@ Paragraph 2 (the receipt + the move, 3-4 sentences): Name the Sun (by sign and h
 
 The paragraph that names a planet without its sign and house FAILS the brief. The receipt is the difference between a horoscope blurb and an Astro-Nat reading. Apply the Voice Test before finalising.`,
       schema: z.object({ chartEssence: Section }),
+      experimental_telemetry: {
+        isEnabled: true,
+        functionId: "chart-interpret-essence",
+        metadata: { posthog_distinct_id: userId },
+      },
     });
 
   const callHouses = () =>
@@ -355,6 +360,11 @@ Output format:
 
 plainLabel: 2-3 words, plain English (e.g. "Creativity & Fun," "Home & Roots"). Do NOT use jargon.`,
       schema: z.object({ houseArchitecture: HouseEnergySection }),
+      experimental_telemetry: {
+        isEnabled: true,
+        functionId: "chart-interpret-houses",
+        metadata: { posthog_distinct_id: userId },
+      },
     });
 
   const callAspectGeometry = () =>
@@ -379,6 +389,11 @@ For each entry:
 
 Apply the Voice Test on every headline and body before finalising.`,
       schema: z.object({ aspectGeometry: AspectGeometrySection }),
+      experimental_telemetry: {
+        isEnabled: true,
+        functionId: "chart-interpret-aspects",
+        metadata: { posthog_distinct_id: userId },
+      },
     });
 
   const callAcg = () =>
@@ -391,6 +406,11 @@ If there are strong ACG lines (under 250km from birth), open with what shapes th
 If there are no strong lines, say plainly that this chart is not tied to one place — the personality works the same everywhere — and end with a one-sentence move (lean into mobility, or pick a city for other reasons).
 Apply the Voice Test before finalising.`,
       schema: z.object({ naturalAngles: Section }),
+      experimental_telemetry: {
+        isEnabled: true,
+        functionId: "chart-interpret-acg",
+        metadata: { posthog_distinct_id: userId },
+      },
     });
 
   const callChartStructure = () =>
@@ -443,6 +463,11 @@ Format per entry:
 
 No fluff. No "energy," no "leverage," no "manifest." Apply the Voice Test before each entry. If the entry could be swapped between two charts that share a sign, it's too generic — make it specific.`,
       schema: z.object({ placementImplications: z.record(z.string(), z.string()) }),
+      experimental_telemetry: {
+        isEnabled: true,
+        functionId: "chart-interpret-placements",
+        metadata: { posthog_distinct_id: userId },
+      },
     });
 
   const stream = new ReadableStream({

@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import posthog from 'posthog-js'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
@@ -44,6 +45,7 @@ function LoginForm() {
   const next = sanitizeNext(searchParams.get('next'))
 
   const handleGoogleLogin = async () => {
+    posthog.capture("user_logged_in", { method: "google" });
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -69,6 +71,8 @@ function LoginForm() {
     }
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
+      posthog.identify(user.id, { email: user.email });
+      posthog.capture("user_logged_in", { method: "password" });
       const { data: profile } = await supabase
         .from('profiles')
         .select('birth_date')
@@ -100,6 +104,7 @@ function LoginForm() {
     if (error) {
       setMessage(`Error: ${error.message}`)
     } else {
+      posthog.capture("magic_link_requested", { email });
       setMessage('Check your email ✨')
     }
     setLoading(false)

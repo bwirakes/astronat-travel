@@ -12,6 +12,8 @@ import { solve12MonthTransits, type TransitHit } from "@/lib/astro/transit-solve
 import { computeHouseMatrix, mapTransitsToMatrix, computeGlobalPenalty, computeCurrentSkyPenalty, acgLineRawScore } from "@/app/lib/house-matrix";
 import { isCurrentSkyPenaltyEnabled } from "@/app/lib/scoring-flags";
 import { computeEventScores } from "@/app/lib/scoring-engine";
+import { computeUniversalSky } from "@/app/lib/universal-sky";
+import { solveUniversalSkySpans } from "@/app/lib/window-scoring";
 import { houseFromLongitude, signFromLongitude } from "@/app/lib/geodetic";
 import { birthToUtc } from "@/lib/astro/birth-utc";
 import { determineSect, computeLotOfFortune, computeLotOfSpirit } from "@/app/lib/arabic-parts";
@@ -241,14 +243,21 @@ export async function runAstrocarto(
   // A1: raw transit positions at refDate — feed Step 5b (transit-on-geodetic-angle).
   // computeHouseMatrix tolerates undefined; the cost is one extra SwissEph call.
   const transitPositionsAtRef = await computeRealtimePositions(refDate);
+  // Universal sky state at refDate — location-agnostic snapshot of the sky
+  // (current retrogrades, ingresses, aspects, nodes, eclipse window). Feeds
+  // computeEventScores as a sky modifier and the V4 view's PlaceFieldTab.
+  const universalSky = await computeUniversalSky(refDate);
   const globalPenalty = isCurrentSkyPenaltyEnabled()
     ? computeCurrentSkyPenalty(transitPositionsAtRef, natalPlanets)
     : computeGlobalPenalty(mappedTransits);
-  // A5: progressed Sun/Moon bands at refDate (async, day-for-a-year).
+  // A5: progressed bands + per-angle hits at refDate (async, day-for-a-year).
+  // destLat now passed so we can compute degree-precise hits to geo-ASC and
+  // geo-DSC, not just MC/IC.
   const progressedBands = await computeProgressedBands({
     birthDateUtc: dtUtcBirth,
     refDate,
     destLon: targetLon,
+    destLat: targetLat,
   });
 
   // 4. Sect, Arabic parts, parans
@@ -272,6 +281,13 @@ export async function runAstrocarto(
   const goalIds: string[] | undefined = Array.isArray(goals)
     ? (goals.filter((g): g is string => typeof g === "string"))
     : undefined;
+  const liveStations = universalSky.stations.map((s) => ({
+    planet: s.planet,
+    type: s.direction,
+    dateUtc: `${s.dateISO}T12:00:00Z`,
+    longitude: s.longitude,
+    sign: s.sign,
+  }));
   const matrixResult = computeHouseMatrix({
     natalPlanets,
     relocatedCusps,
@@ -289,6 +305,7 @@ export async function runAstrocarto(
     transitPositions: transitPositionsAtRef,
     refDate,
     progressedBands,
+    stations: liveStations,
   });
 
   const ascLon = relocatedCusps[0] ?? 0;
@@ -304,7 +321,7 @@ export async function runAstrocarto(
     dignityStatus: p.dignityStatus || p.dignity || p.essentialDignity,
     hasLine: activeLinePlanets.has(String(p.planet || p.name || "").toLowerCase()),
   }));
-  const eventScores = computeEventScores(matrixResult, relocatedPlanets);
+  const eventScores = computeEventScores(matrixResult, relocatedPlanets, universalSky);
 
   // 6. Partner matrix (synastry only) — mirrors the user pipeline at the same destination
   let partnerMatrix: any = null;
@@ -351,6 +368,7 @@ export async function runAstrocarto(
       selectedGoals,
       transitPositions: transitPositionsAtRef,
       refDate,
+      stations: liveStations,
     });
 
     // Partner relocated planet states for the affinity matrix — same shape
@@ -369,7 +387,9 @@ export async function runAstrocarto(
       dignityStatus: p.dignityStatus || p.dignity || p.essentialDignity,
       hasLine: pActiveLinePlanets.has(String(p.planet || p.name || "").toLowerCase()),
     }));
-    const pEventScores = computeEventScores(pMatrixResult, pRelocatedPlanetStates);
+    // Both partners share the same universal sky — same refDate, same
+    // location-agnostic snapshot.
+    const pEventScores = computeEventScores(pMatrixResult, pRelocatedPlanetStates, universalSky);
 
     partnerMatrix = {
       macroScore: pMatrixResult.macroScore,
@@ -418,6 +438,7 @@ export async function runAstrocarto(
     eventScores,
     natalPlanets,
     relocatedCusps,
+    natalCusps,
     natalAngles,
     travelType: travelType === "relocation" ? "relocation" : "trip",
     goalIds: goalIds ?? [],
@@ -436,7 +457,7 @@ export async function runAstrocarto(
 
   let teacherReading: any = undefined;
   try {
-    teacherReading = await writeTeacherReading(aiInput);
+    teacherReading = await writeTeacherReading(aiInput, user.id);
   } catch (err: any) {
     console.warn("Teacher reading AI failed, persisting without it:", err?.message);
     // Verbose diagnostics only outside production. Set DEBUG_TEACHER_READING=1
@@ -555,7 +576,7 @@ export async function runAstrocarto(
       couplesChartStructureYou = couplesInput.chartStructureYou;
       couplesChartStructurePartner = couplesInput.chartStructurePartner;
 
-      couplesReading = await writeCouplesReading(couplesInput);
+      couplesReading = await writeCouplesReading(couplesInput, user.id);
     } catch (err: any) {
       console.warn("Couples reading AI failed, persisting without it:", err?.message);
     }
@@ -635,6 +656,12 @@ export async function runAstrocarto(
     // geodeticHouseFrame). Used by PlaceFieldTab to distinguish a truly
     // quiet sky from an old reading whose engine outputs predate the field.
     geodeticEngineVersion: "2026-05-02",
+    universalSky,
+    universalSkySpans: solveUniversalSkySpans(
+      (travelDate ?? refDate.toISOString().slice(0, 10)) as string,
+      isRelocation ? 365 : 90,
+      universalSky,
+    ),
     ...(matrixResult.modalityCohorts && matrixResult.modalityCohorts.length > 0
       ? { modalityCohorts: matrixResult.modalityCohorts }
       : {}),

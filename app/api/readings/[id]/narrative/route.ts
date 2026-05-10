@@ -431,6 +431,11 @@ Rules for the structured output:
                 friction: z.array(z.string()).max(4),
               }),
             }),
+            experimental_telemetry: {
+              isEnabled: true,
+              functionId: "narrative-synastry-verdict",
+              metadata: { posthog_distinct_id: user.id },
+            },
           });
 
           emit(controller, { section: "verdict", data: object.verdict });
@@ -598,6 +603,11 @@ Hard constraints:
         permanentMap: NarrativeSection,
         personalTiming: NarrativeSection,
       }),
+      experimental_telemetry: {
+        isEnabled: true,
+        functionId: "narrative-group1",
+        metadata: { posthog_distinct_id: user.id },
+      },
     });
 
   const group2 = () =>
@@ -617,6 +627,11 @@ Hard constraints:
         collectiveClimate: NarrativeSection,
         relocatedChart: NarrativeSection,
       }),
+      experimental_telemetry: {
+        isEnabled: true,
+        functionId: "narrative-group2",
+        metadata: { posthog_distinct_id: user.id },
+      },
     });
 
   const group3 = () =>
@@ -642,6 +657,11 @@ Hard constraints:
           bestHouses: z.array(z.string()),
         }),
       }),
+      experimental_telemetry: {
+        isEnabled: true,
+        functionId: "narrative-group3",
+        metadata: { posthog_distinct_id: user.id },
+      },
     });
 
   // ─── Stream results as each parallel call completes ────────────────

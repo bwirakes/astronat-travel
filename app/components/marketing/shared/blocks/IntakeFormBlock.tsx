@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import posthog from "posthog-js";
 
 declare global {
   interface Window {
@@ -387,9 +388,13 @@ export function IntakeFormBlock() {
         throw new Error(data.error ?? "Submission failed");
       }
 
+      posthog.capture("corporate_intake_submitted", {
+        sections_completed: Object.keys(values).length,
+      });
       setStatus("success");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err: any) {
+      posthog.captureException(err);
       setStatus("error");
       setErrorMsg(err.message ?? "Something went wrong. Please try again.");
     }

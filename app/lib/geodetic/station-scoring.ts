@@ -2,8 +2,12 @@
  * Layer 3 — Retrograde Station Proximity to Fixed Angles.
  *
  * When a planet stations near a location's fixed geodetic angle, its ACG
- * line "dwells" over that longitude for weeks or months. Station DIRECT >
- * Station RETROGRADE: compressed energy releases outward at direct.
+ * line "dwells" over that longitude for weeks or months. Per van Dam's
+ * "skipping rule": a retrograde station's influence is not lost by the
+ * subsequent direct station — it persists through the full retrograde
+ * period. So we weight retrograde and direct stations equally rather than
+ * favoring direct (which the previous DIRECT_MULT = 1.4 did, contradicting
+ * the source).
  */
 import { stationsInWindow, type StationEvent } from "./geodetic-events";
 import type { AngleName } from "./angle-transits";
@@ -26,7 +30,9 @@ const ANGLE_STRENGTH: Record<AngleName, number> = {
     ASC: 1.20, MC: 1.10, DSC: 0.95, IC: 0.90,
 };
 
-const DIRECT_MULT = 1.4;
+// Per van Dam's skipping rule: retrograde stations retain influence past
+// the next direct station. Equal weighting of direct vs retrograde.
+const DIRECT_MULT = 1.0;
 
 export interface StationContribution {
     planet: string;

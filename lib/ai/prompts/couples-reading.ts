@@ -115,6 +115,7 @@ Hard constraints for this block:
 
 export async function writeCouplesReading(
   input: CouplesReadingInput,
+  userId?: string,
 ): Promise<CouplesReading> {
   const inputJson = JSON.stringify(input, null, 2);
   const t0 = Date.now();
@@ -131,6 +132,11 @@ export async function writeCouplesReading(
           thinkingConfig: { thinkingLevel: "minimal" },
           structuredOutputs: true,
         },
+      },
+      experimental_telemetry: {
+        isEnabled: true,
+        functionId: "couples-reading",
+        metadata: userId ? { posthog_distinct_id: userId } : undefined,
       },
     });
     console.log(`[couples-reading] ok in ${Date.now() - t0}ms — finish=${finishReason}, usage=${JSON.stringify(usage)}`);

@@ -11,16 +11,22 @@
  * birthDate + (refDate − birthDate) / 365.25 days. We reuse Swiss
  * Ephemeris via `computeRealtimePositions` for accuracy.
  *
- * Output: progressed Sun + Moon longitudes, plus the geodetic longitude
- * BAND each one corresponds to ([signLow, signHigh] = [signIdx*30,
- * signIdx*30+30]). The band tells the UI "your emotional home zone on
- * the globe is currently this 30° slice."
+ * Output:
+ *   - bands: progressed Sun + Moon sign-bands (legacy 30° resolution)
+ *     + a `aggregate` modifier that fires when destLon falls in band
+ *   - angleHits: per-progressed-planet degree-precise hits to the four
+ *     geodetic angles (Sun, Moon, Mercury, Venus, Mars × MC/IC/ASC/DSC,
+ *     ±3° orb). This is the framework's "progressed planet on geodetic
+ *     angle" signal that the sign-band aggregate washes out.
  */
 import { computeRealtimePositions } from "@/lib/astro/transits";
-import { signFromLongitude } from "./geodetic";
+import { signFromLongitude, geodeticMCLongitude, geodeticASCLongitude } from "./geodetic";
 
 const DAY_MS = 86_400_000;
 const TROPICAL_YEAR_DAYS = 365.2422;
+
+/** Angle name (matches AngleName from ./geodetic/angle-transits). */
+type ProgAngle = "ASC" | "IC" | "DSC" | "MC";
 
 export interface ProgressedBand {
     planet: "Sun" | "Moon";
@@ -36,15 +42,32 @@ export interface ProgressedBand {
     destinationInBand: boolean;
 }
 
+/** Per-angle hit: progressed planet within ±3° of a geodetic angle. */
+export interface ProgressionAngleHit {
+    planet: "Sun" | "Moon" | "Mercury" | "Venus" | "Mars";
+    angle: ProgAngle;
+    /** Progressed planet's ecliptic longitude. */
+    progressedLon: number;
+    /** Geodetic angle's ecliptic longitude. */
+    angleLon: number;
+    /** Orb in degrees (0–3). Tighter = stronger. */
+    orb: number;
+    /** Severity contribution (signed; mapped to angular house). */
+    severity: number;
+}
+
 export interface ProgressionsResult {
     /** Progressed-instant timestamp used for the SwissEph call. */
     progressedDateUtc: string;
     /** Years elapsed (used by the day-for-a-year mapping). */
     yearsElapsed: number;
     bands: ProgressedBand[];
-    /** Soft +5 / 0 modifier for bucketGeodetic — fires only when the
-     *  destination longitude lies in the progressed-Sun band. */
+    /** Sign-band aggregate (legacy): +5 if destLon in progressed-Sun band,
+     *  +2 if Moon band. Applied uniformly across all 12 houses. */
     aggregate: number;
+    /** Per-angle degree-precise hits — applied to the angular house the
+     *  angle belongs to (ASC→1, IC→4, DSC→7, MC→10). */
+    angleHits: ProgressionAngleHit[];
 }
 
 function bandForSignIndex(signIdx: number): { fromLon: number; toLon: number; label: string } {
@@ -67,20 +90,52 @@ function destinationInBand(destLon: number, fromLon: number, toLon: number): boo
     return d >= fromLon && d < toLon;
 }
 
+function angularDiff(a: number, b: number): number {
+    let d = Math.abs(a - b) % 360;
+    if (d > 180) d = 360 - d;
+    return d;
+}
+
+/** Per-planet base for degree-precise progression-on-angle hits.
+ *  Mirrors STATION_BASE valences but compressed since progressions are
+ *  slow + persistent (1° = ~1 year of activation).
+ *
+ *  Sun, Moon, Mercury, Venus = positive activations (identity, emotion,
+ *  voice, values land at this place). Mars = friction (drive turning
+ *  inward toward this longitude band creates tension). */
+const PROG_PLANET_BASE: Record<string, number> = {
+    sun:     +6,
+    moon:    +4,
+    mercury: +3,
+    venus:   +5,
+    mars:    -4,
+};
+
+const PROG_ANGLE_STRENGTH: Record<ProgAngle, number> = {
+    ASC: 1.20, MC: 1.10, DSC: 0.95, IC: 0.90,
+};
+const PROG_ORB_MAX = 3;
+const PROG_ORB_SIGMA_SQ_2 = 4.5;
+const PROG_PLANETS = ["Sun", "Moon", "Mercury", "Venus", "Mars"] as const;
+
 export async function computeProgressedBands(params: {
     birthDateUtc: Date;
     refDate: Date;
     destLon: number;
+    /** Optional: latitude lets us also compute degree-precise hits to
+     *  geo-ASC. Without it, only MC/IC angle hits are computed. */
+    destLat?: number;
 }): Promise<ProgressionsResult> {
-    const { birthDateUtc, refDate, destLon } = params;
+    const { birthDateUtc, refDate, destLon, destLat } = params;
 
     const yearsElapsed = (refDate.getTime() - birthDateUtc.getTime()) / DAY_MS / TROPICAL_YEAR_DAYS;
     const progressedMs = birthDateUtc.getTime() + yearsElapsed * DAY_MS;
     const progressedDate = new Date(progressedMs);
 
     const positions = await computeRealtimePositions(progressedDate);
-    const out: ProgressedBand[] = [];
 
+    // ── Sign-band output (legacy 30° resolution, Sun + Moon only) ────────
+    const out: ProgressedBand[] = [];
     for (const planetName of ["Sun", "Moon"] as const) {
         const p = positions.find((x) => x.name.toLowerCase() === planetName.toLowerCase());
         if (!p) continue;
@@ -97,18 +152,58 @@ export async function computeProgressedBands(params: {
         });
     }
 
-    // Aggregate: progressed-Sun band match = strongest signal (identity
-    // alignment), progressed-Moon match = mild emotional resonance.
+    // Sign-band aggregate (legacy uniform-across-houses term).
     let aggregate = 0;
     const sunBand = out.find((b) => b.planet === "Sun");
     const moonBand = out.find((b) => b.planet === "Moon");
     if (sunBand?.destinationInBand) aggregate += 5;
     if (moonBand?.destinationInBand) aggregate += 2;
 
+    // ── Per-angle degree-precise hits (the framework's real signal) ─────
+    const geoMC  = geodeticMCLongitude(destLon);
+    const geoIC  = (geoMC + 180) % 360;
+    const angles: Array<{ name: ProgAngle; lon: number }> = [
+        { name: "MC", lon: geoMC },
+        { name: "IC", lon: geoIC },
+    ];
+    if (typeof destLat === "number" && Number.isFinite(destLat)) {
+        const geoASC = geodeticASCLongitude(destLon, destLat);
+        const geoDSC = (geoASC + 180) % 360;
+        angles.push({ name: "ASC", lon: geoASC });
+        angles.push({ name: "DSC", lon: geoDSC });
+    }
+
+    const angleHits: ProgressionAngleHit[] = [];
+    for (const planetName of PROG_PLANETS) {
+        const p = positions.find((x) => x.name.toLowerCase() === planetName.toLowerCase());
+        if (!p) continue;
+        const base = PROG_PLANET_BASE[planetName.toLowerCase()];
+        if (base === undefined) continue;
+
+        for (const a of angles) {
+            const orb = angularDiff(p.longitude, a.lon);
+            if (orb > PROG_ORB_MAX) continue;
+            const orbFactor = Math.exp(-(orb * orb) / PROG_ORB_SIGMA_SQ_2);
+            const angleWt = PROG_ANGLE_STRENGTH[a.name];
+            const severity = Math.round(base * orbFactor * angleWt);
+            if (severity === 0) continue;
+            angleHits.push({
+                planet: planetName,
+                angle: a.name,
+                progressedLon: p.longitude,
+                angleLon: a.lon,
+                orb: Math.round(orb * 100) / 100,
+                severity,
+            });
+        }
+    }
+    angleHits.sort((a, b) => Math.abs(b.severity) - Math.abs(a.severity));
+
     return {
         progressedDateUtc: progressedDate.toISOString(),
         yearsElapsed: Math.round(yearsElapsed * 100) / 100,
         bands: out,
         aggregate,
+        angleHits,
     };
 }
