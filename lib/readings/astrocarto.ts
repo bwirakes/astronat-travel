@@ -635,6 +635,7 @@ export async function runAstrocarto(
       ? { modalityCohorts: matrixResult.modalityCohorts }
       : {}),
     ...(teacherReading ? { teacherReading } : {}),
+    ...(aiInput.chartStructure ? { chartStructure: aiInput.chartStructure } : {}),
     ...(couplesReading ? { couplesReading } : {}),
     ...(couplesBestWindows.length ? { bestWindows: couplesBestWindows } : {}),
     ...(couplesAvoidWindows.length ? { avoidWindows: couplesAvoidWindows } : {}),

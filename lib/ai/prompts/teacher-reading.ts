@@ -3,6 +3,7 @@ import { gemini, MODEL } from "@/lib/ai/client";
 import { SHARED_VOICE } from "@/lib/ai/voice";
 import { TeacherReadingSchema, type TeacherReading } from "@/lib/ai/schemas";
 import type { TeacherReadingInput } from "@/lib/readings/ai-input-builder";
+import { backfillChartStructureCommentary } from "@/lib/readings/chart-structure-backfill";
 
 // Re-export so callers (e.g. astrocarto.ts) can pick up the input type from
 // the prompt module that owns the writeTeacherReading function, without
@@ -204,6 +205,8 @@ One entry per pattern. The \`patternKey\` MUST match \`patterns[].key\` verbatim
 - House stellium in any house → may also be referenced in \`overview.leanInto\` paragraph 1 (durable place factors)
 - **Patterns (Grand Trine, T-Square)** → MUST be named explicitly in \`tabs["life-themes"].lead\` when present. The pattern's element (Grand Trine) or focal planet (T-Square) is the chart's central tension and belongs in the life-themes opening.
 
+**Bind-to-data rule (critical):** ANY mention of "Grand Trine," "T-Square," "stellium," or "cluster" in body prose (tab leads, overview, leanInto, etc.) MUST in the same sentence or the sentence immediately following name the actual member planets, AND for Grand Trines the element, AND for T-Squares the focal planet. Vague mentions like "you arrive with a Grand Trine" with no planet names are forbidden — the reader will rightly ask "which planets?" and the prose has not answered. Correct: "you arrive with a Water Grand Trine — Pluto, the True Node, and Venus running as one closed circuit." Incorrect: "you arrive with a Grand Trine that allows gifts to flow effortlessly."
+
 Hard constraints:
 - Never invent stelliums, dispositors, or patterns absent from \`chartStructure\`.
 - Never describe a stellium with fewer than 3 members (engine guarantees ≥3 before surfacing).
@@ -275,6 +278,16 @@ export async function writeTeacherReading(
     });
     console.log(`[teacher-reading] ok in ${Date.now() - t0}ms — finish=${finishReason}, usage=${JSON.stringify(usage)}`);
     console.log(`[teacher-reading] geodetics fields — placeCharacter:${object.placeCharacter ? "✓" : "✗"} paransSummary:${object.placeCharacter?.paransSummary ? "✓" : "✗"} liveLinesLead:${object.liveLinesLead ? "✓" : "✗"} liveLines:${object.geodeticLiveLines?.length ?? 0} chartRulerReframe:${object.chartRulerReframe ? "✓" : "✗"} acgLineNotes:${object.acgLineNotes?.length ?? 0} modalityHits:${object.modalityHits?.length ?? 0}`);
+
+    // Defensive backfill: when the input had clusters or patterns but the LLM
+    // skipped clusterCommentary / patternCommentary (Gemini routinely ignores
+    // REQUIRED directives on optional schema fields), synthesize the missing
+    // entries from the engine's structured data so the reader sees the actual
+    // member planets bound to the term.
+    const backfillReport = backfillChartStructureCommentary(object, input.chartStructure);
+    if (backfillReport.patternsBackfilled.length > 0 || backfillReport.clustersBackfilled.length > 0) {
+        console.log(`[teacher-reading] chart-structure backfill — clusters:[${backfillReport.clustersBackfilled.join(",")}] patterns:[${backfillReport.patternsBackfilled.join(",")}]`);
+    }
     return object;
   } catch (err: any) {
     console.error(`[teacher-reading] failed after ${Date.now() - t0}ms — finish=${err?.finishReason ?? "?"}, textLen=${err?.text?.length ?? 0}, usage=${JSON.stringify(err?.usage ?? {})}`);
