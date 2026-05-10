@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getPostHogClient } from '@/lib/posthog-server'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_fallback', {
   apiVersion: '2026-03-25.dahlia', 
@@ -103,6 +104,18 @@ export async function POST(req: Request) {
       cancel_url: cancelUrl,
       client_reference_id: user.id,
     })
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: user.id,
+      event: 'checkout_session_started',
+      properties: {
+        stripe_session_id: session.id,
+        stripe_customer_id: stripeCustomerId,
+        return_to: returnTo,
+      },
+    })
+    await posthog.shutdown()
 
     return NextResponse.json({ url: session.url })
 

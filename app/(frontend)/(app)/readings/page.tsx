@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, Suspense } from "react";
 import { motion } from "framer-motion";
+import posthog from "posthog-js";
 import { ArrowRight, ChevronLeft, ChevronRight, Map as MapIcon, List as ListIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ScoreRing, getVerdict, BAND_CONFIG } from "@/app/components/ScoreRing";
@@ -136,7 +137,7 @@ function ReadingsContent() {
           onType={(t) => updateParam({ type: t === "all" ? null : t, page: null })}
           totalCount={filtered.length}
           showingCount={pageItems.length}
-          onNew={() => router.push("/reading/new")}
+          onNew={() => { posthog.capture("new_reading_started", { source: "readings_page" }); router.push("/reading/new"); }}
         />
 
         {/* Mobile tab switcher (<lg) */}
@@ -233,7 +234,7 @@ function ReadingsContent() {
 
       <button
         className="dashboard-fab"
-        onClick={() => router.push("/reading/new")}
+        onClick={() => { posthog.capture("new_reading_started", { source: "fab" }); router.push("/reading/new"); }}
       >
         + New Reading
       </button>
