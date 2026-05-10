@@ -18,6 +18,25 @@ const nextConfig = {
   // Keep it external so Node resolves it at runtime on the server.
   serverExternalPackages: ["swisseph-wasm", "geo-tz"],
 
+  async rewrites() {
+    return [
+      {
+        source: "/ingest/static/:path*",
+        destination: "https://us-assets.i.posthog.com/static/:path*",
+      },
+      {
+        source: "/ingest/array/:path*",
+        destination: "https://us-assets.i.posthog.com/array/:path*",
+      },
+      {
+        source: "/ingest/:path*",
+        destination: "https://us.i.posthog.com/:path*",
+      },
+    ];
+  },
+
+  skipTrailingSlashRedirect: true,
+
   async redirects() {
     return [
       {

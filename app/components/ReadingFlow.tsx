@@ -7,6 +7,7 @@ import { ArrowRight, ArrowLeft, User, Coins, Home, Heart, Activity, Handshake, B
 import CityAutocomplete from "./CityAutocomplete";
 import { createClient } from "@/lib/supabase/client";
 import { AstroLoader } from "@/app/components/ui/astro-loader";
+import posthog from "posthog-js";
 
 const LIFE_GOALS = [
   { id: "identity", label: "Identity & Self-Discovery", icon: User, color: "var(--color-y2k-blue)", sub: "1st + 9th house emphasis" },
@@ -106,6 +107,7 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
       .single();
 
     if (!error && data) {
+      posthog.capture("partner_profile_added", { partner_birth_city: newPartner.birthCity });
       setPartners(prev => [data, ...prev]);
       setPartnerId(data.id);
       setShowAddPartner(false);
@@ -189,13 +191,34 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
 
       const data = await res.json();
       if (data.readingId) {
+        posthog.capture("reading_generated", {
+          reading_id: data.readingId,
+          reading_type: type,
+          reading_category: type === "couples" ? "synastry" : "astrocartography",
+          destination,
+          has_partner: type === "couples" && !!partnerId,
+          goals,
+        });
         router.push(`/reading/${data.readingId}`);
       } else {
+        const isFreeLimit = data.code === "FREE_TIER_LIMIT";
+        posthog.capture("reading_generation_failed", {
+          error_code: data.code ?? "unknown",
+          error: data.error ?? "unknown",
+          is_free_tier_limit: isFreeLimit,
+          reading_type: type,
+          destination,
+        });
         const errorMsg = data.message ? `${data.error}: ${data.message}` : (data.error || "An unknown error occurred during generation.");
         setErrorMsg(errorMsg);
         setLoading(false);
       }
     } catch (err: any) {
+      posthog.capture("reading_generation_failed", {
+        error: err.message ?? "network_error",
+        reading_type: type,
+        destination,
+      });
       console.error(err);
       setErrorMsg(err.message || "Failed to connect to generation service.");
       setLoading(false);

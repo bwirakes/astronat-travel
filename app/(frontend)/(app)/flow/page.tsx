@@ -10,6 +10,7 @@ import CityAutocomplete from "@/app/components/CityAutocomplete";
 import { useOnboardingStore } from "@/lib/store/onboardingStore";
 import { Suspense } from "react";
 import { createClient } from '@/lib/supabase/client';
+import posthog from "posthog-js";
 import coupleHero from "@/public/couples_flow_hero.png";
 
 const SCREENS = ["Sign Up", "Birth", "Aha"];
@@ -73,6 +74,7 @@ function FlowPageInner() {
   }, [searchParams]);
 
   const handleGoogleSignup = async () => {
+    posthog.capture("user_signed_up", { method: "google" });
     localStorage.setItem('onboardingData', JSON.stringify(store));
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     await supabase.auth.signInWithOAuth({
@@ -100,6 +102,7 @@ function FlowPageInner() {
     if (error) {
       setAuthMessage(`Error: ${error.message}`);
     } else {
+      posthog.capture("user_signed_up", { method: "magic_link", email });
       setAuthMessage("Check your email ✨");
     }
     setAuthLoading(false);
@@ -148,6 +151,11 @@ function FlowPageInner() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        posthog.identify(user.id, {
+          email: user.email,
+          first_name: store.firstName || undefined,
+          birth_city: store.birthCity || undefined,
+        });
         await supabase.from('profiles').upsert({
           id: user.id,
           first_name: store.firstName || null,
@@ -157,6 +165,10 @@ function FlowPageInner() {
           birth_city: store.birthCity || null,
           birth_lat: store.birthLat || null,
           birth_lon: store.birthLon || null,
+        });
+        posthog.capture("onboarding_completed", {
+          birth_time_known: store.birthTimeKnown,
+          has_birth_city: !!store.birthCity,
         });
       }
     } catch (err) {

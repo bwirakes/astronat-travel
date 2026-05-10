@@ -52,7 +52,7 @@ export async function POST() {
   };
 
   try {
-    const result = await streamTeacherScript(JSON.stringify(payload, null, 2));
+    const result = await streamTeacherScript(JSON.stringify(payload, null, 2), user.id);
     return result.toTextStreamResponse();
   } catch (err: any) {
     console.error("[chart/script] streaming failed:", err.message);

@@ -4,6 +4,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState, Suspense, type ReactElement } from "react";
 import { createClient } from "@/lib/supabase/client";
+import posthog from "posthog-js";
 import { MOCK_READING_DETAILS } from "@/lib/astro/mock-readings";
 import { hasV4TeacherReading } from "@/app/lib/reading-viewmodel";
 import { AstroAppLoader } from "@/app/components/ui/app-loader-shell";
@@ -70,11 +71,14 @@ function ReadingContent(): ReactElement | null {
       .then(r => r.json())
       .then(a => {
         if (!active) return;
-        if (a?.authenticated && !a.hasSubscription && a.freeUsed) setShowUpsell(true);
+        if (a?.authenticated && !a.hasSubscription && a.freeUsed) {
+          setShowUpsell(true);
+          posthog.capture("upsell_shown", { reading_id: readingId });
+        }
       })
       .catch(() => {});
     return () => { active = false; };
-  }, [isDemo, reading]);
+  }, [isDemo, reading, readingId]);
 
   useEffect(() => {
     let active = true;
@@ -203,6 +207,21 @@ function ReadingContent(): ReactElement | null {
          setNotFound(true);
       }
       setLoading(false);
+
+      if (data && data.details) {
+        const details = data.details as Record<string, unknown>;
+        const destination = typeof details.destination === "string" ? details.destination : "Unknown Destination";
+        const macroScore = typeof details.macroScore === "number" ? details.macroScore : data.reading_score || 0;
+        const travelType = typeof details.travelType === "string" ? details.travelType : "trip";
+
+        posthog.capture("reading_viewed", {
+          reading_id: readingId,
+          category: data.category || "astrocartography",
+          destination,
+          macro_score: macroScore,
+          travel_type: travelType,
+        });
+      }
     }
     
     fetchReading();

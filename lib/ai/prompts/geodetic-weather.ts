@@ -116,24 +116,36 @@ Do not invent. Use only what is in topEvents.`;
 
 export async function writeWeatherReading(
     input: WeatherReadingInput,
+    userId?: string,
 ): Promise<WeatherReading> {
     const { object } = await generateObject({
         model: gemini(MODEL),
         system: PERSONAL_SYSTEM,
         prompt: `<signal>\n${JSON.stringify(input, null, 2)}\n</signal>\n\nWrite the personal-geodetic reading JSON. Stay strictly inside the signal — do not invent.`,
         schema: WeatherReadingSchema,
+        experimental_telemetry: {
+            isEnabled: true,
+            functionId: "weather-reading-personal",
+            metadata: userId ? { posthog_distinct_id: userId } : undefined,
+        },
     });
     return validateRulerChain(object);
 }
 
 export async function writeMundaneLead(
     input: WeatherReadingInput,
+    userId?: string,
 ): Promise<MundaneReading> {
     const { object } = await generateObject({
         model: gemini(MODEL),
         system: MUNDANE_SYSTEM,
         prompt: `<signal>\n${JSON.stringify(input, null, 2)}\n</signal>\n\nWrite ONE situation-lead sentence.`,
         schema: MundaneReadingSchema,
+        experimental_telemetry: {
+            isEnabled: true,
+            functionId: "weather-reading-mundane-lead",
+            metadata: userId ? { posthog_distinct_id: userId } : undefined,
+        },
     });
     return object;
 }

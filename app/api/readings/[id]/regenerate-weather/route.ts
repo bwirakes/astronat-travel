@@ -179,7 +179,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     };
 
     try {
-        const interpretation = await writeWeatherReading(aiInput);
+        const interpretation = await writeWeatherReading(aiInput, user.id);
         // Same guard as the generate path: AI labels, deterministic dates.
         const ranks = (interpretation.travelWindows ?? []).map((w: any) => w.rank);
         const notes = (interpretation.travelWindows ?? []).map((w: any) => w.note);

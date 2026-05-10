@@ -437,7 +437,7 @@ export async function runAstrocarto(
 
   let teacherReading: any = undefined;
   try {
-    teacherReading = await writeTeacherReading(aiInput);
+    teacherReading = await writeTeacherReading(aiInput, user.id);
   } catch (err: any) {
     console.warn("Teacher reading AI failed, persisting without it:", err?.message);
     // Verbose diagnostics only outside production. Set DEBUG_TEACHER_READING=1
@@ -552,7 +552,7 @@ export async function runAstrocarto(
         natalPlanetsPartner: partnerNatalPlanets ?? [],
       });
 
-      couplesReading = await writeCouplesReading(couplesInput);
+      couplesReading = await writeCouplesReading(couplesInput, user.id);
     } catch (err: any) {
       console.warn("Couples reading AI failed, persisting without it:", err?.message);
     }
