@@ -28,7 +28,10 @@ function capricornStelliumChart(): MatrixNatalPlanet[] {
     ];
 }
 
-/** Same shape but no stellium — every planet in its own house. */
+/** Same shape but no stellium AND no aspect patterns — every planet in its
+ *  own house, no Grand Trines, no T-Squares. Pluto moved from 320° → 250°
+ *  to break the Mars-Pluto opposition that would otherwise form a T-Square
+ *  with Moon as focal. */
 function evenChart(): MatrixNatalPlanet[] {
     return [
         { planet: "Sun",     longitude: 15,  sign: "Aries",       retrograde: false },
@@ -40,7 +43,7 @@ function evenChart(): MatrixNatalPlanet[] {
         { planet: "Saturn",  longitude: 210, sign: "Libra",       retrograde: false },
         { planet: "Uranus",  longitude: 240, sign: "Sagittarius", retrograde: false },
         { planet: "Neptune", longitude: 280, sign: "Capricorn",   retrograde: false },
-        { planet: "Pluto",   longitude: 320, sign: "Aquarius",    retrograde: false },
+        { planet: "Pluto",   longitude: 250, sign: "Sagittarius", retrograde: false },
     ];
 }
 
@@ -111,19 +114,22 @@ describe("CLUSTER_SCORING_V1 amplifier — flag-on with stellium", () => {
         expect(on.houses[9].breakdown.occupants).not.toBe(off.houses[9].breakdown.occupants);
     });
 
-    it("does not amplify houses without a stellium or a dispositor", () => {
+    it("does not amplify houses without a stellium, dispositor, or pattern", () => {
         setClusterScoringEnabled(false);
         const off = score(capricornStelliumChart());
         setClusterScoringEnabled(true);
         const on = score(capricornStelliumChart());
 
-        // Houses expected to move:
+        // Houses expected to move in this fixture:
         //   H10 — holds the Capricorn stellium (amp + leader logic)
         //   H11 — Saturn sits there. Saturn disposits the Cap cluster
         //         (×1.08) AND is the chart's final dispositor (+10), since
         //         every chain in this fixture walks back to Saturn through
         //         Capricorn or Aquarius.
-        const movingHouses = new Set([10, 11]);
+        //   H6  — Neptune in Virgo is the focal of an exact T-Square
+        //         (Uranus 60° opp Pluto 240°, both square Neptune 150°).
+        //         T-Square fires: H6 occupants -4, Neptune mod +2.
+        const movingHouses = new Set([10, 11, 6]);
         for (let i = 0; i < 12; i++) {
             const houseNum = i + 1;
             if (movingHouses.has(houseNum)) continue;
@@ -313,10 +319,12 @@ describe("CLUSTER_SCORING_V1 dispositor section", () => {
         expect(delta).toBeGreaterThanOrEqual(10);
     });
 
-    it("does not fire dispositor effects when no sign stelliums exist", () => {
-        // The even (no-stellium) fixture has no sign clusters → no
-        // dispositors → no Step 2.5 bonus → no Step 3 multiplier →
-        // no final dispositor → identical scores in either flag state.
+    it("does not fire dispositor effects when no sign stelliums or patterns exist", () => {
+        // The even fixture has no sign clusters → no dispositors → no
+        // Step 2.5 bonus → no Step 3 multiplier → no final dispositor.
+        // Pluto was placed at 250° (rather than 320°) to break the
+        // Mars-Pluto opposition; with no patterns either, scores must be
+        // bit-for-bit identical in either flag state.
         setClusterScoringEnabled(false);
         const off = score(evenChart());
         setClusterScoringEnabled(true);
@@ -325,6 +333,51 @@ describe("CLUSTER_SCORING_V1 dispositor section", () => {
             expect(on.houses[i].breakdown.dignity).toBe(off.houses[i].breakdown.dignity);
             expect(on.houses[i].breakdown.occupants).toBe(off.houses[i].breakdown.occupants);
         }
+    });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Aspect patterns (Phase 4a)
+// ═══════════════════════════════════════════════════════════════
+
+describe("CLUSTER_SCORING_V1 aspect patterns", () => {
+    /** Earth Grand Trine: Sun in Taurus (45°), Mars in Virgo (165°),
+     *  Saturn in Capricorn (285°). Each pair at exactly 120°. */
+    function earthGrandTrineChart(): MatrixNatalPlanet[] {
+        return [
+            { planet: "Sun",     longitude: 45,  sign: "Taurus",      retrograde: false },
+            { planet: "Mars",    longitude: 165, sign: "Virgo",       retrograde: false },
+            { planet: "Saturn",  longitude: 285, sign: "Capricorn",   retrograde: false },
+            // Filler — placed to avoid creating a second pattern accidentally.
+            { planet: "Moon",    longitude: 75,  sign: "Gemini",      retrograde: false },
+            { planet: "Mercury", longitude: 95,  sign: "Cancer",      retrograde: false },
+            { planet: "Venus",   longitude: 115, sign: "Cancer",      retrograde: false },
+            { planet: "Jupiter", longitude: 200, sign: "Libra",       retrograde: false },
+            { planet: "Uranus",  longitude: 220, sign: "Libra",       retrograde: false },
+            { planet: "Neptune", longitude: 320, sign: "Aquarius",    retrograde: false },
+            { planet: "Pluto",   longitude: 350, sign: "Pisces",      retrograde: false },
+        ];
+    }
+
+    it("Grand Trine in earth lifts the earth-sign houses (H2/H6/H10) by +6", () => {
+        setClusterScoringEnabled(false);
+        const off = score(earthGrandTrineChart());
+        setClusterScoringEnabled(true);
+        const on = score(earthGrandTrineChart());
+
+        // Each earth house's occupants should move by +6 from the trine
+        // alone (other cluster effects also fire on H10 because Saturn is
+        // there and disposits its own sign-cluster of self... no — Saturn
+        // is one planet in Cap, not a stellium. So no dispositor effects
+        // here. Pure pattern test.)
+        const dH2  = on.houses[1].breakdown.occupants - off.houses[1].breakdown.occupants;
+        const dH6  = on.houses[5].breakdown.occupants - off.houses[5].breakdown.occupants;
+        const dH10 = on.houses[9].breakdown.occupants - off.houses[9].breakdown.occupants;
+        // +6 per house (other contributions on these houses may net to
+        // small adjustments, but ≥+6 is the floor from the trine).
+        expect(dH2).toBeGreaterThanOrEqual(5);  // -100 clamp could trim 1
+        expect(dH6).toBeGreaterThanOrEqual(5);
+        expect(dH10).toBeGreaterThanOrEqual(5);
     });
 });
 

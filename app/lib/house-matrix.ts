@@ -52,6 +52,7 @@ import {
 import { computeHouseNumber } from "./house-system";
 import { isOuterPlanet, computeOuterPlanetScore } from "./outer-planet-scoring";
 import { detectClusters } from "./clusters";
+import { detectAspectPatterns, type ElementName } from "./aspect-patterns";
 import { isClusterScoringEnabled } from "./scoring-flags";
 import { scoreAngleTransits, type AngleName, type AngleTransitContribution } from "./geodetic/angle-transits";
 import { scoreNatalWorldPoints, type NatalWorldPointsResult } from "./geodetic/natal-world-points";
@@ -798,6 +799,14 @@ export function computeHouseMatrix(params: {
     const mrBonusByPlanet = new Map<string, number>();
     const dispositorClusterCount = new Map<string, number>();
     let finalDispositorPlanet: string | undefined;
+
+    // Aspect-pattern bonus maps (Phase 4 / §7). Two channels:
+    //   patternHouseBonus  — additive shift to the house's occupants total
+    //   patternPlanetBonus — additive shift to a specific planet's mod
+    // Both are summed across patterns and rounded at apply time.
+    const patternHouseBonus = new Map<number, number>();
+    const patternPlanetBonus = new Map<string, number>();
+
     if (isClusterScoringEnabled()) {
         const clusterPlanets = natalPlanets
             .map((p) => {
@@ -903,6 +912,52 @@ export function computeHouseMatrix(params: {
         // terminus of every dispositor chain. Promoted to a chart-level
         // attribute. When set, that planet's occupant mod gets +10 flat.
         finalDispositorPlanet = clusterSet.finalDispositor;
+
+        // ── Aspect patterns (Phase 4a / §7) ─────────────────────────────
+        //
+        // Detect Grand Trine + T-Square. Both effects route through the
+        // occupants channel — Grand Trine adds +6 (× tightness) uniformly
+        // to the three houses tied to the trine's element; T-Square adds
+        // -4 (× tightness) to the focal planet's house AND +2 to the focal
+        // planet's mod. PR #5b will add Yod / Grand Cross / Kite / Mystic
+        // Rectangle to the same map.
+        const ELEMENT_HOUSES: Record<ElementName, number[]> = {
+            Fire:  [1, 5, 9],
+            Earth: [2, 6, 10],
+            Air:   [3, 7, 11],
+            Water: [4, 8, 12],
+        };
+        const patterns = detectAspectPatterns(
+            clusterPlanets.map((p) => ({ name: p.name, longitude: p.longitude, sign: p.sign })),
+        );
+        for (const pat of patterns) {
+            if (pat.type === "grand-trine" && pat.element) {
+                for (const h of ELEMENT_HOUSES[pat.element]) {
+                    patternHouseBonus.set(h, (patternHouseBonus.get(h) ?? 0) + 6 * pat.tightness);
+                }
+            } else if (pat.type === "t-square" && pat.focal) {
+                const focalCanon = pat.focal
+                    .split(/\s+/)
+                    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                    .join(" ");
+                const focalPlanet = clusterPlanets.find((cp) =>
+                    cp.name
+                        .split(/\s+/)
+                        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                        .join(" ") === focalCanon,
+                );
+                if (focalPlanet) {
+                    patternHouseBonus.set(
+                        focalPlanet.house,
+                        (patternHouseBonus.get(focalPlanet.house) ?? 0) - 4 * pat.tightness,
+                    );
+                }
+                patternPlanetBonus.set(
+                    focalCanon,
+                    (patternPlanetBonus.get(focalCanon) ?? 0) + 2 * pat.tightness,
+                );
+            }
+        }
     }
 
     // ── O(1) lookup helpers ─────────────────────────────────────────────
@@ -953,6 +1008,17 @@ export function computeHouseMatrix(params: {
     function clusterFinalDispositorBonus(planetName: string): number {
         if (!finalDispositorPlanet || !planetName) return 0;
         return canonName(planetName) === finalDispositorPlanet ? 10 : 0;
+    }
+    /** Per-house pattern bonus (Grand Trine element houses + T-Square focal
+     *  house penalty). Applied to occupants AFTER the per-planet loop. */
+    function patternHouseAdjust(house: number): number {
+        if (patternHouseBonus.size === 0) return 0;
+        return Math.round(patternHouseBonus.get(house) ?? 0);
+    }
+    /** Per-planet pattern bonus (T-Square focal planet's mod boost). */
+    function patternPlanetAdjust(planetName: string): number {
+        if (patternPlanetBonus.size === 0 || !planetName) return 0;
+        return Math.round(patternPlanetBonus.get(canonName(planetName)) ?? 0);
     }
 
     const houses: HouseScore[] = [];
@@ -1028,15 +1094,16 @@ export function computeHouseMatrix(params: {
                     speed:        p.speed,
                 });
                 // CLUSTER_SCORING_V1: leader → dispositor → amplifier → MR
-                // → final dispositor. Multipliers compose left-to-right;
-                // additives (MR + final dispositor bonus) land last.
-                // No-op when the flag is off.
+                // → final dispositor → T-Square focal. Multipliers compose;
+                // additives land last. T-Square focal bonus (+2) applies to
+                // the focal planet's individual mod regardless of which
+                // house we're scoring. No-op when the flag is off.
                 const adjOuter = Math.round(
                     outerScore
                         * clusterLeaderMult(pName)
                         * clusterDispositorMult(pName)
                         * clusterAmplifier(pName),
-                ) + clusterMrBonus(pName) + clusterFinalDispositorBonus(pName);
+                ) + clusterMrBonus(pName) + clusterFinalDispositorBonus(pName) + patternPlanetAdjust(pName);
                 occupants += adjOuter;
             } else {
                 // Traditional planets: base mod → sect → combustion/cazimi → joy → hayz
@@ -1084,23 +1151,28 @@ export function computeHouseMatrix(params: {
                 }
 
                 // CLUSTER_SCORING_V1: leader → dispositor → amplifier → MR
-                // → final dispositor. Multipliers compose; additives land
-                // after rounding. The dispositor multiplier (×1.08 per
-                // disposited cluster, cap ×1.24) fires for the dispositor
-                // wherever it sits — even when the dispositor is NOT in a
-                // cluster itself. The final-dispositor +10 fires on the
-                // chart's master-key planet wherever it sits.
-                // No-op when the flag is off.
+                // → final dispositor → T-Square focal. Multipliers compose;
+                // additives land after rounding. patternPlanetAdjust applies
+                // the +2 T-Square focal bonus to the focal planet's mod
+                // wherever it sits. The per-house Grand-Trine and T-Square
+                // house bonuses are applied AFTER the loop, against
+                // `occupants` directly. No-op when the flag is off.
                 mod = Math.round(
                     mod
                         * clusterLeaderMult(pName)
                         * clusterDispositorMult(pName)
                         * clusterAmplifier(pName),
-                ) + clusterMrBonus(pName) + clusterFinalDispositorBonus(pName);
+                ) + clusterMrBonus(pName) + clusterFinalDispositorBonus(pName) + patternPlanetAdjust(pName);
 
                 occupants += mod;
             }
         }
+        // CLUSTER_SCORING_V1: per-house pattern bonus. Grand Trine houses
+        // get +6 (× tightness); T-Square focal house gets -4 (× tightness).
+        // Applied AFTER the per-planet loop so it lifts/dampens the entire
+        // house uniformly, not per-occupant. No-op when the flag is off.
+        occupants += patternHouseAdjust(h);
+
         // Cap occupants to reasonable range (widened for inflation)
         occupants = Math.max(-100, Math.min(100, occupants));
 
