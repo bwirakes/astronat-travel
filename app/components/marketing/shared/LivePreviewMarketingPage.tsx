@@ -1,7 +1,4 @@
-"use client";
-
 import React from "react";
-import { useLivePreview } from "@payloadcms/live-preview-react";
 import { MarketingPageView } from "./MarketingPageView";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -20,17 +17,12 @@ interface LivePreviewMarketingPageProps {
   customRenderers?: Record<string, BlockRenderer>;
 }
 
+/** Static marketing page shell (live Payload preview removed). */
 export function LivePreviewMarketingPage({
   initialData,
   customRenderers,
 }: LivePreviewMarketingPageProps) {
-  const { data } = useLivePreview<PageData>({
-    initialData,
-    serverURL: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
-    depth: 2,
-  });
-
-  const blocks = data?.layout ?? initialData.layout;
+  const blocks = initialData.layout ?? [];
 
   return (
     <MarketingPageView
