@@ -456,5 +456,29 @@ export const CouplesReadingSchema = z.object({
    *  angle (no paraphrase of leads above). Length(3) is intentional: the
    *  trio is a fixed editorial format, not a flexible list. */
   takeaways: z.array(z.string()).length(3),
+  /** Per-partner cluster commentary. Each entry's `clusterKey` matches a
+   *  `chartStructureYou.stelliums[].key` (or `chartStructurePartner...`).
+   *  Skip clusters flagged generational. */
+  clusterCommentaryYou: z.array(z.object({
+    clusterKey: z.string(),
+    headline: z.string(),
+    body: z.string(),
+  })).max(8).optional(),
+  clusterCommentaryPartner: z.array(z.object({
+    clusterKey: z.string(),
+    headline: z.string(),
+    body: z.string(),
+  })).max(8).optional(),
+  /** Per-partner pattern commentary (Grand Trine / T-Square / etc.). */
+  patternCommentaryYou: z.array(z.object({
+    patternKey: z.string(),
+    headline: z.string(),
+    body: z.string(),
+  })).max(8).optional(),
+  patternCommentaryPartner: z.array(z.object({
+    patternKey: z.string(),
+    headline: z.string(),
+    body: z.string(),
+  })).max(8).optional(),
 });
 export type CouplesReading = z.infer<typeof CouplesReadingSchema>;

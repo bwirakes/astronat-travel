@@ -21,11 +21,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile, getNatalChart } from "@/lib/db";
 import { computeHouseMatrix } from "@/app/lib/house-matrix";
 import { resolveACGFull } from "@/lib/astro/acg-lines";
-import { signFromLongitude } from "@/app/lib/geodetic";
+import { signFromLongitude, houseFromLongitude } from "@/app/lib/geodetic";
 import { SIGN_RULERS, HOUSE_THEMES } from "@/app/lib/astro-constants";
 import { PLANET_DOMAINS, HOUSE_DOMAINS, getOrdinal } from "@/app/lib/astro-wording";
 import { essentialDignityScore } from "@/app/lib/dignity";
 import { SHARED_VOICE } from "@/lib/ai/voice";
+import { buildChartStructure, type ChartStructure } from "@/lib/readings/chart-structure";
 import { generateObject } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { z } from "zod";
@@ -142,6 +143,10 @@ interface Payload {
   }>;
   macroScore: number;
   macroVerdict: string;
+  /** Cluster + dispositor + aspect-pattern structure. Optional — populated
+   *  when the natal chart has stelliums or aspect patterns. House numbers
+   *  are NATAL (anchored to the birth ASC). */
+  chartStructure?: ChartStructure;
 }
 
 interface EphemerisPlanet {
@@ -286,7 +291,7 @@ export async function POST(request: Request) {
   if (cachedInterpretation?.placementImplications) {
     const stream = new ReadableStream({
       start(controller) {
-        for (const key of ["chartEssence", "houseArchitecture", "aspectGeometry", "aspectWeaver", "naturalAngles", "placementImplications"]) {
+        for (const key of ["chartEssence", "houseArchitecture", "aspectGeometry", "aspectWeaver", "naturalAngles", "placementImplications", "chartStructureNote"]) {
           if (cachedInterpretation[key]) {
             emit(controller, { section: key, data: cachedInterpretation[key] });
           }
@@ -388,6 +393,35 @@ Apply the Voice Test before finalising.`,
       schema: z.object({ naturalAngles: Section }),
     });
 
+  const callChartStructure = () =>
+    generateObject({
+      model: google("gemini-3.1-flash-lite-preview"),
+      system: SYSTEM_PROMPT,
+      prompt: `Write the "chartStructureNote" section. Data:\n${payloadStr}
+
+This section ONLY exists when payload.chartStructure is present (the chart has stelliums and/or aspect patterns and/or a final dispositor). Use the input's livedTheme strings as your starting register but rewrite in Astro-Nat voice.
+
+Output: Section { title, content }
+- title: ≤ 6 words, editorial. Examples: "Where the chart concentrates", "The structural anchor", "Three planets, one obsession".
+- content: 100–180 words, 2 paragraphs separated by a blank line.
+
+Paragraph 1 — the dominant structural feature, in lived-outcome language.
+- If payload.chartStructure.finalDispositor is present, lead with it: "Your chart has a final dispositor — every planet's energy chains back to [planet]." Gloss "final dispositor" plain-English. Then describe what [planet]'s placement does in this person's life.
+- Else if there's a stellium with size ≥4, lead with that: "Four planets pile into [house/sign] — [theme] stops being one thing among many and becomes a dominant theme." Gloss "stellium" plain-English.
+- Else lead with the strongest stellium or pattern, in priority order: house stellium → sign stellium → pattern.
+
+Paragraph 2 — secondary structural features OR the strategic move.
+- If multiple stelliums exist, name the second briefly as supporting context.
+- If patterns exist (Grand Trine, T-Square), name them with their lived implications. Gloss the pattern term plain-English the first time.
+- Close with a strategic note — what to do with this structural information.
+
+Hard constraints:
+- Skip ANY chartStructure entry where generational === true. Those describe a generational cohort, not the individual reader.
+- Never invent stelliums, dispositors, or patterns absent from payload.chartStructure.
+- Always gloss astrology terms (stellium, dispositor, Grand Trine, T-Square) plain-English the first time each appears.`,
+      schema: z.object({ chartStructureNote: Section }),
+    });
+
   const callPlacements = () =>
     generateObject({
       model: google("gemini-3.1-flash-lite-preview"),
@@ -415,7 +449,23 @@ No fluff. No "energy," no "leverage," no "manifest." Apply the Voice Test before
     async start(controller) {
       const interpretation: Record<string, unknown> = {};
 
-      const tasks = [callEssence, callHouses, callAspectGeometry, callAcg, callPlacements].map(async (call) => {
+      // chartStructure section fires only when the chart has structure
+      // worth narrating (stelliums, patterns, or a final dispositor).
+      // Otherwise the call is skipped — saves a Gemini round-trip and
+      // avoids emitting an empty section. Each call's return shape
+      // differs (different schema), but downstream we only iterate
+      // Object.entries on `object`, so a permissive type works.
+      type SectionCall = () => Promise<{ object: Record<string, unknown> }>;
+      const taskFns: SectionCall[] = [
+        callEssence as SectionCall,
+        callHouses as SectionCall,
+        callAspectGeometry as SectionCall,
+        callAcg as SectionCall,
+        callPlacements as SectionCall,
+      ];
+      if (payload.chartStructure) taskFns.push(callChartStructure as SectionCall);
+
+      const tasks = taskFns.map(async (call) => {
         try {
           const { object } = await call();
           for (const [key, value] of Object.entries(object)) {
@@ -637,6 +687,22 @@ async function buildPayload(userId: string, profile: ChartProfile, ephemeris: Ep
       }];
     });
 
+  // Cluster + dispositor + aspect-pattern structure for the AI prompt's
+  // chartStructure section. Houses are NATAL (anchored to the birth ASC).
+  // Omitted from the payload when the chart yields no stelliums and no
+  // patterns — the chartStructure section call is then skipped entirely.
+  const chartStructure = buildChartStructure(
+    planets.map((p) => ({
+      name: p.name ?? p.planet ?? "",
+      longitude: p.longitude,
+      sign: p.sign ?? signFromLongitude(p.longitude),
+    })),
+    (lon: number) => houseFromLongitude(lon, ascLon),
+  );
+  const hasStructure = chartStructure.stelliums.length > 0
+    || chartStructure.patterns.length > 0
+    || !!chartStructure.finalDispositor;
+
   return {
     firstName: profile.first_name ?? null,
     natal: {
@@ -658,6 +724,7 @@ async function buildPayload(userId: string, profile: ChartProfile, ephemeris: Ep
     topChallenging,
     closestAcg,
     placements,
+    ...(hasStructure ? { chartStructure } : {}),
     macroScore,
     macroVerdict,
   };

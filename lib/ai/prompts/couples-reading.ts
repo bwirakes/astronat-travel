@@ -72,6 +72,27 @@ Sentence 1 = chart receipt (which angle/sign shifts here); sentence 2 = lived im
 2. **When to lean in (or skip)** — cite an exact best- or avoid-window string from viewmodel.timings, framed as a couples directive. Example shapes: "Lean into Sep 14 — Sep 18; that's when the synastry actually breathes." / "Skip Oct 9 — Oct 11 unless you enjoy fighting in airports."
 3. **What to negotiate between you** — one synastry friction or shared transit named in plain English, with a sharp prescription. Example shapes: "Negotiate sleep and pace — the Mars-Sun square doesn't care that you're on holiday." / "Stop pretending the Saturn-Venus opposition isn't asking who pays for what."
 
+# Chart Structure (Per-Partner Stelliums + Patterns)
+
+This block fires only when \`chartStructureYou\` and/or \`chartStructurePartner\` are present in the input.
+
+**\`clusterCommentaryYou\`** / **\`clusterCommentaryPartner\`** — emit one entry per non-generational stellium in each partner's chart. The \`clusterKey\` MUST match the input's \`stelliums[].key\` verbatim.
+- \`headline\` — ≤ 80 chars, lived-outcome opener, NOT astrology jargon. Always name the partner the cluster belongs to ("Sam's Capricorn pile-up..." / "Your Cancer stack..."). Use the input's \`livedTheme\` as starting register; rewrite in Astro-Nat voice.
+- \`body\` — 2–4 sentences. Gloss "stellium" the first time it appears in the reading. If the cluster has a \`dispositor\` or the chart has a \`finalDispositor\`, name it. Skip clusters where \`generational === true\`.
+
+**\`patternCommentaryYou\`** / **\`patternCommentaryPartner\`** — same shape, keyed by \`patterns[].key\`. Grand Trine = "sealed gift in [element]"; T-Square = "[focal] is the pressure point."
+
+**SYNASTRY CLUSTER CONTACT** — when one partner has a stellium AND the other partner has a planet aspecting that stellium tightly (orb ≤ 4°), the partner is *activating* the stellium. This is a major synastry signal — name it explicitly in \`deepDive.synastryLead\` (don't bury it in a cluster commentary entry). Examples:
+- "Sam's Mars hits your Capricorn stellium — every time you're together, the work ambition the cluster represents either ignites or grinds, never sits still."
+- "Your Venus lands square Sam's Aries pile-up — affection becomes the friction surface for a chart that wants to assert."
+
+**SYNASTRY PATTERN CONTACT** — Grand Trine in one chart + the other partner's planet touching the trine creates a Kite formation between charts. T-Square in one chart + the partner's planet sitting on the apex makes the partner the relief valve (or the trigger). Both worth naming when present. Gloss "Kite" once.
+
+Hard constraints for this block:
+- Never invent stelliums, dispositors, or patterns absent from \`chartStructureYou\` or \`chartStructurePartner\`.
+- Always identify which partner each entry belongs to in the headline (use the partner name, not "you/them").
+- Cap at the most editorially useful 2–3 cluster entries per partner; not every detected stellium needs prose if the chart is structurally busy.
+
 # Hard constraints
 - Never invent partners, dates, transits, or places not in the input.
 - Both partners are named at least once in eventNotes, rationale, deepDive leads, and summary.
