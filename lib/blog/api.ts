@@ -1,5 +1,8 @@
-import { getPayload } from "payload";
-import configPromise from "@payload-config";
+import {
+  getStaticBlogPostBySlug,
+  getStaticBlogPosts,
+  type BlogPostDoc,
+} from "./static-posts";
 
 const mockLexicalContent = {
   root: {
@@ -86,13 +89,14 @@ const mockLexicalContent = {
   },
 };
 
-const samplePost = {
+const samplePost: BlogPostDoc = {
   id: "sample-1",
   title: "The Reality of Relocating on Your Jupiter Line",
   slug: "sample-post",
   author: "Natalia H.",
   publishedDate: new Date().toISOString(),
-  excerpt: "Everyone talks about how the Jupiter line brings abundance, but no one talks about the overwhelm. Here is the honest truth after six months living the data.",
+  excerpt:
+    "Everyone talks about how the Jupiter line brings abundance, but no one talks about the overwhelm. Here is the honest truth after six months living the data.",
   heroImage: {
     url: "/astronat-hero.jpg",
     alt: "Vespa and cypress",
@@ -100,35 +104,14 @@ const samplePost = {
   content: mockLexicalContent,
 };
 
-export async function getPosts() {
-  try {
-    const payload = await getPayload({ config: await configPromise });
-    const res = await payload.find({
-      collection: "posts",
-      sort: "-publishedDate",
-      depth: 2,
-    });
-    return res.docs.length > 0 ? res.docs : [samplePost];
-  } catch (err) {
-    console.error(`[getPosts] Failed to fetch posts:`, err);
-    return [samplePost];
-  }
+export async function getPosts(): Promise<BlogPostDoc[]> {
+  const staticPosts = getStaticBlogPosts();
+  return staticPosts.length > 0 ? staticPosts : [samplePost];
 }
 
-export async function getPostBySlug(slug: string) {
-  try {
-    if (slug === "sample-post") {
-      return samplePost;
-    }
-    const payload = await getPayload({ config: await configPromise });
-    const res = await payload.find({
-      collection: "posts",
-      where: { slug: { equals: slug } },
-      depth: 2,
-    });
-    return res.docs[0] || null;
-  } catch (err) {
-    console.error(`[getPostBySlug] Failed to fetch post ${slug}:`, err);
-    return null;
+export async function getPostBySlug(slug: string): Promise<BlogPostDoc | null> {
+  if (slug === "sample-post") {
+    return samplePost;
   }
+  return getStaticBlogPostBySlug(slug) ?? null;
 }
