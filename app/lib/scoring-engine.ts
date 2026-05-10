@@ -549,8 +549,15 @@ export function computeFusedReadingHeadline(
         raw = mean(eventScores.map((r) => r.finalScore));
     }
 
-    const stretched = 50 + (raw - 50) * 1.4;
-    return softCapScore(stretched);
+    // Pre-fusion the macro intent stretched (50 + (raw-50)*1.4) was needed
+    // because matrix-only macros under-dispersed once goal weighting picked
+    // a single row. Now that every surface scores through the fused engine
+    // (place affinity + transits + sky + station all on one path), the
+    // stretch creates the very inconsistency the fusion is meant to remove
+    // — sidebar windows would score against a non-stretched math while the
+    // hero stretched. Drop the stretch; rely on softCapScore for tail
+    // compression.
+    return softCapScore(raw);
 }
 
 function mean(xs: number[]): number {
@@ -601,7 +608,7 @@ export function computeFusedReadingPackage(inputs: FusedReadingInputs): FusedRea
     return { eventScores, readingScore, drivers };
 }
 
-function topDriversAtAnchor(
+export function topDriversAtAnchor(
     transits: TransitHit[],
     centerISO: string | null,
     goalIds: string[],
@@ -627,6 +634,59 @@ function topDriversAtAnchor(
         });
     }
     return arr.sort((a, b) => Math.abs(b.w) - Math.abs(a.w)).slice(0, 3).map(d => d.note);
+}
+
+// ─── Per-anchor score from pre-computed layers ────────────────────────────────
+//
+// Performance helper for callers that score many anchors (daily series,
+// per-day range candidates, monthly series). Place-affinity layers are
+// date-independent; computing them once and reusing across every anchor is
+// the only way to avoid a quadratic blowup in the daily/range loops.
+
+export interface ScoreAtAnchorArgs {
+    layers: PlaceAffinityLayers;
+    transits: TransitHit[];
+    centerISO: string | null;
+    goalIds: string[];
+    selectedGoalIndices?: number[] | null;
+    natalPlanetHouse: Map<string, number>;
+    halfWidthDays?: number;
+    skyState?: UniversalSkyState | null;
+    stationContributions?: StationContribution[] | null;
+}
+
+export interface ScoreAtAnchorResult {
+    score: number;
+    drivers: string[];
+    eventScores: FinalEventScore[];
+}
+
+/** Score a single anchor date against pre-computed place-affinity layers.
+ *  Use this in tight loops (daily / monthly / range scans) — caller computes
+ *  `layers` once via `computePlaceAffinityLayers` and reuses across every
+ *  call. Returns the fused headline score plus the contributing event rows. */
+export function scoreAtAnchor(args: ScoreAtAnchorArgs): ScoreAtAnchorResult {
+    const tm = computeTransitModifiersAtAnchor(
+        args.transits,
+        args.centerISO,
+        args.goalIds,
+        args.natalPlanetHouse,
+        args.halfWidthDays,
+    );
+    const eventScores = finalizeEventScoresFromLayers(
+        args.layers,
+        tm,
+        args.skyState ?? null,
+        args.stationContributions ?? null,
+    );
+    const score = computeFusedReadingHeadline(eventScores, args.selectedGoalIndices);
+    const drivers = topDriversAtAnchor(
+        args.transits,
+        args.centerISO,
+        args.goalIds,
+        args.halfWidthDays ?? HALF_WIDTH_DAYS,
+    );
+    return { score, drivers, eventScores };
 }
 
 // ─── Fused scored windows ─────────────────────────────────────────────────────
