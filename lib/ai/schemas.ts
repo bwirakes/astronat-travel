@@ -335,6 +335,22 @@ export const TeacherReadingSchema = z.object({
   chartRulerReframe: ChartRulerReframeSchema.optional(),
   acgLineNotes: z.array(AcgLineNoteSchema).max(20).optional(),
   modalityHits: z.array(ModalityHitSchema).max(12).optional(),
+
+  // Chart structure — cluster + dispositor + aspect-pattern commentary.
+  // Populated only when `chartStructure` is present in the input. Each entry's
+  // key MUST match a `chartStructure.stelliums[].key` or `chartStructure.patterns[].key`
+  // verbatim so the view can look them up without inventing IDs.
+  clusterCommentary: z.array(z.object({
+    clusterKey: z.string(),    // matches a chartStructure.stelliums[].key
+    headline: z.string(),      // ≤ 80 chars, lived-outcome opener
+    body: z.string(),          // 2-4 sentences in Astro-Nat voice
+  })).max(8).optional(),
+
+  patternCommentary: z.array(z.object({
+    patternKey: z.string(),    // matches a chartStructure.patterns[].key
+    headline: z.string(),
+    body: z.string(),
+  })).max(8).optional(),
 });
 export type TeacherReading = z.infer<typeof TeacherReadingSchema>;
 
