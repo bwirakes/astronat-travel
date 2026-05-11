@@ -211,6 +211,12 @@ export interface HouseMatrixResult {
     houses: HouseScore[];
     macroScore: number;
     macroVerdict: string;
+    /** Place-only macro captured before transit fusion, so downstream
+     *  baseline helpers (e.g. buildScoredWindows / buildRangeHighlights)
+     *  don't double-count transits on top of an already-fused macroScore.
+     *  Set by lib/readings/astrocarto.ts when fused scoring runs; absent
+     *  for legacy / pre-fusion code paths. */
+    matrixMacroScore?: number;
     houseSystem: string;     // NEW: "placidus" | "whole-sign"
     lotOfFortune?: { longitude: number; house: number; sign: string };
     lotOfSpirit?: { longitude: number; house: number; sign: string };

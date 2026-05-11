@@ -21,12 +21,61 @@ import {
     buildArrivalScores,
     pickArrivalWindowsToNarrate,
     type DailyScore,
+    type FusedWindowInputs,
     type RangeHighlights,
     type TransitSpan,
     type MonthlyScore,
     type MonthlyHighlights,
     type ArrivalCandidate,
 } from "./window-scoring";
+import {
+    buildNatalPlanetRelocatedHouseMap,
+    buildOccupancyPlanets,
+} from "./scoring-engine";
+
+/** Try to assemble a FusedWindowInputs bundle from a `reading` payload.
+ *  Returns null when the chart inputs are incomplete (legacy rows that
+ *  predate persisted natal/relocated payloads) — caller falls back to a
+ *  neutral place-only score for those surfaces. */
+function tryBuildFusedWindowInputs(
+    reading: any,
+    transits: any[],
+    goalIds: string[],
+): FusedWindowInputs | null {
+    const houses = reading?.houses;
+    const natalPlanets = reading?.natalPlanets;
+    const relocatedCusps = reading?.relocatedCusps;
+    const planetaryLines = reading?.planetaryLines;
+    if (
+        !Array.isArray(houses) || houses.length !== 12 ||
+        !Array.isArray(natalPlanets) || natalPlanets.length === 0 ||
+        !Array.isArray(relocatedCusps) || relocatedCusps.length < 12
+    ) return null;
+    try {
+        const matrixResult = { houses } as any;
+        const relocatedPlanets = buildOccupancyPlanets(
+            natalPlanets,
+            relocatedCusps,
+            Array.isArray(planetaryLines) ? planetaryLines : [],
+        );
+        const natalPlanetHouse = buildNatalPlanetRelocatedHouseMap(natalPlanets, relocatedCusps);
+        return {
+            matrixResult,
+            relocatedPlanets,
+            transits,
+            goalIds,
+            natalPlanetHouse,
+            // skyState / selectedGoalIndices not threaded on `reading` — when
+            // the persisted payload includes them, plumb them here. Falling
+            // through means sidebar windows score against the same
+            // place+transit channels the macro saw, just without re-deriving
+            // sky/station here (they're already baked into matrixResult /
+            // station contributions when available).
+        };
+    } catch {
+        return null;
+    }
+}
 import { READING_TABS, READING_TAB_IDS, deriveScoreNarrative, type EvidencePoint, type ReadingTabDefinition, type ReadingTabId, type ScoreNarrative } from "./reading-tabs";
 import { HERO_BAND_LABEL, heroBand, verdictBand, verdictTone, type HeroBand } from "./verdict";
 
@@ -810,11 +859,11 @@ function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateI
     // the engine's strongest alternates, excluding the anchor month so it
     // never appears twice.
     if (travelType === "relocation" && travelDateISO) {
-        const baseline = typeof reading?.macroScore === "number" ? reading.macroScore : 70;
         const tw: any[] = Array.isArray(reading?.transitWindows) ? reading.transitWindows : [];
         const isHitShape = tw[0] && "transit_planet" in tw[0];
-        const candidates = isHitShape
-            ? buildArrivalScores(travelDateISO, tw, baseline, goalIdsArg, 12)
+        const fusedInputs = isHitShape ? tryBuildFusedWindowInputs(reading, tw, goalIdsArg) : null;
+        const candidates = fusedInputs
+            ? buildArrivalScores(travelDateISO, fusedInputs, 12)
             : [];
 
         const candidateToWindow = (c: ArrivalCandidate, kind: "anchor" | "strong" | "alt"): V4TravelWindow => {
@@ -902,9 +951,31 @@ function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateI
         const isHitShape = tw[0] && "transit_planet" in tw[0];
 
         if (isHitShape) {
-            const baselineMacro = reading?.macroScore ?? 70;
-            const hero = buildScoredWindows(travelDateISO, tw, baselineMacro, goalIdsArg)[0];
-            const highlights = buildRangeHighlights(travelDateISO, tw, baselineMacro, goalIdsArg);
+            // Every surface scores through the fused engine via a single
+            // FusedWindowInputs bundle. Legacy rows missing the chart payload
+            // (no houses / natalPlanets / relocatedCusps) fall through to the
+            // synthetic-window path further below.
+            const fusedInputs = tryBuildFusedWindowInputs(reading, tw, goalIdsArg);
+            if (!fusedInputs) {
+                // No chart payload — degrade gracefully to a single anchor
+                // window at the persisted macro score (no per-window scoring
+                // possible without the engine).
+                const start = new Date(travelDateISO!);
+                const end = new Date(start.getTime() + 9 * 86_400_000);
+                return [{
+                    rank: 1,
+                    flavor: "Best match", flavorTitle: "Home-like, settling", emoji: "✦",
+                    dates: fmtRange(start.toISOString(), end.toISOString()),
+                    nights: nightsBetween(start.toISOString(), end.toISOString()),
+                    score: reading?.macroScore || 75,
+                    note: "Your travel window.",
+                    startISO: start.toISOString(),
+                    endISO: end.toISOString(),
+                }];
+            }
+            const scoredWindows = buildScoredWindows(travelDateISO, fusedInputs);
+            const hero = scoredWindows[0];
+            const highlights = buildRangeHighlights(travelDateISO, fusedInputs);
 
             const rawWindows: any[] = [];
             if (hero) rawWindows.push({ ...hero, flavor: "Your dates", emoji: "✦", flavorTitle: "" });
@@ -2096,7 +2167,13 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
     // Daily series + derived timing structures — only for trips with transit hit data.
     const _tw = reading?.transitWindows;
     const _isHitShape = Array.isArray(_tw) && _tw[0] && "transit_planet" in _tw[0];
-    const _baseline = typeof reading?.macroScore === "number" ? reading.macroScore : 70;
+    // Build the single FusedWindowInputs bundle every per-window/day/month
+    // helper now consumes. When the chart payload is incomplete (legacy rows),
+    // every helper short-circuits to empty — no fallback baseline needed
+    // because there's only one engine and one score path.
+    const _fusedInputs: FusedWindowInputs | null = _isHitShape
+        ? tryBuildFusedWindowInputs(reading, _tw, goalIds)
+        : null;
 
     // Trip-grain (week) vs relocation-grain (month) timing series.
     // Trip readings populate dailySeries / rangeHighlights and run the gantt
@@ -2106,8 +2183,8 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
     // `vm.timeline.grain` (or equivalently `vm.travelType`) at render time.
 
     const dailySeries: DailyScore[] = (() => {
-        if (travelType === "relocation" || !_isHitShape) return [];
-        return buildDailySeries(travelDateISO, _tw, _baseline, goalIds, 7, 90);
+        if (travelType === "relocation" || !_fusedInputs) return [];
+        return buildDailySeries(travelDateISO, _fusedInputs, 7, 90);
     })();
 
     const transitSpans: TransitSpan[] = (() => {
@@ -2122,13 +2199,13 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
     })();
 
     const rangeHighlights: RangeHighlights = (() => {
-        if (travelType === "relocation" || !_isHitShape) return { good: [], bad: [] };
-        return buildRangeHighlights(travelDateISO, _tw, _baseline, goalIds);
+        if (travelType === "relocation" || !_fusedInputs) return { good: [], bad: [] };
+        return buildRangeHighlights(travelDateISO, _fusedInputs);
     })();
 
     const monthlySeries: MonthlyScore[] = (() => {
-        if (travelType !== "relocation" || !_isHitShape) return [];
-        return buildMonthlySeries(travelDateISO, _tw, _baseline, goalIds, 12);
+        if (travelType !== "relocation" || !_fusedInputs) return [];
+        return buildMonthlySeries(travelDateISO, _fusedInputs, 12);
     })();
 
     const monthlyHighlights: MonthlyHighlights = (() => {
@@ -2137,8 +2214,8 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
     })();
 
     const arrivalCandidates: ArrivalCandidate[] = (() => {
-        if (travelType !== "relocation" || !_isHitShape) return [];
-        return buildArrivalScores(travelDateISO, _tw, _baseline, goalIds, 12);
+        if (travelType !== "relocation" || !_fusedInputs) return [];
+        return buildArrivalScores(travelDateISO, _fusedInputs, 12);
     })();
 
     // Floor check: when even the strongest arrival arc lands in the "press"
@@ -2174,7 +2251,8 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
 
     const timingPercentile: number = (() => {
         if (!dailySeries.length) return 50;
-        const userScore = heroWindow?.score ?? _baseline;
+        const userScore = heroWindow?.score
+            ?? (typeof reading?.macroScore === "number" ? reading.macroScore : 50);
         return fieldPercentile(dailySeries, userScore);
     })();
 

@@ -9,6 +9,30 @@ import type { TransitHit } from "@/lib/astro/transit-solver";
 // branches on travelType and populates the relocation-shape fields the Timing
 // tab and the future prompt change both depend on.
 
+/** Minimal chart payload that lets `tryBuildFusedWindowInputs` succeed —
+ *  flat-50 houses, all 10 natals at 30° spacing, equal-house relocated cusps.
+ *  After migration, every per-window helper requires this; legacy rows that
+ *  predate persisted natal/relocated payloads land on the empty-VM path. */
+function minimalChart(houseScore = 50) {
+    return {
+        houses: Array.from({ length: 12 }, (_, i) => ({ house: i + 1, score: houseScore })),
+        natalPlanets: [
+            { planet: "sun",     longitude:  10 },
+            { planet: "moon",    longitude:  40 },
+            { planet: "mercury", longitude:  70 },
+            { planet: "venus",   longitude: 100 },
+            { planet: "mars",    longitude: 130 },
+            { planet: "jupiter", longitude: 160 },
+            { planet: "saturn",  longitude: 190 },
+            { planet: "uranus",  longitude: 220 },
+            { planet: "neptune", longitude: 250 },
+            { planet: "pluto",   longitude: 280 },
+        ],
+        relocatedCusps: Array.from({ length: 12 }, (_, i) => i * 30),
+        planetaryLines: [],
+    };
+}
+
 function hit(date: string, opts: Partial<TransitHit> = {}): TransitHit {
     return {
         date,
@@ -56,10 +80,7 @@ function relocationReading(overrides: Partial<any> = {}) {
         goalIds: ["relocation"],
         macroScore: 60,
         macroVerdict: "Mixed",
-        houses: [],
-        natalPlanets: [],
-        planetaryLines: [],
-        relocatedCusps: [],
+        ...minimalChart(),
         transitWindows: fullYearHits(),
         ...overrides,
     };
@@ -154,15 +175,23 @@ describe("toV4ViewModel · relocation grain", () => {
                 aspect: "Trine",
             });
         });
+        // Place + benefic transit stack land the arc in mixed/lift tone, not
+        // press — flag stays off. The fused engine's per-row transit cap
+        // (12pt) plus the place fit clears the press cutline (50pt) once the
+        // kernel-weighted M0 lift propagates through the arc.
         const vm = toV4ViewModel(relocationReading({
             macroScore: 49,
+            ...minimalChart(60),
             transitWindows: allBenefic,
         }));
         expect(vm.placeFloorTripped).toBe(false);
     });
 
     it("does not trip placeFloorTripped on a healthy place", () => {
-        const vm = toV4ViewModel(relocationReading({ macroScore: 70 }));
+        // Houses 75 → place fit lands well above the press-tone band, so the
+        // arc score stays comfortably out of press regardless of mild transit
+        // signal.
+        const vm = toV4ViewModel(relocationReading({ macroScore: 70, ...minimalChart(75) }));
         expect(vm.placeFloorTripped).toBe(false);
     });
 });
@@ -178,10 +207,7 @@ describe("toV4ViewModel · trip grain (regression)", () => {
             goalIds: ["career"],
             macroScore: 72,
             macroVerdict: "Solid",
-            houses: [],
-            natalPlanets: [],
-            planetaryLines: [],
-            relocatedCusps: [],
+            ...minimalChart(),
             transitWindows: [
                 hit("2026-05-05"),
                 hit("2026-05-12", { transit_planet: "Venus", natal_planet: "Moon", aspect: "Sextile" }),

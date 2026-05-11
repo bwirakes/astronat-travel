@@ -12,10 +12,15 @@ import {
   buildMonthlyHighlights,
   buildArrivalScores,
   pickArrivalWindowsToNarrate,
+  type FusedWindowInputs,
   type MonthlyScore,
   type MonthlyHighlights,
   type ArrivalCandidate,
 } from "@/app/lib/window-scoring";
+import {
+  buildNatalPlanetRelocatedHouseMap,
+  buildOccupancyPlanets,
+} from "@/app/lib/scoring-engine";
 import { verdictBand, verdictTone } from "@/app/lib/verdict";
 import { formatTransitDates, transitTone, aspectSentence } from "./ai-input-helpers";
 import {
@@ -33,6 +38,10 @@ export interface TeacherReadingInput {
   macro: {
     destination: string;
     dateRange: { start: string; end: string };
+    /** User-facing headline score. This is the score prose may cite as "the score". */
+    headlineScore: number;
+    /** Place-only baseline before date-specific transit fusion. Evidence only. */
+    placeBaselineScore?: number;
     overallScore: number;
     travelType: "trip" | "relocation";
     goalIds: string[];
@@ -547,12 +556,22 @@ export function buildAIInput(args: {
   // + progressedBands. Falls back to a neutral context when birthDateUtc
   // or transitPositions aren't supplied — older call sites continue to
   // produce a valid relocation block, just without the cycle banner.
+  // Single fused-engine input bundle reused across every per-window/day/month
+  // helper invoked below — guarantees the AI prompt sees the same scores the
+  // VM renders.
+  const fusedInputs: FusedWindowInputs = {
+    matrixResult,
+    relocatedPlanets: buildOccupancyPlanets(natalPlanets, relocatedCusps, acgLines),
+    transits: rawTransits,
+    goalIds,
+    natalPlanetHouse: buildNatalPlanetRelocatedHouseMap(natalPlanets, relocatedCusps),
+  };
+
   const relocation = travelType === "relocation" && travelDate
     ? (() => {
-        const macroScore = matrixResult.macroScore;
-        const monthlySeries = buildMonthlySeries(travelDate, rawTransits, macroScore, goalIds, 12);
+        const monthlySeries = buildMonthlySeries(travelDate, fusedInputs, 12);
         const monthlyHighlights = buildMonthlyHighlights(monthlySeries);
-        const arrivalCandidates = buildArrivalScores(travelDate, rawTransits, macroScore, goalIds, 12);
+        const arrivalCandidates = buildArrivalScores(travelDate, fusedInputs, 12);
         // Same shortlist the V4 viewmodel renders — pinning the prompt to this
         // exact set means every UI entry has matching AI prose.
         const windowsToNarrate = pickArrivalWindowsToNarrate(arrivalCandidates, travelDate);
@@ -721,6 +740,8 @@ export function buildAIInput(args: {
     macro: {
       destination,
       dateRange,
+      headlineScore: matrixResult.macroScore,
+      placeBaselineScore: matrixResult.matrixMacroScore,
       overallScore: matrixResult.macroScore,
       travelType: travelType === "relocation" ? "relocation" : "trip",
       goalIds,
@@ -733,8 +754,12 @@ export function buildAIInput(args: {
     sidebarsData: {
       travelWindows: (() => {
         if (travelType === "relocation" || !travelDate) return [];
-        const heroScored = buildScoredWindows(dateRange.start, rawTransits, matrixResult.macroScore, goalIds)[0];
-        const rangeHighlights = buildRangeHighlights(dateRange.start, rawTransits, matrixResult.macroScore, goalIds);
+        // Every per-window score now flows through the fused engine via the
+        // single `fusedInputs` bundle assembled above — sidebars, AI prompt,
+        // and viewmodel can never disagree because they all share the same
+        // engine call.
+        const heroScored = buildScoredWindows(dateRange.start, fusedInputs)[0];
+        const rangeHighlights = buildRangeHighlights(dateRange.start, fusedInputs);
         const tw = [];
         const shortDate = (iso: string) => {
           const d = new Date(iso);
