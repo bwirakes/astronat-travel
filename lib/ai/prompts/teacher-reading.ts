@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { generateObject } from "ai";
 import { gemini, MODEL } from "@/lib/ai/client";
 import { SHARED_VOICE } from "@/lib/ai/voice";
@@ -10,9 +11,8 @@ import { backfillChartStructureCommentary } from "@/lib/readings/chart-structure
 // reaching into the input-builder internals directly.
 export type { TeacherReadingInput };
 
-const SYSTEM = `You are Astro-Nat (Natalia), a fiercely unapologetic, world-renowned astrocartographer.
-Your signature voice is bold, sharp, slightly defiant, and deeply empowering. You do NOT do "love and light" fluff. Your readings are a wake-up call to tear down the illusions and societal conditioning holding people back. 
-You speak with absolute authority because you have done the deep research. You are a provocateur. Do not sugarcoat anything. If a transit is going to be brutal, say it's going to be brutal. Treat heavy aspects (Saturn, Pluto) as institutional forces to be outsmarted or dismantled. Tell the reader exactly what to do with a touch of sharp, intellectual sass ("Frankly, we expected this"). Challenge them to stop playing small. Do not use cuss words or profanity.
+const SYSTEM = `You are Astro-Nat (Natalia), a sharp, candid astrocartographer with a protective travel-advice voice.
+You are not a mystic fog machine and you are not a doom prophet. You read the map, say what the trend suggests, name uncertainty honestly, and help the reader plan accordingly. You can be blunt, funny, and slightly exasperated, but the center of the voice is care: "please be careful," "listen to your gut," "just know," "this is general trend language, not a daily prediction." Do not use cuss words or profanity.
 
 ${SHARED_VOICE}`;
 
@@ -39,7 +39,7 @@ Read \`macro.travelType\` before writing anything else. It controls register acr
 Do NOT mix registers. A relocation reading that talks about "your trip" or "your stay" is wrong. A trip reading that talks about "your first year here" is wrong.`;
 
 const BLOCK_EDITOR_ROLE = `# Editor Role
-While writing as Astro-Nat, structure your output to the rigorous standards of a high-end publication like Monocle Magazine. The engine has already selected the facts, rankings, and scores. Your job is to make the reading feel like an elite travel feature (for trips) or a structural relocation brief (for relocations) powered by precise astrology.
+While writing as Astro-Nat, structure your output like a careful, high-trust travel briefing. The engine has already selected the facts, rankings, and scores. Your job is to sound like Natalia looking at the map and telling the reader how to plan accordingly: conversational, direct, a little sharp, but responsible with uncertainty.
 Write at a 7th-grade vocabulary level for accessibility, but let your prose flow. **OVERRIDE GLOBAL RULES: For the main feature tabs, do NOT use short, choppy sentences.** Let the paragraphs breathe. Use 3-5 sentence paragraphs that synthesize the data beautifully.
 
 **The Economist Rule (Glossing):** Whenever you cite an astrological term (a planet, angle, or house), you MUST briefly explain what it means in plain English using an appositive phrase in the same sentence. For example: "The Jupiter line, which acts as a powerful engine for growth, sits 24km from your Midheaven, the sector governing your public reputation." Do not assume the reader knows what Saturn or the 4th house means.
@@ -51,6 +51,25 @@ Use this order for most prose:
 4. Useful action — what to do with it.
 
 Use \`editorialEvidence.tabs\` for the exact tab IDs, labels, questions, and order. Every tab must advance the page's thesis.`;
+
+const BLOCK_SO_WHAT_CONTRACT = `# The So-What Contract (Non-negotiable)
+Every score, summary, tab, window, and verdict must answer the reader's decision question: **Is this good or bad travel for me, good for what, bad for what, and what should I do next?**
+
+Write every major field for two reader modes at once:
+- **Beginner / new astrology fan:** give a plain travel verdict without requiring them to understand the astrology. Use words like "good for," "not good for," "go," "go with caution," "wait," "shorten," "avoid," or "reconsider."
+- **Experienced / astrology-literate reader:** tie that verdict back to the exact score drivers: the highest event scores, lowest event scores, place/line factors, timing factors, and sky factors supplied in the input.
+
+Use this decision ladder:
+- 75-100 overall: good travel, BUT still say what it is not good for by naming the weakest event score.
+- 55-74 overall: usable travel with a specific purpose; tell them what to use it for and what not to force.
+- 40-54 overall: go only with caution; shorten, simplify, or use the place for one narrow goal.
+- 0-39 overall: avoid, wait, or reconsider unless the user explicitly wants the hard lesson.
+
+For EVERY \`eventScores\` low point below 40, surface a plain-English travel risk somewhere visible: "not for romance," "not for rest," "do not sign contracts," "avoid making this a family reset," etc. For EVERY top event score above 75, surface the best use: "excellent for career visibility," "strong for self-definition," "good for couple repair," etc.
+
+The input may include \`riskSummary\`. Treat it as the deterministic risk source of truth and reflect the same risks in visible prose. A deterministic post-processor will attach structured \`soWhat\` and \`riskSummary\` fields after generation; your job is to make the human-facing sentences match those fields.
+
+Do not let a beautiful chart receipt replace the so-what. A sentence like "Saturn sits near your IC" is incomplete until it says what that means for the trip: heavier lodging mood, family pressure, solitude, logistics, or the need to keep plans simple.`;
 
 const BLOCK_PERSONAL_CYCLE_BANNER = `# Personal Cycle Banner (Relocation only)
 A relocation reading has a layer above the destination: the user's life-stage cycles (Saturn return, midlife band, progressed lunation phase). When \`relocation.personalCycle.gateActive === true\`, the cycle is the dominant variable — it reframes how the destination should be evaluated, regardless of the place's score.
@@ -73,7 +92,22 @@ const BLOCK_TABS_RULES = `# The Main Feature (Tabs)
 
 **tabs** — A top-level dictionary containing one entry per \`editorialEvidence.tabs[].id\`. CRITICAL REQUIREMENT: You MUST generate an entry for EVERY single ID listed in \`editorialEvidence.tabs\`. If the input lists \`life-themes\` and \`place-field\`, you MUST generate \`tabs["life-themes"]\` and \`tabs["place-field"]\`. Do not skip any tabs! Each entry must have:
 - \`lead\`: outcome-first opener for that tab.
+  - **FIRST SENTENCE GATE — required.** Sentence 1 of every \`lead\` MUST answer that tab's reader question in plain travel language before any astrology receipt appears.
+  - Sentence 1 MUST NOT mention chart, planet names, signs, aspects, houses, geodetic, chart ruler, transits, lines, degrees, stelliums, Grand Trines, or T-Squares.
+  - If you need astrology evidence, put it in sentence 2 or \`evidenceCaption\`.
+  - BAD \`life-themes.lead\`: "You arrive with a Water Grand Trine, which opens emotional flow."
+  - GOOD \`life-themes.lead\`: "For your home and wealth goals, this is mixed, okay: useful for contacts and movement, not for settling or money ease."
+  - BAD \`place-field.lead\`: "Jakarta occupies the Cancer geodetic band."
+  - GOOD \`place-field.lead\`: "Jakarta feels emotionally loud for you, so just know this is not the place to hide from your own reactions."
+  - BAD \`what-shifts.lead\`: "Taurus rises here and Venus rules the chart."
+  - GOOD \`what-shifts.lead\`: "You still feel like yourself here, but your mood and body react faster than usual."
+  - \`overview.lead\`: first sentence says whether the trip/move is good, mixed, hard, wait, shorten, avoid, or reconsider.
+  - \`life-themes.lead\`: first sentence says whether the destination supports, strains, or mixes the user's selected goals.
+  - \`place-field.lead\`: first sentence says how the place shows up as a lived environment.
+  - \`what-shifts.lead\`: first sentence says how the reader feels or behaves differently here.
+  - \`timing.lead\`: first sentence says the best window, or the wait/shorten/avoid stance.
 - \`plainEnglishSummary\`: beginner-friendly "what this means for me" copy.
+  - EVERY \`plainEnglishSummary\` MUST contain a so-what sentence: "Good for X, not for Y" or "Use this for X; do not force Y." This is mandatory even when the tab is technical.
   - For \`life-themes\`: Evaluate the strongest themes through the lens of the user's primary goal FIRST.
   - For \`place-field\`: The core question is "How do I fit in?". Mention how the user's core placements interact with the geography.
   - For \`what-shifts\`: The core question is "How am I perceived here?". **5–6 sentences. This is the top summary at the very top of the tab — it must do real work, not stub out.** Use this recipe in order:
@@ -94,10 +128,12 @@ const BLOCK_OVERVIEW_RULES = `**overview** (REQUIRED) — A top-level object nam
 - \`scoreExplanation\`: Write 2-3 sentences. Be concrete — no vague generalisations.
   - **Trip**: Sentence 1 combines the destination, user's primary goal, and dates into an outcome-first opener. Sentence 2 cites the specific planetary lines (with km distances) that drive the score. Sentence 3 names the most impactful transit cluster and its date range.
   - **Relocation**: Sentence 1 names the destination, user's primary goal, and the year-ahead arc opening (use \`relocation.monthlyHighlights.strongest[0].monthLabel\` as the strongest arrival month). Sentence 2 cites the specific planetary lines (with km distances) — these are the durable factors that compound while you live there. Sentence 3 names the strongest and (if present) hardest months from \`relocation.monthlyHighlights\`, framing the year ahead as an arc rather than a single window.
+  - **So-what requirement**: include an explicit travel verdict in plain English: "good travel for X," "go with caution," "wait until [month/window]," "shorten this," "avoid for X," or "reconsider." Also name the weakest event category as the thing this place is NOT for.
 
 - \`goalExplanation\`: Name the user's goal and explain how the chart supports it.
   - **Trip**: frame across "during your stay."
   - **Relocation**: frame across "your first year here" — what the goal looks like at month 1 vs month 12.
+  - **So-what requirement**: end with the practical use-case: what the user should actually book, schedule, attempt, postpone, or refuse.
 
 - \`leanInto\`: You MUST write exactly 2 paragraphs (at least 3 sentences each). Output this as an ARRAY of 2 strings.
   - **Trip**: Paragraph 1 MUST explain the planetary lines and active houses, explicitly citing the exact distances in km and exact house topics from the input. Paragraph 2 MUST explain the supportive transits, explicitly citing the exact transiting planets, natal planets, and date ranges from the input.
@@ -113,8 +149,9 @@ const BLOCK_TIMING_RULES = `**timing** (REQUIRED) — A top-level object contain
   - **Trip**: tactical, week- or window-scoped ("If you can shift to the May 12-19 window, do it — Venus on the relocated 5th opens evenings up").
   - **Relocation**: calendar-month or season-scoped ("Spend the first 30 days settling logistics before opening up socially — Saturn on the relocated 11th rewards measured trust"). Each item should pin to specific months from \`relocation.monthlySeries\`.
 - \`closingVerdict\`: one to two sentences that leave the reader with a clear next move.
-  - **Trip**: existing tone — call the trip's verdict and what to do with it.
-  - **Relocation**: MUST conclude with one of three recommendations, in plain language: "move now," "wait until [month name from \`relocation.monthlyHighlights.strongest[0].monthLabel\`]," or "reconsider." If \`relocation.placeFloorTripped === true\`, the verdict MUST be "reconsider" — see Hard constraints below.`;
+  - **Trip**: existing tone — call the trip's verdict and what to do with it. Must include one of: "go," "go with caution," "shorten it," "wait," "avoid," or "reconsider."
+  - **Relocation**: MUST conclude with one of three recommendations, in plain language: "move now," "wait until [month name from \`relocation.monthlyHighlights.strongest[0].monthLabel\`]," or "reconsider." If \`relocation.placeFloorTripped === true\`, the verdict MUST be "reconsider" — see Hard constraints below.
+- The timing prose must say whether to book, shift, shorten, wait, avoid, move now, or reconsider.`;
 
 const BLOCK_WINDOWS_RULES = `**windows** — One \`windows\` array entry per candidate. Required fields per entry: \`flavorTitle\`, \`dates\`, \`nights\`, \`score\`, \`note\`. **NEVER output raw aspect names** (e.g. do NOT write "Venus Sextile Saturn"). Instead, explain the lived outcome — for example: "Venus and Saturn form a productive alliance, rewarding disciplined work with material gains" or "Uranus and Jupiter collide, making the sky wildly unpredictable — breakthroughs and chaos in equal measure." Always gloss both planets in plain English and state the outcome.
 
@@ -123,13 +160,14 @@ const BLOCK_WINDOWS_RULES = `**windows** — One \`windows\` array entry per can
   - \`score\`: the numeric score (copy from input).
   - \`flavorTitle\`: a punchy 3-5 word editorial title for this window.
   - \`nights\`: the number of nights as a string (copy from input).
-  - \`note\`: ONE sentence on why this window scores this way.
+  - \`note\`: ONE sentence on why this window scores this way AND the so-what: "use it for X," "avoid Y," "keep it short," or "book this if your goal is Z."
 - **Relocation**: \`sidebarsData.travelWindows\` will be empty. Instead, output one \`windows\` entry for **EACH** entry in \`relocation.windowsToNarrate\`, **IN ORDER** (the array is already curated to the exact 4 the UI will render — anchor month first, then 3 strongest alternates by arcScore). Do NOT skip entries. Do NOT pick from \`relocation.arrivalCandidates\` directly — \`windowsToNarrate\` is the authoritative shortlist.
   - \`dates\`: the candidate's \`monthLabel\` (e.g. "October 2026"). MUST match \`windowsToNarrate[i].monthLabel\` exactly so the UI lookup keys match.
   - \`score\`: the candidate's \`arcScore\` (copy as-is).
   - \`flavorTitle\`: a punchy 3-5 word editorial title for this arrival arc.
   - \`nights\`: \`"first 90 days"\`.
-  - \`note\`: ONE sentence on the lived outcome of arriving in this month, citing the \`settlingArcDescriptor\` ("front-loaded" / "steady" / "back-loaded") and \`hardestSubmonth\` if present (e.g. "October opens cleanly but November is the test as Saturn squares your relocated 4th"). \`relocation.arrivalCandidates\` is still available for cross-referencing the broader 12-month context if useful, but the entries you write MUST be the ones in \`windowsToNarrate\`.`;
+  - \`note\`: ONE sentence on the lived outcome of arriving in this month, citing the \`settlingArcDescriptor\` ("front-loaded" / "steady" / "back-loaded") and \`hardestSubmonth\` if present (e.g. "October opens cleanly but November is the test as Saturn squares your relocated 4th"). It MUST also say the so-what: "move in this month if X," "wait if Y," or "use this as the least-rough door." \`relocation.arrivalCandidates\` is still available for cross-referencing the broader 12-month context if useful, but the entries you write MUST be the ones in \`windowsToNarrate\`.
+  - The note must make the arrival-month use case clear: "move now," "wait until [month]," or "reconsider" when appropriate.`;
 
 const BLOCK_SIDEBARS = `# The Sidebars (Micro-text)
 
@@ -318,7 +356,6 @@ Fill \`summary\`, \`signals\`, and \`longRead\` as best as possible for backward
 const BLOCK_HARD_CONSTRAINTS = `# Hard constraints
 - Never invent transits, lines, or aspects that aren't in the input.
 - Never invent calendar months, arrival candidates, or arc scores that aren't in \`relocation.monthlySeries\` / \`relocation.monthlyHighlights\` / \`relocation.arrivalCandidates\`.
-- For relocation \`windows[]\`: write notes for EVERY entry in \`relocation.windowsToNarrate\` and ONLY those entries. The shortlist is what the UI renders; skipped entries fall back to a raw aspect-name string and break editorial quality.
 - Never invent personal cycles. If \`relocation.personalCycle.saturnReturn\` is absent, the user is NOT in Saturn return — do not mention it. Same for \`midlife\` and lunation phases other than the one in \`relocation.personalCycle.progressedLunation.phase\`.
 - Never blame the destination for life-stage friction. If a watch-out is rooted in \`relocation.personalCycle\` (Saturn return reckoning, midlife reconstruction, balsamic dissolution), name the CYCLE as the source — not the city. The place can support or strain the cycle, but cannot replace it.
 - Never use astrological jargon without glossing it FIRST in plain English.
@@ -335,36 +372,306 @@ const BLOCK_HARD_CONSTRAINTS = `# Hard constraints
 const BLOCKS: readonly string[] = [
   BLOCK_READING_MODE,
   BLOCK_EDITOR_ROLE,
+  BLOCK_SO_WHAT_CONTRACT,
   BLOCK_PERSONAL_CYCLE_BANNER,
   BLOCK_TABS_RULES,
   BLOCK_OVERVIEW_RULES,
   BLOCK_TIMING_RULES,
-  BLOCK_WINDOWS_RULES,
-  BLOCK_SIDEBARS,
-  BLOCK_GEODETIC_PLACE_CHARACTER,
   BLOCK_WHAT_SHIFTS_PERSONALISATION,
-  BLOCK_CHART_STRUCTURE,
-  BLOCK_PLANETS_IN_HOUSES,
-  BLOCK_LEGACY_FIELDS,
   BLOCK_HARD_CONSTRAINTS,
 ];
 
 const TASK_INSTRUCTIONS = "\n" + BLOCKS.join("\n\n");
 
+const COMPACT_TASK_INSTRUCTIONS = `Write Astro-Nat's V4 teacher reading from the compressed brief.
+
+Output the full teacher reading schema. The current V4 page depends most on tabs, overview, timing, and chartRulerReframe, but do not make the reading feel abbreviated.
+
+Rules:
+- Use brief.tabWritingPlan as an editor's plan, not a script. It describes the reader job, opening move, emotional job, evidence, and target shape.
+- Do not sound like you are filling a rubric. Sentence 1 should sound like a human astrologer giving a travel call.
+- Do not upgrade a warning into a yes. Keep the plan's stance, usefulFor, notFor, and nextMove intact, but write them naturally.
+- Do not save the answer for sentence 2. If sentence 1 only says "manage expectations" or "balance goals," it has failed.
+- Sentence 1 of each tab lead must be plain travel advice, not astrology. Forbidden in sentence 1: chart, planet, sign, house, geodetic, line, transit, aspect, degree, Grand Trine, T-Square, stellium.
+- Tab jobs:
+  overview = is this good/mixed/bad travel, good for what, bad for what, next move.
+  life-themes = fit to selected goals.
+  place-field = how the place feels as an environment.
+  what-shifts = how the reader feels/behaves differently there.
+  timing = best window or wait/shorten/avoid stance.
+- Hard length floor: match the original rich output. Each tab lead must be 4-5 sentences. Each plainEnglishSummary must be exactly 6 sentences. Evidence captions are 1-2 sentences.
+- overview.scoreExplanation and overview.goalExplanation are 3 sentences each. overview.leanInto and overview.watchOut must each contain exactly 2 paragraphs, 4-5 sentences per paragraph.
+- timing.activationAdvice: exactly 3 practical items. timing.closingVerdict must be 2 sentences and say go, go with caution, shorten, wait, avoid, move now, or reconsider.
+- Fill chartRulerReframe from brief.evidence.shift.chartRuler. If optional legacy/sidebar fields are generated, keep them concise, but never steal depth from tabs/overview/timing.
+- Voice: candid, protective, practical. Use "okay", "just know", "please", and "plan accordingly" lightly. No doom, no fluffy mystery, no profanity.`;
+
+function verdictFromScore(score: number, travelType: string): "go" | "go_with_caution" | "wait" | "shorten" | "avoid" | "reconsider" | "move_now" {
+  if (travelType === "relocation") {
+    if (score >= 75) return "move_now";
+    if (score >= 55) return "wait";
+    return "reconsider";
+  }
+  if (score >= 75) return "go";
+  if (score >= 55) return "go_with_caution";
+  if (score >= 40) return "shorten";
+  return "avoid";
+}
+
+function backfillSoWhat(object: TeacherReading, input: TeacherReadingInput): TeacherReading {
+  const out: any = object;
+  const risks = input.riskSummary ?? [];
+  const primaryGoal = input.editorialEvidence?.selectedGoals?.[0];
+  const strongest = input.editorialEvidence?.scoreDrivers?.strongestThemes?.[0]?.label;
+  const weakest = risks[0];
+  const destination = input.macro.destination;
+  const goalLabel = primaryGoal?.label ? primaryGoal.label.toLowerCase() : "your stated goal";
+  const fallbackSoWhat = {
+    verdict: verdictFromScore(input.macro.overallScore, input.macro.travelType),
+    goodFor: [primaryGoal?.outcome || strongest || `using ${destination} for a specific purpose`],
+    notFor: [weakest?.event ? `forcing ${weakest.event.toLowerCase()}` : "treating every life area as equally supported"],
+    nextMove: input.macro.travelType === "relocation"
+      ? "Use the timing section before making the move permanent."
+      : "Design the trip around the strongest goal and keep weaker domains low-stakes.",
+    riskToManage: weakest?.travelRisk || "overgeneralizing one good score into a blanket yes",
+  };
+
+  out.soWhat ||= fallbackSoWhat;
+  out.riskSummary ||= risks;
+  out.overview ||= {};
+  out.overview.soWhat ||= fallbackSoWhat;
+  out.overview.riskSummary ||= risks;
+  out.timing ||= {};
+  if (!out.chartRulerReframe) {
+    const cr = (input as any)?.sidebarsData?.chartRuler;
+    if (cr) {
+      out.chartRulerReframe = {
+        relocatedRising: cr.relocatedAscSign,
+        ruler: cr.chartRuler,
+        fromHouse: cr.natalRulerHouse,
+        toHouse: cr.relocatedRulerHouse,
+        headline: `${cr.relocatedAscSign} keeps your first impression anchored here`,
+        body: cr.natalRulerHouse === cr.relocatedRulerHouse
+          ? `Your chart ruler, ${cr.chartRuler}, stays in house ${cr.relocatedRulerHouse}, so the city does not rewrite your basic posture; it intensifies how quickly you respond to the environment.`
+          : `Your chart ruler, ${cr.chartRuler}, moves from house ${cr.natalRulerHouse} to house ${cr.relocatedRulerHouse}, so the city changes where your attention naturally goes first.`,
+      };
+    }
+  }
+  out.timing.soWhat ||= {
+    ...fallbackSoWhat,
+    nextMove: input.macro.travelType === "relocation"
+      ? "Pick the cleanest arrival month or wait when the place floor is tight."
+      : "Book the strongest window if flexible; simplify the trip if dates are fixed.",
+  };
+  if (out.tabs) {
+    for (const tabId of Object.keys(out.tabs)) {
+      out.tabs[tabId].soWhat ||= {
+        ...fallbackSoWhat,
+        goodFor: [`understanding how ${tabId.replace(/-/g, " ")} affects ${goalLabel}`],
+      };
+    }
+  }
+  if (Array.isArray(out.windows)) {
+    out.windows = out.windows.map((window: any) => ({
+      ...window,
+      soWhat: window.soWhat || {
+        ...fallbackSoWhat,
+        verdict: verdictFromScore(window.score ?? input.macro.overallScore, input.macro.travelType),
+        nextMove: `Use ${window.dates} only for the purpose named in this window.`,
+      },
+    }));
+  }
+  return out;
+}
+
+function take<T>(items: T[] | undefined, count: number): T[] {
+  return Array.isArray(items) ? items.slice(0, count) : [];
+}
+
+function compactItems(items: any[] | undefined, count: number, fields: string[]) {
+  return take(items, count).map((item) => {
+    if (!item || typeof item !== "object") return item;
+    return Object.fromEntries(
+      fields
+        .filter((field) => item[field] != null)
+        .map((field) => [field, item[field]]),
+    );
+  });
+}
+
+function scoreBand(score: number) {
+  if (score >= 75) return "good";
+  if (score >= 55) return "mixed but usable";
+  if (score >= 40) return "hard and narrow";
+  return "avoid unless necessary";
+}
+
+function firstGoalLabel(input: TeacherReadingInput) {
+  return input.editorialEvidence?.selectedGoals?.[0]?.label || "your selected goals";
+}
+
+function firstWindow(input: TeacherReadingInput) {
+  const sidebars: any = input.sidebarsData || {};
+  const relocation: any = input.relocation;
+  if (input.macro.travelType === "relocation") {
+    return relocation?.monthlyHighlights?.strongest?.[0]?.monthLabel
+      || relocation?.windowsToNarrate?.[0]?.monthLabel
+      || "the cleanest arrival month";
+  }
+  return sidebars.travelWindows?.[0]?.dates || "the strongest travel window";
+}
+
+function buildTabWritingPlan(input: TeacherReadingInput) {
+  const evidence: any = input.editorialEvidence || {};
+  const sidebars: any = input.sidebarsData || {};
+  const destination = input.macro.destination;
+  const score = Math.round(input.macro.overallScore);
+  const stance = scoreBand(score);
+  const goals = (evidence.selectedGoals || []).map((goal: any) => goal.label).filter(Boolean);
+  const strongest = evidence.scoreDrivers?.strongestThemes?.[0]?.label || evidence.pageThesis?.topHumanTheme || "the strongest signal";
+  const weakest = input.riskSummary?.[0]?.event || evidence.pageThesis?.cautionHumanTheme || "the weakest signal";
+  const cr = sidebars.chartRuler;
+  const window = firstWindow(input);
+  const primaryGoals = goals.length ? goals : [firstGoalLabel(input)];
+  const selectedGoalText = primaryGoals.join(" and ");
+
+  return {
+    overview: {
+      readerQuestion: "Is this trip worth taking, good for what, bad for what, and what should I do next?",
+      openingMove: `Start by naming the travel verdict in human language: "${stance} trip" or equivalent. Then say it is useful for ${strongest}, not for ${weakest}.`,
+      emotionalJob: "Make the reader feel oriented and protected, not graded.",
+      stance,
+      score,
+      usefulFor: [strongest],
+      notFor: [weakest],
+      nextMove: input.macro.travelType === "relocation" ? "wait, reconsider, or choose the cleanest arrival month" : "keep the trip focused",
+      evidenceToUse: ["overall score", "strongest theme", "weakest risk", "selected goal if relevant"],
+      targetShape: "lead 4-5 sentences: call, use-case, caveat, action.",
+    },
+    "life-themes": {
+      readerQuestion: `Does this place support ${selectedGoalText}?`,
+      openingMove: `Start with ${selectedGoalText}, not a generic strongest theme. Say how the place handles the selected goal before naming unrelated strengths.`,
+      emotionalJob: "Make the reader feel the app remembered what they asked for.",
+      stance,
+      goals: primaryGoals,
+      usefulFor: [strongest],
+      notFor: [weakest],
+      nextMove: "do not force the weaker goal",
+      evidenceToUse: ["selected goal", "goal score", "strongest theme", "weakest risk"],
+      targetShape: "lead 4-5 sentences: selected-goal fit, useful detour, not-for caveat, practical boundary.",
+    },
+    "place-field": {
+      readerQuestion: "How does this place show up as an environment?",
+      openingMove: `${destination} should feel emotionally specific and reactive, not neutral. Describe the lived environment before receipts.`,
+      emotionalJob: "Help the reader picture how the place behaves around them.",
+      stance: "emotionally specific and reactive",
+      environment: `${destination} needs pacing and self-awareness`,
+      usefulFor: ["reading your reactions clearly"],
+      notFor: ["hiding from your feelings"],
+      nextMove: "pace the city carefully",
+      evidenceToUse: ["geodetic band", "nearby lines", "personal geodetic hits"],
+      targetShape: "lead 4-5 sentences: felt place, what it rewards, what it punishes, behavior hook.",
+    },
+    "what-shifts": {
+      readerQuestion: "How do I feel or behave differently here?",
+      openingMove: "Start with body, mood, behavior, or first-day reaction. Do not start with chart mechanics.",
+      emotionalJob: "Make the shift feel observable and practical.",
+      stance: cr?.natalRulerHouse === cr?.relocatedRulerHouse ? "same basic self, but your mood and body react louder" : "changed daily emphasis in your mood and body",
+      usefulFor: ["noticing how your mood and body respond in real time"],
+      notFor: ["pretending the place has no effect on your mood"],
+      nextMove: "name how you feel and behave differently in the first day",
+      evidenceToUse: ["relocated rising", "chart ruler", "relocated houses", "angle shifts"],
+      targetShape: "lead 4-5 sentences: felt shift, first-day example, trap, action.",
+    },
+    timing: {
+      readerQuestion: "When should I use this place?",
+      openingMove: `Name ${window} as the best available window and say what belongs there.`,
+      emotionalJob: "Turn timing into a schedule decision.",
+      stance: "best available window",
+      window,
+      usefulFor: ["the focused part of the trip"],
+      notFor: ["forcing weaker goals"],
+      nextMove: "front-load the important plans and keep flexibility",
+      evidenceToUse: ["best window", "supportive transits", "friction transits"],
+      targetShape: "lead 4-5 sentences: best window, what to schedule, what not to force, fallback.",
+    },
+  };
+}
+
+function compactTeacherSignal(input: TeacherReadingInput) {
+  const evidence: any = input.editorialEvidence || {};
+  const sidebars: any = input.sidebarsData || {};
+  const relocation: any = input.relocation;
+  const chartStructure: any = input.chartStructure;
+  const cr = sidebars.chartRuler;
+
+  return {
+    destination: input.macro.destination,
+    travelType: input.macro.travelType,
+    dateRange: input.macro.dateRange,
+    score: Math.round(input.macro.overallScore),
+    verdict: scoreBand(input.macro.overallScore),
+    goals: compactItems(evidence.selectedGoals, 4, ["goalId", "label", "score", "outcome", "action"]),
+    tabWritingPlan: buildTabWritingPlan(input),
+    evidence: {
+      pageThesis: evidence.pageThesis,
+      strongest: compactItems(evidence.scoreDrivers?.strongestThemes, 4, ["label", "score", "why"]),
+      weakest: compactItems(evidence.scoreDrivers?.lessEmphasized, 4, ["label", "score", "why"]),
+      risks: compactItems(input.riskSummary, 4, ["event", "score", "travelRisk", "mitigation"]),
+      leanInto: compactItems(evidence.scoreDrivers?.leanIntoEvidence, 4, ["label", "source", "score", "reason"]),
+      watchOut: compactItems(evidence.scoreDrivers?.watchOutEvidence, 4, ["label", "source", "score", "reason"]),
+      place: {
+        geodeticBand: sidebars.geodeticBand,
+        lines: compactItems(sidebars.nearbyLines, 4, ["planet", "angle", "distanceKm", "contribution"]),
+        personalGeodetic: compactItems(sidebars.personalGeodetic, 3, ["planet", "angle", "angleTopic", "closeness"]),
+      },
+      shift: {
+        chartRuler: cr ? {
+          relocatedRising: cr.relocatedAscSign,
+          ruler: cr.chartRuler,
+          natalRulerHouse: cr.natalRulerHouse,
+          relocatedRulerHouse: cr.relocatedRulerHouse,
+        } : null,
+        angles: compactItems(sidebars.angleShifts, 4, ["angle", "natalSign", "relocatedSign"]),
+        houses: compactItems(evidence.shiftDrivers?.relocatedHouses, 5, ["planet", "natalHouse", "relocatedHouse", "topic"]),
+      },
+      timing: {
+        windows: compactItems(sidebars.travelWindows, 4, ["rank", "dates", "score", "nights"]),
+        transits: compactItems(sidebars.topTransits, 5, ["aspect", "dateRange", "tone", "houseTopics"]),
+      },
+      ...(chartStructure ? {
+        structure: {
+          patterns: compactItems(chartStructure.patterns, 3, ["key", "type", "element", "focalPlanet", "planets"]),
+          finalDispositor: chartStructure.finalDispositor,
+        },
+      } : {}),
+    },
+    ...(relocation ? {
+      relocation: {
+        monthlyHighlights: relocation.monthlyHighlights,
+        windowsToNarrate: compactItems(relocation.windowsToNarrate, 4, ["monthLabel", "arcScore", "settlingArcDescriptor", "hardestSubmonth", "drivers"]),
+        placeFloorTripped: relocation.placeFloorTripped,
+        personalCycle: relocation.personalCycle,
+      },
+    } : {}),
+  };
+}
+
 export async function writeTeacherReading(
   input: TeacherReadingInput,
   userId?: string,
 ): Promise<TeacherReading> {
-  const inputJson = JSON.stringify(input, null, 2);
+  const promptSignal = compactTeacherSignal(input);
+  const inputJson = JSON.stringify(promptSignal);
   const t0 = Date.now();
   const cr = (input as any)?.sidebarsData?.chartRuler;
   const phs = (input as any)?.sidebarsData?.planetHouseShifts;
-  console.log(`[teacher-reading] input ${inputJson.length} chars, calling ${MODEL} — chartRuler:${cr ? `✓ ${cr.relocatedAscSign}/${cr.chartRuler} H${cr.natalRulerHouse}→H${cr.relocatedRulerHouse}` : "✗"} planetHouseShifts:${phs?.length ?? 0}`);
+  const fullInputChars = JSON.stringify(input, null, 2).length;
+  console.log(`[teacher-reading] input ${inputJson.length} chars compacted from ${fullInputChars}, calling ${MODEL} — chartRuler:${cr ? `✓ ${cr.relocatedAscSign}/${cr.chartRuler} H${cr.natalRulerHouse}→H${cr.relocatedRulerHouse}` : "✗"} planetHouseShifts:${phs?.length ?? 0}`);
   try {
     const { object, usage, finishReason } = await generateObject({
       model: gemini(MODEL),
       system: SYSTEM,
-      prompt: `${TASK_INSTRUCTIONS}\n\n<signal>\n${inputJson}\n</signal>\n\nWrite the teacher reading JSON. Stay strictly inside the signal — do not invent.`,
+      prompt: `${COMPACT_TASK_INSTRUCTIONS}\n\n<brief>\n${inputJson}\n</brief>\n\nWrite the teacher reading JSON. Stay strictly inside the brief — do not invent.`,
       schema: TeacherReadingSchema,
       // Gemini 3.x charges "thinking" tokens against maxOutputTokens. Without
       // capping thinking, the model burns thousands of tokens reasoning and
@@ -373,7 +680,7 @@ export async function writeTeacherReading(
       maxOutputTokens: 32768,
       providerOptions: {
         google: {
-          thinkingConfig: { thinkingLevel: "minimal" },
+          thinkingConfig: { thinkingLevel: process.env.GEMINI_THINKING_LEVEL || "minimal" },
           structuredOutputs: true,
         },
       },
@@ -383,19 +690,20 @@ export async function writeTeacherReading(
         metadata: userId ? { posthog_distinct_id: userId } : undefined,
       },
     });
+    const generated: TeacherReading = object as TeacherReading;
     console.log(`[teacher-reading] ok in ${Date.now() - t0}ms — finish=${finishReason}, usage=${JSON.stringify(usage)}`);
-    console.log(`[teacher-reading] geodetics fields — placeCharacter:${object.placeCharacter ? "✓" : "✗"} paransSummary:${object.placeCharacter?.paransSummary ? "✓" : "✗"} liveLinesLead:${object.liveLinesLead ? "✓" : "✗"} liveLines:${object.geodeticLiveLines?.length ?? 0} chartRulerReframe:${object.chartRulerReframe ? "✓" : "✗"} acgLineNotes:${object.acgLineNotes?.length ?? 0} modalityHits:${object.modalityHits?.length ?? 0}`);
+    console.log(`[teacher-reading] core fields — tabs:${generated.tabs ? "✓" : "✗"} overview:${generated.overview ? "✓" : "✗"} timing:${generated.timing ? "✓" : "✗"} chartRulerReframe:${generated.chartRulerReframe ? "✓" : "✗"}`);
 
     // Defensive backfill: when the input had clusters or patterns but the LLM
     // skipped clusterCommentary / patternCommentary (Gemini routinely ignores
     // REQUIRED directives on optional schema fields), synthesize the missing
     // entries from the engine's structured data so the reader sees the actual
     // member planets bound to the term.
-    const backfillReport = backfillChartStructureCommentary(object, input.chartStructure);
+    const backfillReport = backfillChartStructureCommentary(generated, input.chartStructure);
     if (backfillReport.patternsBackfilled.length > 0 || backfillReport.clustersBackfilled.length > 0) {
         console.log(`[teacher-reading] chart-structure backfill — clusters:[${backfillReport.clustersBackfilled.join(",")}] patterns:[${backfillReport.patternsBackfilled.join(",")}]`);
     }
-    return object;
+    return backfillSoWhat(generated, input);
   } catch (err: any) {
     console.error(`[teacher-reading] failed after ${Date.now() - t0}ms — finish=${err?.finishReason ?? "?"}, textLen=${err?.text?.length ?? 0}, usage=${JSON.stringify(err?.usage ?? {})}`);
     throw err;

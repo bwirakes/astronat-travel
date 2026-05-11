@@ -372,6 +372,15 @@ export const TeacherReadingSchema = z.object({
 });
 export type TeacherReading = z.infer<typeof TeacherReadingSchema>;
 
+// Lean schema used for the main teacher generation call. The current V4 page
+// only requires tabs, overview, and timing; optional sidebars have deterministic
+// UI fallbacks and can be generated in smaller follow-up calls later.
+export const TeacherReadingGenerationSchema = TeacherReadingSchema.pick({
+  tabs: true,
+  overview: true,
+  timing: true,
+});
+
 /**
  * Output of the geodetic-weather prompt — shorter, day-window focused.
  */

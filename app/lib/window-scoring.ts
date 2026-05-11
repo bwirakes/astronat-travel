@@ -39,6 +39,14 @@ const GOAL_BOOST = 1.6;             // multiplier for goal-relevant transits
 // natal Venus + Moon than transits hitting Saturn or Pluto. We use planet
 // names (lowercase) to match TransitHit.natal_planet.
 export const GOAL_NATAL_TARGETS: Record<string, string[]> = {
+    identity:   ["sun", "mars", "asc", "jupiter"],
+    wealth:     ["venus", "jupiter", "saturn"],
+    home:       ["moon", "ic"],
+    romance:    ["venus", "moon", "mars"],
+    health:     ["moon", "mercury", "mars", "saturn"],
+    partnerships: ["venus", "moon", "dsc"],
+    friendship: ["mercury", "jupiter"],
+    spirituality: ["jupiter", "neptune", "moon"],
     love:       ["venus", "moon"],
     career:     ["sun", "mars", "saturn", "mc"],
     community:  ["mercury", "jupiter"],

@@ -612,6 +612,14 @@ const HOUSE_LABEL: Record<number, string> = {
 // "timing" is transit-driven, not house-driven — its score falls back to
 // macroScore.
 const GOAL_TO_HOUSES: Record<string, number[]> = {
+    identity:   [1, 9],         // self + direction
+    wealth:     [2, 8],         // money + shared resources
+    home:       [4],            // home, roots
+    romance:    [5, 7],         // romance + partnership
+    health:     [6, 12],        // routine + recovery
+    partnerships: [7, 11],      // one-to-one bonds + durable allies
+    friendship: [11, 3],        // networks + neighbours
+    spirituality: [12, 9],      // inner life + perspective
     love:       [5, 7],         // romance + partnerships
     career:     [10, 6, 2],     // status + work + income
     community:  [11, 3],        // networks + neighbours
@@ -637,6 +645,14 @@ const HOUSE_TOPIC: Record<number, string> = {
 };
 
 const GOAL_VIBE_PRESET: Record<string, { icon: string; title: string }> = {
+    identity:   { icon: "◎", title: "You feel more like yourself here." },
+    wealth:     { icon: "$", title: "Resources ask for a plan." },
+    home:       { icon: "⌂", title: "Your roots get louder." },
+    romance:    { icon: "♡", title: "Romance gets easier to read." },
+    health:     { icon: "+", title: "Your rhythm matters more here." },
+    partnerships: { icon: "=", title: "One-to-one bonds come into focus." },
+    friendship: { icon: "◈", title: "New people enter." },
+    spirituality: { icon: "✦", title: "Quieter inside, clearer ahead." },
     love:       { icon: "♡", title: "Love and closeness soften here." },
     career:     { icon: "▲", title: "Your direction sharpens." },
     community:  { icon: "◈", title: "New people enter." },
@@ -1271,6 +1287,14 @@ function deriveChartMonths(reading: any, anchorISO: string | null, goalIdsArg: s
             if (!goalIdsArg.length) return null;
             const set = new Set<string>();
             const map: Record<string, string[]> = {
+                identity:   ["sun", "mars", "asc", "jupiter"],
+                wealth:     ["venus", "jupiter", "saturn"],
+                home:       ["moon", "ic"],
+                romance:    ["venus", "moon", "mars"],
+                health:     ["moon", "mercury", "mars", "saturn"],
+                partnerships: ["venus", "moon", "dsc"],
+                friendship: ["mercury", "jupiter"],
+                spirituality: ["jupiter", "neptune", "moon"],
                 love:       ["venus", "moon"],
                 career:     ["sun", "mars", "saturn", "mc"],
                 community:  ["mercury", "jupiter"],
@@ -2629,6 +2653,38 @@ function heroExplainer(
 }
 
 const RELOCATION_TODO_BY_GOAL: Record<string, { title: string; body: string }> = {
+    identity: {
+        title: "Use the first month to choose your local identity on purpose.",
+        body: "Notice where you feel more visible or more guarded, then build routines around the version of you that has more room.",
+    },
+    wealth: {
+        title: "Audit the cost of the new life before you scale it.",
+        body: "Resource signals need structure here. Price the real monthly rhythm, not the fantasy version of the move.",
+    },
+    home: {
+        title: "Test the neighborhood before you commit.",
+        body: "Home signals are place-specific. Spend ordinary days there before treating it as settled.",
+    },
+    romance: {
+        title: "Let romance adapt to the new setting slowly.",
+        body: "The chemistry changes with the chart. Keep early expectations light enough for the connection to recalibrate.",
+    },
+    health: {
+        title: "Build the boring routine first.",
+        body: "Sleep, food, movement, and workload decide whether this place supports you. Make those non-negotiable in month one.",
+    },
+    partnerships: {
+        title: "Write down the agreements before life gets busy.",
+        body: "This place tests one-to-one expectations. Clear roles and boundaries will do more than good intentions.",
+    },
+    friendship: {
+        title: "Choose one recurring local room.",
+        body: "Belonging compounds through repeat contact here. Pick the class, group, or cafe you can actually return to.",
+    },
+    spirituality: {
+        title: "Protect quiet before the calendar fills.",
+        body: "The inner-life signal needs space. Set a weekly practice before the city teaches you its pace.",
+    },
     love: {
         title: "Plan a slow first month before introducing the relationship.",
         body: "Don't import the relationship dynamics from your old place; let them recalibrate to the new chart first.",
@@ -2656,6 +2712,38 @@ const RELOCATION_TODO_BY_GOAL: Record<string, { title: string; body: string }> =
 };
 
 const TRIP_TODO_BY_GOAL: Record<string, { title: string; body: string }> = {
+    identity: {
+        title: "Do one thing that makes you feel visible.",
+        body: "Book the class, solo meal, or public-facing plan that lets you practice the version of yourself this place brings forward.",
+    },
+    wealth: {
+        title: "Treat money choices as part of the itinerary.",
+        body: "Set a spending rule before you go, then use the best windows for negotiations, shopping, or resource decisions.",
+    },
+    home: {
+        title: "Spend one normal morning like a local.",
+        body: "The home signal shows up in ordinary rhythm. Groceries, walking routes, and quiet rooms will tell you more than landmarks.",
+    },
+    romance: {
+        title: "Leave one evening unscripted.",
+        body: "Romance signals favor softer plans here. Give chemistry enough room to appear without over-managing it.",
+    },
+    health: {
+        title: "Plan recovery as seriously as plans.",
+        body: "Keep sleep, meals, and movement steady. This trip works better when your body is not negotiating from a deficit.",
+    },
+    partnerships: {
+        title: "Decide the shared rules before the day starts.",
+        body: "Partnership energy improves when expectations are explicit: pace, budget, alone time, and what counts as a good day.",
+    },
+    friendship: {
+        title: "Say yes to a small group setting.",
+        body: "Networking signals work through repeatable rooms: workshops, local meetups, friends-of-friends, and low-stakes invitations.",
+    },
+    spirituality: {
+        title: "Give the trip a quiet anchor.",
+        body: "A walk, temple, journal hour, or study block turns the signal into something you can actually bring home.",
+    },
     love: {
         title: "Save one evening for an unplanned conversation.",
         body: "Romantic / closeness signals here favor encounters you didn't schedule.",

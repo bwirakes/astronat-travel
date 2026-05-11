@@ -42,6 +42,15 @@ export interface TeacherReadingInput {
   /** The core structured data for the AI to base its tabs on */
   editorialEvidence: EditorialEvidence;
 
+  /** Deterministic low-score travel risks from the scoring engine. The AI
+   *  should reuse these instead of deciding which weak areas matter. */
+  riskSummary?: Array<{
+    event: string;
+    score: number;
+    travelRisk: string;
+    mitigation: string;
+  }>;
+
   /** Extra raw data needed for generating specific sidebars and tooltips */
   sidebarsData: {
     /** Trip-only candidate windows (top hero + range highlights). Empty array
@@ -92,7 +101,7 @@ export interface TeacherReadingInput {
       withinActivationOrb: boolean; // orbAtClosest ≤ 3
       daysFromTravel: number;       // signed; negative = before travel date
     }>;
-  };
+};
 
   /** Relocation-only timing block. Present iff `macro.travelType === "relocation"`.
    *  The prompt reads this to write copy in the relocation register (calendar
@@ -132,6 +141,74 @@ export interface TeacherReadingInput {
    *  destination's relocated ASC) so cluster commentary lines up with the
    *  rest of the relocation reading. */
   chartStructure?: ChartStructure;
+}
+
+export function travelRiskForEvent(eventName: string): { travelRisk: string; mitigation: string } {
+  const key = eventName.toLowerCase();
+  if (key.includes("wealth") || key.includes("financial")) {
+    return {
+      travelRisk: "money choices, shopping, contracts, or shared-resource decisions can feel heavier than expected",
+      mitigation: "set a budget before arrival and avoid making financial commitments under pressure",
+    };
+  }
+  if (key.includes("home") || key.includes("family") || key.includes("roots")) {
+    return {
+      travelRisk: "family repair, nesting, or emotional settling can feel unstable",
+      mitigation: "treat the place as a field test before asking it to feel like home",
+    };
+  }
+  if (key.includes("romance") || key.includes("love")) {
+    return {
+      travelRisk: "romance can turn performative, brittle, or harder to soften into",
+      mitigation: "keep expectations light and do not make the trip prove the relationship",
+    };
+  }
+  if (key.includes("health") || key.includes("routine") || key.includes("wellness")) {
+    return {
+      travelRisk: "sleep, digestion, recovery, and daily rhythm can wobble",
+      mitigation: "book quieter lodging, protect rest, and keep the itinerary physically simple",
+    };
+  }
+  if (key.includes("partnership") || key.includes("marriage")) {
+    return {
+      travelRisk: "one-to-one expectations can tighten into conflict or disappointment",
+      mitigation: "name roles, pace, budget, and alone-time before the trip starts",
+    };
+  }
+  if (key.includes("career") || key.includes("public")) {
+    return {
+      travelRisk: "work visibility or public-facing moves may demand more effort than payoff",
+      mitigation: "use the place for research or preparation rather than forcing a launch",
+    };
+  }
+  if (key.includes("friendship") || key.includes("network")) {
+    return {
+      travelRisk: "social plans can scatter, drain, or fail to become real belonging",
+      mitigation: "choose smaller repeatable rooms over big networking pushes",
+    };
+  }
+  if (key.includes("spiritual") || key.includes("inner")) {
+    return {
+      travelRisk: "quiet, perspective, or inner peace may be hard to access",
+      mitigation: "schedule solitude deliberately instead of expecting the place to provide it",
+    };
+  }
+  return {
+    travelRisk: `${eventName} is not the easiest use of this place`,
+    mitigation: "keep this domain low-stakes and design the trip around stronger signals",
+  };
+}
+
+export function buildRiskSummary(eventScores: Array<{ eventName: string; finalScore: number }>) {
+  return [...eventScores]
+    .filter((event) => typeof event.finalScore === "number" && event.finalScore < 45)
+    .sort((a, b) => a.finalScore - b.finalScore)
+    .slice(0, 5)
+    .map((event) => ({
+      event: event.eventName,
+      score: Math.round(event.finalScore),
+      ...travelRiskForEvent(event.eventName),
+    }));
 }
 
 function geodeticBandForLon(lon: number): { sign: string; longitudeRange: string } {
@@ -650,6 +727,7 @@ export function buildAIInput(args: {
       scoreBreakdown,
     },
     editorialEvidence,
+    riskSummary: buildRiskSummary(eventScores),
     ...(relocation ? { relocation } : {}),
     ...(hasStructure ? { chartStructure } : {}),
     sidebarsData: {
