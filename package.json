@@ -8,12 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "bunx playwright test",
-    "test:ui": "bunx playwright test --reporter=html",
-    "test:astro": "bun run scripts/test-precision.ts",
-    "test:scoring": "bun run scripts/test-scoring.ts",
-    "eval:distribution": "bun run scripts/eval-scoring-distribution.ts",
-    "generate:geodetic-patterns": "bun run scripts/generate-geodetic-patterns.ts",
-    "eval:couples-prompt": "bun run scripts/eval-couples-prompt.ts"
+    "test:ui": "bunx playwright test --reporter=html"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.60",

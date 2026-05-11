@@ -13,6 +13,24 @@
 /tests
 app/lib/__tests__/
 
+# local archives and non-app working material
+/archive/
+/.agents/
+/.gemini/
+/.worktrees/
+/IDENTITY/
+/docs/
+/mcp-astro-engine/
+/scratch/
+/scratch*.ts
+/temp/
+/data/
+/store/
+/public/brand/
+/app/mockup-*/
+/app/mock-reading-design/
+/app/(frontend)/mockup-*/
+
 # next.js
 /.next/
 /out/
@@ -61,11 +79,15 @@ tmp*
 evaluate_personas.ts
 evaluation_charts.html
 generate-visuals.tsx
+generate_map.ts
 parse.js
 parse.mjs
+record.ts
+fix.ts
 setup-dom.ts
 test-houses.ts
 *.pdf
+fast-notion-push.mjs
 update-notion.mjs
 
 # Research binaries — keep source .md alongside code, not the rendered artifacts

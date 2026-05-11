@@ -40,17 +40,6 @@ const nextConfig = {
       { source: '/auth/login', destination: '/login', permanent: false },
       { source: '/auth/login/', destination: '/login', permanent: false },
       // Old flat app routes still served by (app) group — no change needed for /chart, /flow, etc.
-      // Mockup routes → /mockup/* namespace
-      { source: '/mockup-acg', destination: '/mockup/acg', permanent: true },
-      { source: '/mockup-chart-example', destination: '/mockup/chart-example', permanent: true },
-      { source: '/mockup-natal', destination: '/mockup/natal', permanent: true },
-      { source: '/mockup-reading', destination: '/mockup/reading', permanent: true },
-      { source: '/mockup-reading-version-1', destination: '/mockup/reading-version-1', permanent: true },
-      { source: '/mockup-reading-version-2', destination: '/mockup/reading-version-2', permanent: true },
-      { source: '/mockup-relocation-1', destination: '/mockup/relocation-1', permanent: true },
-      { source: '/mockup-relocation-2', destination: '/mockup/relocation-2', permanent: true },
-      { source: '/mockup-chart', destination: '/chart', permanent: true },
-      { source: '/mock-reading-design', destination: '/mockup/reading-design', permanent: true },
     ];
   },
 };

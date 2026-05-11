@@ -13,7 +13,7 @@ export const PROTECTED_PREFIXES = [
   "/learn",
   "/mundane",
   "/geodetic-patterns",
-  "/scoring",
+  "/weather",
 ] as const;
 
 export const AUTH_ENTRY_PREFIXES = ["/login", "/flow"] as const;
@@ -120,7 +120,7 @@ export const config = {
     "/learn/:path*",
     "/mundane/:path*",
     "/geodetic-patterns/:path*",
-    "/scoring/:path*",
+    "/weather/:path*",
     "/login/:path*",
     "/flow/:path*",
   ],
