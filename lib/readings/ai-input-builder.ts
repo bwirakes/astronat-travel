@@ -38,6 +38,10 @@ export interface TeacherReadingInput {
   macro: {
     destination: string;
     dateRange: { start: string; end: string };
+    /** User-facing headline score. This is the score prose may cite as "the score". */
+    headlineScore: number;
+    /** Place-only baseline before date-specific transit fusion. Evidence only. */
+    placeBaselineScore?: number;
     overallScore: number;
     travelType: "trip" | "relocation";
     goalIds: string[];
@@ -736,6 +740,8 @@ export function buildAIInput(args: {
     macro: {
       destination,
       dateRange,
+      headlineScore: matrixResult.macroScore,
+      placeBaselineScore: matrixResult.matrixMacroScore,
       overallScore: matrixResult.macroScore,
       travelType: travelType === "relocation" ? "relocation" : "trip",
       goalIds,

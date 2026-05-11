@@ -391,6 +391,7 @@ Rules:
 - Use brief.tabWritingPlan as an editor's plan, not a script. It describes the reader job, opening move, emotional job, evidence, and target shape.
 - Do not sound like you are filling a rubric. Sentence 1 should sound like a human astrologer giving a travel call.
 - Do not upgrade a warning into a yes. Keep the plan's stance, usefulFor, notFor, and nextMove intact, but write them naturally.
+- If you mention a raw score, use brief.headlineScore / brief.score only. brief.placeBaselineScore is background evidence, not the user-facing score.
 - Do not save the answer for sentence 2. If sentence 1 only says "manage expectations" or "balance goals," it has failed.
 - Sentence 1 of each tab lead must be plain travel advice, not astrology. Forbidden in sentence 1: chart, planet, sign, house, geodetic, line, transit, aspect, degree, Grand Trine, T-Square, stellium.
 - Tab jobs:
@@ -417,6 +418,10 @@ function verdictFromScore(score: number, travelType: string): "go" | "go_with_ca
   return "avoid";
 }
 
+function headlineScore(input: TeacherReadingInput): number {
+  return Math.round(input.macro.headlineScore ?? input.macro.overallScore);
+}
+
 function backfillSoWhat(object: TeacherReading, input: TeacherReadingInput): TeacherReading {
   const out: any = object;
   const risks = input.riskSummary ?? [];
@@ -426,7 +431,7 @@ function backfillSoWhat(object: TeacherReading, input: TeacherReadingInput): Tea
   const destination = input.macro.destination;
   const goalLabel = primaryGoal?.label ? primaryGoal.label.toLowerCase() : "your stated goal";
   const fallbackSoWhat = {
-    verdict: verdictFromScore(input.macro.overallScore, input.macro.travelType),
+    verdict: verdictFromScore(headlineScore(input), input.macro.travelType),
     goodFor: [primaryGoal?.outcome || strongest || `using ${destination} for a specific purpose`],
     notFor: [weakest?.event ? `forcing ${weakest.event.toLowerCase()}` : "treating every life area as equally supported"],
     nextMove: input.macro.travelType === "relocation"
@@ -475,7 +480,7 @@ function backfillSoWhat(object: TeacherReading, input: TeacherReadingInput): Tea
       ...window,
       soWhat: window.soWhat || {
         ...fallbackSoWhat,
-        verdict: verdictFromScore(window.score ?? input.macro.overallScore, input.macro.travelType),
+        verdict: verdictFromScore(window.score ?? headlineScore(input), input.macro.travelType),
         nextMove: `Use ${window.dates} only for the purpose named in this window.`,
       },
     }));
@@ -524,7 +529,7 @@ function buildTabWritingPlan(input: TeacherReadingInput) {
   const evidence: any = input.editorialEvidence || {};
   const sidebars: any = input.sidebarsData || {};
   const destination = input.macro.destination;
-  const score = Math.round(input.macro.overallScore);
+  const score = headlineScore(input);
   const stance = scoreBand(score);
   const goals = (evidence.selectedGoals || []).map((goal: any) => goal.label).filter(Boolean);
   const strongest = evidence.scoreDrivers?.strongestThemes?.[0]?.label || evidence.pageThesis?.topHumanTheme || "the strongest signal";
@@ -608,8 +613,12 @@ function compactTeacherSignal(input: TeacherReadingInput) {
     destination: input.macro.destination,
     travelType: input.macro.travelType,
     dateRange: input.macro.dateRange,
-    score: Math.round(input.macro.overallScore),
-    verdict: scoreBand(input.macro.overallScore),
+    score: headlineScore(input),
+    headlineScore: headlineScore(input),
+    placeBaselineScore: input.macro.placeBaselineScore != null
+      ? Math.round(input.macro.placeBaselineScore)
+      : undefined,
+    verdict: scoreBand(headlineScore(input)),
     goals: compactItems(evidence.selectedGoals, 4, ["goalId", "label", "score", "outcome", "action"]),
     tabWritingPlan: buildTabWritingPlan(input),
     evidence: {

@@ -27,13 +27,13 @@ import { W_EVENTS, M_AFFINITY, PLANETS, NUM_HOUSES, LIFE_EVENTS } from "./planet
 import { EVENT_LABELS, verdictBand } from "./verdict";
 import { softCapScore } from "./scoring-flags";
 import { computeStationEventModifier } from "./geodetic/station-event-affinity";
+import type { StationContribution } from "./geodetic/station-scoring";
 import { houseFromLongitude } from "./geodetic";
 import type {
     UniversalSkyState,
     DignityTier,
     ElementName,
     ModalityName,
-    SkyAspect,
     AspectKind,
 } from "./universal-sky";
 import type { TransitHit } from "@/lib/astro/transit-solver";
@@ -676,8 +676,8 @@ export function scoreAtAnchor(args: ScoreAtAnchorArgs): ScoreAtAnchorResult {
     const eventScores = finalizeEventScoresFromLayers(
         args.layers,
         tm,
-        args.skyState ?? null,
-        args.stationContributions ?? null,
+        args.skyState ? computeSkyModifier(args.skyState) : null,
+        computeStationEventModifier(args.stationContributions ?? undefined),
     );
     const score = computeFusedReadingHeadline(eventScores, args.selectedGoalIndices);
     const drivers = topDriversAtAnchor(
