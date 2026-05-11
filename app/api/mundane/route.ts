@@ -5,7 +5,7 @@
  *   2. Angular planets — which transiting planets are on MC, IC, ASC, or DSC over the location
  *   3. Paran crossings — which planet pairs cross each other within ±2° latitude of the location
  *
- * This is the engine for the backtest tool.
+ * This is the engine for mundane chart calculations.
  *
  * Request body:
  *   { date: "YYYY-MM-DD", time?: "HH:MM", lat: number, lon: number, city?: string }

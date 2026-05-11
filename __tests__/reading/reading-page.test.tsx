@@ -31,23 +31,6 @@ mock.module("@/lib/supabase/client", () => ({
   }),
 }));
 
-// Mock our scrollytelling components to avoid GSAP/complex logic in tests
-mock.module("../../mock-reading-design/components/RelocatedWheelInteractive", () => ({
-  default: () => <div data-testid="wheel" />,
-}));
-mock.module("../../mock-reading-design/components/PlanetaryShiftStory", () => ({
-  PlanetaryShiftStory: () => <div data-testid="planetary-story" />,
-}));
-mock.module("../../mock-reading-design/components/GeographicACGMap", () => ({
-  GeographicACGMapLines: () => <div data-testid="acg-map" />,
-  GeographicBackgroundMap: () => <div data-testid="bg-map" />,
-}));
-mock.module("../../mock-reading-design/components/FinalReportSummary", () => ({
-  FinalReportSummary: () => <div data-testid="final-report" />,
-}));
-mock.module("../../mock-reading-design/AnimationMachine", () => ({
-  useAnimationMachine: (fn: any) => fn ? fn({ wheelOpacity: 1, activeView: "intro" }) : { wheelOpacity: 1, activeView: "intro" },
-}));
 mock.module("../../components/Navbar", () => ({
   default: () => <nav data-testid="navbar" />,
 }));

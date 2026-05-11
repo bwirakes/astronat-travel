@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useInView } from "framer-motion";
-import { useAnimationMachine, ViewState } from "../../../mock-reading-design/AnimationMachine";
+import { useAnimationMachine, type ViewState } from "./animation-machine";
 
 export function useScrollSection<T extends HTMLElement = HTMLElement>(viewStateId: ViewState, margin: string = "-40% 0px -40% 0px") {
   const ref = useRef<T>(null);

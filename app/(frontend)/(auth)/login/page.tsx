@@ -119,7 +119,7 @@ function LoginForm() {
     })
 
     if (error) {
-      setMessage(`Demo Error: ${error.message}. Run: bun run scripts/create-test-user.ts`)
+      setMessage(`Demo Error: ${error.message}. Check the demo account seed in Supabase.`)
       setLoading(false)
       return
     }
@@ -329,4 +329,3 @@ function LoginForm() {
     </div>
   )
 }
-

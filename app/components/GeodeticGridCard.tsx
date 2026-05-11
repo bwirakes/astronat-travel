@@ -19,7 +19,7 @@ interface Props {
     /** Destination label, shown at the bottom-right. */
     destination?: string;
     /** Real per-angle data. When omitted, the component renders the mock
-     *  set so existing call-sites (mockup pages) keep working. */
+     *  set so legacy call-sites keep working. */
     angles?: GeodeticGridAngle[];
 }
 
