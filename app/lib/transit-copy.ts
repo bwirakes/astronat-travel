@@ -14,6 +14,14 @@ import { PLANET_EXPRESSION_NOUNS } from "./astro-wording";
 // Goal ID → natal planets whose activation matters for that goal.
 // Mirrors GOAL_NATAL_TARGETS in window-scoring.ts — kept local to avoid a circular dep.
 const GOAL_TARGETS: Record<string, string[]> = {
+    identity:   ["sun", "mars", "asc", "jupiter"],
+    wealth:     ["venus", "jupiter", "saturn"],
+    home:       ["moon", "ic"],
+    romance:    ["venus", "moon", "mars"],
+    health:     ["moon", "mercury", "mars", "saturn"],
+    partnerships: ["venus", "moon", "dsc"],
+    friendship: ["mercury", "jupiter"],
+    spirituality: ["jupiter", "neptune", "moon"],
     love:       ["venus", "moon"],
     career:     ["sun", "mars", "saturn", "mc"],
     community:  ["mercury", "jupiter"],
@@ -23,6 +31,14 @@ const GOAL_TARGETS: Record<string, string[]> = {
 };
 
 const GOAL_LABEL: Record<string, string> = {
+    identity:   "identity and self-discovery",
+    wealth:     "wealth and resources",
+    home:       "home and roots",
+    romance:    "romance and love",
+    health:     "health and routine",
+    partnerships: "partnership and commitment",
+    friendship: "friendship and networking",
+    spirituality: "spirituality and inner peace",
     love:       "love and connection",
     career:     "career and visibility",
     community:  "community and networks",

@@ -41,6 +41,14 @@ export interface CouplesReadingInput {
             delta: number;
         };
         topEvents: Array<{ event: string; you: number; partner: number }>;
+        weakEvents: Array<{
+            event: string;
+            you: number;
+            partner: number;
+            joint: number;
+            travelRisk: string;
+            mitigation: string;
+        }>;
         timings: {
             score: number;
             label: string;
@@ -63,22 +71,78 @@ export interface CouplesReadingInput {
     chartStructurePartner?: ChartStructure;
 }
 
+export function couplesRiskForEvent(event: string): { travelRisk: string; mitigation: string } {
+    const key = event.toLowerCase();
+    if (key.includes("wealth") || key.includes("financial")) {
+        return {
+            travelRisk: "money, upgrades, bills, or shared-resource choices can become the fight",
+            mitigation: "set the budget and payment rules before either person is tired",
+        };
+    }
+    if (key.includes("home") || key.includes("family")) {
+        return {
+            travelRisk: "family history, lodging comfort, or private downtime can feel less settled",
+            mitigation: "choose calm lodging and avoid making the trip carry family repair work",
+        };
+    }
+    if (key.includes("romance") || key.includes("love")) {
+        return {
+            travelRisk: "chemistry may not automatically translate into softness or romance",
+            mitigation: "plan one low-pressure night and do not choreograph intimacy",
+        };
+    }
+    if (key.includes("health") || key.includes("routine")) {
+        return {
+            travelRisk: "sleep, pace, meals, and recovery can become the relationship stress point",
+            mitigation: "agree on rest windows and food timing before the itinerary gets ambitious",
+        };
+    }
+    if (key.includes("partnership") || key.includes("marriage")) {
+        return {
+            travelRisk: "commitment expectations and decision rights can tighten fast",
+            mitigation: "decide who leads which decisions and where each person gets veto power",
+        };
+    }
+    if (key.includes("career") || key.includes("public")) {
+        return {
+            travelRisk: "work, status, or public attention can pull focus from the pair",
+            mitigation: "separate work obligations from couple time on the calendar",
+        };
+    }
+    if (key.includes("friendship") || key.includes("network")) {
+        return {
+            travelRisk: "social plans can split the pair or drain one partner faster",
+            mitigation: "cap group plans and build a clear exit option",
+        };
+    }
+    if (key.includes("spiritual") || key.includes("inner")) {
+        return {
+            travelRisk: "quiet meaning-making can turn into withdrawal or misread silence",
+            mitigation: "name when solitude is restoration, not rejection",
+        };
+    }
+    return {
+        travelRisk: `${event} is a weaker shared use of the destination`,
+        mitigation: "keep that domain low-stakes and design around stronger shared events",
+    };
+}
+
 function buildEditorialSpine(vm: CouplesVM): CouplesEditorialSpine {
     const { destination, partnerName, joint, deltaPts } = vm.hero;
     const { you, partner } = vm.ledger;
     const goals = vm.intro.goals.join(" and ");
     const goalLabel = goals || "shared goals";
 
-    const youSummary = `you ${you.score}/100 (${you.label.toLowerCase()})`;
-    const partnerSummary = `${partnerName} ${partner.score}/100 (${partner.label.toLowerCase()})`;
+    const youSummary = `you read as ${you.label.toLowerCase()}`;
+    const partnerSummary = `${partnerName} reads as ${partner.label.toLowerCase()}`;
 
-    const thesis = `${destination} is a ${joint.label.toLowerCase()} for two with ${goalLabel} — joint ${joint.score}/100, ${youSummary}, ${partnerSummary}.`;
+    const thesis = `${destination} is a ${joint.label.toLowerCase()} match for two with ${goalLabel}: ${youSummary}, while ${partnerSummary}.`;
 
     const primaryQuestion = `Where does ${destination} pull ${partnerName} and you together, and where does it pull you apart?`;
 
     let throughline: string;
     if (deltaPts >= 25) {
-        throughline = `Polarised pair: scores diverge by ${deltaPts} points. Lead §02 and §04 with the gap; surface who feels which side of the city.`;
+        throughline = `Polarised pair: the partners experience the city very differently. Lead §02 and §04 with the gap; surface who feels which side of the city.`;
     } else if (joint.band === "peak" || joint.band === "solid") {
         throughline = `Aligned and supportive: lean into the shared peak. Both partners can take this place at face value.`;
     } else if (joint.band === "mixed") {
@@ -215,6 +279,17 @@ export function buildCouplesAIInput(args: {
                 you: row.you,
                 partner: row.partner,
             })),
+            weakEvents: [...viewmodel.goals.events]
+                .map((row) => ({
+                    event: row.event,
+                    you: row.you,
+                    partner: row.partner,
+                    joint: Math.round((row.you + row.partner) / 2),
+                    ...couplesRiskForEvent(row.event),
+                }))
+                .filter((row) => row.joint < 45 || row.you < 40 || row.partner < 40)
+                .sort((a, b) => a.joint - b.joint)
+                .slice(0, 5),
             timings: {
                 score: viewmodel.timings.score,
                 label: viewmodel.timings.label,

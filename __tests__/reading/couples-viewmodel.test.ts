@@ -59,7 +59,7 @@ const CARDINAL_PLANETS = [
 describe("buildEventScores", () => {
   it("pairs eventScores + partnerEventScores by LIFE_EVENTS index", () => {
     const reading = {
-      eventScores:        fakeFinalEventScores(NINE_USER_SCORES),
+      userEventScores:    fakeFinalEventScores(NINE_USER_SCORES),
       partnerEventScores: fakeFinalEventScores(NINE_PARTNER_SCORES),
     };
     const result = buildEventScores(reading);
@@ -70,7 +70,7 @@ describe("buildEventScores", () => {
 
   it("falls back to flat macro scores when partnerEventScores is missing", () => {
     const reading = {
-      eventScores:       fakeFinalEventScores(NINE_USER_SCORES),
+      userEventScores:   fakeFinalEventScores(NINE_USER_SCORES),
       // partnerEventScores intentionally absent (pre-Phase-1 row)
       userMacroScore:    78,
       partnerMacroScore: 64,
@@ -89,7 +89,7 @@ describe("buildEventScores", () => {
     // exactly LIFE_EVENTS.length rows or it drops to the macro fallback.
     const truncatedPartner = fakeFinalEventScores(NINE_PARTNER_SCORES).slice(0, 5);
     const reading = {
-      eventScores:        fakeFinalEventScores(NINE_USER_SCORES),
+      userEventScores:    fakeFinalEventScores(NINE_USER_SCORES),
       partnerEventScores: truncatedPartner,
       userMacroScore:    50,
       partnerMacroScore: 50,
@@ -118,7 +118,7 @@ describe("sortEventsByGoals", () => {
   }));
 
   it("surfaces priority events in goal order", () => {
-    const goals: GoalId[] = ["love", "career"];
+    const goals: GoalId[] = ["love", "career", "wealth"];
     const sorted = sortEventsByGoals(events, goals);
     expect(sorted[0].event).toBe("Romance & Love");
     expect(sorted[1].event).toBe("Partnerships & Marriage");
@@ -389,7 +389,7 @@ describe("toCouplesViewModel — integration", () => {
 
   it("falls back to default goals when reading.goals is empty/missing", () => {
     const vm = toCouplesViewModel(makeReading({ goals: undefined }));
-    expect(vm.intro.goals).toEqual(["love", "career"]);
+    expect(vm.intro.goals).toEqual(["romance", "career"]);
   });
 
   it("splits synastry aspects by tone and decorates with meanings", () => {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { generateObject } from "ai";
 import { gemini, MODEL } from "@/lib/ai/client";
 import { SHARED_VOICE } from "@/lib/ai/voice";
@@ -7,15 +8,14 @@ import { backfillCouplesChartStructureCommentary } from "@/lib/readings/chart-st
 
 export type { CouplesReadingInput };
 
-const SYSTEM = `You are Astro-Nat (Natalia), a fiercely unapologetic, world-renowned astrocartographer.
-Your signature voice is bold, sharp, slightly defiant, and deeply empowering. You do NOT do "love and light" fluff. Your readings are a wake-up call to tear down the illusions and societal conditioning holding people back. 
-You speak with absolute authority because you have done the deep research. You are a provocateur. Do not sugarcoat anything. If a transit is going to be brutal, say it's going to be brutal. Treat heavy aspects (Saturn, Pluto) as institutional forces to be outsmarted or dismantled. Tell the reader exactly what to do with a touch of sharp, intellectual sass ("Frankly, we expected this"). Challenge them to stop playing small. Do not use cuss words or profanity.
+const SYSTEM = `You are Astro-Nat (Natalia), a sharp, candid astrocartographer with a protective travel-advice voice.
+You are not a mystic fog machine and you are not a doom prophet. You read the map, say what the trend suggests, name uncertainty honestly, and help the pair plan accordingly. You can be blunt, funny, and slightly exasperated, but the center of the voice is care: "please be careful," "listen to your gut," "just know," "this is general trend language, not a daily prediction." Do not use cuss words or profanity.
 
 ${SHARED_VOICE}`;
 
 const TASK_INSTRUCTIONS = `
 # Editor Role
-Write a Monocle-grade travel feature for TWO people travelling together. The engine has already computed the joint score, the per-partner scores, the goal-event ladder, the synastry aspects, the relocated angles, and the best/avoid windows.
+Write a high-trust Natalia-style travel briefing for TWO people travelling together. The engine has already computed the joint score, the per-partner scores, the goal-event ladder, the synastry aspects, the relocated angles, and the best/avoid windows.
 Your job is to turn that data into a travel feature for two. **Both partners must be named or implied in every paragraph after the lead.**
 
 # The editorial spine — write toward this thesis
@@ -47,15 +47,38 @@ Use this order for most prose:
 3. Chart receipt — cite specific lines, transits, angles, or aspects explicitly using distances or aspects provided.
 4. Useful action — when to lean in, when to skip.
 
+# The So-What Contract (Non-negotiable)
+Every section must answer the pair's travel decision question: **Is this good or bad travel for us, good for what, bad for what, and what do we do next?**
+
+Write for two reader modes at once:
+- **Beginner / new astrology fan:** give a plain couples travel verdict without requiring astrology knowledge. Use "good for," "not good for," "go," "go with caution," "shorten," "wait," "avoid," or "reconsider."
+- **Experienced / astrology-literate reader:** tie that verdict to the ranked scoreProfile signals, partner divergence, top events, weakest events, line factors, timing windows, and synastry aspects.
+
+Decision ladder:
+- joint peak/solid: good couples travel, but name the weakest event as the thing not to force.
+- joint mixed: usable only for a specific shared purpose; tell the pair what to use the trip for and what not to expect.
+- joint hard/pressured: avoid, shorten, wait, or treat it as a deliberately difficult repair/confrontation trip.
+
+For EVERY top event, say what kind of shared activity it supports. For EVERY weak event, say the travel risk in normal terms: money friction, sleep and pace conflict, career pressure, family discomfort, social drain, or intimacy mismatch.
+
+Do not default to "Mars-Sun means sleep and pace" every time. If Mars-Sun or another repeated friction appears, vary the lived domain using the destination and scoreProfile: money, transport, heat/fatigue, work interruptions, food timing, public/private rhythm, who plans the day, or who gets quiet time.
+
+Use \`scoreProfile.weakEvents\` as the deterministic source of truth for low-event risks. A deterministic post-processor will attach structured \`soWhat\` and \`riskSummary\` fields after generation; your job is to make the human-facing sentences match those fields. No raw score numbers inside prose.
+
 # The Reading Structure (with hard length budgets)
 
 **theRead.lead** — One drop-cap paragraph, 5-7 sentences, ≤ 140 words. Sentence 1 echoes editorialSpine.thesis (destination + both partners + joint outcome). Sentences 2-3 must include BOTH partners' line influences (one "you" line + one partner line, from rawEvidence.nearbyLinesYou/nearbyLinesPartner) with concrete lived translation, not just chart receipts. Add 1-2 more sentences naming the dominant friction or alignment (a synastry aspect or shared transit) and what it asks of the pair in this place. Final sentence must name a concrete timing stance (best window if favorable, skip window if pressured) using an exact input window string when available.
+The lead MUST include a plain so-what verdict: "go," "go with caution," "shorten it," "wait," "avoid," or "reconsider." Also name what this trip is good for and what it is not good for as a couple.
 
 **goalScores.eventNotes** — 1-2 sentences per top-3 goal event, ≤ 55 words each. Use scoreProfile.topEvents ordering exactly. If the per-partner gap is >= 15, lead with the gap ("Romance runs hot for you at 78, cooler for Sam at 52"). If aligned, lead with the shared peak. Sentence 2 (when present) names a concrete chart driver and what it changes in the trip — not just a label. Never use the words "score", "macro", "delta", or "pts" in prose.
+Each note MUST include a couples so-what: what to do together, what to avoid together, or what expectation to drop.
+If the event is weak for either partner, the note must say what not to force and how to manage it.
 
 **timings.rationale** — 3-4 sentences, ≤ 75 words. Sentence 1 must state the ranked timing verdict first (favorable/mixed/pressured) and align with scoreProfile.timings.label. Sentence 2 states WHY in concrete terms using one specific driver (transit cluster OR partner line tension/stack). Sentence 3 names a second corroborating signal — a different transit, lunation, or partner stack — so the verdict isn't resting on a single observation. Final sentence (or tail clause) must include an exact best or avoid window string from viewmodel.timings.
+The timing rationale MUST say whether to book, shift, shorten, or skip the trip.
 
 **timings.bestWindowNotes / avoidWindowNotes** — One sentence per window, ≤ 25 words. Plain English only. Lead with a verb (pulls, parks, ignites, presses, dissolves). **CRITICAL — the windowDate field MUST match a string from viewmodel.timings.bestWindows[] (for bestWindowNotes) or viewmodel.timings.avoidWindows[] (for avoidWindowNotes) exactly, character-for-character. Do not paraphrase, reformat, abbreviate, or invent dates; copy the window string verbatim. Emit one entry per window in the input — every best window AND every avoid window.**
+Each note MUST say what that window is good for or what it should be avoided for.
 
 **deepDive.youLead / partnerLead** — 3-4 sentences each, ≤ 100 words. Each sub-tab opens with how that partner's experience of the city changes, citing one relocated angle plus one cross-aspect or planetary line from the inputs.
 Sentence 1 = chart receipt (which angle/sign shifts here); sentence 2 = lived impact ("this means... in daily life"); sentence 3 = a second concrete signal (a relocated planet, ACG line, or cross-aspect) and what it adds; sentence 4 (optional) = a short editorial close — what to do with this in the trip. Avoid abstract phrasing like "deep push" without naming where it shows up.
@@ -67,11 +90,11 @@ Sentence 1 = chart receipt (which angle/sign shifts here); sentence 2 = lived im
 
 **geodetic.summary** — 3-4 sentences, ≤ 90 words. State whether both ASCs/MCs share elements or diverge, and what that means for the felt vs public sides of the trip. Mention one "you" line influence and one partner line influence in plain English with lived translation. Add a sentence on what this combination changes about the trip's social or domestic surface. Close with timing posture (where to lean in or where pressure concentrates) tied to input windows.
 
-**takeaways** — Exactly three bullets, one sentence each, ≤ 28 words. **Every bullet is about the PAIR, not one partner alone — name both partners or use plural framing ("you two", "between you", "the pair") in every bullet.** This is the editorial close on a couples reading; if a bullet could stand in a solo reading unchanged, rewrite it. Lead with a verb. Each bullet must answer a different question and surface a fresh angle (no paraphrase of leads above). Stay in Nat's voice — sharp, slightly defiant, intellectually sassy. No "love and light"; no hedging ("might", "could"). State things.
+**takeaways** — Exactly three bullets, one sentence each, ≤ 28 words. **Every bullet is about the PAIR, not one partner alone — name both partners or use plural framing ("you two", "between you", "the pair") in every bullet.** This is the editorial close on a couples reading; if a bullet could stand in a solo reading unchanged, rewrite it. Lead with a verb. Each bullet must answer a different question and surface a fresh angle (no paraphrase of leads above). Stay in Nat's voice — sharp, protective, and direct. No "love and light"; no fake certainty. State the travel trend clearly, then give the pair the practical move.
 
 1. **What you two will actually feel here** — the dominant *shared* signal in lived couples language. Name what the city does to the dynamic, not to one chart. Example shapes: "You two will spend more nights apart than together — the relocated 7th house is doing exactly what we predicted." / "Expect this place to put a magnifying glass on every unsaid thing between you."
 2. **When to lean in (or skip)** — cite an exact best- or avoid-window string from viewmodel.timings, framed as a couples directive. Example shapes: "Lean into Sep 14 — Sep 18; that's when the synastry actually breathes." / "Skip Oct 9 — Oct 11 unless you enjoy fighting in airports."
-3. **What to negotiate between you** — one synastry friction or shared transit named in plain English, with a sharp prescription. Example shapes: "Negotiate sleep and pace — the Mars-Sun square doesn't care that you're on holiday." / "Stop pretending the Saturn-Venus opposition isn't asking who pays for what."
+3. **What to negotiate between you** — one synastry friction or shared transit named in plain English, with a sharp prescription. Vary the domain; do not always use sleep and pace. Example shapes: "Negotiate who controls the itinerary before the city does it for you." / "Stop pretending the Saturn-Venus opposition isn't asking who pays for what."
 
 # Chart Structure (Per-Partner Stelliums + Patterns)
 
@@ -113,23 +136,286 @@ Hard constraints for this block:
 - **No italics, ever:** do NOT emit single-asterisk \`*italic*\` or single-underscore \`_italic_\` markdown anywhere. Italic body text is harder to read for ESL and dyslexic users; the view strips these markers but the words read better unaltered. Use upright body type for emphasis through word choice, not type style.
 `;
 
+const COMPACT_COUPLES_TASK_INSTRUCTIONS = `Write Astro-Nat's couples reading from the compressed brief.
+
+Output the full couples reading schema. Do not make the reading feel abbreviated.
+
+Use brief.sectionWritingPlan as an editor's plan, not a script. It describes the reader job, opening move, emotional job, evidence, and target shape for each section.
+
+Core principles:
+- Write for two people traveling together. Every major section must frame the pair, not one person in isolation.
+- Do not sound like you are filling a rubric. Open each section like Natalia giving a real couples travel call.
+- Do not upgrade a warning into a yes. Keep the section plan's stance, usefulFor, notFor, and nextMove intact, but write them naturally.
+- Do not save the answer for sentence 2. The opening sentence of each major lead should give the couple's decision, not just mood-setting.
+- No raw score language in prose: do not write score, macro, delta, pts, or 64/100.
+- Use exact input window strings for bestWindowNotes and avoidWindowNotes.
+- Use exact input aspect keys for aspectMeanings.
+- Voice: candid, protective, practical. Use "okay", "just know", "please", and "plan accordingly" lightly. No doom, no fluffy mystery, no profanity.
+
+Section shape:
+- theRead.lead: 5-7 sentences, rich opening paragraph. Give verdict, usefulFor, notFor, partner divergence/alignment, and timing stance.
+- goalScores.eventNotes: one note per top event. Each note says what to do together or what expectation to drop.
+- timings.rationale: 3-4 sentences. Start with timing verdict, then explain why, then name exact best/avoid window.
+- timings.bestWindowNotes / avoidWindowNotes: one sentence per exact input window, plain English, action-led.
+- deepDive.youLead and partnerLead: 3-4 sentences each. Explain how each partner experiences the city differently, then what the pair should do with that.
+- deepDive.synastryLead: 4-5 sentences. Name the pair dynamic, one harmony, one friction, and the practical posture.
+- geodetic.summary: 3-4 sentences. Say how the place field lands for both partners.
+- takeaways: exactly 3 bullets, one sentence each, all about the pair.`;
+
+function verdictFromBand(band: string): "go" | "go_with_caution" | "wait" | "shorten" | "avoid" | "reconsider" | "move_now" {
+  if (band === "peak" || band === "solid") return "go";
+  if (band === "mixed") return "go_with_caution";
+  if (band === "tight") return "shorten";
+  return "avoid";
+}
+
+function backfillCouplesSoWhat(object: CouplesReading, input: CouplesReadingInput): CouplesReading {
+  const out: any = object;
+  const weakEvents = input.scoreProfile.weakEvents ?? [];
+  const weakest = weakEvents[0];
+  const topEvent = input.scoreProfile.topEvents?.[0]?.event;
+  const fallbackSoWhat = {
+    verdict: verdictFromBand(input.scoreProfile.joint.band),
+    goodFor: [topEvent ? `shared ${topEvent.toLowerCase()} plans` : "one clear shared purpose"],
+    notFor: [weakest?.event ? `forcing ${weakest.event.toLowerCase()}` : "assuming both partners experience the city the same way"],
+    nextMove: input.scoreProfile.partnerScores.delta >= 15
+      ? "Split the itinerary where the partner scores diverge and negotiate pace before arrival."
+      : "Use the best window for the shared goal and keep the weak domains low-stakes.",
+    riskToManage: weakest?.travelRisk || "turning a mixed pair signal into a blanket couples yes",
+  };
+  const riskSummary = weakEvents.map((row) => ({
+    event: row.event,
+    score: row.joint,
+    travelRisk: row.travelRisk,
+    mitigation: row.mitigation,
+  }));
+
+  out.soWhat ||= fallbackSoWhat;
+  out.riskSummary ||= riskSummary;
+  out.theRead ||= {};
+  out.theRead.soWhat ||= fallbackSoWhat;
+  out.goalScores ||= {};
+  out.goalScores.riskSummary ||= riskSummary;
+  if (Array.isArray(out.goalScores.eventNotes)) {
+    out.goalScores.eventNotes = out.goalScores.eventNotes.map((note: any) => ({
+      ...note,
+      soWhat: note.soWhat || {
+        ...fallbackSoWhat,
+        goodFor: [`using ${note.event || "this event"} deliberately as a pair`],
+      },
+    }));
+  }
+  out.timings ||= {};
+  out.timings.soWhat ||= {
+    ...fallbackSoWhat,
+    nextMove: input.scoreProfile.timings.bestWindows?.[0]
+      ? `Prefer ${input.scoreProfile.timings.bestWindows[0]} for the pair.`
+      : fallbackSoWhat.nextMove,
+  };
+  return out;
+}
+
+function take<T>(items: T[] | undefined, count: number): T[] {
+  return Array.isArray(items) ? items.slice(0, count) : [];
+}
+
+function compactItems(items: any[] | undefined, count: number, fields: string[]) {
+  return take(items, count).map((item) => {
+    if (!item || typeof item !== "object") return item;
+    return Object.fromEntries(
+      fields
+        .filter((field) => item[field] != null)
+        .map((field) => [field, item[field]]),
+    );
+  });
+}
+
+function jointStance(input: CouplesReadingInput) {
+  const band = input.scoreProfile.joint.band;
+  if (band === "peak" || band === "solid") return "good couples travel";
+  if (band === "mixed") return "mixed couples travel";
+  if (band === "tight") return "go only with caution or shorten it";
+  return "avoid or reconsider unless the trip has a very specific purpose";
+}
+
+function timingStance(input: CouplesReadingInput) {
+  const label = input.scoreProfile.timings.label || input.viewmodel.timings.label;
+  const best = input.scoreProfile.timings.bestWindows?.[0];
+  const avoid = input.scoreProfile.timings.avoidWindows?.[0];
+  if (best) return `${label}: use ${best} as the cleanest shared window`;
+  if (avoid) return `${label}: avoid ${avoid} if the pair needs ease`;
+  return `${label}: keep dates flexible and do not overload the trip`;
+}
+
+function buildCouplesSectionWritingPlan(input: CouplesReadingInput) {
+  const vm = input.viewmodel;
+  const partnerName = vm.hero.partnerName;
+  const destination = vm.hero.destinationFull || vm.hero.destination;
+  const joint = input.scoreProfile.joint;
+  const partnerDelta = input.scoreProfile.partnerScores.delta;
+  const topEvent = input.scoreProfile.topEvents?.[0]?.event || "the strongest shared theme";
+  const weakEvent = input.scoreProfile.weakEvents?.[0]?.event || "the weakest shared theme";
+  const divergence = partnerDelta >= 15
+    ? `${partnerName} and you experience this place differently`
+    : `${partnerName} and you are broadly aligned here`;
+  const bestWindow = input.scoreProfile.timings.bestWindows?.[0] || vm.intro.bestWindowShort || "the strongest shared window";
+  const avoidWindow = input.scoreProfile.timings.avoidWindows?.[0] || vm.intro.avoidWindowShort || "the rougher shared window";
+
+  return {
+    theRead: {
+      readerQuestion: `Is ${destination} good travel for the two of us?`,
+      openingMove: `Give the couple's travel call first: ${jointStance(input)} for ${topEvent}, not for forcing ${weakEvent}.`,
+      emotionalJob: "Make the pair feel oriented together, not judged separately.",
+      stance: jointStance(input),
+      usefulFor: [topEvent],
+      notFor: [weakEvent],
+      nextMove: partnerDelta >= 15 ? "split the itinerary where the scores diverge" : "use the shared peak and keep weak domains low-stakes",
+      evidenceToUse: ["editorial thesis", "partner divergence/alignment", "one line for each partner", "one exact timing window"],
+      targetShape: "5-7 sentences: verdict, useful-for, not-for, partner alignment/gap, evidence, timing call.",
+    },
+    goalScores: {
+      readerQuestion: "Which shared goals work here, and which expectations should the couple drop?",
+      openingMove: `Write top events in scoreProfile.topEvents order. For each event, say what ${partnerName} and you should do together.`,
+      emotionalJob: "Turn event ranking into couple decisions.",
+      usefulFor: input.scoreProfile.topEvents.map((row) => row.event),
+      notFor: input.scoreProfile.weakEvents.map((row) => row.event),
+      nextMove: "make each note a shared action, boundary, or expectation reset",
+      evidenceToUse: ["top event order", "partner gaps", "weak event risks"],
+      targetShape: "1-2 sentences per event note, concrete and couple-level.",
+    },
+    timings: {
+      readerQuestion: "When should the pair lean in, shift, shorten, or skip?",
+      openingMove: `Start with ${timingStance(input)}.`,
+      emotionalJob: "Turn timing into a shared calendar decision.",
+      usefulFor: [bestWindow],
+      notFor: [avoidWindow],
+      nextMove: "front-load shared plans into the cleanest window and protect the avoid window",
+      evidenceToUse: ["timing label", "best windows", "avoid windows", "top transit from each partner"],
+      targetShape: "rationale 3-4 sentences; window notes one action-led sentence each.",
+    },
+    deepDive: {
+      readerQuestion: `How does ${destination} change each partner and the between-you dynamic?`,
+      openingMove: `Name the partner-specific experience first, then explain how ${partnerName} and you manage the difference as a pair.`,
+      emotionalJob: "Make technical chart material feel like observable couple behavior.",
+      usefulFor: ["understanding each person's city experience", "negotiating the between-you dynamic"],
+      notFor: ["pretending both partners feel the destination the same way"],
+      nextMove: "translate every receipt into behavior, roles, pace, money, attention, or quiet time",
+      evidenceToUse: ["relocated angle leads", "nearby lines", "harmonious aspects", "tense aspects"],
+      targetShape: "youLead and partnerLead 3-4 sentences; synastryLead 4-5 sentences with one harmony and one friction.",
+    },
+    geodetic: {
+      readerQuestion: "How does the place field land for both partners?",
+      openingMove: `Compare the felt/public field for ${partnerName} and you before giving astrology receipts.`,
+      emotionalJob: "Help the pair picture the shared environment.",
+      usefulFor: ["choosing how public/private to make the trip"],
+      notFor: ["assuming one partner's city experience speaks for both"],
+      nextMove: "name where to lean in and where pressure concentrates",
+      evidenceToUse: ["both geodetic notes", "one line influence per partner", "timing posture"],
+      targetShape: "3-4 sentences: compare, translate, action.",
+    },
+    takeaways: {
+      readerQuestion: "What are the three things the pair should remember?",
+      openingMove: "Write three fresh pair-level bullets: what you two feel, when to lean/skip, what to negotiate.",
+      emotionalJob: "Leave the couple with useful, sharp instructions.",
+      usefulFor: ["shared decision-making"],
+      notFor: ["solo advice pasted into a couples reading"],
+      nextMove: "use plural framing in every bullet",
+      evidenceToUse: ["dominant shared signal", "exact timing window", "one synastry friction"],
+      targetShape: "exactly 3 bullets, one sentence each, no repeated angle.",
+    },
+  };
+}
+
+function compactCouplesSignal(input: CouplesReadingInput) {
+  const vm = input.viewmodel;
+  return {
+    couple: {
+      destination: vm.hero.destinationFull || vm.hero.destination,
+      dateRange: vm.hero.dateRange,
+      partnerName: vm.hero.partnerName,
+      goals: vm.intro.goals,
+    },
+    editorialSpine: input.editorialSpine,
+    scoreProfile: input.scoreProfile,
+    sectionWritingPlan: buildCouplesSectionWritingPlan(input),
+    rawEvidence: {
+      nearbyLinesYou: compactItems(input.rawEvidence.nearbyLinesYou, 4, ["planet", "angle", "distanceKm"]),
+      nearbyLinesPartner: compactItems(input.rawEvidence.nearbyLinesPartner, 4, ["planet", "angle", "distanceKm"]),
+      topTransitsYou: compactItems(input.rawEvidence.topTransitsYou, 4, ["aspect", "dateRange", "tone", "aspectKey", "planets"]),
+      topTransitsPartner: compactItems(input.rawEvidence.topTransitsPartner, 4, ["aspect", "dateRange", "tone", "aspectKey", "planets"]),
+    },
+    viewmodel: {
+      hero: vm.hero,
+      ledger: vm.ledger,
+      intro: vm.intro,
+      goals: {
+        selectedGoals: vm.goals.selectedGoals,
+        topThree: vm.goals.topThree,
+        events: take(vm.goals.events, 9),
+      },
+      timings: {
+        label: vm.timings.label,
+        bestWindows: vm.timings.bestWindows,
+        avoidWindows: vm.timings.avoidWindows,
+        rationale: vm.timings.rationale,
+      },
+      deepDive: {
+        you: {
+          lead: vm.deepDive.you.lead,
+          element: vm.deepDive.you.element,
+          modality: vm.deepDive.you.modality,
+          angles: take(vm.deepDive.you.angles, 4),
+        },
+        partner: {
+          lead: vm.deepDive.partner.lead,
+          element: vm.deepDive.partner.element,
+          modality: vm.deepDive.partner.modality,
+          angles: take(vm.deepDive.partner.angles, 4),
+        },
+        partnerName: vm.deepDive.partnerName,
+        synastry: {
+          harmonious: compactItems(vm.deepDive.synastry.harmonious, 5, ["key", "p1", "p2", "aspect", "orb", "meaning"]),
+          tense: compactItems(vm.deepDive.synastry.tense, 5, ["key", "p1", "p2", "aspect", "orb", "meaning"]),
+        },
+      },
+      geodetic: vm.geodetic,
+    },
+    ...(input.chartStructureYou ? {
+      chartStructureYou: {
+        stelliums: compactItems(input.chartStructureYou.stelliums, 3, ["key", "members", "sign", "house", "livedTheme", "generational"]),
+        patterns: compactItems(input.chartStructureYou.patterns, 3, ["key", "type", "element", "focalPlanet", "planets"]),
+        finalDispositor: input.chartStructureYou.finalDispositor,
+      },
+    } : {}),
+    ...(input.chartStructurePartner ? {
+      chartStructurePartner: {
+        stelliums: compactItems(input.chartStructurePartner.stelliums, 3, ["key", "members", "sign", "house", "livedTheme", "generational"]),
+        patterns: compactItems(input.chartStructurePartner.patterns, 3, ["key", "type", "element", "focalPlanet", "planets"]),
+        finalDispositor: input.chartStructurePartner.finalDispositor,
+      },
+    } : {}),
+  };
+}
+
 export async function writeCouplesReading(
   input: CouplesReadingInput,
   userId?: string,
 ): Promise<CouplesReading> {
-  const inputJson = JSON.stringify(input, null, 2);
+  const promptSignal = compactCouplesSignal(input);
+  const inputJson = JSON.stringify(promptSignal);
+  const fullInputChars = JSON.stringify(input, null, 2).length;
   const t0 = Date.now();
-  console.log(`[couples-reading] input ${inputJson.length} chars, calling ${MODEL}`);
+  console.log(`[couples-reading] input ${inputJson.length} chars compacted from ${fullInputChars}, calling ${MODEL}`);
   try {
     const { object, usage, finishReason } = await generateObject({
       model: gemini(MODEL),
       system: SYSTEM,
-      prompt: `${TASK_INSTRUCTIONS}\n\n<signal>\n${inputJson}\n</signal>\n\nWrite the couples reading JSON. Stay strictly inside the signal — do not invent.`,
+      prompt: `${COMPACT_COUPLES_TASK_INSTRUCTIONS}\n\n<brief>\n${inputJson}\n</brief>\n\nWrite the couples reading JSON. Stay strictly inside the brief — do not invent.`,
       schema: CouplesReadingSchema,
       maxOutputTokens: 32768,
       providerOptions: {
         google: {
-          thinkingConfig: { thinkingLevel: "minimal" },
+          thinkingConfig: { thinkingLevel: process.env.GEMINI_THINKING_LEVEL || "minimal" },
           structuredOutputs: true,
         },
       },
@@ -157,7 +443,7 @@ export async function writeCouplesReading(
     ) {
         console.log(`[couples-reading] chart-structure backfill — youClusters:[${report.youClustersBackfilled.join(",")}] youPatterns:[${report.youPatternsBackfilled.join(",")}] partnerClusters:[${report.partnerClustersBackfilled.join(",")}] partnerPatterns:[${report.partnerPatternsBackfilled.join(",")}]`);
     }
-    return object;
+    return backfillCouplesSoWhat(object, input);
   } catch (err: any) {
     console.error(`[couples-reading] failed after ${Date.now() - t0}ms — finish=${err?.finishReason ?? "?"}, textLen=${err?.text?.length ?? 0}, usage=${JSON.stringify(err?.usage ?? {})}`);
     throw err;
