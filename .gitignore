@@ -1,5 +1,6 @@
 # dependencies
 /node_modules
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -33,7 +34,9 @@ app/lib/__tests__/
 
 # next.js
 /.next/
+/apps/web/.next/
 /out/
+/apps/web/out/
 
 # production
 /build
@@ -67,6 +70,7 @@ bun.lock
 
 # Playwright results
 /test-results/
+/apps/web/test-results/
 
 # SQLite journal files
 *.db-shm
