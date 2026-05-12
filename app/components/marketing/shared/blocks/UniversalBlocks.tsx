@@ -35,10 +35,10 @@ const getBlockTheme = (bgToken: string | undefined) => {
   
   if (token === 'acqua') {
     return {
-      bgClass: "bg-[var(--color-acqua)]",
-      textClass: "text-[var(--text-on-acqua)]",
-      mutedClass: "text-[var(--text-on-acqua)] opacity-70",
-      borderClass: "border-[var(--surface-border)]",
+      bgClass: "bg-[var(--color-acqua-soft)]",
+      textClass: "text-[var(--text-on-acqua-soft)]",
+      mutedClass: "text-[var(--text-on-acqua-soft)] opacity-75",
+      borderClass: "border-black/10",
       isDark: false
     };
   }
@@ -929,7 +929,7 @@ export const CardGrid: React.FC<any> = ({ block }) => {
             const cardTheme = getBlockTheme(p.bgToken);
             
             return (
-              <div key={i} className={`p-10 md:p-12 min-h-[360px] flex flex-col rounded-[2rem] theme-block-h ${cardTheme.bgClass} ${cardTheme.textClass}`} style={p.bgToken === 'acqua' ? { backgroundColor: 'var(--color-acqua)', color: 'var(--color-charcoal)' } : undefined}>
+              <div key={i} className={`p-10 md:p-12 min-h-[360px] flex flex-col rounded-[2rem] theme-block-h ${cardTheme.bgClass} ${cardTheme.textClass}`} style={p.bgToken === 'acqua' ? { backgroundColor: 'var(--color-acqua-soft)', color: 'var(--color-charcoal)' } : undefined}>
                 {p.num && <div className="font-primary text-5xl mb-8 leading-none opacity-40 shrink-0">{p.num}</div>}
                 <h3 className="font-secondary text-2xl md:text-3xl mb-4 leading-tight lowercase">{p.title}</h3>
                 <p className={`font-body text-sm leading-relaxed ${cardTheme.mutedClass} flex-1`}>{p.desc}</p>
@@ -1029,12 +1029,12 @@ export const SplitContent: React.FC<any> = ({ block }) => {
     : 'lg:grid-cols-2';
 
   return (
-    <section className={`border-y theme-block-h ${theme.bgClass} ${theme.borderClass} ${theme.textClass}`} style={block.bgToken === 'acqua' ? { backgroundColor: 'var(--color-acqua)', color: 'var(--color-charcoal)' } : undefined}>
+    <section className={`border-y theme-block-h ${theme.bgClass} ${theme.borderClass} ${theme.textClass}`} style={block.bgToken === 'acqua' ? { backgroundColor: 'var(--color-acqua-soft)', color: 'var(--color-charcoal)' } : undefined}>
       <div className="max-w-7xl mx-auto w-full">
       <div className={`grid grid-cols-1 ${gridColsClass} min-h-[500px]`}>
          {/* TEXT COLUMN */}
          <div className={`flex flex-col py-16 md:py-24 px-6 ${textPaddingClass} ${isImageLeft && block.image ? 'lg:order-2' : ''}`}>
-            {block.kicker && <div className={`font-mono text-[10px] uppercase tracking-[0.2em] mb-4 ${theme.isDark ? 'text-[var(--color-acqua)]' : 'text-[var(--color-spiced-life)]'}`}>{block.kicker}</div>}
+            {block.kicker && <div className={`font-mono text-[10px] uppercase tracking-[0.2em] mb-4 ${block.bgToken === 'acqua' ? 'text-[var(--color-y2k-blue)]' : theme.isDark ? 'text-[var(--color-acqua)]' : 'text-[var(--color-spiced-life)]'}`}>{block.kicker}</div>}
             
             {(block.headingHtml || block.heading) && (
               <h2 className="font-primary text-4xl md:text-6xl uppercase leading-[0.9] mb-8">
@@ -1098,30 +1098,30 @@ export const SplitContent: React.FC<any> = ({ block }) => {
                )}
             </div>
          ) : block.rightPanel ? (
-            <div className="flex flex-col h-full w-full pt-16 md:pt-32 pb-16 px-6 lg:pr-[max(1.5rem,calc((100vw-80rem)/2))] lg:pl-16 border-l border-black/10 relative" style={{ backgroundColor: 'var(--color-acqua)', color: 'var(--color-charcoal)' }}>
+            <div className="flex flex-col h-full w-full pt-16 md:pt-32 pb-16 px-6 lg:pr-[max(1.5rem,calc((100vw-80rem)/2))] lg:pl-16 border-l border-black/10 relative" style={{ backgroundColor: 'var(--color-acqua-soft)', color: 'var(--color-charcoal)' }}>
               <div className="sticky top-24">
                  <div className="mb-4">
-                   <div className="font-mono text-[10px] uppercase tracking-[0.2em] opacity-50 mb-2 text-[var(--text-on-acqua)]">{block.rightPanel.kicker || "Engagement"}</div>
+                   <div className="font-mono text-[10px] uppercase tracking-[0.2em] opacity-65 mb-2 text-[var(--text-on-acqua-soft)]">{block.rightPanel.kicker || "Engagement"}</div>
                    <div className="font-primary text-4xl md:text-5xl font-semibold leading-none text-[var(--color-y2k-blue)]">
                      {block.rightPanel.priceLine || "By Engagement"}
                    </div>
-                   <div className="font-body text-xs opacity-60 mt-4 font-light leading-relaxed max-w-[280px] text-[var(--text-on-acqua)]">{block.rightPanel.priceNote}</div>
+                   <div className="font-body text-sm opacity-75 mt-4 font-light leading-relaxed max-w-[320px] text-[var(--text-on-acqua-soft)]">{block.rightPanel.priceNote}</div>
                  </div>
 
-                 <div className="flex items-center gap-3 mt-8 mb-10 font-mono text-[9px] uppercase tracking-widest max-w-[240px] leading-relaxed text-[var(--text-on-acqua)] opacity-60">
-                   <div className="w-2 h-2 rounded-full bg-[#3fb950] shrink-0 mt-0.5 opacity-100"></div>
+                 <div className="inline-flex items-center gap-3 mt-8 mb-10 border border-black/15 px-4 py-3 font-mono text-[9px] uppercase tracking-widest max-w-[300px] leading-relaxed text-[var(--text-on-acqua-soft)] bg-white/25">
+                   <div className="w-2 h-2 rounded-full bg-[var(--sage)] shrink-0 mt-0.5"></div>
                    <span>{block.rightPanel.limitNote}</span>
                  </div>
 
                  {block.rightPanel.ctaLabel && (
-                   <Link href={block.rightPanel.ctaHref || "#"} className="w-full text-center py-5 px-6 font-semibold font-mono text-[10px] uppercase tracking-widest transition-opacity hover:opacity-80 mb-24 block bg-[var(--color-charcoal)] text-[var(--color-eggshell)]">
+                   <Link href={block.rightPanel.ctaHref || "#"} className="w-full text-center py-5 px-6 font-semibold font-mono text-[10px] uppercase tracking-widest transition-opacity hover:opacity-80 mb-14 block bg-[var(--color-charcoal)] text-[var(--color-eggshell)]">
                       {block.rightPanel.ctaLabel}
                    </Link>
                  )}
 
                  {block.rightPanel.testimonialQuote && (
-                   <div className="mt-20 border-t border-black/10 w-full pt-8">
-                      <p className="font-secondary italic text-base md:text-lg leading-snug text-[var(--color-charcoal)] mb-6">&ldquo;{block.rightPanel.testimonialQuote}&rdquo;</p>
+                   <div className="mt-12 border-t border-black/10 w-full pt-8">
+                      <p className="font-secondary text-base md:text-lg leading-snug text-[var(--color-charcoal)] mb-6">&ldquo;{block.rightPanel.testimonialQuote}&rdquo;</p>
                       <p className="font-mono text-[9px] uppercase tracking-widest text-[var(--color-charcoal)] opacity-60">{block.rightPanel.testimonialKicker} · {block.rightPanel.testimonialMeta}</p>
                    </div>
                  )}
@@ -1134,78 +1134,105 @@ export const SplitContent: React.FC<any> = ({ block }) => {
   );
 };
 
+type ProcessStep = {
+  n: string;
+  title: string;
+  body: string;
+};
+
+const processStepCountToGridClass = (count: number) => {
+  if (count === 3) return "md:grid-cols-3";
+  if (count === 4) return "md:grid-cols-4";
+  if (count === 6) return "md:grid-cols-6";
+  return "md:grid-cols-5";
+};
+
+const ProcessHeader: React.FC<{ kicker?: string; headingHtml?: string }> = ({ kicker, headingHtml }) => (
+  <div className="max-w-3xl mx-auto text-center mb-12 md:mb-16">
+    {kicker && (
+      <div className="font-mono text-[10px] md:text-xs uppercase tracking-[0.22em] text-[var(--color-y2k-blue)] mb-4">
+        {kicker}
+      </div>
+    )}
+    <h2
+      className="font-primary uppercase leading-[0.9] text-[var(--text-primary)]"
+      style={{ fontSize: "clamp(2.6rem, 5vw, 5.4rem)" }}
+    >
+      <div dangerouslySetInnerHTML={{ __html: renderHtml(headingHtml) }} />
+    </h2>
+  </div>
+);
+
+const ProcessStepBadge: React.FC<{ n: string; className?: string }> = ({ n, className = "" }) => (
+  <div
+    className={`w-14 h-14 md:w-16 md:h-16 rounded-full border flex items-center justify-center font-primary text-lg md:text-xl relative z-10 bg-[var(--bg)] text-[var(--color-y2k-blue)] border-[var(--color-y2k-blue)] ${className}`}
+  >
+    {n}
+  </div>
+);
+
+const ProcessStepCard: React.FC<{ step: ProcessStep; index: number }> = ({ step, index }) => (
+  <article className="relative flex flex-col items-center text-center px-2">
+    <ProcessStepBadge n={step.n} />
+    <div className="mt-6 flex flex-col items-center">
+      <div className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--text-tertiary)] mb-3">
+        Step {index + 1}
+      </div>
+      <h3 className="font-primary text-xl md:text-2xl uppercase leading-none text-[var(--text-primary)] mb-3">
+        {step.title}
+      </h3>
+      <p className="font-body text-sm leading-relaxed text-[var(--text-secondary)] max-w-[13rem]">
+        {step.body}
+      </p>
+    </div>
+  </article>
+);
+
+const ProcessDesktopGrid: React.FC<{ steps: ProcessStep[] }> = ({ steps }) => (
+  <div className="hidden md:block relative">
+    <div className="absolute top-8 left-[8%] right-[8%] h-px bg-[var(--color-y2k-blue)] opacity-25" />
+    <div className={`grid ${processStepCountToGridClass(steps.length)} gap-8 relative`}>
+      {steps.map((step, index) => (
+        <ProcessStepCard key={`${step.n}-${step.title}`} step={step} index={index} />
+      ))}
+    </div>
+  </div>
+);
+
+const ProcessMobileRail: React.FC<{ steps: ProcessStep[] }> = ({ steps }) => (
+  <div className="md:hidden relative">
+    <div className="absolute left-7 top-0 bottom-0 w-px bg-[var(--color-y2k-blue)] opacity-25" />
+    <div className="space-y-8">
+      {steps.map((step, index) => (
+        <article key={`${step.n}-${step.title}`} className="relative grid grid-cols-[3.5rem_1fr] gap-5">
+          <ProcessStepBadge n={step.n} className="w-14 h-14 text-base" />
+          <div className="border-b border-[var(--surface-border)] pb-8">
+            <div className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--text-tertiary)] mb-2">
+              Step {index + 1}
+            </div>
+            <h3 className="font-primary text-2xl uppercase leading-none text-[var(--text-primary)] mb-3">
+              {step.title}
+            </h3>
+            <p className="font-body text-sm leading-relaxed text-[var(--text-secondary)]">
+              {step.body}
+            </p>
+          </div>
+        </article>
+      ))}
+    </div>
+  </div>
+);
+
 export const ProcessTimeline: React.FC<any> = ({ block }) => {
-  // AstroBrand editorial color-band alternation
-  const stepColors = [
-    { bg: 'var(--color-eggshell)',   text: 'var(--color-charcoal)', accent: 'var(--color-y2k-blue)',    muted: 'rgba(27,27,27,0.55)' },
-    { bg: 'var(--color-charcoal)',   text: 'var(--color-eggshell)', accent: 'var(--color-acqua)',        muted: 'rgba(248,245,236,0.55)' },
-    { bg: 'var(--color-y2k-blue)',   text: '#fcfaf1',               accent: 'var(--color-acqua)',        muted: 'rgba(252,250,241,0.60)' },
-    { bg: 'var(--color-eggshell)',   text: 'var(--color-charcoal)', accent: 'var(--color-spiced-life)', muted: 'rgba(27,27,27,0.55)' },
-    { bg: 'var(--color-spiced-life)',text: '#fcfaf1',               accent: '#fcfaf1',                  muted: 'rgba(252,250,241,0.65)' },
-  ];
+  const steps = (block.steps || []) as ProcessStep[];
 
   return (
-    <section id={block.anchorId} className="border-t border-[var(--surface-border)]">
-      {/* Section heading slab */}
-      <div className="py-12 md:py-16 px-6 md:px-16 text-center bg-[var(--bg-raised)] border-b border-[var(--surface-border)]">
-        <div className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--color-y2k-blue)] mb-4">{block.kicker}</div>
-        <h2
-          className="font-primary uppercase leading-[0.9] text-[var(--text-primary)]"
-          style={{ fontSize: "clamp(2.8rem, 6vw, 7rem)" }}
-        >
-          <div dangerouslySetInnerHTML={{ __html: renderHtml(block.headingHtml) }} />
-        </h2>
+    <section id={block.anchorId} className="py-16 md:py-24 border-y border-[var(--surface-border)] bg-[var(--bg-raised)]">
+      <div className="max-w-7xl mx-auto px-6">
+        <ProcessHeader kicker={block.kicker} headingHtml={block.headingHtml} />
+        <ProcessDesktopGrid steps={steps} />
+        <ProcessMobileRail steps={steps} />
       </div>
-
-      {/* Step bands — one per row, alternating color blocks */}
-      {block.steps?.map((step: any, i: number) => {
-        const colors = stepColors[i % stepColors.length];
-        return (
-          <div
-            key={i}
-            className="relative flex items-center gap-8 md:gap-16 px-6 md:px-16 lg:px-24 py-10 md:py-12 border-b border-black/8 overflow-hidden"
-            style={{ backgroundColor: colors.bg, color: colors.text }}
-          >
-            {/* Giant watermark step number */}
-            <span
-              className="absolute right-6 md:right-12 top-1/2 -translate-y-1/2 font-primary leading-none pointer-events-none select-none"
-              style={{ fontSize: 'clamp(6rem, 14vw, 11rem)', opacity: 0.07, color: colors.text }}
-              aria-hidden="true"
-            >
-              {step.n}
-            </span>
-
-            {/* Step number badge */}
-            <div
-              className="shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-full border-2 flex items-center justify-center font-primary text-xl md:text-2xl"
-              style={{ borderColor: colors.accent, color: colors.accent }}
-            >
-              {step.n}
-            </div>
-
-            {/* Content */}
-            <div className="relative z-10 flex-1">
-              <h3
-                className="font-primary uppercase tracking-tight leading-none mb-2 md:mb-3"
-                style={{ fontSize: 'clamp(1.4rem, 3vw, 2.8rem)', color: colors.text }}
-              >
-                {step.title}
-              </h3>
-              <p
-                className="font-body text-base md:text-lg leading-relaxed max-w-xl"
-                style={{ color: colors.muted }}
-              >
-                {step.body}
-              </p>
-            </div>
-
-            {/* Right arrow */}
-            <div className="shrink-0 hidden md:flex" style={{ color: colors.accent, opacity: 0.35 }}>
-              <ArrowRight size={36} />
-            </div>
-          </div>
-        );
-      })}
     </section>
   );
 };
