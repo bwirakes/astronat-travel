@@ -298,6 +298,7 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
     const interpretations = buildGeodeticInterpretations(
         vm.geodeticHouseFrame.natalAssignments,
         reading?.natalPlanets ?? [],
+        vm.scoreNarrative.selectedGoals[0],
     );
 
     const tabLead = copiedTab?.lead?.trim() || "";
@@ -317,6 +318,8 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
                 <span>{vm.travelDateISO ? vm.travelDateISO.slice(0, 10) : "any time"}</span>
                 <span>geo-ASC {signFromLongitude(geoASC)} · geo-MC {signFromLongitude(geoMC)}</span>
             </div>
+
+            <PlaceGoalLens city={city} goal={vm.scoreNarrative.selectedGoals[0]} />
 
             {/* ── Personalised opener — only shown when no AI dek/intro exists ── */}
             {!hasAiCopy && (
@@ -668,6 +671,43 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
 
 // ── Personalised opener (editorial drop-cap lede) ────────────────────────
 
+function PlaceGoalLens({
+    city,
+    goal,
+}: {
+    city: string;
+    goal?: { goalId: string; label: string; score: number; action: string } | undefined;
+}) {
+    if (!goal) return null;
+    const houses = GOAL_HOUSES[goal.goalId] ?? [];
+    const houseText = houses.length
+        ? houses.map((h) => `H${h} ${HOUSE_DOMAIN_SHORT[h] ?? ""}`.trim()).join(" + ")
+        : "timing factors";
+    return (
+        <div
+            style={{
+                borderTop: "1px solid var(--surface-border)",
+                borderBottom: "1px solid var(--surface-border)",
+                padding: "0.8rem 0",
+                margin: "0 0 var(--space-lg) 0",
+                display: "grid",
+                gridTemplateColumns: "minmax(0, 1fr)",
+                gap: "0.25rem",
+                maxWidth: "680px",
+            }}
+        >
+            <div style={{ ...MONO_SM, color: "var(--gold)" }}>
+                Goal lens · {goal.label} · {Math.round(goal.score)}/100 · {houseText}
+            </div>
+            <p style={{ ...BODY_CAPTION, margin: 0 }}>
+                {city}&rsquo;s longitude changes where your natal planets act, so the goal score
+                gets a local texture: which parts of you become louder, quieter, easier, or more
+                reactive in the place itself.
+            </p>
+        </div>
+    );
+}
+
 interface TimingState {
     skyHasContent: boolean;     // active transits OR eclipses OR lunations within orb
     hasProgressedBand: boolean; // a progressed Sun/Moon band brackets this longitude
@@ -793,6 +833,7 @@ interface GeodeticInterpretation {
 function buildGeodeticInterpretations(
     assignments: ReadonlyArray<{ planet: string; house: number }>,
     natalPlanets: ReadonlyArray<{ name?: string; planet?: string; house?: number }>,
+    selectedGoal?: { goalId: string; label: string; score: number; action: string } | undefined,
 ): GeodeticInterpretation[] {
     const natalHouseMap = new Map<string, number>();
     for (const np of natalPlanets) {
@@ -821,27 +862,78 @@ function buildGeodeticInterpretations(
             domainShort: HOUSE_DOMAIN_SHORT[house] ?? `H${house}`,
             domainFull: HOUSE_THEMES[house] ?? `House ${house}`,
             planets,
-            sentence: composeInterpretationSentence(house, planets.map((p) => p.name)),
+            sentence: composeInterpretationSentence(house, planets.map((p) => p.name), selectedGoal),
         }));
 }
 
-function composeInterpretationSentence(house: number, planetNames: string[]): string {
+function composeInterpretationSentence(
+    house: number,
+    planetNames: string[],
+    selectedGoal?: { goalId: string; label: string; score: number; action: string } | undefined,
+): string {
     const domain = HOUSE_DOMAIN_SHORT[house] ?? `House ${house}`;
+    const domainLong = HOUSE_THEMES[house] ?? `House ${house}`;
     const lex0 = PLANET_LEX[planetNames[0]];
     const f0 = lex0?.shortFlavour ?? "a quiet signal";
     const cap = (s: string) => s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : s;
+    const action = planetAction(planetNames[0]);
+    const goal = goalClause(house, selectedGoal);
 
     if (planetNames.length === 1) {
-        return `${cap(domain)} here: ${cap(planetNames[0])}-coded — ${f0}.`;
+        return `${cap(planetNames[0])} loads ${domain.toLowerCase()} here, so ${action} shows up through ${domainLong.toLowerCase()}. ${goal}`;
     }
     if (planetNames.length === 2) {
         const lex1 = PLANET_LEX[planetNames[1]];
         const f1 = lex1?.shortFlavour ?? "weight";
-        return `${cap(domain)} here: ${cap(planetNames[0])}-coded with ${cap(planetNames[1])}'s ${f1} folded in — ${f0} meeting ${f1}.`;
+        return `${cap(domain)} is busy here: ${cap(planetNames[0])} brings ${f0}, while ${cap(planetNames[1])} adds ${f1}. Use this house for concrete choices, not vague mood-reading. ${goal}`;
     }
     // 3+ planets: list them, lead with the dominant flavour.
     const allCaps = planetNames.map(cap);
-    return `${cap(domain)} here: ${allCaps.slice(0, -1).join(", ")}, and ${allCaps[allCaps.length - 1]} all loaded — ${f0} setting the tone.`;
+    return `${cap(domain)} is one of the loud rooms here: ${allCaps.slice(0, -1).join(", ")}, and ${allCaps[allCaps.length - 1]} all pile into ${domainLong.toLowerCase()}. Start with ${planetAction(planetNames[0])}; that sets the tone. ${goal}`;
+}
+
+function planetAction(planetName: string): string {
+    switch (planetName.toLowerCase()) {
+        case "sun": return "visibility and self-direction";
+        case "moon": return "mood, rest, and emotional safety";
+        case "mercury": return "talking, planning, and daily messages";
+        case "venus": return "connection, pleasure, and money choices";
+        case "mars": return "action, urgency, anger, and effort";
+        case "jupiter": return "growth, faith, learning, and appetite";
+        case "saturn": return "limits, duty, patience, and pressure";
+        case "uranus": return "change, freedom, and disruption";
+        case "neptune": return "dreams, fog, art, and porous boundaries";
+        case "pluto": return "power, intensity, and deeper control issues";
+        default: return `${planetName} themes`;
+    }
+}
+
+const GOAL_HOUSES: Record<string, number[]> = {
+    identity: [1, 9],
+    wealth: [2, 8],
+    home: [4],
+    romance: [5, 7],
+    health: [6, 12],
+    partnerships: [7, 11],
+    friendship: [11, 3],
+    spirituality: [12, 9],
+    love: [5, 7],
+    career: [10, 6, 2],
+    community: [11, 3],
+    growth: [9, 12],
+    relocation: [4],
+};
+
+function goalClause(
+    house: number,
+    selectedGoal?: { goalId: string; label: string; score: number; action: string } | undefined,
+): string {
+    if (!selectedGoal) return "The useful question is what this makes easier or harder in ordinary life.";
+    const relevant = GOAL_HOUSES[selectedGoal.goalId]?.includes(house);
+    if (relevant) {
+        return `This directly touches your ${selectedGoal.label.toLowerCase()} goal, so ${selectedGoal.action}.`;
+    }
+    return `For your ${selectedGoal.label.toLowerCase()} goal, treat this as context rather than the main event.`;
 }
 
 function Opener({ data }: { data: OpenerData }) {
@@ -1236,9 +1328,8 @@ function ContactTable({
 
 // ── ParanList ─────────────────────────────────────────────────────────────
 
-function ParanList({ parans, city: _city, notes }: {
+function ParanList({ parans, notes }: {
     parans: V4Paran[];
-    city: string;
     notes?: Map<string, { headline: string; body: string }>;
 }) {
     return (
@@ -1565,26 +1656,9 @@ function ParansDisclosure({ parans, city, notes, paransSummary }: {
                         benefic pairs lift the field, malefic pairs press it.
                     </p>
                 )}
-                <ParanList parans={topParans} city={city} notes={notes} />
+                <ParanList parans={topParans} notes={notes} />
             </div>
         </details>
-    );
-}
-
-function SubHead({ title }: { title: string }) {
-    return (
-        <h3 style={{
-            fontFamily: "var(--font-primary, serif)",
-            fontSize: "1.25rem",
-            fontWeight: 500,
-            lineHeight: 1.3,
-            color: "var(--text-primary)",
-            margin: 0,
-            textTransform: "none",
-            letterSpacing: 0,
-        }}>
-            {title}
-        </h3>
     );
 }
 

@@ -4,6 +4,7 @@ import {
   HOUSE_DOMAINS,
   getOrdinal,
   buildPlacementImplicationSentence,
+  buildRelocatedPlacementImplication,
   resolvePlacementImplication,
 } from "@/app/lib/astro-wording";
 
@@ -74,6 +75,18 @@ describe("planet-hover-card — content contract", () => {
     expect(resolvePlacementImplication({ planet, sign, house })).toBe(
       buildPlacementImplicationSentence({ planet, sign, house })
     );
+  });
+
+  it("relocated hover copy explains the planet and this house context", () => {
+    const copy = buildRelocatedPlacementImplication({
+      planet: "Mars",
+      sign: "Aries",
+      house: 12,
+    });
+
+    expect(copy).toContain("drive, anger, courage");
+    expect(copy).toContain("12th house of what you keep inside");
+    expect(copy).toContain("rest, privacy, hidden pressure");
   });
 });
 

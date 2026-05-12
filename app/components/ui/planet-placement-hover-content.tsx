@@ -1,8 +1,9 @@
 import { PLANET_COLORS } from "@/app/lib/planet-data";
 import {
-  HOUSE_DOMAINS,
   PLANET_DOMAINS,
+  buildRelocatedPlacementImplication,
   getOrdinal,
+  resolvePlacementImplication,
 } from "@/app/lib/astro-wording";
 
 export interface PlanetPlacementHoverContentProps {
@@ -26,8 +27,11 @@ export function PlanetPlacementHoverContent({
 }: PlanetPlacementHoverContentProps) {
   const pColor = PLANET_COLORS[planet] || "var(--color-y2k-blue)";
   const domain = PLANET_DOMAINS[planet] || `${planet} Placements`;
-  const houseDomain = HOUSE_DOMAINS[house] || "life";
-  const sentence = implication || `${planet} in ${sign} emphasizes the ${getOrdinal(house)} house of ${houseDomain}.`;
+  const sentence = implication || (
+    context === "relocated"
+      ? buildRelocatedPlacementImplication({ planet, sign, house })
+      : resolvePlacementImplication({ planet, sign, house })
+  );
 
   return (
     <>
