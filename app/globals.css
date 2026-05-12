@@ -77,6 +77,47 @@
   --testimonial-card-accent: #F8F5EC;
   --testimonial-card-border: rgba(255, 255, 255, 0.2);
 
+  /* Geodetic case-study map artwork */
+  --geo-case-map-panel-bg: var(--color-charcoal);
+  --geo-case-map-panel-rule: rgba(248, 245, 236, 0.08);
+  --geo-case-map-caption: rgba(248, 245, 236, 0.58);
+  --geo-case-map-caption-muted: rgba(248, 245, 236, 0.45);
+  --geo-case-map-bg: var(--color-charcoal);
+  --geo-case-map-bg-wash-top: rgba(248, 245, 236, 0.08);
+  --geo-case-map-bg-wash-bottom: rgba(248, 245, 236, 0.02);
+  --geo-case-map-grid: rgba(248, 245, 236, 0.13);
+  --geo-case-map-grid-soft: rgba(248, 245, 236, 0.1);
+  --geo-case-map-label: rgba(248, 245, 236, 0.38);
+  --geo-case-map-land: rgba(248, 245, 236, 0.16);
+  --geo-case-map-land-stroke: rgba(248, 245, 236, 0.35);
+  --geo-case-map-pin-bg: var(--color-charcoal);
+  --geo-case-map-label-halo: var(--color-charcoal);
+  --geo-case-map-neutral: var(--color-eggshell);
+  --geo-case-map-neutral-soft: rgba(248, 245, 236, 0.72);
+  --geo-case-map-moon: rgba(220, 220, 255, 0.86);
+
+  /* Main Sepharial geodetic atlas */
+  --geo-atlas-panel-bg: var(--color-black);
+  --geo-atlas-panel-border: rgba(248, 245, 236, 0.14);
+  --geo-atlas-panel-rule: rgba(248, 245, 236, 0.08);
+  --geo-atlas-panel-wash: rgba(248, 245, 236, 0.03);
+  --geo-atlas-caption: rgba(248, 245, 236, 0.42);
+  --geo-atlas-caption-muted: rgba(248, 245, 236, 0.35);
+  --geo-atlas-land: rgba(248, 245, 236, 0.14);
+  --geo-atlas-land-stroke: rgba(248, 245, 236, 0.28);
+  --geo-atlas-grid: rgba(248, 245, 236, 0.14);
+  --geo-atlas-grid-label: rgba(248, 245, 236, 0.42);
+  --geo-atlas-tropic: rgba(201, 169, 110, 0.1);
+  --geo-atlas-asc-line: rgba(201, 169, 110, 0.72);
+  --geo-atlas-asc-label: rgba(201, 169, 110, 0.85);
+  --geo-atlas-zone-opacity: 0.24;
+  --geo-atlas-zone-active-opacity: 0.92;
+  --geo-atlas-zone-inactive-opacity: 0.12;
+  --geo-atlas-sign-opacity: 0.18;
+  --geo-atlas-info-bg: rgba(10, 10, 10, 0.85);
+  --geo-atlas-info-text: rgba(248, 245, 236, 0.95);
+  --geo-atlas-info-muted: rgba(248, 245, 236, 0.62);
+
   /* Spacing */
   --space-xs: 0.5rem;
   --space-sm: 1rem;
@@ -166,6 +207,47 @@
   --testimonial-card-text: var(--color-charcoal);
   --testimonial-card-accent: var(--color-y2k-blue);
   --testimonial-card-border: rgba(0, 0, 0, 0.1);
+
+  /* Geodetic case-study map artwork */
+  --geo-case-map-panel-bg: color-mix(in oklab, var(--bg-raised) 84%, white);
+  --geo-case-map-panel-rule: rgba(27, 27, 27, 0.1);
+  --geo-case-map-caption: rgba(27, 27, 27, 0.58);
+  --geo-case-map-caption-muted: rgba(27, 27, 27, 0.52);
+  --geo-case-map-bg: color-mix(in oklab, var(--bg-raised) 86%, white);
+  --geo-case-map-bg-wash-top: rgba(27, 27, 27, 0.035);
+  --geo-case-map-bg-wash-bottom: rgba(27, 27, 27, 0.005);
+  --geo-case-map-grid: rgba(27, 27, 27, 0.14);
+  --geo-case-map-grid-soft: rgba(27, 27, 27, 0.1);
+  --geo-case-map-label: rgba(27, 27, 27, 0.48);
+  --geo-case-map-land: rgba(27, 27, 27, 0.11);
+  --geo-case-map-land-stroke: rgba(27, 27, 27, 0.28);
+  --geo-case-map-pin-bg: var(--color-cream);
+  --geo-case-map-label-halo: var(--color-cream);
+  --geo-case-map-neutral: var(--color-charcoal);
+  --geo-case-map-neutral-soft: rgba(27, 27, 27, 0.66);
+  --geo-case-map-moon: #5f6688;
+
+  /* Main Sepharial geodetic atlas */
+  --geo-atlas-panel-bg: color-mix(in oklab, var(--bg-raised) 88%, white);
+  --geo-atlas-panel-border: rgba(27, 27, 27, 0.12);
+  --geo-atlas-panel-rule: rgba(27, 27, 27, 0.1);
+  --geo-atlas-panel-wash: rgba(27, 27, 27, 0.025);
+  --geo-atlas-caption: rgba(27, 27, 27, 0.58);
+  --geo-atlas-caption-muted: rgba(27, 27, 27, 0.52);
+  --geo-atlas-land: rgba(27, 27, 27, 0.11);
+  --geo-atlas-land-stroke: rgba(27, 27, 27, 0.3);
+  --geo-atlas-grid: rgba(27, 27, 27, 0.14);
+  --geo-atlas-grid-label: rgba(27, 27, 27, 0.48);
+  --geo-atlas-tropic: rgba(166, 124, 0, 0.18);
+  --geo-atlas-asc-line: rgba(166, 124, 0, 0.72);
+  --geo-atlas-asc-label: rgba(106, 82, 12, 0.9);
+  --geo-atlas-zone-opacity: 0.18;
+  --geo-atlas-zone-active-opacity: 0.72;
+  --geo-atlas-zone-inactive-opacity: 0.08;
+  --geo-atlas-sign-opacity: 0.24;
+  --geo-atlas-info-bg: color-mix(in oklab, var(--color-cream) 94%, white);
+  --geo-atlas-info-text: var(--color-charcoal);
+  --geo-atlas-info-muted: rgba(27, 27, 27, 0.62);
 }
 
 /* ── Block Theming Utilities ────────────────────────────────── */

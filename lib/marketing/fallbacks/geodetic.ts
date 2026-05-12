@@ -13,6 +13,8 @@ export const geodeticFallbackBlocksUniversal = [
     primaryCta: { label: "Book a Geodetic Reading →", href: "#" },
     secondaryCta: { label: "Explore the Course", href: "#" },
     footnote: "Analytical, evidence-led practice — not prediction theatre.",
+    heroImage: "/nat-1.jpg",
+    heroImageAlt: "Nat reading a map on a red Vespa in a cypress-lined lane",
     layout: "text-only",
     decorativeElement: "orbital-grid",
     kickerColor: "y2k-blue",
@@ -127,10 +129,11 @@ export const geodeticFallbackBlocksUniversal = [
       kicker: "Most requested",
       titleHtml: 'ACG Deep Dive<br/><span class="font-normal opacity-80 text-[1.1rem]">includes geodetic overlay</span>',
       href: "#",
+      ctaLabel: "Book deep dive",
     },
     secondaryCards: [
-      { kicker: "Self-study", titleHtml: "Geodetic & Mundane<br/>Intensive Course", href: "#" },
-      { kicker: "Free", titleHtml: "Research Notes<br/>ongoing cycle analysis", href: "#" },
+      { kicker: "Self-study", titleHtml: "Geodetic & Mundane<br/>Intensive Course", href: "#", ctaLabel: "View course" },
+      { kicker: "Free", titleHtml: "Research Notes<br/>ongoing cycle analysis", href: "#", ctaLabel: "Read notes" },
     ],
   },
 ] as const;
