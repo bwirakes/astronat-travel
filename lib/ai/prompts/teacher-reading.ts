@@ -389,9 +389,12 @@ Rules:
 - Use brief.tabWritingPlan as an editor's plan, not a script. It describes the reader job, opening move, emotional job, evidence, and target shape.
 - Do not sound like you are filling a rubric. Sentence 1 should sound like a human astrologer giving a travel call.
 - Do not upgrade a warning into a yes. Keep the plan's stance, usefulFor, notFor, and nextMove intact, but write them naturally.
-- If you mention a raw score, use brief.headlineScore / brief.score only. brief.placeBaselineScore is background evidence, not the user-facing score.
+- If you mention the overall/headline/trip score, use brief.headlineScore / brief.score only. brief.placeBaselineScore is background evidence, not the user-facing score. Category scores are allowed only when clearly labeled, such as "Identity scores 67" or "Health sits at 42."
 - Do not save the answer for sentence 2. If sentence 1 only says "manage expectations" or "balance goals," it has failed.
 - Sentence 1 of each tab lead must be plain travel advice, not astrology. Forbidden in sentence 1: chart, planet, sign, house, geodetic, line, transit, aspect, degree, Grand Trine, T-Square, stellium.
+- Sentences 2-4 of each tab lead MUST include at least one astrology receipt from that tab's evidence. A score or theme label alone is NOT a receipt. A valid receipt names the actual chart signal: house, planet line, geodetic band, relocated rising/chart ruler, angle shift, or dated transit/window. Gloss the receipt in plain English immediately.
+- Every plainEnglishSummary must include one receipt sentence and one so-what sentence. Do not write six sentences of pure coaching copy.
+- If a tab's ideal receipt is missing, say the available evidence is quiet and use the next-best supplied score/driver. Never invent a line, transit, house, or degree.
 - Tab jobs:
   overview = is this good/mixed/bad travel, good for what, bad for what, next move.
   life-themes = fit to selected goals.
@@ -399,7 +402,7 @@ Rules:
   what-shifts = how the reader feels/behaves differently there.
   timing = best window or wait/shorten/avoid stance.
 - Hard length floor: match the original rich output except for \`tabs["what-shifts"].plainEnglishSummary\`, which must be exactly 4 concise sentences. Each tab lead must be 4-5 sentences. All other plainEnglishSummary fields must be exactly 6 sentences. Evidence captions are 1-2 sentences.
-- overview.scoreExplanation and overview.goalExplanation are 3 sentences each. overview.leanInto and overview.watchOut must each contain exactly 2 paragraphs, 4-5 sentences per paragraph.
+- overview.scoreExplanation is 3 sentences: sentence 1 gives the travel call, sentence 2 cites a concrete astrology receipt (line, house, geodetic band, or dated transit), sentence 3 says what to do next. overview.goalExplanation is 3 sentences and must cite the selected goal score plus one astrology receipt. overview.leanInto and overview.watchOut must each contain exactly 2 paragraphs, 4-5 sentences per paragraph.
 - timing.activationAdvice: exactly 3 practical items. timing.closingVerdict must be 2 sentences and say go, go with caution, shorten, wait, avoid, move now, or reconsider.
 - Fill chartRulerReframe from brief.evidence.shift.chartRuler. If optional legacy/sidebar fields are generated, keep them concise, but never steal depth from tabs/overview/timing.
 - Voice: candid, protective, practical. Use "okay", "just know", "please", and "plan accordingly" lightly. No doom, no fluffy mystery, no profanity.`;
@@ -540,31 +543,31 @@ function buildTabWritingPlan(input: TeacherReadingInput) {
   return {
     overview: {
       readerQuestion: "Is this trip worth taking, good for what, bad for what, and what should I do next?",
-      openingMove: `Start by naming the travel verdict in human language: "${stance} trip" or equivalent. Then say it is useful for ${strongest}, not for ${weakest}.`,
+      openingMove: `Sentence 1 names the travel verdict in human language: "${stance} trip" or equivalent. Sentence 2 or 3 must cite a concrete astrology receipt from place, shift, or timing evidence before returning to the so-what. Do not treat a score by itself as the receipt.`,
       emotionalJob: "Make the reader feel oriented and protected, not graded.",
       stance,
       score,
       usefulFor: [strongest],
       notFor: [weakest],
       nextMove: input.macro.travelType === "relocation" ? "wait, reconsider, or choose the cleanest arrival month" : "keep the trip focused",
-      evidenceToUse: ["overall score", "strongest theme", "weakest risk", "selected goal if relevant"],
-      targetShape: "lead 4-5 sentences: call, use-case, caveat, action.",
+      evidenceToUse: ["headline score", "one astrology receipt from place/shift/timing evidence", "strongest event score", "weakest event risk"],
+      targetShape: "lead 4-5 sentences: call, chart receipt, use-case, caveat, action.",
     },
     "life-themes": {
       readerQuestion: `Does this place support ${selectedGoalText}?`,
-      openingMove: `Start with ${selectedGoalText}, not a generic strongest theme. Say how the place handles the selected goal before naming unrelated strengths.`,
+      openingMove: `Start with ${selectedGoalText}, not a generic strongest theme. Then cite the selected goal score or closest event score AND one astrology receipt that explains the goal fit; contrast it with the weakest event risk.`,
       emotionalJob: "Make the reader feel the app remembered what they asked for.",
       stance,
       goals: primaryGoals,
       usefulFor: [strongest],
       notFor: [weakest],
       nextMove: "do not force the weaker goal",
-      evidenceToUse: ["selected goal", "goal score", "strongest theme", "weakest risk"],
-      targetShape: "lead 4-5 sentences: selected-goal fit, useful detour, not-for caveat, practical boundary.",
+      evidenceToUse: ["selected goal", "goal score", "one astrology receipt from strongest/lean/shift evidence", "weakest event risk"],
+      targetShape: "lead 4-5 sentences: selected-goal fit, astrology receipt, useful detour, not-for caveat, practical boundary.",
     },
     "place-field": {
       readerQuestion: "How does this place show up as an environment?",
-      openingMove: `${destination} should feel emotionally specific and reactive, not neutral. Describe the lived environment before receipts.`,
+      openingMove: `${destination} should feel emotionally specific and reactive, not neutral. Describe the lived environment first, then cite the geodetic band, nearest line, or personal geodetic hit that explains it.`,
       emotionalJob: "Help the reader picture how the place behaves around them.",
       stance: "emotionally specific and reactive",
       environment: `${destination} needs pacing and self-awareness`,
@@ -572,22 +575,22 @@ function buildTabWritingPlan(input: TeacherReadingInput) {
       notFor: ["hiding from your feelings"],
       nextMove: "pace the city carefully",
       evidenceToUse: ["geodetic band", "nearby lines", "personal geodetic hits"],
-      targetShape: "lead 4-5 sentences: felt place, what it rewards, what it punishes, behavior hook.",
+      targetShape: "lead 4-5 sentences: felt place, geodetic/line receipt, what it rewards, what it punishes, behavior hook.",
     },
     "what-shifts": {
       readerQuestion: "How do I feel or behave differently here?",
-      openingMove: "Start with body, mood, behavior, or first-day reaction. Do not start with chart mechanics.",
+      openingMove: "Start with body, mood, behavior, or first-day reaction. Then cite the relocated rising/chart ruler, angle shift, or house shift that explains the behavioral change.",
       emotionalJob: "Make the shift feel observable and practical.",
       stance: cr?.natalRulerHouse === cr?.relocatedRulerHouse ? "same basic self, but your mood and body react louder" : "changed daily emphasis in your mood and body",
       usefulFor: ["noticing how your mood and body respond in real time"],
       notFor: ["pretending the place has no effect on your mood"],
       nextMove: "name how you feel and behave differently in the first day",
       evidenceToUse: ["relocated rising", "chart ruler", "relocated houses", "angle shifts"],
-      targetShape: "lead 4-5 sentences: felt shift, first-day example, trap, action.",
+      targetShape: "lead 4-5 sentences: felt shift, relocated-chart receipt, first-day example, trap, action.",
     },
     timing: {
       readerQuestion: "When should I use this place?",
-      openingMove: `Name ${window} as the best available window and say what belongs there.`,
+      openingMove: `Name ${window} as the best available window and say what belongs there. Then cite one dated transit/window receipt that explains why this timing is cleaner or trickier.`,
       emotionalJob: "Turn timing into a schedule decision.",
       stance: "best available window",
       window,
@@ -595,7 +598,7 @@ function buildTabWritingPlan(input: TeacherReadingInput) {
       notFor: ["forcing weaker goals"],
       nextMove: "front-load the important plans and keep flexibility",
       evidenceToUse: ["best window", "supportive transits", "friction transits"],
-      targetShape: "lead 4-5 sentences: best window, what to schedule, what not to force, fallback.",
+      targetShape: "lead 4-5 sentences: best window, transit/window receipt, what to schedule, what not to force, fallback.",
     },
   };
 }
@@ -621,8 +624,8 @@ function compactTeacherSignal(input: TeacherReadingInput) {
     tabWritingPlan: buildTabWritingPlan(input),
     evidence: {
       pageThesis: evidence.pageThesis,
-      strongest: compactItems(evidence.scoreDrivers?.strongestThemes, 4, ["label", "score", "why"]),
-      weakest: compactItems(evidence.scoreDrivers?.lessEmphasized, 4, ["label", "score", "why"]),
+      strongest: compactItems(evidence.scoreDrivers?.strongestThemes, 4, ["label", "source", "score", "why"]),
+      weakest: compactItems(evidence.scoreDrivers?.lessEmphasized, 4, ["label", "source", "score", "why"]),
       risks: compactItems(input.riskSummary, 4, ["event", "score", "travelRisk", "mitigation"]),
       leanInto: compactItems(evidence.scoreDrivers?.leanIntoEvidence, 4, ["label", "source", "score", "reason"]),
       watchOut: compactItems(evidence.scoreDrivers?.watchOutEvidence, 4, ["label", "source", "score", "reason"]),

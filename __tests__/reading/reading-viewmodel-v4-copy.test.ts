@@ -178,6 +178,23 @@ describe("V4 teacherReading completeness", () => {
     expect(mars?.shift).not.toContain("moves from private recovery into money & resources here");
   });
 
+  it("normalizes stale teacher headline-score mentions to the hero score", () => {
+    const teacherReading = completeTeacherReading();
+    teacherReading.overview.scoreExplanation = "This trip carries a score of 73 because it has potential.";
+    teacherReading.tabs.overview.lead = "This trip has a score of 71, okay, so keep it focused.";
+
+    const vm = toV4ViewModel({
+      ...baseReading(teacherReading),
+      heroWindowScore: 81,
+    });
+
+    expect(vm.hero.bestWindow.score).toBe(81);
+    expect(vm.tabs.overview?.scoreExplanation).toContain("score of 81");
+    expect(vm.tabs.overview?.scoreExplanation).not.toContain("73");
+    expect(vm.tabs.copy.overview?.lead).toContain("score of 81");
+    expect(vm.tabs.copy.overview?.lead).not.toContain("71");
+  });
+
   it("frames fallback overview around the user's goals instead of internal scoring terms", () => {
     const vm = toV4ViewModel({
       ...baseReading(legacyTeacherReading),
