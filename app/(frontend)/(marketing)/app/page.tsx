@@ -115,39 +115,31 @@ export default function AppLanding() {
   const howItWorksBlock = {
     kicker: "How the App Works",
     anchorId: "how-it-works",
-    headingHtml: "THE SCIENCE<br/><em style=\"font-family:var(--font-display-alt-2);font-style:italic;text-transform:none;color:var(--color-spiced-life);font-size:0.85em\">behind</em><br/>THE MAGIC",
+    headingHtml: "THREE WAYS<br/><em style=\"font-family:var(--font-display-alt-2);font-style:italic;text-transform:none;color:var(--color-spiced-life);font-size:0.85em\">to read</em><br/>YOUR MAP",
     tabs: [
       {
-        id: "natal",
-        label: "Cosmic Blueprint",
-        title: "Your Cosmic DNA",
-        desc: "Your birth data computed to the minute. The app maps your exact planetary blueprint before any city is analyzed.",
-        ctaLabel: "Explore the Science",
-        ctaHref: "/learn"
+        id: "chart",
+        label: "Chart",
+        title: "Start with your birth chart",
+        desc: "Enter your birth details once. AstroNat builds your natal chart, planetary placements, aspects, and map lines so every reading starts from your real astrology.",
+        ctaLabel: "Open My Chart",
+        ctaHref: "/chart"
       },
       {
-        id: "acg",
-        label: "Astrocartography",
-        title: "Lines That Find You",
-        desc: "Every city on Earth scored against your natal chart. The app reveals exactly where your planetary energy is most active.",
-        ctaLabel: "See The Map",
+        id: "travel",
+        label: "Travel",
+        title: "Check a city before you go",
+        desc: "Choose a destination, travel date, and up to three life goals. AstroNat scores the place, shows your strongest planetary lines, and highlights better timing windows.",
+        ctaLabel: "Start a Travel Reading",
         ctaHref: "/flow"
       },
       {
-        id: "geodetic",
-        label: "Geodetic Zones",
-        title: "Foundational Energy",
-        desc: "Discover the permanent zodiacal energies anchoring your chosen locations based on the world's longitudinal bands.",
-        ctaLabel: "Learn Geodetics",
-        ctaHref: "/learn"
-      },
-      {
-        id: "transit",
-        label: "Transit Windows",
-        title: "Your Optimal Window",
-        desc: "Not just where — but when. Understand your 12-month transit forecast to know the best time to make your move.",
-        ctaLabel: "Check Timing",
-        ctaHref: "/flow"
+        id: "couples",
+        label: "Couples",
+        title: "See how a place affects both of you",
+        desc: "Add a partner, choose a shared destination, and get a relationship reading that blends synastry, location, timing, and the goals you care about together.",
+        ctaLabel: "Try Couples",
+        ctaHref: "/couples"
       }
     ]
   };
@@ -218,11 +210,11 @@ export default function AppLanding() {
   // ── 7. Scarcity Band ──────────────────────────────────────────────
   const scarcityBlock = {
     variant: "scarcity-hero",
-    spotsLeft: 13,
     totalSpots: 100,
+    progressPct: 92,
     heading: "FOUNDER'S CLUB",
     subheading: "One payment. Every feature. Forever.",
-    body: "100 lifetime spots — ever. Lock in today's price and get access to every feature the app builds from here. 87 founders are already in.",
+    body: "Only 100 lifetime spots will ever be released, and just a few remain. Lock in today's price and get access to every feature the app builds from here.",
     ctaLabel: "Secure My Lifetime Spot →",
     ctaHref: "/flow",
     guarantee: "30-day guarantee — love your reading or get a full refund. No questions.",
@@ -271,7 +263,7 @@ export default function AppLanding() {
         glyph: "☾",
       },
       {
-        tier: "LIFETIME — 13 SPOTS LEFT",
+        tier: "LIFETIME — FEW SPOTS LEFT",
         title: "Founder's Club",
         tagline: "One payment. Every feature the app ever builds. You're in forever.",
         price: "$397.97",
@@ -286,7 +278,7 @@ export default function AppLanding() {
         ctaHref: "/flow",
         primary: false,
         glyph: "♄",
-        urgencyNote: "Only 13 of 100 spots left",
+        urgencyNote: "A few of the 100 lifetime spots remain",
       },
     ],
   };

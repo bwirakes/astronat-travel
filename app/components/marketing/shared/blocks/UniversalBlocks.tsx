@@ -2,7 +2,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Moon, Sun, AlertCircle, Compass, FileText } from "lucide-react";
+import { ArrowRight, Moon, Sun, AlertCircle, Compass, FileText, CalendarDays, Heart, MapPin, Plane, Users } from "lucide-react";
 import { NatalWheelSVG } from "@/app/components/natal/NatalWheelSVG";
 import { AcgMap } from "@/app/components/AcgMap";
 import InteractiveGeodeticWorldMap from "@/app/geodetic/components/InteractiveGeodeticWorldMap";
@@ -461,7 +461,7 @@ export const StatsStrip: React.FC<any> = ({ block }) => {
 };
 
 // ── Animated progress bar for scarcity section ─────────────────────────────
-function ProgressBar({ pct, spotsLeft, totalSpots, claimed }: { pct: number; spotsLeft: number; totalSpots: number; claimed: number }) {
+function ProgressBar({ pct, totalSpots }: { pct: number; totalSpots: number }) {
   const barRef = useRef<HTMLDivElement>(null);
   const hasAnimated = useRef(false);
 
@@ -496,13 +496,13 @@ function ProgressBar({ pct, spotsLeft, totalSpots, claimed }: { pct: number; spo
     <div className="max-w-sm mx-auto mb-10">
       <div className="flex justify-between items-center mb-2">
         <span className="font-mono text-[9px] uppercase tracking-widest text-[var(--color-eggshell)] opacity-40">
-          {claimed} of {totalSpots} spots claimed
+          Founder access is nearly full
         </span>
         <span
           className="font-mono text-[10px] uppercase tracking-widest font-bold"
           style={{ color: "var(--color-acqua)" }}
         >
-          {spotsLeft} left
+          Few of {totalSpots} left
         </span>
       </div>
       <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
@@ -703,9 +703,12 @@ export const StatementBand: React.FC<any> = ({ block }) => {
 
   // ── Scarcity Hero ──────────────────────────────────────────────────────────
   if (block.variant === "scarcity-hero") {
-    const pct = block.spotsLeft && block.totalSpots
+    const pct = typeof block.progressPct === "number"
+      ? block.progressPct
+      : block.spotsLeft && block.totalSpots
       ? Math.round(((block.totalSpots - block.spotsLeft) / block.totalSpots) * 100)
-      : 87;
+      : 92;
+    const totalSpots = block.totalSpots || 100;
     return (
       <section className="py-20 md:py-28 relative overflow-hidden" style={{ backgroundColor: "var(--color-charcoal)" }}>
         {/* Background orrery watermark */}
@@ -752,7 +755,7 @@ export const StatementBand: React.FC<any> = ({ block }) => {
           )}
 
           {/* Progress bar — animates on scroll-enter */}
-          <ProgressBar pct={pct} spotsLeft={block.spotsLeft || 13} totalSpots={block.totalSpots || 100} claimed={block.totalSpots - block.spotsLeft || 87} />
+          <ProgressBar pct={pct} totalSpots={totalSpots} />
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
@@ -1597,6 +1600,7 @@ export const FeatureCarousel: React.FC<any> = ({ block }) => {
   // Visual Renderer based on Tab ID
   const renderVisual = (id: string) => {
     switch(id) {
+      case "chart":
       case "natal":
         return (
           <div className="absolute inset-0 flex items-center justify-center p-4">
@@ -1623,6 +1627,61 @@ export const FeatureCarousel: React.FC<any> = ({ block }) => {
                   ]}
                 />
              </div>
+             {id === "chart" && (
+               <div className="absolute bottom-6 left-6 right-6 md:left-auto md:w-64 bg-[var(--color-eggshell)] text-[var(--color-charcoal)] border border-white/20 shadow-2xl rounded-2xl p-4">
+                  <div className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-widest text-black/45 mb-2">
+                    <FileText size={13} />
+                    Natal chart ready
+                  </div>
+                  <div className="font-secondary text-2xl leading-none mb-3">Placements, aspects, lines</div>
+                  <div className="grid grid-cols-3 gap-2 font-mono text-[8px] uppercase tracking-widest">
+                    <span className="bg-black/5 rounded-full px-2 py-1 text-center">Sun</span>
+                    <span className="bg-black/5 rounded-full px-2 py-1 text-center">Moon</span>
+                    <span className="bg-black/5 rounded-full px-2 py-1 text-center">ACG</span>
+                  </div>
+               </div>
+             )}
+          </div>
+        );
+      case "travel":
+        return (
+          <div className="absolute inset-0 overflow-hidden bg-[var(--color-charcoal)]">
+             <Image
+               src="/tokyo-tower-unsplash.jpg"
+               alt="Tokyo Tower skyline at dusk"
+               fill
+               sizes="(max-width: 1024px) 100vw, 50vw"
+               className="object-cover object-center opacity-90"
+             />
+             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/10 pointer-events-none"></div>
+             <div className="absolute left-5 right-5 bottom-5 md:left-8 md:right-auto md:w-80 bg-[var(--color-eggshell)] text-[var(--color-charcoal)] rounded-2xl shadow-2xl border border-white/20 overflow-hidden">
+                <div className="p-4 border-b border-black/5 flex items-center justify-between">
+                   <div className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-widest text-black/45">
+                      <Plane size={13} />
+                      Travel reading
+                   </div>
+                   <span className="font-mono text-[9px] uppercase tracking-widest bg-[var(--color-y2k-blue)] text-white px-2 py-1 rounded-full">82 score</span>
+                </div>
+                <div className="p-4 space-y-3">
+                   <div className="flex items-center justify-between gap-4">
+                      <div>
+                         <div className="font-secondary text-3xl leading-none">Tokyo</div>
+                         <div className="font-mono text-[9px] uppercase tracking-widest text-black/40 mt-1">Career · romance · identity</div>
+                      </div>
+                      <MapPin size={20} className="text-[var(--color-spiced-life)]" />
+                   </div>
+                   <div className="grid grid-cols-2 gap-2 font-mono text-[9px] uppercase tracking-widest">
+                      <div className="rounded-xl bg-black/5 p-3">
+                         <CalendarDays size={13} className="mb-2 text-[var(--color-y2k-blue)]" />
+                         Best window<br />Aug 12-19
+                      </div>
+                      <div className="rounded-xl bg-black/5 p-3">
+                         <Compass size={13} className="mb-2 text-[var(--color-spiced-life)]" />
+                         Venus line<br />active
+                      </div>
+                   </div>
+                </div>
+             </div>
           </div>
         );
       case "acg":
@@ -1642,6 +1701,38 @@ export const FeatureCarousel: React.FC<any> = ({ block }) => {
                 />
              </div>
              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 pointer-events-none"></div>
+          </div>
+        );
+      case "couples":
+        return (
+          <div className="absolute inset-0 overflow-hidden bg-[var(--color-charcoal)]">
+             <Image
+               src="/couples_flow_hero.png"
+               alt="Couples reading flow preview"
+               fill
+               sizes="(max-width: 1024px) 100vw, 50vw"
+               className="object-cover object-center opacity-85"
+             />
+             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-black/20 pointer-events-none"></div>
+             <div className="absolute left-5 right-5 bottom-5 md:left-8 md:right-auto md:w-80 bg-[var(--color-eggshell)] text-[var(--color-charcoal)] rounded-2xl shadow-2xl border border-white/20 overflow-hidden">
+                <div className="p-4 border-b border-black/5 flex items-center justify-between">
+                   <div className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-widest text-black/45">
+                      <Users size={13} />
+                      Couples reading
+                   </div>
+                   <Heart size={15} className="text-[var(--color-spiced-life)]" />
+                </div>
+                <div className="p-4 space-y-3">
+                   <div>
+                      <div className="font-secondary text-3xl leading-none">Two charts, one place</div>
+                      <div className="font-mono text-[9px] uppercase tracking-widest text-black/40 mt-2">Synastry · timing · destination</div>
+                   </div>
+                   <div className="flex gap-2 font-mono text-[9px] uppercase tracking-widest">
+                      <span className="rounded-full bg-[var(--color-spiced-life)]/10 text-[var(--color-spiced-life)] px-3 py-2">Partner saved</span>
+                      <span className="rounded-full bg-black/5 px-3 py-2">Paris selected</span>
+                   </div>
+                </div>
+             </div>
           </div>
         );
       case "geodetic":
