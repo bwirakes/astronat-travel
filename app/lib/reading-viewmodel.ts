@@ -690,7 +690,48 @@ const HOUSE_TOPIC: Record<number, string> = {
     9: "expansion",
     10: "career & status",
     11: "community",
-    12: "interior life",
+    12: "private recovery",
+};
+
+const HOUSE_TOPIC_LONG: Record<number, string> = {
+    1: "self, body, and first impressions",
+    2: "money, resources, and what you protect",
+    3: "daily talk, neighbors, and short trips",
+    4: "home, roots, and emotional ground",
+    5: "romance, play, creativity, and children",
+    6: "work, health, and daily rhythm",
+    7: "partners, contracts, and close others",
+    8: "shared resources, intimacy, and deep change",
+    9: "travel, study, belief, and big ideas",
+    10: "career, reputation, and public responsibility",
+    11: "friends, groups, community, and future plans",
+    12: "private recovery, hidden pressure, and behind-the-scenes work",
+};
+
+const PLANET_SHIFT_SUBJECT: Record<string, string> = {
+    sun: "identity and visibility",
+    moon: "emotional life",
+    mercury: "thinking and conversation",
+    venus: "love, pleasure, and taste",
+    mars: "drive and action",
+    jupiter: "luck and growth",
+    saturn: "discipline and responsibility",
+    uranus: "freedom and disruption",
+    neptune: "imagination and longing",
+    pluto: "power and intensity",
+};
+
+const PLANET_SHIFT_ACTION: Record<string, string> = {
+    sun: "visibility, clear choices, and taking up space with other people",
+    moon: "rest, emotional reactions, and choosing what feels safe",
+    mercury: "questions, plans, messages, and daily replies",
+    venus: "connection, desire, spending, and social ease",
+    mars: "action, earning, effort, and protecting your energy",
+    jupiter: "learning, trust, bigger offers, and knowing when enough is enough",
+    saturn: "commitments, delays, budgets, and responsibility",
+    uranus: "changed plans, experiments, and refusing stale rules",
+    neptune: "dreams, blurred signals, art, and checked assumptions",
+    pluto: "clear terms, intensity, and changing what has power",
 };
 
 const GOAL_VIBE_PRESET: Record<string, { icon: string; title: string }> = {
@@ -1557,30 +1598,33 @@ function derivePlanetsInHouses(reading: any): V4PlanetHouseRow[] {
 
 function shiftCopy(name: string, from: number | undefined, to: number): string {
     const lower = name.toLowerCase();
-    const subjects: Record<string, string> = {
-        sun: "Your core identity",
-        moon: "Your emotional life",
-        mercury: "Your thinking and conversation",
-        venus: "Your taste for love and pleasure",
-        mars: "Your drive",
-        jupiter: "Your luck and growth",
-        saturn: "Your sense of discipline",
-        uranus: "Your appetite for disruption",
-        neptune: "Your dreaming and longing",
-        pluto: "Your edge and power",
-    };
-    const subject = subjects[lower] ?? `Your ${name}`;
+    const subject = PLANET_SHIFT_SUBJECT[lower] ?? `${name} energy`;
     const topicOf = (h: number | undefined) =>
         h ? (HOUSE_TOPIC[h] ?? "another life area") : null;
     const fromTopic = topicOf(from);
     const toTopic = topicOf(to) ?? "a different area of life";
+    const fromLong = from ? (HOUSE_TOPIC_LONG[from] ?? fromTopic) : null;
+    const toLong = HOUSE_TOPIC_LONG[to] ?? toTopic;
+    const action = PLANET_SHIFT_ACTION[lower] ?? "choosing what to do next";
+    const planet = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
     if (from === to) {
-        return `${subject} stays in ${toTopic} here — your house structure didn't rotate this planet.`;
+        return `Your ${planet} placement keeps ${subject} in the ${ordinal(to)} house, ${toLong}. Here, the place intensifies that same topic instead of redirecting it.`;
     }
     if (!fromTopic) {
-        return `${subject} settles into ${toTopic} here.`;
+        return `Your ${planet} placement puts ${subject} into the ${ordinal(to)} house, ${toLong}. In this place, ${action} matter more.`;
     }
-    return `${subject} moves from ${fromTopic} into ${toTopic} here.`;
+    return `Your ${planet} placement shifts from the ${ordinal(from)} house, ${fromLong}, into the ${ordinal(to)} house, ${toLong}. In this place, ${action} matter more.`;
+}
+
+function ordinal(n: number): string {
+    const v = n % 100;
+    if (v >= 11 && v <= 13) return `${n}th`;
+    switch (n % 10) {
+        case 1: return `${n}st`;
+        case 2: return `${n}nd`;
+        case 3: return `${n}rd`;
+        default: return `${n}th`;
+    }
 }
 
 function deriveAspectsToAngles(reading: any): V4AspectToAngle[] {
@@ -2012,6 +2056,25 @@ export function hasV4TeacherReading(teacherReading: unknown): boolean {
     return hasTabs && hasOverview && hasTiming;
 }
 
+function normalizeTabCopy(tabs: Record<string, any>): Record<string, any> {
+    const out: Record<string, any> = { ...tabs };
+    const whatShifts = out["what-shifts"];
+    if (isRecord(whatShifts) && typeof whatShifts.plainEnglishSummary === "string") {
+        out["what-shifts"] = {
+            ...whatShifts,
+            plainEnglishSummary: limitSentences(whatShifts.plainEnglishSummary, 4),
+        };
+    }
+    return out;
+}
+
+function limitSentences(text: string, maxSentences: number): string {
+    const clean = text.replace(/\s+/g, " ").trim();
+    if (!clean) return "";
+    const sentences = clean.match(/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/g) ?? [clean];
+    return sentences.slice(0, maxSentences).join(" ").replace(/\s+/g, " ").trim();
+}
+
 function evidenceSourceLabel(source: EvidencePoint["source"]): string {
     switch (source) {
         case "event":
@@ -2045,7 +2108,7 @@ function deterministicEvidenceCopy(point: EvidencePoint, mode: "lean" | "watch",
     return `${label} needs more care here (${source}${score}). Keep this part simple, explicit, and lower-pressure instead of assuming the city will do it for you.`;
 }
 
-function evidenceFromTheme(theme: ScoreNarrative["themes"][number], mode: "lean" | "watch"): EvidencePoint {
+function evidenceFromTheme(theme: ScoreNarrative["themes"][number]): EvidencePoint {
     return {
         label: theme.label,
         score: theme.score,
@@ -2180,7 +2243,15 @@ function deterministicTimingCopy(heroWindow: V4TravelWindow, travelWindows: V4Tr
 
 export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
     const travelType: V4TravelType = reading?.travelType === "relocation" ? "relocation" : "trip";
-    const goalIds: string[] = Array.isArray(reading?.goalIds) ? reading.goalIds.filter((g: any) => typeof g === "string") : [];
+    const persistedGoalIds: string[] = Array.isArray(reading?.goalIds)
+        ? reading.goalIds.filter((g: any) => typeof g === "string")
+        : [];
+    const narrativeGoalIds: string[] = Array.isArray(reading?.scoreNarrative?.selectedGoals)
+        ? reading.scoreNarrative.selectedGoals
+            .map((goal: any) => goal?.goalId)
+            .filter((goalId: any): goalId is string => typeof goalId === "string")
+        : [];
+    const goalIds: string[] = persistedGoalIds.length ? persistedGoalIds : narrativeGoalIds;
 
     const travelDateISO = reading?.travelDate
         ? new Date(reading.travelDate).toISOString().slice(0, 10)
@@ -2301,7 +2372,7 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
         ? normalizeHeadlineScoresInCopy(reading.teacherReading, heroWindow?.score ?? null)
         : null;
     const tabCopy = isRecord(trustedTeacherReading?.tabs)
-        ? trustedTeacherReading.tabs
+        ? normalizeTabCopy(trustedTeacherReading.tabs)
         : {};
     const baselineScore = typeof reading?.macroScore === "number" ? Math.round(reading.macroScore) : 0;
     const overviewCopy = trustedTeacherReading?.overview

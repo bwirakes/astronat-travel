@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { hasV4TeacherReading, toV4ViewModel } from "@/app/lib/reading-viewmodel";
 import { READING_TAB_IDS, type ReadingTabId } from "@/app/lib/reading-tabs";
 
-function baseReading(teacherReading?: any) {
+function baseReading(teacherReading?: unknown) {
   return {
     destination: "Singapore, SG",
     destinationLat: 1.3521,
@@ -136,6 +136,46 @@ describe("V4 teacherReading completeness", () => {
     expect(vm.tabs.overview?.leanInto).toEqual(["Teacher lean into."]);
     expect(vm.tabs.timing?.closingVerdict).toBe("Teacher timing verdict.");
     expect(Object.keys(vm.tabs.copy)).toEqual([...READING_TAB_IDS]);
+  });
+
+  it("shortens what-shifts summary copy to four sentences while preserving the intro beats", () => {
+    const teacherReading = completeTeacherReading();
+    teacherReading.tabs["what-shifts"].plainEnglishSummary = [
+      "Capricorn rises here, with Saturn running the chart instead of natal Taurus's Venus.",
+      "People read you as more contained and deliberate in the first thirty seconds.",
+      "Work is the concrete domain at stake, especially how quickly you accept responsibility.",
+      "For your career goal, this helps if you want authority and strains you if you wanted ease.",
+      "Watch how your shoulders feel on arrival day.",
+      "The payoff is real, but only if you pace yourself.",
+    ].join(" ");
+
+    const vm = toV4ViewModel(baseReading(teacherReading));
+    const summary = vm.tabs.copy["what-shifts"]?.plainEnglishSummary ?? "";
+
+    expect(summary).toContain("Capricorn rises here");
+    expect(summary).toContain("career goal");
+    expect(summary).not.toContain("Watch how your shoulders feel");
+    expect((summary.match(/[.!?](?=\s|$)/g) ?? []).length).toBe(4);
+  });
+
+  it("writes planet-house fallback shifts as practical consequences, not generic movement labels", () => {
+    const vm = toV4ViewModel({
+      ...baseReading(),
+      natalPlanets: [
+        { name: "Mars", longitude: 330, house: 12 },
+      ],
+      relocatedCusps: [300, 330, 0, 30, 60, 90, 120, 150, 180, 210, 240, 270],
+      natalCusps: Array.from({ length: 12 }, (_, i) => i * 30),
+      natalAngles: { ASC: 0, IC: 90, DSC: 180, MC: 270 },
+    });
+
+    const mars = vm.relocated.planetsInHouses.find((p) => p.planet === "Mars");
+
+    expect(mars?.shift).toContain("Your Mars placement shifts from the 12th house");
+    expect(mars?.shift).toContain("private recovery, hidden pressure");
+    expect(mars?.shift).toContain("2nd house");
+    expect(mars?.shift).toContain("earning");
+    expect(mars?.shift).not.toContain("moves from private recovery into money & resources here");
   });
 
   it("normalizes stale teacher headline-score mentions to the hero score", () => {

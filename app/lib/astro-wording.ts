@@ -143,6 +143,50 @@ export function resolvePlacementImplication({
   return implication || buildPlacementImplicationSentence({ planet, sign, house });
 }
 
+export function buildRelocatedPlacementImplication({
+  planet,
+  sign,
+  house,
+}: {
+  planet: string;
+  sign: string;
+  house: number;
+}): string {
+  const houseDomain = HOUSE_DOMAINS[house] || "life";
+  const p = planet.toLowerCase();
+  const verb = RELOCATED_PLANET_ACTIONS[p] || "expresses itself";
+  const consequence = RELOCATED_HOUSE_PRACTICALS[house] || "notice what this place asks you to do differently";
+  return `${planet} describes ${verb}. In this place, ${planet} in ${sign} works through the ${getOrdinal(house)} house of ${houseDomain}, so ${consequence}.`;
+}
+
+const RELOCATED_PLANET_ACTIONS: Record<string, string> = {
+  sun: "visibility, identity, and where you take up space",
+  moon: "mood, body needs, and emotional safety",
+  mercury: "thinking, talking, planning, and messages",
+  venus: "connection, pleasure, taste, and money ease",
+  mars: "drive, anger, courage, and how you take action",
+  jupiter: "growth, faith, opportunity, and excess",
+  saturn: "discipline, limits, duty, and pressure",
+  uranus: "change, disruption, freedom, and surprise",
+  neptune: "dreams, fog, devotion, and imagination",
+  pluto: "power, intensity, control, and transformation",
+};
+
+const RELOCATED_HOUSE_PRACTICALS: Record<number, string> = {
+  1: "your body language and first impression carry more weight",
+  2: "earning, spending, pricing, and protecting resources become the live issue",
+  3: "daily conversations, errands, siblings, and local movement become louder",
+  4: "home, family, sleep, and emotional ground need more attention",
+  5: "dating, play, creativity, and children become easier to activate",
+  6: "workload, health, habits, and routines need clearer structure",
+  7: "partners, clients, contracts, and close others become the mirror",
+  8: "shared money, intimacy, endings, and trust need care",
+  9: "travel, study, faith, and big-picture decisions pull focus",
+  10: "career, reputation, authority, and public visibility become harder to ignore",
+  11: "friends, groups, networks, and future plans become the doorway",
+  12: "rest, privacy, hidden pressure, and behind-the-scenes work need room",
+};
+
 // Score → status label
 export const SCORE_STATUS: Record<string, string> = {
   "Peak Flow":        "Peak Flow",

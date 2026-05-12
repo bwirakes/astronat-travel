@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { readFileSync } from "node:fs";
 import { CouplesReadingSchema, TeacherReadingSchema } from "@/lib/ai/schemas";
 import { buildRiskSummary, travelRiskForEvent } from "@/lib/readings/ai-input-builder";
 import { couplesRiskForEvent } from "@/lib/readings/ai-couples-input-builder";
@@ -32,6 +33,14 @@ const teacherTabs = {
 };
 
 describe("AI reading schema contracts", () => {
+  it("keeps what-shifts intro shorter than the other tab summaries in the teacher prompt", () => {
+    const prompt = readFileSync("lib/ai/prompts/teacher-reading.ts", "utf8");
+
+    expect(prompt).toContain('tabs["what-shifts"].plainEnglishSummary');
+    expect(prompt).toContain("which must be exactly 4 concise sentences");
+    expect(prompt).toContain('Do not add a fifth sentence');
+  });
+
   it("accepts the current teacher reading contract required by the V4 tabs", () => {
     const parsed = TeacherReadingSchema.safeParse({
       tabs: teacherTabs,

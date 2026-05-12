@@ -150,8 +150,11 @@ function ReadingContent(): ReactElement | null {
                 ? data.reading_date.slice(0, 10)
                 : new Date(data.reading_date).toISOString().slice(0, 10)),
             travelType: d.travelType || "trip",
+            goals: d.goals || [],
+            goalIds: d.goalIds || [],
             macroScore: d.macroScore || data.reading_score || 0,
             macroVerdict: d.macroVerdict || "Mixed",
+            scoreNarrative: d.scoreNarrative,
             houses: d.houses || [],
             transitWindows: d.transitWindows || [],
             planetaryLines: d.planetaryLines || [],
