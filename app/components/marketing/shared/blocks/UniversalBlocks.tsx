@@ -11,8 +11,13 @@ import InteractiveGeodeticWorldMap from "@/app/geodetic/components/InteractiveGe
 // Payload sends down raw HTML (if using Lexical HTML converter) or we handle basic mapping.
 // For safety, assuming block.xxxHtml might be a pre-rendered string or slate structure.
 const renderHtml = (htmlContent: any) => {
-  if (typeof htmlContent === "string") return htmlContent;
-  return String(htmlContent || "");
+  const raw = typeof htmlContent === "string" ? htmlContent : String(htmlContent || "");
+  return raw
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&");
 };
 
 /**
@@ -145,9 +150,10 @@ export const HeroSection: React.FC<any> = ({ block }) => {
           </h1>
 
           {/* Subtitle */}
-          <p className="font-body text-base md:text-lg leading-relaxed text-[var(--text-secondary)] max-w-[440px] mb-7 opacity-85">
-            {block.subtitle}
-          </p>
+          <div
+            className="font-body text-base md:text-lg leading-relaxed text-[var(--text-secondary)] max-w-[440px] mb-7 opacity-85 prose-editorial"
+            dangerouslySetInnerHTML={{ __html: renderHtml(block.subtitle) }}
+          />
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row flex-wrap gap-4 items-stretch sm:items-center mb-10">
@@ -320,7 +326,7 @@ export const HeroSection: React.FC<any> = ({ block }) => {
 
   // ── Standard Layout (original) ────────────────────────────────────────
   return (
-    <section className="pt-16 pb-14 md:pt-20 md:pb-24 relative overflow-hidden">
+    <section className="pt-16 pb-14 md:pt-20 md:pb-24 relative overflow-hidden min-h-[calc(100svh-88px)] flex items-center">
       <div className="absolute inset-0 pointer-events-none opacity-5 bg-[linear-gradient(var(--text-primary)_1px,transparent_1px),linear-gradient(90deg,var(--text-primary)_1px,transparent_1px)]" style={{ backgroundSize: "60px 60px" }} />
       {block.decorativeElement === "rotating-svg" && (
         <div className="absolute right-[-10vw] top-1/2 -translate-y-1/2 w-[min(580px,48vw)] h-[min(580px,48vw)] opacity-10 pointer-events-none mix-blend-multiply flex items-center justify-center z-0 hidden lg:flex animate-[spin_100s_linear_infinite]">
@@ -332,7 +338,7 @@ export const HeroSection: React.FC<any> = ({ block }) => {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-6 relative z-10 grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] items-center gap-12 md:gap-14">
+      <div className="max-w-7xl mx-auto px-6 relative z-10 grid grid-cols-1 lg:grid-cols-[minmax(0,0.88fr)_minmax(360px,0.72fr)] items-center gap-10 md:gap-14 w-full">
         <div className="flex flex-col justify-center">
           {block.kicker && (
             <div className="flex items-center gap-3 mb-6">
@@ -352,9 +358,10 @@ export const HeroSection: React.FC<any> = ({ block }) => {
             <div dangerouslySetInnerHTML={{ __html: renderHtml(block.titleHtml) }} />
           </h1>
 
-          <p className="text-xs font-light text-[var(--text-secondary)] leading-[1.65] max-w-sm mb-8 opacity-80 whitespace-pre-wrap">
-            {block.subtitle}
-          </p>
+          <div
+            className="text-sm font-light text-[var(--text-secondary)] leading-[1.7] max-w-[31rem] mb-8 opacity-85 prose-editorial"
+            dangerouslySetInnerHTML={{ __html: renderHtml(block.subtitle) }}
+          />
 
           <div className="flex flex-wrap gap-4 items-center">
             {block.primaryCta?.label && (
@@ -371,9 +378,28 @@ export const HeroSection: React.FC<any> = ({ block }) => {
         </div>
         
         {block.heroImage && (
-          <div className="relative">
-            <div className="relative w-full aspect-[4/5] md:aspect-auto md:h-[620px] overflow-hidden rounded-[2rem]">
-              <Image src={block.heroImage?.url || block.heroImage || "/nat-1.jpg"} alt={block.heroImage?.alt || "Hero Element"} fill priority style={{ objectFit: "cover", objectPosition: "center top" }} />
+          <div className="relative lg:justify-self-end w-full max-w-[520px] mx-auto lg:mx-0">
+            <div className="absolute -left-5 -top-5 h-24 w-24 border-l border-t border-[var(--color-y2k-blue)] opacity-70 pointer-events-none" />
+            <div className="absolute -right-4 bottom-8 h-28 w-28 border-r border-b border-[var(--color-spiced-life)] opacity-70 pointer-events-none" />
+            <div className="relative aspect-[16/10] lg:aspect-[4/5] max-h-[360px] lg:max-h-[min(68svh,660px)] min-h-[240px] sm:min-h-[300px] lg:min-h-[360px] overflow-hidden [clip-path:var(--cut-lg)] border border-[var(--surface-border)] bg-[var(--bg-raised)]">
+              <Image
+                src={block.heroImage?.url || block.heroImage || "/nat-1.jpg"}
+                alt={block.heroImage?.alt || block.heroImageAlt || "Nat in an editorial travel portrait"}
+                fill
+                priority
+                sizes="(min-width: 1024px) 40vw, 92vw"
+                className="object-cover"
+                style={{ objectPosition: block.heroImagePosition || "center 44%" }}
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0)_52%,rgba(0,0,0,0.5)_100%)] pointer-events-none" />
+              <div className="absolute left-5 right-5 bottom-5 flex items-end justify-between gap-4 text-[var(--color-eggshell)]">
+                <span className="font-mono text-[9px] uppercase tracking-[0.18em] leading-relaxed opacity-80">
+                  Geodetic field notes
+                </span>
+                <span className="font-secondary text-[clamp(2.5rem,5vw,4.5rem)] leading-none text-[var(--color-spiced-life)]">
+                  Nat
+                </span>
+              </div>
             </div>
           </div>
         )}
@@ -935,7 +961,10 @@ export const CardGrid: React.FC<any> = ({ block }) => {
               <div key={i} className={`p-10 md:p-12 min-h-[360px] flex flex-col rounded-[2rem] theme-block-h ${cardTheme.bgClass} ${cardTheme.textClass}`} style={p.bgToken === 'acqua' ? { backgroundColor: 'var(--color-acqua-soft)', color: 'var(--color-charcoal)' } : undefined}>
                 {p.num && <div className="font-primary text-5xl mb-8 leading-none opacity-40 shrink-0">{p.num}</div>}
                 <h3 className="font-secondary text-2xl md:text-3xl mb-4 leading-tight lowercase">{p.title}</h3>
-                <p className={`font-body text-sm leading-relaxed ${cardTheme.mutedClass} flex-1`}>{p.desc}</p>
+                <div
+                  className={`font-body text-sm leading-relaxed ${cardTheme.mutedClass} flex-1 prose-editorial`}
+                  dangerouslySetInnerHTML={{ __html: renderHtml(p.desc) }}
+                />
                 {p.tag && (
                   <div className={`font-mono text-[9px] uppercase tracking-widest mt-8 border-t pt-4 ${cardTheme.borderClass}`}>
                     {p.tag}
@@ -1315,31 +1344,55 @@ export const CtaBand: React.FC<any> = ({ block }) => {
 
   if (layout === "cta-cards") {
     return (
-      <section className="py-16 md:py-24 bg-[var(--color-y2k-blue)] relative overflow-hidden">
-         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-12 relative z-10">
+      <section className="py-16 md:py-24 bg-[var(--color-y2k-blue)] relative overflow-hidden border-y border-[rgba(248,245,236,0.16)]">
+         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-[minmax(0,0.86fr)_minmax(0,1.14fr)] gap-10 lg:gap-14 relative z-10 items-stretch">
             <div>
                {block.kicker && <div className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--color-eggshell)] opacity-60 mb-6">{block.kicker}</div>}
-               <h2 className="font-primary text-5xl md:text-7xl uppercase leading-[0.9] text-white mb-8" dangerouslySetInnerHTML={{ __html: renderHtml(block.headingHtml) }} />
-               <p className="font-body text-base md:text-lg leading-relaxed text-white/80 max-w-sm">{block.body}</p>
+               <h2 className="font-primary text-5xl md:text-7xl uppercase leading-[0.9] text-[var(--text-on-y2k-blue)] mb-8" dangerouslySetInnerHTML={{ __html: renderHtml(block.headingHtml) }} />
+               <p className="font-body text-base md:text-lg leading-relaxed text-[var(--text-on-y2k-blue)] opacity-80 max-w-sm">{block.body}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                {block.primaryCard && (
-                  <Link href={block.primaryCard.href || "#"} className="bg-[var(--color-acqua)] p-8 md:p-10 rounded-[2rem] flex flex-col hover:opacity-90 transition-opacity md:col-span-2 group">
-                     <div className="font-mono text-[9px] uppercase tracking-widest text-[var(--color-charcoal)] opacity-60 mb-4">{block.primaryCard.kicker}</div>
-                     <h3 className="font-secondary text-3xl md:text-4xl text-[var(--color-charcoal)] leading-tight flex-1" dangerouslySetInnerHTML={{ __html: renderHtml(block.primaryCard.titleHtml) }} />
-                     <div className="flex justify-between items-end mt-12 w-full">
-                        <div className="w-12 h-12 rounded-full border border-[var(--color-charcoal)] flex items-center justify-center group-hover:bg-[var(--color-charcoal)] group-hover:text-[var(--color-acqua)] transition-colors">
-                           <ArrowRight size={20} />
+                  <Link
+                    href={block.primaryCard.href || "#"}
+                    className="bg-[var(--color-acqua-soft)] text-[var(--text-on-acqua-soft)] p-7 md:p-10 [clip-path:var(--cut-md)] flex flex-col md:col-span-2 group border border-[rgba(27,27,27,0.14)] min-h-[17rem] transition-colors hover:bg-[var(--color-eggshell)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--color-eggshell)]"
+                  >
+                     <div className="font-mono text-[9px] uppercase tracking-[0.18em] opacity-65 mb-4">{block.primaryCard.kicker}</div>
+                     <h3 className="font-secondary text-3xl md:text-4xl leading-tight tracking-normal flex-1 text-[var(--color-charcoal)] [&_span]:text-inherit" dangerouslySetInnerHTML={{ __html: renderHtml(block.primaryCard.titleHtml) }} />
+                     <div className="flex flex-wrap justify-between items-end gap-4 mt-10 w-full border-t border-current/15 pt-5">
+                        <span className="font-mono text-[10px] uppercase tracking-[0.16em] font-bold">
+                          {block.primaryCard.ctaLabel || "Explore the reading"}
+                        </span>
+                        <div className="w-11 h-11 rounded-full border border-current flex items-center justify-center bg-transparent text-current group-hover:bg-[var(--color-charcoal)] group-hover:text-[var(--color-acqua-soft)] transition-colors">
+                           <ArrowRight size={18} />
                         </div>
                      </div>
                   </Link>
                )}
                {block.secondaryCards?.map((c: any, i: number) => (
-                  <Link key={i} href={c.href || "#"} className="bg-[var(--bg-raised)] p-8 md:p-10 rounded-[2rem] flex flex-col hover:bg-[var(--color-charcoal)] transition-colors group border border-white/5">
-                     <div className="font-mono text-[9px] uppercase tracking-widest text-white/60 mb-4">{c.kicker}</div>
-                     <h3 className="font-secondary text-2xl text-white leading-tight flex-1" dangerouslySetInnerHTML={{ __html: renderHtml(c.titleHtml) }} />
-                     <div className="mt-8 flex justify-end">
-                        <ArrowRight size={20} className="text-[var(--color-y2k-blue)] group-hover:block hidden" />
+                  <Link
+                    key={i}
+                    href={c.href || "#"}
+                    className={`p-7 md:p-8 [clip-path:var(--cut-sm)] flex flex-col min-h-[14rem] transition-colors group border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--color-eggshell)] ${
+                      i % 2 === 0
+                        ? "bg-[var(--color-charcoal)] text-[var(--text-on-charcoal)] border-[rgba(248,245,236,0.18)] hover:bg-[var(--color-black)]"
+                        : "bg-[var(--color-eggshell)] text-[var(--color-charcoal)] border-[rgba(27,27,27,0.12)] hover:bg-[var(--color-cream)]"
+                    }`}
+                  >
+                     <div className="font-mono text-[9px] uppercase tracking-[0.18em] opacity-65 mb-4">{c.kicker}</div>
+                     <h3
+                       className={`font-secondary text-2xl leading-tight tracking-normal flex-1 [&_span]:text-inherit ${
+                         i % 2 === 0 ? "text-[var(--color-eggshell)]" : "text-[var(--color-charcoal)]"
+                       }`}
+                       dangerouslySetInnerHTML={{ __html: renderHtml(c.titleHtml) }}
+                     />
+                     <div className="mt-8 flex items-center justify-between gap-4 border-t border-current/15 pt-5">
+                        <span className="font-mono text-[10px] uppercase tracking-[0.16em] font-bold">
+                          {c.ctaLabel || "Open"}
+                        </span>
+                        <span className="w-10 h-10 rounded-full border border-current flex items-center justify-center text-current group-hover:bg-[var(--color-y2k-blue)] group-hover:text-[var(--text-on-y2k-blue)] transition-colors">
+                          <ArrowRight size={17} />
+                        </span>
                      </div>
                   </Link>
                ))}

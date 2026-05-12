@@ -56,7 +56,7 @@ function solveLatForAsc(lonDeg: number, targetDeg: number): number | null {
 
 /** Signed angular difference a − b in [-180, 180]. */
 function shortestDelta(a: number, b: number): number {
-    let d = ((a - b) + 540) % 360 - 180;
+    const d = ((a - b) + 540) % 360 - 180;
     return d;
 }
 
@@ -84,7 +84,6 @@ function polylinePoints(curve: Array<[number, number]>): string {
 
 export default function InteractiveGeodeticWorldMap({ className }: { className?: string }) {
     const [activeZoneId, setActiveZoneId] = useState<string | null>(null);
-    const isDark = true;
 
     const ascBoundaries = useMemo(() => buildAscBoundaries(), []);
 
@@ -113,16 +112,16 @@ export default function InteractiveGeodeticWorldMap({ className }: { className?:
                     ))}
                     {/* ASC curve stroke — a warmer gold so they read as a distinct layer from MC red. */}
                     <linearGradient id="asc-curve" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="rgba(201,169,110,0.7)" />
-                        <stop offset="100%" stopColor="rgba(201,169,110,0.7)" />
+                        <stop offset="0%" stopColor="var(--geo-atlas-asc-line)" />
+                        <stop offset="100%" stopColor="var(--geo-atlas-asc-line)" />
                     </linearGradient>
                 </defs>
 
                 {/* World Map Landmass */}
                 <path
                     d={WORLD_MAP_PATH}
-                    fill={isDark ? "rgba(255,255,255,0.08)" : "rgba(27,27,27,0.12)"}
-                    stroke={isDark ? "rgba(255,255,255,0.2)" : "rgba(27,27,27,0.3)"}
+                    fill="var(--geo-atlas-land)"
+                    stroke="var(--geo-atlas-land-stroke)"
                     strokeWidth="0.5"
                 />
 
@@ -145,7 +144,7 @@ export default function InteractiveGeodeticWorldMap({ className }: { className?:
                                 strokeWidth={isActive ? 1.5 : 0.5}
                                 strokeDasharray={isActive ? "none" : "4 4"}
                                 style={{ transition: "all 0.4s ease", cursor: "pointer" }}
-                                opacity={activeZoneId ? (isActive ? 1 : 0.2) : 0.4}
+                                opacity={activeZoneId ? (isActive ? "var(--geo-atlas-zone-active-opacity)" : "var(--geo-atlas-zone-inactive-opacity)") : "var(--geo-atlas-zone-opacity)"}
                                 onMouseEnter={() => setActiveZoneId(z.id)}
                                 onMouseLeave={() => setActiveZoneId(null)}
                                 onClick={() => setActiveZoneId(z.id)}
@@ -153,7 +152,7 @@ export default function InteractiveGeodeticWorldMap({ className }: { className?:
 
                             <g
                                 transform={`translate(${x1 + width / 2 - 8}, 20)`}
-                                opacity={activeZoneId ? (isActive ? 1 : 0.1) : 0.2}
+                                opacity={activeZoneId ? (isActive ? 1 : 0.08) : "var(--geo-atlas-sign-opacity)"}
                                 style={{ transition: "opacity 0.4s ease", color: elem.stroke }}
                                 dangerouslySetInnerHTML={{ __html: SIGN_PATHS[z.sign] }}
                             />
@@ -162,7 +161,7 @@ export default function InteractiveGeodeticWorldMap({ className }: { className?:
                                 x1={x1} y1={0} x2={x1} y2={500}
                                 stroke={elem.stroke}
                                 strokeWidth={isActive ? 1.5 : 0.5}
-                                opacity={activeZoneId ? (isActive ? 0.9 : 0.15) : 0.25}
+                                opacity={activeZoneId ? (isActive ? 0.9 : 0.1) : 0.18}
                                 style={{ transition: "all 0.4s ease" }}
                             />
 
@@ -172,7 +171,7 @@ export default function InteractiveGeodeticWorldMap({ className }: { className?:
                                 fontSize="7"
                                 fill={elem.stroke}
                                 fontFamily="var(--font-mono)"
-                                opacity={activeZoneId ? (isActive ? 0.9 : 0.15) : 0.3}
+                                opacity={activeZoneId ? (isActive ? 0.9 : 0.08) : 0.22}
                                 style={{ transition: "opacity 0.4s ease" }}
                             >
                                 {z.startLon >= 0 ? `${z.startLon}°E` : `${Math.abs(z.startLon)}°W`}
@@ -196,18 +195,14 @@ export default function InteractiveGeodeticWorldMap({ className }: { className?:
                             <polyline
                                 points={polylinePoints(b.points)}
                                 fill="none"
-                                stroke="rgba(201,169,110,0.8)"
+                                stroke="var(--geo-atlas-asc-line)"
                                 strokeWidth={isActiveEdge ? 1.6 : 0.7}
                                 strokeDasharray={isActiveEdge ? "none" : "2 3"}
-                                opacity={
-                                    activeZoneId
-                                        ? (isActiveEdge ? 1 : 0.15)
-                                        : 0.55
-                                }
+                                opacity={activeZoneId ? (isActiveEdge ? 0.95 : 0.06) : 0.18}
                                 style={{ transition: "all 0.4s ease" }}
                             />
-                            {/* Sign glyph at a sensible latitude anchor — the curve's equatorial crossing. */}
-                            {b.points.length > 0 && (() => {
+                            {/* Label only the active ASC boundaries; all labels at rest made the map read as static. */}
+                            {isActiveEdge && b.points.length > 0 && (() => {
                                 // Find the point closest to lat 0 for a label anchor.
                                 let best = b.points[0];
                                 for (const p of b.points) if (Math.abs(p[1]) < Math.abs(best[1])) best = p;
@@ -215,10 +210,10 @@ export default function InteractiveGeodeticWorldMap({ className }: { className?:
                                     <text
                                         x={projectLon(best[0]) + 4}
                                         y={projectLat(best[1]) - 3}
-                                        fontSize="7"
-                                        fill="rgba(201,169,110,0.85)"
+                                        fontSize="8"
+                                        fill="var(--geo-atlas-asc-label)"
                                         fontFamily="var(--font-mono)"
-                                        opacity={activeZoneId ? (isActiveEdge ? 1 : 0.15) : 0.5}
+                                        opacity={0.95}
                                         style={{ transition: "opacity 0.4s ease" }}
                                     >
                                         {b.signEnteringOnNorth} ASC
@@ -230,12 +225,12 @@ export default function InteractiveGeodeticWorldMap({ className }: { className?:
                 })}
 
                 {/* Equator */}
-                <line x1="0" y1={projectLat(0)} x2="1000" y2={projectLat(0)} stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" strokeDasharray="6 4" />
-                <text x="4" y={projectLat(0) - 4} fontSize="7" fill="rgba(255,255,255,0.3)" fontFamily="var(--font-mono)">EQUATOR</text>
+                <line x1="0" y1={projectLat(0)} x2="1000" y2={projectLat(0)} stroke="var(--geo-atlas-grid)" strokeWidth="0.5" strokeDasharray="6 4" />
+                <text x="4" y={projectLat(0) - 4} fontSize="7" fill="var(--geo-atlas-grid-label)" fontFamily="var(--font-mono)">EQUATOR</text>
 
                 {/* Tropics */}
-                <line x1="0" y1={projectLat(23.5)} x2="1000" y2={projectLat(23.5)} stroke="rgba(201,169,110,0.1)" strokeWidth="0.4" strokeDasharray="3 6" />
-                <line x1="0" y1={projectLat(-23.5)} x2="1000" y2={projectLat(-23.5)} stroke="rgba(201,169,110,0.1)" strokeWidth="0.4" strokeDasharray="3 6" />
+                <line x1="0" y1={projectLat(23.5)} x2="1000" y2={projectLat(23.5)} stroke="var(--geo-atlas-tropic)" strokeWidth="0.4" strokeDasharray="3 6" />
+                <line x1="0" y1={projectLat(-23.5)} x2="1000" y2={projectLat(-23.5)} stroke="var(--geo-atlas-tropic)" strokeWidth="0.4" strokeDasharray="3 6" />
             </svg>
 
             {/* Pop-up info card for the hovered/clicked zone */}
@@ -249,17 +244,17 @@ export default function InteractiveGeodeticWorldMap({ className }: { className?:
                         <div
                             className="p-5 backdrop-blur-xl w-full mx-auto md:w-80 shadow-2xl"
                             style={{
-                                background: "rgba(10,10,10,0.85)",
+                                background: "var(--geo-atlas-info-bg)",
                                 border: `1px solid ${elem.stroke}`,
-                                borderRadius: "var(--shape-asymmetric-sm)",
+                                borderRadius: "var(--radius-sm)",
                             }}
                         >
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
-                                    <div className="font-primary text-3xl text-white/95">{zone.sign}</div>
+                                    <div className="font-primary text-3xl text-[var(--geo-atlas-info-text)]">{zone.sign}</div>
                                     <div className="text-2xl" style={{ color: elem.stroke }}>{zone.glyph}</div>
                                 </div>
-                                <div className="font-mono text-[9px] uppercase tracking-widest text-white/50 text-right">
+                                <div className="font-mono text-[9px] uppercase tracking-widest text-[var(--geo-atlas-info-muted)] text-right">
                                     {zone.startLon >= 0 ? `${zone.startLon}°E` : `${Math.abs(zone.startLon)}°W`}<br />
                                     to {zone.startLon + 30 >= 0 ? `${zone.startLon + 30}°E` : `${Math.abs(zone.startLon + 30)}°W`}
                                 </div>
@@ -267,10 +262,10 @@ export default function InteractiveGeodeticWorldMap({ className }: { className?:
                             <div className="font-secondary text-sm italic mb-3" style={{ color: elem.stroke }}>
                                 {zone.keyword}
                             </div>
-                            <p className="font-body text-xs text-white/80 leading-relaxed mb-3">
+                            <p className="font-body text-xs text-[var(--geo-atlas-info-text)] opacity-80 leading-relaxed mb-3">
                                 {zone.desc}
                             </p>
-                            <p className="font-mono text-[9px] uppercase tracking-widest text-white/60 mb-3">
+                            <p className="font-mono text-[9px] uppercase tracking-widest text-[var(--geo-atlas-info-muted)] mb-3">
                                 Red column = MC (Midheaven) zone · fixed vertical band<br />
                                 Gold curve = ASC (Rising) boundary · depends on latitude
                             </p>
