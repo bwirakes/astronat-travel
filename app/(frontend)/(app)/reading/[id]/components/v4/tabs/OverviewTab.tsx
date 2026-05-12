@@ -1,9 +1,8 @@
 "use client";
 
 import SignIcon from "@/app/components/SignIcon";
-import PlanetIcon from "@/app/components/PlanetIcon";
+import SectionHead from "../../shared/SectionHead";
 import TabSection from "../../shared/TabSection";
-import { WindowsList } from "../parts/WindowsList";
 import type { V4VM } from "./types";
 
 interface Props {
@@ -15,7 +14,6 @@ interface Props {
 const FONT_PRIMARY = "var(--font-primary, serif)";
 const FONT_BODY = "var(--font-body, system-ui)";
 const FONT_MONO = "var(--font-mono, monospace)";
-const FONT_DISPLAY_ALT_1 = "var(--font-display-alt-1, serif)";
 
 function WireframeGlobe() {
     // Stroke 0.5 on a 100×100 viewBox renders ~1.5–2.5 px at the 300–500 px
@@ -35,7 +33,7 @@ function WireframeGlobe() {
     );
 }
 
-export default function OverviewTab({ vm, copiedTab }: Props) {
+export default function OverviewTab({ vm, copiedTab, selectTab }: Props) {
     const selectedGoal = vm.scoreNarrative.selectedGoals[0];
     const leanInto = vm.tabs.overview?.leanInto ?? [];
     const watchOut = vm.tabs.overview?.watchOut ?? [];
@@ -58,11 +56,15 @@ export default function OverviewTab({ vm, copiedTab }: Props) {
     const watermarkSign = sunSign
         ? sunSign.charAt(0).toUpperCase() + sunSign.slice(1).toLowerCase()
         : null;
+    const topTheme = vm.scoreNarrative.strongestThemes[0];
+    const timing = vm.travelWindows[0];
+    const timingTitle = vm.timeline.grain === "month" ? "Arrive then" : "Go then";
+    const timingSectionTitle = vm.timeline.grain === "month" ? "Best month to arrive" : "Best timing";
 
     return (
         <TabSection
             kicker="Overview"
-            title="Your reading"
+            title="At a Glance"
             lead={fallbackLede}
             intro={summary}
         >
@@ -87,18 +89,18 @@ export default function OverviewTab({ vm, copiedTab }: Props) {
                 )}
 
                 {selectedGoal && (
-                    <div 
-                        className="mb-[clamp(40px,5vw,64px)] pl-[clamp(16px,2vw,24px)] border-l-[3px]" 
+                    <div
+                        className="mb-[clamp(28px,4vw,40px)] border-l-[3px] pl-[clamp(16px,2vw,22px)]"
                         style={{ borderColor: "var(--color-y2k-blue)" }}
                     >
-                        <h4
-                            className="m-0 mb-[12px] text-[11px] tracking-[0.15em] uppercase"
+                        <span
+                            className="block mb-[8px] text-[11px] tracking-[0.16em] uppercase"
                             style={{ color: "var(--color-y2k-blue)", fontFamily: FONT_MONO }}
                         >
-                            Primary Focus: {selectedGoal.label}
-                        </h4>
+                            You asked about {selectedGoal.label}
+                        </span>
                         <p
-                            className="m-0 max-w-[60ch] text-[clamp(20px,2vw,24px)] leading-[1.4] [text-wrap:balance]"
+                            className="m-0 max-w-[64ch] text-[clamp(20px,2vw,25px)] leading-[1.38] [text-wrap:balance]"
                             style={{ fontFamily: FONT_PRIMARY, color: "var(--text-primary)" }}
                         >
                             {vm.tabs.overview?.goalExplanation || selectedGoal.outcome}
@@ -106,149 +108,159 @@ export default function OverviewTab({ vm, copiedTab }: Props) {
                     </div>
                 )}
 
-                {/* Lean Into / Watch Out — bold full-color blocks */}
-                <div className="mt-[clamp(40px,6vw,80px)] border-t pt-[clamp(32px,5vw,48px)]" style={{ borderColor: "var(--surface-border)" }}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-[clamp(32px,5vw,64px)]">
-                        <SupportBlock
-                            title="Lean Into"
-                            items={leanInto.slice(0, 4)}
-                            variant="acqua"
+                <SectionHead
+                    index="01"
+                    title="How to use this place"
+                    flush
+                />
+                <section
+                    className="grid grid-cols-1 md:grid-cols-2 gap-0 border-t border-l"
+                    style={{ borderColor: "var(--surface-border)" }}
+                >
+                        <AnswerCard
+                            label="Use this for"
+                            items={leanInto.length ? leanInto.slice(0, 2) : [topTheme?.label || "This is the clearest thing to build the reading around."]}
+                            accent="var(--sage)"
                         />
-                        <SupportBlock
-                            title="Watch Out For"
-                            items={watchOut.slice(0, 4)}
-                            variant="spiced"
+                        <AnswerCard
+                            label="Don't use this for"
+                            items={watchOut.length ? watchOut.slice(0, 2) : ["Do not make this place carry every goal at once."]}
+                            accent="var(--color-spiced-life)"
                         />
-                    </div>
-                </div>
+                </section>
 
-                {/* Theme cards — side by side */}
-                <div className="mt-[clamp(44px,5vw,68px)] border-t pt-[clamp(32px,5vw,48px)] mb-[clamp(44px,5vw,68px)]" style={{ borderColor: "var(--surface-border)" }}>
-                    <div className="grid gap-[clamp(24px,4vw,48px)] grid-cols-1 md:grid-cols-[1fr_1px_1fr]">
-                        <ThemeListCard
-                            title="Strongest Themes"
-                            themes={vm.scoreNarrative.strongestThemes}
-                            scoreColor="var(--sage)"
+                {timing && (
+                    <>
+                        <SectionHead
+                            index="02"
+                            title={timingSectionTitle}
                         />
-                        <div className="hidden md:block bg-[var(--surface-border)] w-full h-full" />
-                        <ThemeListCard
-                            title="Less Emphasized"
-                            themes={vm.scoreNarrative.lessEmphasized}
-                            scoreColor="var(--color-spiced-life)"
+                        <TimingSummary
+                            label={timingTitle}
+                            title={timing.dates}
+                            body={timing.note}
+                            score={timing.score}
+                            onClick={() => selectTab?.("timing", true)}
                         />
-                    </div>
-                </div>
-
-                {/* Travel windows / arrival months summary — heading swaps by grain
-                    so the relocation rows ("Your move month / Strongest alternate / …")
-                    don't appear under a "Travel Windows" heading. */}
-                <div className="border-t pt-[clamp(32px,5vw,48px)] pb-[clamp(24px,3vw,32px)]" style={{ borderColor: "var(--surface-border)" }}>
-                    <h3
-                        className="tracking-[-0.01em] m-0 mb-[24px]"
-                        style={{ fontFamily: FONT_PRIMARY, fontSize: "clamp(26px, 3.5vw, 32px)", color: "var(--text-primary)" }}
-                    >
-                        {vm.timeline.grain === "month" ? "Best months to arrive" : "Travel Windows"}
-                    </h3>
-                    <WindowsList vm={vm} limit={3} />
-                </div>
+                    </>
+                )}
             </div>
         </TabSection>
     );
-
-    function ThemeListCard({
-        title,
-        themes,
-        scoreColor = "var(--text-primary)",
-    }: {
-        title: string;
-        themes: V4VM["scoreNarrative"]["strongestThemes"];
-        scoreColor?: string;
-    }) {
-        return (
-            <article className="flex flex-col">
-                <h3
-                    className="m-0 mb-[16px] leading-[1.05]"
-                    style={{ fontFamily: FONT_PRIMARY, fontSize: "clamp(28px, 3.5vw, 36px)", fontWeight: 400, color: "var(--text-primary)" }}
-                >
-                    {title}
-                </h3>
-                <div className="flex flex-col border-t" style={{ borderColor: "var(--text-primary)" }}>
-                    {themes.map((theme) => (
-                        <div
-                            key={theme.id}
-                            className="flex justify-between items-center py-[12px] border-b"
-                            style={{ borderColor: "var(--surface-border)", color: "var(--text-secondary)", fontFamily: FONT_BODY }}
-                        >
-                            <span className="text-[15px] leading-[1.4]">{theme.label}</span>
-                            <strong
-                                className="text-[12px] tracking-[0.05em] tabular-nums"
-                                style={{ color: scoreColor, fontFamily: FONT_MONO, fontWeight: 400 }}
-                            >
-                                {theme.score}
-                            </strong>
-                        </div>
-                    ))}
-                </div>
-            </article>
-        );
-    }
 }
 
-function SupportBlock({
-    title,
+function AnswerCard({
+    label,
     items,
-    variant,
+    accent,
 }: {
-    title: string;
+    label: string;
     items: string[];
-    variant: "acqua" | "spiced";
+    accent: string;
 }) {
-    const isAcqua = variant === "acqua";
-    const bg = isAcqua ? "#CAF1F0" : "#E67A7A"; // Hardcoded to retain vibrant colors in all modes
-    const textColor = "#1B1B1B"; // High contrast for solid bright blocks
-    const planet = isAcqua ? "Jupiter" : "Saturn"; // Benefic for Lean Into, Malefic for Watch Out
-
     return (
-        <div 
-            className="relative flex flex-col p-[clamp(28px,4vw,42px)] overflow-hidden" 
-            style={{ background: bg, color: textColor }}
+        <article
+            className="min-w-0 w-full text-left p-[clamp(22px,3vw,32px)] border-r border-b"
+            style={{ borderColor: "var(--surface-border)" }}
         >
-            {/* Micro-Texture: Floating Planet Icon */}
-            <div 
-                className="absolute -top-[15px] -right-[15px] opacity-[0.08] pointer-events-none mix-blend-overlay"
-                style={{ color: textColor }}
+            <div
+                className="mb-[16px] h-[3px] w-[42px]"
+                style={{ background: accent }}
+            />
+            <span
+                className="block mb-[10px] text-[11px] tracking-[0.16em] uppercase"
+                style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}
             >
-                <PlanetIcon planet={planet} size={180} />
-            </div>
-
-            <h3
-                className="leading-[1.05] m-0 mt-[8px] mb-6 [text-wrap:balance] relative z-10"
-                style={{
-                    fontFamily: FONT_PRIMARY,
-                    fontSize: "clamp(28px, 3.5vw, 36px)",
-                    fontWeight: 400,
-                    color: textColor
-                }}
-            >
-                {title}
-            </h3>
-            <ul className="list-none m-0 p-0 flex flex-col gap-4 relative z-10">
-                {items.map((item, i) => (
+                {label}
+            </span>
+            <ul className="m-0 p-0 list-none flex flex-col gap-[14px]">
+                {items.map((item, index) => (
                     <li
-                        key={i}
-                        className="text-[16px] leading-[1.5] [text-wrap:pretty] pl-6 relative font-medium"
-                        style={{ fontFamily: FONT_BODY, color: textColor }}
+                        key={`${label}-${index}`}
+                        className="relative pl-[18px] text-[15px] leading-[1.6] [text-wrap:pretty]"
+                        style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
                     >
                         <span
-                            className="absolute left-0 top-0 text-[18px]"
-                            style={{ color: textColor, fontFamily: FONT_PRIMARY, marginTop: "0.1em" }}
-                        >
-                            *
-                        </span>
+                            aria-hidden
+                            className="absolute left-0 top-[0.72em] h-[4px] w-[4px] rounded-full"
+                            style={{ background: accent }}
+                        />
                         {item}
                     </li>
                 ))}
             </ul>
-        </div>
+        </article>
+    );
+}
+
+function TimingSummary({
+    label,
+    title,
+    body,
+    score,
+    onClick,
+}: {
+    label: string;
+    title: string;
+    body: string;
+    score: number;
+    onClick?: () => void;
+}) {
+    return (
+        <article
+            onClick={onClick}
+            role={onClick ? "button" : undefined}
+            tabIndex={onClick ? 0 : undefined}
+            onKeyDown={(event) => {
+                if (!onClick) return;
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onClick();
+                }
+            }}
+            className="grid grid-cols-1 md:grid-cols-[minmax(220px,0.52fr)_minmax(0,1fr)] gap-[clamp(20px,4vw,56px)] border-t border-l border-r border-b p-[clamp(22px,3.5vw,34px)]"
+            style={{ borderColor: "var(--surface-border)", cursor: onClick ? "pointer" : undefined }}
+        >
+            <div className="min-w-0">
+                <div
+                    className="mb-[16px] h-[3px] w-[42px]"
+                    style={{ background: "var(--color-y2k-blue)" }}
+                />
+                <span
+                    className="block mb-[10px] text-[11px] tracking-[0.16em] uppercase"
+                    style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}
+                >
+                    {label}
+                </span>
+                <h3
+                    className="m-0 leading-[1.08] [text-wrap:balance]"
+                    style={{ fontFamily: FONT_PRIMARY, fontSize: "clamp(28px,3.6vw,40px)", fontWeight: 400, color: "var(--text-primary)" }}
+                >
+                    {title}
+                </h3>
+            </div>
+            <div className="min-w-0">
+                <div className="mb-[12px] flex items-baseline justify-between gap-4">
+                    <span
+                        className="text-[11px] tracking-[0.16em] uppercase"
+                        style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}
+                    >
+                        Timing score
+                    </span>
+                    <span
+                        className="text-[13px] tracking-[0.08em] uppercase tabular-nums"
+                        style={{ fontFamily: FONT_MONO, color: "var(--color-y2k-blue)" }}
+                    >
+                        {Math.round(score)}/100
+                    </span>
+                </div>
+                <p
+                    className="m-0 max-w-[72ch] text-[15px] leading-[1.65] [text-wrap:pretty]"
+                    style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
+                >
+                    {body}
+                </p>
+            </div>
+        </article>
     );
 }
