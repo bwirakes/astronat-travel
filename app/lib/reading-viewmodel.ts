@@ -2180,7 +2180,15 @@ function deterministicTimingCopy(heroWindow: V4TravelWindow, travelWindows: V4Tr
 
 export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
     const travelType: V4TravelType = reading?.travelType === "relocation" ? "relocation" : "trip";
-    const goalIds: string[] = Array.isArray(reading?.goalIds) ? reading.goalIds.filter((g: any) => typeof g === "string") : [];
+    const persistedGoalIds: string[] = Array.isArray(reading?.goalIds)
+        ? reading.goalIds.filter((g: any) => typeof g === "string")
+        : [];
+    const narrativeGoalIds: string[] = Array.isArray(reading?.scoreNarrative?.selectedGoals)
+        ? reading.scoreNarrative.selectedGoals
+            .map((goal: any) => goal?.goalId)
+            .filter((goalId: any): goalId is string => typeof goalId === "string")
+        : [];
+    const goalIds: string[] = persistedGoalIds.length ? persistedGoalIds : narrativeGoalIds;
 
     const travelDateISO = reading?.travelDate
         ? new Date(reading.travelDate).toISOString().slice(0, 10)
