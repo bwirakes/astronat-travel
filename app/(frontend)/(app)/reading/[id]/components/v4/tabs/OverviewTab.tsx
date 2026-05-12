@@ -15,7 +15,6 @@ interface Props {
 const FONT_PRIMARY = "var(--font-primary, serif)";
 const FONT_BODY = "var(--font-body, system-ui)";
 const FONT_MONO = "var(--font-mono, monospace)";
-const FONT_DISPLAY_ALT_1 = "var(--font-display-alt-1, serif)";
 
 function WireframeGlobe() {
     // Stroke 0.5 on a 100×100 viewBox renders ~1.5–2.5 px at the 300–500 px
@@ -36,7 +35,6 @@ function WireframeGlobe() {
 }
 
 export default function OverviewTab({ vm, copiedTab }: Props) {
-    const selectedGoal = vm.scoreNarrative.selectedGoals[0];
     const leanInto = vm.tabs.overview?.leanInto ?? [];
     const watchOut = vm.tabs.overview?.watchOut ?? [];
     const scoreExplanation = vm.tabs.overview?.scoreExplanation || "";
@@ -83,26 +81,6 @@ export default function OverviewTab({ vm, copiedTab }: Props) {
                         style={{ color: "var(--text-primary)" }}
                     >
                         <SignIcon sign={watermarkSign} size={220} />
-                    </div>
-                )}
-
-                {selectedGoal && (
-                    <div 
-                        className="mb-[clamp(40px,5vw,64px)] pl-[clamp(16px,2vw,24px)] border-l-[3px]" 
-                        style={{ borderColor: "var(--color-y2k-blue)" }}
-                    >
-                        <h4
-                            className="m-0 mb-[12px] text-[11px] tracking-[0.15em] uppercase"
-                            style={{ color: "var(--color-y2k-blue)", fontFamily: FONT_MONO }}
-                        >
-                            Primary Focus: {selectedGoal.label}
-                        </h4>
-                        <p
-                            className="m-0 max-w-[60ch] text-[clamp(20px,2vw,24px)] leading-[1.4] [text-wrap:balance]"
-                            style={{ fontFamily: FONT_PRIMARY, color: "var(--text-primary)" }}
-                        >
-                            {vm.tabs.overview?.goalExplanation || selectedGoal.outcome}
-                        </p>
                     </div>
                 )}
 
