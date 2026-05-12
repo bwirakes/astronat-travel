@@ -110,13 +110,11 @@ const BLOCK_TABS_RULES = `# The Main Feature (Tabs)
   - EVERY \`plainEnglishSummary\` MUST contain a so-what sentence: "Good for X, not for Y" or "Use this for X; do not force Y." This is mandatory even when the tab is technical.
   - For \`life-themes\`: Evaluate the strongest themes through the lens of the user's primary goal FIRST.
   - For \`place-field\`: The core question is "How do I fit in?". Mention how the user's core placements interact with the geography.
-  - For \`what-shifts\`: The core question is "How am I perceived here?". **5–6 sentences. This is the top summary at the very top of the tab — it must do real work, not stub out.** Use this recipe in order:
+  - For \`what-shifts\`: The core question is "How am I perceived here?". **Exactly 4 concise sentences. This is the top summary at the very top of the tab — orient quickly, then let \`chartRulerReframe\` carry the deeper interpretation.** Use this recipe in order:
     1. Receipt — name the relocated Rising sign and its ruling planet, then the natal Rising it replaces. ("Capricorn rises here, with Saturn now running the chart instead of natal Taurus's Venus.")
     2. What changes about how the user is perceived — lived terms, how a stranger reads you in the first 30 seconds. Concrete sensory or behavioral detail.
     3. What's at stake — name ONE concrete domain (work, sleep, conversations, money, dating, friendship, your phone, your apartment, your body, what you eat, who you text). NOT abstract noun-phrases like "your perspective" or "your worldview."
-    4. Goal-tie when \`macro.goalIds\` is non-empty — say bluntly if this helps or strains the user's primary goal. When empty, skip this beat.
-    5. One concrete thing to pay attention to in the first 24 hours of arriving — a literal observable.
-    6. (Optional) The trap or the payoff — one sentence on what doing-it-wrong looks like, OR one sentence on the upside if leaned into. Add when sentence 5 needs a finishing beat.
+    4. Goal-tie when \`macro.goalIds\` is non-empty, otherwise one literal first-24-hours action. Do not add a fifth sentence.
   - For \`timing\`:
     - **Trip**: lead with the strongest candidate window from \`sidebarsData.travelWindows\` ("the week of X is the cleanest door"). Frame as "when to go."
     - **Relocation**: lead with the strongest arrival month from \`relocation.monthlyHighlights.strongest[0]\` ("October opens cleanest"). If \`relocation.monthlyHighlights.hardest.length > 0\`, also name the hardest month and what makes it hard. Frame as "when to arrive" — never "when to visit."
@@ -400,7 +398,7 @@ Rules:
   place-field = how the place feels as an environment.
   what-shifts = how the reader feels/behaves differently there.
   timing = best window or wait/shorten/avoid stance.
-- Hard length floor: match the original rich output. Each tab lead must be 4-5 sentences. Each plainEnglishSummary must be exactly 6 sentences. Evidence captions are 1-2 sentences.
+- Hard length floor: match the original rich output except for \`tabs["what-shifts"].plainEnglishSummary\`, which must be exactly 4 concise sentences. Each tab lead must be 4-5 sentences. All other plainEnglishSummary fields must be exactly 6 sentences. Evidence captions are 1-2 sentences.
 - overview.scoreExplanation and overview.goalExplanation are 3 sentences each. overview.leanInto and overview.watchOut must each contain exactly 2 paragraphs, 4-5 sentences per paragraph.
 - timing.activationAdvice: exactly 3 practical items. timing.closingVerdict must be 2 sentences and say go, go with caution, shorten, wait, avoid, move now, or reconsider.
 - Fill chartRulerReframe from brief.evidence.shift.chartRuler. If optional legacy/sidebar fields are generated, keep them concise, but never steal depth from tabs/overview/timing.

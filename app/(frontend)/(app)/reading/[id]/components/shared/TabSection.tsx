@@ -13,6 +13,7 @@ interface Props {
     /** When true, intro renders as a wide blue-bordered callout (used by Overview).
      *  When false, intro renders as plain body copy capped at 580px. */
     wideIntro?: boolean;
+    titleNoWrap?: boolean;
     children: ReactNode;
 }
 
@@ -24,7 +25,7 @@ const FONT_MONO = "var(--font-mono, monospace)";
  * Shared step container for the V4 reading tabs. Hierarchy:
  *   kicker (mono label) → title (short H2) → lead (drop-cap dek) → intro (body para)
  */
-export default function TabSection({ kicker, title, lead, intro, wideIntro, children }: Props) {
+export default function TabSection({ kicker, title, lead, intro, wideIntro, titleNoWrap, children }: Props) {
     // Merge AI lead + summary into a single drop-cap paragraph under the H2.
     // Avoids the "two sentences competing for the same role" issue while
     // preserving the longer explainer copy. If lead and intro happen to be
@@ -51,7 +52,7 @@ export default function TabSection({ kicker, title, lead, intro, wideIntro, chil
                     {kicker}
                 </div>
                 <h2
-                    className="font-normal leading-[1.05] tracking-[-0.02em] m-0 mb-6 [text-wrap:balance] max-w-[28ch]"
+                    className={`font-normal leading-[1.05] tracking-[-0.02em] m-0 mb-6 max-w-[28ch] ${titleNoWrap ? "[text-wrap:balance] sm:whitespace-nowrap sm:[text-wrap:normal]" : "[text-wrap:balance]"}`}
                     style={{
                         fontFamily: FONT_PRIMARY,
                         fontSize: "clamp(28px, 3.4vw, 44px)",

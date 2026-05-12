@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import NatalMockupWheel, { type NatalPlanet } from "@/app/components/NatalMockupWheel";
+import PlanetIcon from "@/app/components/PlanetIcon";
 import SectionHead from "../../shared/SectionHead";
 import TabSection from "../../shared/TabSection";
 import type { V4VM } from "./types";
 import { geodeticPlanetMeaning } from "@/app/lib/geodetic/planet-meanings";
+import { PLANET_COLORS } from "@/app/lib/planet-data";
 
 interface Props {
     vm: V4VM;
@@ -92,6 +94,7 @@ export default function WhatShiftsTab({ vm, isDark, natalWheel, relocatedWheel, 
         <TabSection
             kicker="What Shifts"
             title="What changes when your chart moves here."
+            titleNoWrap
             lead={tabLead}
             intro={tabIntro}
         >
@@ -105,7 +108,7 @@ export default function WhatShiftsTab({ vm, isDark, natalWheel, relocatedWheel, 
                 </p>
             )}
             {/* ─ CHARTS ──────────────────────────────────────────────────── */}
-            <div className="mb-10 max-w-[1080px] mx-auto">
+            <div className="mb-10 w-full">
                 <header className="mb-4">
                     <div
                         className="flex flex-wrap items-center justify-between gap-3 pb-[10px] border-b"
@@ -277,33 +280,83 @@ export default function WhatShiftsTab({ vm, isDark, natalWheel, relocatedWheel, 
 // ─── Teacher-copy renderers (what-shifts tab) ─────────────────────────────
 
 function ChartRulerReframeCallout({ cr }: { cr: NonNullable<V4VM["relocated"]["chartRulerReframe"]>; }) {
+    const planetColor = PLANET_COLORS[cr.ruler] || "var(--text-primary)";
     return (
         <div
-            className="mb-10 p-5 sm:p-6 max-w-[720px] mx-auto"
+            className="mb-10 w-full px-[20px] py-[18px] rounded-[8px] flex flex-col gap-3"
             style={{
-                border: "1px solid var(--gold)",
-                borderRadius: "10px",
-                background: "color-mix(in oklab, var(--gold) 5%, transparent)",
+                background: "color-mix(in oklab, var(--surface-border) 28%, var(--bg))",
             }}
         >
-            <div
-                className="text-[11px] tracking-[0.16em] uppercase mb-2"
-                style={{ fontFamily: FONT_MONO, color: "var(--gold)", fontWeight: 700 }}
-            >
-                Chart ruler · {cr.ruler} · H{cr.fromHouse} → H{cr.toHouse}
-            </div>
+            <header className="flex items-start justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-[10px] min-w-0">
+                    <span
+                        className="inline-flex items-center justify-center w-[30px] h-[30px] rounded-full shrink-0"
+                        style={{
+                            color: planetColor,
+                            background: "color-mix(in oklab, var(--surface-border) 60%, var(--bg))",
+                        }}
+                    >
+                        <PlanetIcon planet={cr.ruler} color="currentColor" size={18} />
+                    </span>
+                    <div className="min-w-0">
+                        <div
+                            className="text-[10px] tracking-[0.16em] uppercase"
+                            style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)", fontWeight: 700 }}
+                        >
+                            Chart ruler
+                        </div>
+                        <div
+                            className="text-[13px] leading-[1.2]"
+                            style={{ fontFamily: FONT_MONO, color: planetColor, fontWeight: 700 }}
+                        >
+                            {cr.ruler}
+                        </div>
+                    </div>
+                </div>
+                <div
+                    className="grid items-center gap-2 p-2 rounded-[4px] grid-cols-[1fr_18px_1fr]"
+                    style={{
+                        background: "color-mix(in oklab, var(--surface-border) 60%, var(--bg))",
+                        minWidth: "180px",
+                    }}
+                >
+                    <HouseChip label="Natally" house={cr.fromHouse} />
+                    <div className="text-center" style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}>→</div>
+                    <HouseChip label="Here" house={cr.toHouse} accent />
+                </div>
+            </header>
             <h3
-                className="text-[18px] sm:text-[20px] m-0 mb-3"
-                style={{ fontFamily: FONT_PRIMARY, color: "var(--text-primary)", fontWeight: 600 }}
+                className="text-[18px] leading-[1.15] m-0"
+                style={{ fontFamily: FONT_PRIMARY, color: "var(--text-primary)", fontWeight: 500 }}
             >
                 {cr.headline}
             </h3>
             <p
-                className="text-[15px] leading-[1.55] m-0 max-w-[640px]"
-                style={{ fontFamily: FONT_BODY, color: "var(--text-primary)" }}
+                className="text-[14px] leading-[1.55] m-0 max-w-[760px] [text-wrap:pretty]"
+                style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)", fontWeight: 300 }}
             >
                 {cr.body}
             </p>
+        </div>
+    );
+}
+
+function HouseChip({ label, house, accent }: { label: string; house: number; accent?: boolean }) {
+    return (
+        <div className="px-2 min-w-0">
+            <div
+                className="text-[8px] tracking-[0.18em] uppercase"
+                style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)", fontWeight: 700 }}
+            >
+                {label}
+            </div>
+            <div
+                className="text-[13px] leading-[1.1] mt-[2px]"
+                style={{ fontFamily: FONT_MONO, color: accent ? "var(--color-spiced-life)" : "var(--text-primary)", fontWeight: 700 }}
+            >
+                H{house}
+            </div>
         </div>
     );
 }
@@ -941,4 +994,3 @@ function SeasonalCard({ item }: { item: SeasonalItem }) {
         </article>
     );
 }
-
