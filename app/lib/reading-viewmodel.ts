@@ -2137,6 +2137,30 @@ function deterministicOverviewCopy(
     };
 }
 
+function normalizeHeadlineScoreText(text: unknown, headlineScore: number | null): unknown {
+    if (typeof text !== "string" || headlineScore == null || !Number.isFinite(headlineScore)) return text;
+    const score = String(Math.round(headlineScore));
+    return text
+        .replace(/\b((?:this|the)\s+(?:trip|move|relocation|reading|window)\s+(?:carries|has|scores|lands at|sits at)\s+(?:a\s+)?(?:score\s+of\s+)?)(\d{1,3})(\/100)?\b/gi, (_match, prefix, _num, suffix = "") => `${prefix}${score}${suffix}`)
+        .replace(/\b((?:overall|headline|topline)\s+score\s+(?:of\s+|is\s+|at\s+)?)(\d{1,3})(\/100)?\b/gi, (_match, prefix, _num, suffix = "") => `${prefix}${score}${suffix}`)
+        .replace(/\b(a\s+score\s+of\s+)(\d{1,3})\b/gi, (_match, prefix) => `${prefix}${score}`);
+}
+
+function normalizeHeadlineScoresInCopy<T>(copy: T, headlineScore: number | null): T {
+    if (!copy || typeof copy !== "object") {
+        return normalizeHeadlineScoreText(copy, headlineScore) as T;
+    }
+    if (Array.isArray(copy)) {
+        return copy.map((item) => normalizeHeadlineScoresInCopy(item, headlineScore)) as T;
+    }
+    return Object.fromEntries(
+        Object.entries(copy).map(([key, value]) => [
+            key,
+            normalizeHeadlineScoresInCopy(value, headlineScore),
+        ]),
+    ) as T;
+}
+
 function deterministicTimingCopy(heroWindow: V4TravelWindow, travelWindows: V4TravelWindow[]): NonNullable<V4ReadingVM["tabs"]["timing"]> {
     const alternate = travelWindows.find((window) => window.rank !== heroWindow.rank && window.score > heroWindow.score);
     return {
@@ -2274,7 +2298,7 @@ export function toV4ViewModel(reading: any, narrative?: any): V4ReadingVM {
         });
     const hasCompleteV4Copy = hasV4TeacherReading(reading?.teacherReading);
     const trustedTeacherReading = hasCompleteV4Copy && isRecord(reading?.teacherReading)
-        ? reading.teacherReading
+        ? normalizeHeadlineScoresInCopy(reading.teacherReading, heroWindow?.score ?? null)
         : null;
     const tabCopy = isRecord(trustedTeacherReading?.tabs)
         ? trustedTeacherReading.tabs
