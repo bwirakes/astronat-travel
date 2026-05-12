@@ -63,7 +63,7 @@ export const b2bFallbackBlocksUniversal = [
     layout: "retainer-panel",
     bgToken: "acqua",
     kicker: "Engagement Options",
-    headingHtml: `<span class="font-secondary italic normal-case text-3xl md:text-4xl text-[var(--color-spiced-life)] mb-2 block tracking-normal">Private Retainer</span>
+    headingHtml: `<span class="font-secondary italic normal-case text-3xl md:text-4xl text-[var(--color-y2k-blue)] mb-2 block tracking-normal">Private Retainer</span>
                  The Inner <span class="font-secondary italic lowercase text-[var(--color-y2k-blue)]">Circle.</span>`,
     body: `<p>For founders, C-suite executives, and family offices who require astrological intelligence woven permanently into their strategic operating rhythm. This is not a one-time report — it is an <strong class="text-[var(--text-primary)] font-semibold">ongoing advisory relationship</strong> where cosmic intelligence becomes part of how you make decisions, year-round.</p>`,
     body2:
@@ -111,7 +111,7 @@ export const b2bFallbackBlocksUniversal = [
   {
     blockType: "processTimeline",
     kicker: "How It Works",
-    headingHtml: `From Brief to <br /><span class="font-secondary italic lowercase text-[var(--color-y2k-blue)]">Intelligence</span>`,
+    headingHtml: `From Brief <span class="inline-block ml-3">to</span><br /><span class="font-secondary italic lowercase text-[var(--color-y2k-blue)]">Intelligence</span>`,
     bgToken: "raised",
     steps: B2B_PROCESS_STEPS.map((s) => ({ n: s.n, title: s.title, body: s.body })),
   },

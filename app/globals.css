@@ -19,6 +19,7 @@
   --color-charcoal: #1B1B1B;
   --color-y2k-blue: #0456fb;
   --color-acqua: #CAF1F0;
+  --color-acqua-soft: #CAF1F0;
   --color-black: #000000;
   --color-eggshell: #F8F5EC;
   --color-cream: #F1EFE7;
@@ -66,7 +67,8 @@
   /* Theme-aware Text Colors for Brand Backgrounds */
   --text-on-charcoal: #F8F5EC;
   --text-on-y2k-blue: #F8F5EC;
-  --text-on-acqua: #111b2E; /* Acqua is light in dark mode, use dark text */
+  --text-on-acqua: #111b2E; /* Soft acqua surfaces use dark text */
+  --text-on-acqua-soft: #111b2e;
   --dispatch-color: #111b2e; /* dark mode: dark text on light acqua */
 
   /* Testimonial card — blue in dark mode */
@@ -130,6 +132,7 @@
   --accent: var(--color-spiced-life);
   --cyan: #007676; /* Dark teal replacing Acqua */
   --color-acqua: #007676; 
+  --color-acqua-soft: #CAF1F0;
   --sage: #007A00; /* Deep green replacing neon */
   --amber: #C17B3F;
   --gold: #A67C00; /* Darker gold for text contrast */
@@ -154,7 +157,8 @@
   /* Theme-aware Text Colors for Brand Backgrounds */
   --text-on-charcoal: #F8F5EC; /* Force legibility on dark blocks in light mode */
   --text-on-y2k-blue: #F8F5EC;
-  --text-on-acqua: #111b2e; /* Acqua is teal in light mode, use dark text */
+  --text-on-acqua: #F8F5EC; /* Teal acqua needs light text in light mode */
+  --text-on-acqua-soft: #111b2e;
   --dispatch-color: #ffffff; /* light mode: white text on dark teal acqua */
 
   /* Testimonial card — original bg in light mode */
