@@ -11,7 +11,7 @@ interface AnnouncementBarProps {
 export default function AnnouncementBar({
   messages = [
     {
-      text: "✦ FOUNDER'S CLUB: Only 13 of 100 lifetime spots remaining.",
+      text: "✦ FOUNDER'S CLUB: A few of the 100 lifetime spots remain.",
       cta: "Secure yours →",
       ctaHref: "/flow",
     },
