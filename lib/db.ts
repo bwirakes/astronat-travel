@@ -74,7 +74,10 @@ export async function getRecentSearches(userId: string, limit = 3): Promise<Sear
   return data ?? []
 }
 
-// Save a reading record
+// Save a reading record. Invalidates `access-<userId>` so the cached
+// readingsTotal/freeUsed reflect the new row immediately — otherwise the
+// upsell flag stays stale for up to the access cache's revalidate window
+// (60s) after a user generates their first reading.
 export async function saveReading(reading: Omit<Reading, 'id' | 'created_at'>): Promise<Reading | null> {
   const supabase = await createClient()
   const { data } = await supabase
@@ -82,6 +85,10 @@ export async function saveReading(reading: Omit<Reading, 'id' | 'created_at'>): 
     .insert(reading)
     .select()
     .single()
+  if (data) {
+    const { revalidateTag } = await import('next/cache')
+    revalidateTag(`access-${reading.user_id}`, 'max')
+  }
   return data
 }
 

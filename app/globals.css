@@ -725,6 +725,17 @@ a {
   to   { transform: rotate(360deg); }
 }
 
+/* ── Route Skeleton shimmer (Suspense fallbacks) ── */
+@keyframes route-skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [aria-busy="true"] [style*="route-skeleton-shimmer"] {
+    animation: none;
+  }
+}
+
 /* ── Home Layout V2 (100vh lock on Desktop only) - Removed to allow scrolling ── */
 
 /* ── Base UI Navigation Menu — force transparent containers ── */
