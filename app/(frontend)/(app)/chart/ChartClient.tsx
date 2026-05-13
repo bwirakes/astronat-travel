@@ -255,8 +255,13 @@ export default function ChartPage({
     return () => controller.abort();
   }, [initialNatalData, isMundane, countrySlug]);
 
-  // Fetch interpretation once natal data is available. Streams NDJSON; sections
-  // render progressively as each Gemini call completes.
+  // Fetch interpretation once natal data is available. The endpoint still
+  // streams NDJSON (each Gemini section is dispatched in parallel server-
+  // side, then emitted as it completes), but we buffer chunks here and
+  // commit a single setInterpretation call once the stream closes. The
+  // user sees one clean reveal — placeholder → full interpretation —
+  // instead of sections popping in one at a time, which read as jittery
+  // since each section is dense editorial prose.
   useEffect(() => {
     if (isMundane || !realNatal) return;
     if (interpretStartedRef.current) return;
@@ -295,17 +300,22 @@ export default function ChartPage({
             try {
               const msg = JSON.parse(line);
               if (msg.section && msg.data) {
+                // Accumulate without triggering re-render. The single
+                // reveal happens after the loop exits.
                 acc[msg.section] = msg.data;
-                setInterpretation({ ...acc });
-              } else if (msg.done) {
-                setInterpretLoading(false);
               } else if (msg.error) {
                 console.warn("[interpret] partial error:", msg.error);
               }
+              // msg.done is no longer load-bearing — we treat the stream
+              // closing (reader's `done === true`) as the canonical signal.
             } catch {
               console.warn("[interpret] bad NDJSON line:", line);
             }
           }
+        }
+
+        if (!controller.signal.aborted) {
+          setInterpretation(acc);
         }
       } catch (err: any) {
         if (err?.name === "AbortError") return;
