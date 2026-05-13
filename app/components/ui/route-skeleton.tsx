@@ -121,17 +121,6 @@ export function RouteSkeleton({ variant = "default", label }: RouteSkeletonProps
       {variant === "detail" && <DetailVariant />}
       {variant === "split" && <SplitVariant />}
       {variant === "default" && <DefaultVariant label={label} />}
-      <style>{`
-        @keyframes route-skeleton-shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          [aria-busy="true"] [style*="route-skeleton-shimmer"] {
-            animation: none;
-          }
-        }
-      `}</style>
     </div>
   );
 }
