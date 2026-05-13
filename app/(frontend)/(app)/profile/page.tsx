@@ -108,13 +108,24 @@ export default function ProfilePage() {
         birth_lon: lon,
       });
       
-    setSaving(false);
     if (error) {
       console.error("[profile save]", error);
       setToast(`Error saving profile: ${error.message || error.code || "unknown"}`);
     } else {
-      setToast("Profile saved");
+      try {
+        const refresh = await fetch("/api/natal?refresh=1", { cache: "no-store" });
+        if (!refresh.ok) {
+          console.warn("[profile save] chart refresh failed", await refresh.json().catch(() => ({})));
+          setToast("Profile saved. Chart will refresh on next load.");
+        } else {
+          setToast("Profile saved. Chart updated.");
+        }
+      } catch (refreshError) {
+        console.warn("[profile save] chart refresh failed", refreshError);
+        setToast("Profile saved. Chart will refresh on next load.");
+      }
     }
+    setSaving(false);
     setTimeout(() => setToast(""), 4000);
   };
 

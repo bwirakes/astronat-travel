@@ -166,6 +166,7 @@ function FlowPageInner() {
           birth_lat: store.birthLat || null,
           birth_lon: store.birthLon || null,
         });
+        await fetch("/api/natal?refresh=1", { cache: "no-store" }).catch(() => {});
         posthog.capture("onboarding_completed", {
           birth_time_known: store.birthTimeKnown,
           has_birth_city: !!store.birthCity,

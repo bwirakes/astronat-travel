@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, getNatalChart, saveNatalChart } from "@/lib/db";
 import { SwissEphSingleton, getHouse, ZODIAC_SIGNS, computeRealtimePositions } from "@/lib/astro/transits";
+import { natalCacheMatchesProfile } from "@/lib/astro/chart-cache";
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,6 +36,14 @@ export async function GET(request: NextRequest) {
       birth_lon: profile.birth_lon,
     };
 
+    const { birthToUtc } = await import("@/lib/astro/birth-utc");
+    const dtUtc = await birthToUtc(
+      profile.birth_date,
+      profile.birth_time,
+      profile.birth_lat,
+      profile.birth_lon,
+    );
+
     // 2. Check if natal chart already exists — merge profile birth metadata
     //    so the UI always shows Date/Time/Location correctly. Also backfill
     //    angles + aspects from the cached planets/cusps when they're missing
@@ -47,7 +56,7 @@ export async function GET(request: NextRequest) {
       await supabase.from("natal_charts").delete().eq("user_id", userId).eq("chart_type", "natal");
     }
     const cached = refresh ? null : await getNatalChart(userId);
-    if (cached && cached.ephemeris_data) {
+    if (natalCacheMatchesProfile(cached, profile, dtUtc)) {
       const cachedData = cached.ephemeris_data as any;
       const planets: any[] = cachedData.planets || [];
       const cusps: number[] = cachedData.cusps || [];
@@ -120,14 +129,6 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({ ...cachedData, angles, aspects, interpretation, ...birthMeta });
     }
-
-    const { birthToUtc } = await import("@/lib/astro/birth-utc");
-    const dtUtc = await birthToUtc(
-      profile.birth_date,
-      profile.birth_time,
-      profile.birth_lat,
-      profile.birth_lon,
-    );
 
     const swe = await SwissEphSingleton.getInstance();
     const year = dtUtc.getUTCFullYear();
