@@ -31,14 +31,22 @@ async function buildInitialNatalData(userId: string) {
     };
 }
 
-export default async function ChartPage() {
+// All async work (auth + natal data) lives in this child so the parent
+// can return synchronously and the Suspense fallback actually streams.
+// Previously the parent awaited buildInitialNatalData inline, which
+// meant the Suspense wrapper was decorative — the page blocked on the
+// data fetch before any JSX returned and the AstroAppLoader never showed.
+async function ChartShell() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     const initialNatalData = user ? await buildInitialNatalData(user.id) : null;
+    return <ChartClient initialNatalData={initialNatalData} />;
+}
 
+export default function ChartPage() {
     return (
         <Suspense fallback={<AstroAppLoader label="Loading chart..." />}>
-            <ChartClient initialNatalData={initialNatalData} />
+            <ChartShell />
         </Suspense>
     );
 }
