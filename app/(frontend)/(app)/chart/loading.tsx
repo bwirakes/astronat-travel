@@ -1,5 +1,5 @@
-import { RouteSkeleton } from "@/app/components/ui/route-skeleton";
+import { ChartShellSkeleton } from "./ChartShellSkeleton";
 
 export default function ChartLoading() {
-  return <RouteSkeleton variant="detail" label="Loading chart…" />;
+  return <ChartShellSkeleton />;
 }

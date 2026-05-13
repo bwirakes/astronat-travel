@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import ChartClient from "./ChartClient";
-import { AstroAppLoader } from "@/app/components/ui/app-loader-shell";
+import { ChartShellSkeleton } from "./ChartShellSkeleton";
+import { PageHeader } from "@/components/app/page-header-context";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, getNatalChart } from "@/lib/db";
 
@@ -31,14 +32,26 @@ async function buildInitialNatalData(userId: string) {
     };
 }
 
-export default async function ChartPage() {
+// Async shell — auth + data fetch live here so the parent can return
+// synchronously and the page's structural chrome (header, container, shaped
+// skeleton) renders instantly above the Suspense boundary.
+async function ChartShell() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     const initialNatalData = user ? await buildInitialNatalData(user.id) : null;
+    return <ChartClient initialNatalData={initialNatalData} />;
+}
 
+export default function ChartPage() {
     return (
-        <Suspense fallback={<AstroAppLoader label="Loading chart..." />}>
-            <ChartClient initialNatalData={initialNatalData} />
-        </Suspense>
+        <>
+            {/* Registers the context bar title immediately — no waiting on data. */}
+            <PageHeader title="Astro-Nat | Chart Analysis" />
+            <div style={{ width: "100%", padding: "var(--space-md) var(--space-md) var(--space-3xl)" }}>
+                <Suspense fallback={<ChartShellSkeleton />}>
+                    <ChartShell />
+                </Suspense>
+            </div>
+        </>
     );
 }
