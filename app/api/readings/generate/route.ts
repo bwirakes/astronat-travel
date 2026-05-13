@@ -1,21 +1,39 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getReadingAccess } from "@/lib/access";
-import { runAstrocarto } from "@/lib/readings/astrocarto";
-import { runGeodeticWeather } from "@/lib/readings/geodetic-weather";
-import { persistReading, logSearch } from "@/lib/readings/persist";
 import { computeHeroScore } from "@/app/lib/hero-score";
 import { capturePostHogEvent } from "@/lib/posthog-server";
+import { runAstrocarto } from "@/lib/readings/astrocarto";
+import { runGeodeticWeather } from "@/lib/readings/geodetic-weather";
+import { logSearch, persistReading } from "@/lib/readings/persist";
+import type { Database } from "@/lib/supabase/types";
+
+export const maxDuration = 300;
 
 /**
  * /api/readings/generate — thin dispatcher.
- * Auth, parse, gate, route to the appropriate compute pipeline, persist, return.
- * All math + AI synthesis lives in lib/readings/* and lib/ai/*.
+ * Auth, parse, gate, compute deterministic reading, persist, return.
+ * The route returns only after the reading row is usable, matching the
+ * pre-pending-row flow and avoiding detail-page polling loops.
  */
 
 const FREE_TIER_LIMIT = {
   error: "Free reading already used. Subscribe for unlimited readings.",
   code: "FREE_TIER_LIMIT",
+};
+
+type ReadingCategory = Database["public"]["Enums"]["reading_category"];
+type GenerationBody = {
+  destination?: string;
+  travelType?: string;
+  readingCategory?: ReadingCategory | "geodetic-weather";
+  targetLat?: number;
+  targetLon?: number;
+  travelDate?: string | null;
+  goals?: unknown[];
+  partner_id?: string | null;
+  weather?: Parameters<typeof runGeodeticWeather>[0]["weather"];
+  [key: string]: unknown;
 };
 
 export async function POST(req: Request) {
@@ -33,7 +51,7 @@ export async function POST(req: Request) {
       return NextResponse.json(FREE_TIER_LIMIT, { status: 402 });
     }
 
-    const body = await req.json();
+    const body = (await req.json()) as GenerationBody;
     const {
       destination,
       travelType,
@@ -46,23 +64,41 @@ export async function POST(req: Request) {
       weather,
     } = body;
 
-    // ── Geodetic weather branch ──────────────────────────────────────────
+    const requestedCategory = readingCategory ?? "astrocartography";
+    const category: ReadingCategory =
+      requestedCategory === "geodetic-weather"
+        ? "mundane"
+        : requestedCategory === "synastry"
+          ? "synastry"
+          : "astrocartography";
+    const readingDate = requestedCategory === "geodetic-weather"
+      ? (weather?.startDate || new Date().toISOString().slice(0, 10))
+      : (travelDate || new Date().toISOString());
+
     if (readingCategory === "geodetic-weather") {
-      const { result, macroScore, startDate } = await runGeodeticWeather({
+      if (!weather) {
+        return NextResponse.json({ error: "Missing weather payload." }, { status: 400 });
+      }
+      const { result, startDate } = await runGeodeticWeather({
         user,
         destination,
         weather,
         supabase,
         origin: new URL(req.url).origin,
       });
-      const hero = computeHeroScore(result as any, startDate);
+      const hero = computeHeroScore(result as never, startDate);
       const { readingId } = await persistReading({
         supabase,
         userId: user.id,
-        category: "mundane",
+        category,
         readingDate: startDate,
         readingScore: hero.score,
-        details: { ...result, heroWindowScore: hero.score, heroScoreSource: hero.source },
+        details: {
+          ...result,
+          generationInput: body,
+          heroWindowScore: hero.score,
+          heroScoreSource: hero.source,
+        },
       });
       await capturePostHogEvent({
         distinctId: user.id,
@@ -77,7 +113,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, readingId });
     }
 
-    // ── Astrocartography / Synastry branch ───────────────────────────────
     if (!destination || !targetLat || !targetLon) {
       return NextResponse.json(
         { error: "Missing required geospatial payload." },
@@ -93,24 +128,36 @@ export async function POST(req: Request) {
       travelDate,
       travelType,
       goals,
-      readingCategory: readingCategory ?? "astrocartography",
+      readingCategory: category,
       partnerId: partner_id ?? null,
       supabase,
+      aiMode: "skip",
     });
+    if (result.generationTimings) {
+      console.info("[readings/generate] astrocarto timings", {
+        readingCategory: category,
+        travelType: travelType ?? "trip",
+        totalMs: result.generationTimings.totalMs,
+        stepsMs: result.generationTimings.stepsMs,
+      });
+    }
 
-    const readingDate = travelDate || new Date().toISOString();
-    const hero = computeHeroScore(result as any, readingDate);
+    const hero = computeHeroScore(result as never, readingDate);
     const { readingId } = await persistReading({
       supabase,
       userId: user.id,
       partnerId,
-      category: readingCategory ?? "astrocartography",
+      category,
       readingDate,
       readingScore: hero.score,
-      details: { ...result, heroWindowScore: hero.score, heroScoreSource: hero.source },
+      details: {
+        ...result,
+        generationInput: body,
+        heroWindowScore: hero.score,
+        heroScoreSource: hero.source,
+      },
     });
 
-    // Non-blocking: log to searches table for analytics
     await logSearch({
       supabase,
       userId: user.id,
@@ -121,7 +168,7 @@ export async function POST(req: Request) {
       travelType: travelType ?? "trip",
       macroScore: result.macroScore,
       macroVerdict: result.macroVerdict,
-      houseScores: result.houses.map((h: any) => ({ house: h.house, score: h.score })),
+      houseScores: result.houses.map((h: { house: number; score: number }) => ({ house: h.house, score: h.score })),
       eventScores: result.eventScores,
       goals: result.goals,
     });
@@ -141,13 +188,13 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true, readingId });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to generate reading:", error);
     return NextResponse.json(
       {
         error: "Internal Server Error",
-        message: error.message,
-        stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+        message: error instanceof Error ? error.message : String(error),
+        stack: process.env.NODE_ENV === "development" && error instanceof Error ? error.stack : undefined,
       },
       { status: 500 },
     );

@@ -16,7 +16,7 @@ import {
     ZODIAC_SIGNS,
     type ComputedPosition,
 } from "@/lib/astro/transits";
-import { getComputedSkyForDate, UNIVERSAL_SKY_BODIES } from "@/lib/astro/ephemeris-cache";
+import { getComputedSkyForDate, getComputedSkyForDateRange, UNIVERSAL_SKY_BODIES } from "@/lib/astro/ephemeris-cache";
 import { essentialDignityLabel } from "./dignity";
 import { SIGN_ELEMENT } from "./dignity-tables";
 import { eclipsesInWindow } from "./geodetic/geodetic-events";
@@ -231,10 +231,14 @@ async function scanStationsAndRetrogradeWindows(
         samplesByPlanet.set(cap.toLowerCase(), []);
     }
 
+    const positionsByDate = await getComputedSkyForDateRange(new Date(startTime), totalDays + 1, {
+        bodies: UNIVERSAL_SKY_BODIES,
+    });
+
     for (let d = 0; d <= totalDays; d++) {
         const t = startTime + d * MS_DAY;
-        const date = new Date(t);
-        const positions = await getComputedSkyForDate(date, { bodies: UNIVERSAL_SKY_BODIES });
+        const dateISO = new Date(t).toISOString().slice(0, 10);
+        const positions = positionsByDate.get(dateISO) ?? [];
         for (const p of positions) {
             const arr = samplesByPlanet.get(p.name.toLowerCase());
             if (!arr) continue;

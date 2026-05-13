@@ -31,7 +31,17 @@ const CouplesReadingRouteView = dynamic(() => import("./components/couples/Coupl
 });
 
 interface Props {
-  reading: Record<string, unknown> & { category?: string; weatherForecast?: unknown; teacherReading?: unknown; narrative?: unknown };
+  reading: Record<string, unknown> & {
+    category?: string;
+    generationCreatedAt?: unknown;
+    generationError?: unknown;
+    generationStage?: unknown;
+    generationStartedAt?: unknown;
+    generationStatus?: unknown;
+    weatherForecast?: unknown;
+    teacherReading?: unknown;
+    narrative?: unknown;
+  };
   readingId: string;
   isDemo: boolean;
   showUpsell: boolean;
@@ -42,6 +52,8 @@ export function ReadingClient({ reading, readingId, isDemo, showUpsell }: Props)
     (reading.narrative as Record<string, unknown> | null) ?? null
   );
   const [narrativeLoading, setNarrativeLoading] = useState(false);
+  const generationStatus = typeof reading.generationStatus === "string" ? reading.generationStatus : undefined;
+  const isGenerating = generationStatus === "pending" || generationStatus === "running";
 
   // Analytics: emit `reading_viewed` once per route entry; emit
   // `upsell_shown` if the server determined the user is gated. Both used
@@ -49,6 +61,7 @@ export function ReadingClient({ reading, readingId, isDemo, showUpsell }: Props)
   // fire as soon as the server-provided props are available.
   useEffect(() => {
     if (isDemo) return;
+    if (isGenerating || generationStatus === "failed") return;
     const destination = typeof reading.destination === "string" ? reading.destination : "Unknown Destination";
     const macroScore = typeof reading.macroScore === "number" ? reading.macroScore : 0;
     const travelType = typeof reading.travelType === "string" ? reading.travelType : "trip";
@@ -59,7 +72,7 @@ export function ReadingClient({ reading, readingId, isDemo, showUpsell }: Props)
       macro_score: macroScore,
       travel_type: travelType,
     });
-  }, [isDemo, readingId, reading]);
+  }, [isDemo, isGenerating, generationStatus, readingId, reading]);
 
   useEffect(() => {
     if (showUpsell) posthog.capture("upsell_shown", { reading_id: readingId });
@@ -71,6 +84,7 @@ export function ReadingClient({ reading, readingId, isDemo, showUpsell }: Props)
   // here, not on the server.
   useEffect(() => {
     if (isDemo || readingId.length < 30) return;
+    if (isGenerating || generationStatus === "failed") return;
     if (reading.weatherForecast) return;
     if (reading.teacherReading) {
       if (!hasV4TeacherReading(reading.teacherReading)) {
@@ -133,7 +147,23 @@ export function ReadingClient({ reading, readingId, isDemo, showUpsell }: Props)
     return () => {
       cancelled = true;
     };
-  }, [reading, readingId, isDemo]);
+  }, [reading, readingId, isDemo, isGenerating, generationStatus]);
+
+  if (isGenerating) {
+    return (
+      <AstroAppLoader
+        label={typeof reading.generationStage === "string" ? reading.generationStage : "Writing your reading..."}
+      />
+    );
+  }
+
+  if (generationStatus === "failed") {
+    return (
+      <AstroAppLoader
+        label={typeof reading.generationError === "string" ? reading.generationError : "Reading generation failed. Please try again."}
+      />
+    );
+  }
 
   const isSynastry = reading.category === "synastry";
   // Geodetic weather readings live under category "mundane" (enum constraint)

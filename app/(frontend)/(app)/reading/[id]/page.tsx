@@ -87,6 +87,11 @@ function shapeFromDb(data: Record<string, unknown>): Record<string, unknown> {
     universalSky: d.universalSky,
     universalSkySpans: d.universalSkySpans,
     eventScores: d.eventScores,
+    generationStatus: d.generationStatus,
+    generationStage: d.generationStage,
+    generationCreatedAt: d.generationCreatedAt,
+    generationStartedAt: d.generationStartedAt,
+    generationError: d.generationError,
   };
 }
 

@@ -60,6 +60,9 @@ const SWISS_FALLBACK_BODIES = new Set([
   "True Node",
 ]);
 
+const _skyRangeCache = new Map<string, Map<string, CachedSkyPosition[]>>();
+const _SKY_RANGE_CACHE_MAX = 20;
+
 export interface CachedSkyPosition {
   name: string;
   longitude: number;
@@ -74,8 +77,29 @@ export interface SkyCacheOptions {
   bodies?: readonly string[];
 }
 
+type EphemerisDailyRow = {
+  date_ut?: string;
+  planet_name: string;
+  longitude: number;
+  speed: number;
+  is_retrograde: boolean;
+  zodiac_sign: string;
+  zodiac_degree: number;
+};
+
 function dateOnly(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+function dateFromOnly(dateStr: string): Date {
+  return new Date(`${dateStr}T00:00:00.000Z`);
+}
+
+function enumerateDateStrings(startDate: Date, count: number): string[] {
+  const startMs = dateFromOnly(dateOnly(startDate)).getTime();
+  return Array.from({ length: count }, (_, index) =>
+    dateOnly(new Date(startMs + index * 86_400_000))
+  );
 }
 
 function normalizeBodySet(bodies: readonly string[] = EPHEMERIS_DAILY_BODIES): string[] {
@@ -99,6 +123,32 @@ function rowToCachedPosition(row: {
     degree_in_sign: row.zodiac_degree,
     computed_at_utc: `${dateStr}T00:00:00.000Z`,
   };
+}
+
+async function fetchCachedRowsForDateRange(
+  firstDate: string,
+  lastDate: string,
+  requestedBodies: string[],
+): Promise<EphemerisDailyRow[]> {
+  const admin = createAdminClient();
+  const pageSize = 1000;
+  const rows: EphemerisDailyRow[] = [];
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await admin
+      .from("ephemeris_daily")
+      .select("date_ut, planet_name, longitude, speed, is_retrograde, zodiac_sign, zodiac_degree")
+      .gte("date_ut", firstDate)
+      .lte("date_ut", lastDate)
+      .in("planet_name", requestedBodies)
+      .range(from, from + pageSize - 1);
+
+    if (error) throw error;
+    rows.push(...((data ?? []) as EphemerisDailyRow[]));
+    if (!data || data.length < pageSize) break;
+  }
+
+  return rows;
 }
 
 export function cachedToComputedPosition(position: CachedSkyPosition): ComputedPosition {
@@ -188,4 +238,69 @@ export async function getComputedSkyForDate(
 ): Promise<ComputedPosition[]> {
   const rows = await getSkyForDate(date, options);
   return rows.map(cachedToComputedPosition);
+}
+
+/**
+ * Fetch many daily sky snapshots with one cache read.
+ *
+ * Universal-sky station scans walk 100-400 consecutive dates. Calling
+ * getSkyForDate once per day turns that into hundreds of Supabase round trips,
+ * even when every row is already cached. This helper batches the cached read and
+ * only falls back to per-date SwissEph computation for missing dates.
+ */
+export async function getSkyForDateRange(
+  startDate: Date,
+  count: number,
+  options: SkyCacheOptions = {},
+): Promise<Map<string, CachedSkyPosition[]>> {
+  const requestedBodies = normalizeBodySet(options.bodies);
+  const dateStrings = enumerateDateStrings(startDate, Math.max(0, count));
+  const result = new Map<string, CachedSkyPosition[]>();
+  if (!dateStrings.length) return result;
+
+  const firstDate = dateStrings[0];
+  const lastDate = dateStrings[dateStrings.length - 1];
+  const cacheKey = `${firstDate}:${lastDate}:${requestedBodies.join(",")}`;
+  const cached = _skyRangeCache.get(cacheKey);
+  if (cached) return new Map(cached);
+
+  const rows = await fetchCachedRowsForDateRange(firstDate, lastDate, requestedBodies);
+
+  const grouped = new Map<string, CachedSkyPosition[]>();
+  for (const row of rows) {
+    const dateStr = String(row.date_ut).slice(0, 10);
+    const positions = grouped.get(dateStr) ?? [];
+    positions.push(rowToCachedPosition(row, dateStr));
+    grouped.set(dateStr, positions);
+  }
+
+  for (const dateStr of dateStrings) {
+    const cached = grouped.get(dateStr) ?? [];
+    if (cached.length >= requestedBodies.length) {
+      result.set(dateStr, cached);
+      continue;
+    }
+    result.set(dateStr, await getSkyForDate(dateFromOnly(dateStr), options));
+  }
+
+  if (_skyRangeCache.size >= _SKY_RANGE_CACHE_MAX) {
+    const oldest = _skyRangeCache.keys().next().value;
+    if (oldest !== undefined) _skyRangeCache.delete(oldest);
+  }
+  _skyRangeCache.set(cacheKey, new Map(result));
+
+  return result;
+}
+
+export async function getComputedSkyForDateRange(
+  startDate: Date,
+  count: number,
+  options: SkyCacheOptions = {},
+): Promise<Map<string, ComputedPosition[]>> {
+  const rowsByDate = await getSkyForDateRange(startDate, count, options);
+  const computedByDate = new Map<string, ComputedPosition[]>();
+  for (const [dateStr, rows] of rowsByDate) {
+    computedByDate.set(dateStr, rows.map(cachedToComputedPosition));
+  }
+  return computedByDate;
 }
