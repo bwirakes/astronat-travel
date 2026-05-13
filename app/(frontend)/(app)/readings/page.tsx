@@ -1,9 +1,17 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { ReadingsClient, PAGE_SIZE, type Reading, type SortKey, type TypeFilter } from "./ReadingsClient";
+import {
+  ReadingsClient,
+  PAGE_SIZE,
+  toReading,
+  type Reading,
+  type SortKey,
+  type SupabaseReadingRow,
+  type TypeFilter,
+} from "./ReadingsClient";
 
 const VALID_SORTS: ReadonlySet<SortKey> = new Set<SortKey>(["recent", "score", "travel", "alpha"]);
-const VALID_TYPES: ReadonlySet<TypeFilter> = new Set<TypeFilter>(["all", "trip", "relocation"]);
+const VALID_TYPES: ReadonlySet<TypeFilter> = new Set<TypeFilter>(["all", "trip", "relocation", "couples"]);
 
 export default async function ReadingsPage({
   searchParams,
@@ -16,7 +24,9 @@ export default async function ReadingsPage({
   const typeFilter: TypeFilter = VALID_TYPES.has(sp.type as TypeFilter) ? (sp.type as TypeFilter) : "all";
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/readings");
 
   let q = supabase
@@ -24,10 +34,12 @@ export default async function ReadingsPage({
     .select("id, category, details, reading_date, reading_score", { count: "exact" })
     .eq("user_id", user.id);
 
-  if (typeFilter !== "all") {
-    // Match the legacy client-side filter, which treats either column as the
-    // type signal. Most rows write to `category`; older rows used the JSON.
-    q = q.or(`category.eq.${typeFilter},details->>travelType.eq.${typeFilter}`);
+  if (typeFilter === "couples") {
+    q = q.eq("category", "synastry");
+  } else if (typeFilter === "relocation") {
+    q = q.or("details->>travelType.eq.relocation");
+  } else if (typeFilter === "trip") {
+    q = q.neq("category", "synastry").or("details->>travelType.eq.trip,category.eq.astrocartography");
   }
 
   switch (sort) {
@@ -49,24 +61,12 @@ export default async function ReadingsPage({
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
   const { data, count } = await q.range(from, to);
-
-  const readings: Reading[] = (data || []).map((r: Record<string, unknown>) => {
-    const details = (r.details as Record<string, unknown> | null | undefined) ?? {};
-    return {
-      id: String(r.id),
-      destination: (details.destination as string) || "Unknown Destination",
-      lat: typeof details.destinationLat === "number" ? (details.destinationLat as number) : null,
-      lon: typeof details.destinationLon === "number" ? (details.destinationLon as number) : null,
-      travelType: (details.travelType as string) || (r.category as string) || "trip",
-      travelDate: r.reading_date as string,
-      score: (r.reading_score as number) || (details.macroScore as number) || 50,
-    };
-  });
+  const readings: Reading[] = ((data ?? []) as SupabaseReadingRow[]).map(toReading);
 
   return (
     <ReadingsClient
       readings={readings}
-      total={count || 0}
+      total={count ?? readings.length}
       page={page}
       sort={sort}
       typeFilter={typeFilter}
