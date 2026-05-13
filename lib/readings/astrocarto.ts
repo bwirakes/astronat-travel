@@ -22,6 +22,7 @@ import { solveUniversalSkySpans } from "@/app/lib/window-scoring";
 import { EVENT_LABELS, verdictBand } from "@/app/lib/verdict";
 import { signFromLongitude } from "@/app/lib/geodetic";
 import { birthToUtc } from "@/lib/astro/birth-utc";
+import { natalCacheMatchesProfile, natalCuspsFromCache } from "@/lib/astro/chart-cache";
 import { determineSect, computeLotOfFortune, computeLotOfSpirit } from "@/app/lib/arabic-parts";
 import { GOAL_DEFINITIONS, buildEditorialEvidence, deriveScoreNarrative } from "@/app/lib/reading-tabs";
 
@@ -61,8 +62,8 @@ async function loadOrComputeNatal(
   );
 
   const cached = await getNatalChart(userId);
-  if (cached?.ephemeris_data?.planets) {
-    return { planets: cached.ephemeris_data.planets, cusps: cached.cusps_data?.cusps ?? [], dtUtc };
+  if (natalCacheMatchesProfile(cached, profile, dtUtc)) {
+    return { planets: cached.ephemeris_data.planets, cusps: natalCuspsFromCache(cached), dtUtc };
   }
 
   const swe = await SwissEphSingleton.getInstance();
@@ -86,7 +87,17 @@ async function loadOrComputeNatal(
 
   await saveNatalChart(
     userId,
-    { planets, cusps, asc: h.ascmc["0"], mc: h.ascmc["1"], profile_time: dtUtc.toISOString() },
+    {
+      planets,
+      cusps,
+      asc: h.ascmc["0"],
+      mc: h.ascmc["1"],
+      profile_time: dtUtc.toISOString(),
+      birth_date: profile.birth_date,
+      birth_time: profile.birth_time,
+      birth_lat: profile.birth_lat,
+      birth_lon: profile.birth_lon,
+    },
     { cusps },
   );
   return { planets, cusps, dtUtc };
@@ -110,8 +121,8 @@ async function loadOrComputePartnerNatal(
   // reading row, and break §04 partner natal→relocated rendering. When
   // cusps are missing, fall through to recompute and re-cache.
   const cached = await getPartnerNatalChart(partnerId);
-  const cachedCusps = Array.isArray(cached?.cusps_data?.cusps) ? cached.cusps_data.cusps : null;
-  if (cached?.ephemeris_data?.planets && cachedCusps && cachedCusps.length === 12) {
+  const cachedCusps = natalCuspsFromCache(cached);
+  if (natalCacheMatchesProfile(cached, partnerProfile, dtUtc) && cachedCusps.length === 12) {
     return { planets: cached.ephemeris_data.planets, cusps: cachedCusps, dtUtc };
   }
 
@@ -136,7 +147,15 @@ async function loadOrComputePartnerNatal(
 
   await savePartnerNatalChart(
     partnerId,
-    { planets, cusps, profile_time: dtUtc.toISOString() },
+    {
+      planets,
+      cusps,
+      profile_time: dtUtc.toISOString(),
+      birth_date: partnerProfile.birth_date,
+      birth_time: partnerProfile.birth_time || "12:00:00",
+      birth_lat: partnerProfile.birth_lat,
+      birth_lon: partnerProfile.birth_lon,
+    },
     { cusps },
   );
   return { planets, cusps, dtUtc };
