@@ -14,6 +14,7 @@ import MonocleSectionHeader from "@/app/components/editorial/MonocleSectionHeade
 import ThickRule from "@/app/components/editorial/ThickRule";
 import { essentialDignityLabel } from "@/app/lib/dignity";
 import { resolvePlacementImplication, HOUSE_DOMAINS } from "@/app/lib/astro-wording";
+import { ChartShellSkeleton } from "./ChartShellSkeleton";
 import posthog from "posthog-js";
 
 
@@ -255,8 +256,13 @@ export default function ChartPage({
     return () => controller.abort();
   }, [initialNatalData, isMundane, countrySlug]);
 
-  // Fetch interpretation once natal data is available. Streams NDJSON; sections
-  // render progressively as each Gemini call completes.
+  // Fetch interpretation once natal data is available. The endpoint still
+  // streams NDJSON (each Gemini section is dispatched in parallel server-
+  // side, then emitted as it completes), but we buffer chunks here and
+  // commit a single setInterpretation call once the stream closes. The
+  // user sees one clean reveal — placeholder → full interpretation —
+  // instead of sections popping in one at a time, which read as jittery
+  // since each section is dense editorial prose.
   useEffect(() => {
     if (isMundane || !realNatal) return;
     if (interpretStartedRef.current) return;
@@ -295,17 +301,22 @@ export default function ChartPage({
             try {
               const msg = JSON.parse(line);
               if (msg.section && msg.data) {
+                // Accumulate without triggering re-render. The single
+                // reveal happens after the loop exits.
                 acc[msg.section] = msg.data;
-                setInterpretation({ ...acc });
-              } else if (msg.done) {
-                setInterpretLoading(false);
               } else if (msg.error) {
                 console.warn("[interpret] partial error:", msg.error);
               }
+              // msg.done is no longer load-bearing — we treat the stream
+              // closing (reader's `done === true`) as the canonical signal.
             } catch {
               console.warn("[interpret] bad NDJSON line:", line);
             }
           }
+        }
+
+        if (!controller.signal.aborted) {
+          setInterpretation(acc);
         }
       } catch (err: any) {
         if (err?.name === "AbortError") return;
@@ -401,11 +412,21 @@ export default function ChartPage({
     growthHouse?: { houseNumber: number; plainLabel: string; oneLiner: string };
   } | null;
 
+  // Gate the chart on having BOTH natal data AND (in natal mode) the
+  // interpretation. Until both are ready, render a single skeleton — the
+  // same shape used by the route's Suspense fallback — so the user sees
+  // one continuous loading state from navigation through interpretation
+  // arrival, then one clean reveal of the full chart with all sections
+  // populated. Mundane charts skip the interpretation gate (that flow
+  // doesn't fetch /api/chart/interpret).
+  const chartReady = !!natal && (isMundane || !interpretLoading);
+  const showLoader = loading || (!isMundane && interpretLoading);
+
   const content = (
     <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "1rem" }}>
       <AnimatePresence mode="wait">
-        <motion.div key="main-layout" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}>
-            {natal ? (
+        <motion.div key={chartReady ? "chart" : showLoader ? "loader" : "fallback"} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}>
+            {chartReady ? (
               <>
                 {/* BANNER — full-width hero, kicker+name on left, Core Identity (Asc/Sun/Moon) ledger on right */}
                 <section style={{
@@ -852,15 +873,8 @@ export default function ChartPage({
 
                 </div>
               </>
-            ) : loading ? (
-              <div style={{ minHeight: "60vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "var(--space-md)" }}>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>
-                  Reading your chart
-                </div>
-                <div className="animate-pulse" style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(1.4rem, 2.4vw, 1.8rem)", color: "var(--text-secondary)" }}>
-                  Loading natal data…
-                </div>
-              </div>
+            ) : showLoader ? (
+              <ChartShellSkeleton />
             ) : error ? (
               <div style={{ padding: "var(--space-3xl) var(--space-md)", textAlign: "center", display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
                 <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--accent)" }}>
