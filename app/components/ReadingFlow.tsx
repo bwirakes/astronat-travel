@@ -27,9 +27,17 @@ const slideVariants = {
   exit: (d: number) => ({ x: d > 0 ? -40 : 40, opacity: 0 }),
 };
 
+type ReadingType = "travel" | "relocation" | "couples";
+
+function normalizeReadingType(value: string | null): ReadingType | null {
+  if (value === "travel" || value === "relocation" || value === "couples") return value;
+  return null;
+}
+
 export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | "relocation" | "couples" } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const initialType = defaultType ?? normalizeReadingType(searchParams.get("type")) ?? "travel";
 
   // When the wizard is embedded on a type-specific surface (e.g. /couples),
   // skip the type-picker step and land directly on the first type-relevant step.
@@ -37,7 +45,7 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
   const [dir, setDir] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  const [type, setType] = useState<"travel" | "relocation" | "couples">(defaultType ?? "travel");
+  const [type, setType] = useState<ReadingType>(initialType);
   const [goals, setGoals] = useState<string[]>([]);
   const [destination, setDestination] = useState("");
   const [destLat, setDestLat] = useState<number | null>(null);
@@ -50,13 +58,6 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
   const [showAddPartner, setShowAddPartner] = useState(false);
   const [newPartner, setNewPartner] = useState({ firstName: "", birthDate: "", birthTime: "12:00", birthCity: "", birthLat: null as number | null, birthLon: null as number | null });
   const [partnerSaving, setPartnerSaving] = useState(false);
-
-  useEffect(() => {
-    const qType = searchParams.get("type");
-    if (qType === "couples") setType("couples");
-    else if (qType === "relocation") setType("relocation");
-    else if (qType === "travel") setType("travel");
-  }, [searchParams]);
 
   // Load saved partner profiles when couples type is active
   useEffect(() => {
@@ -167,7 +168,7 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
             setLoading(false);
             return;
           }
-        } catch (e) {
+        } catch {
           setErrorMsg("Failed to find location coordinates.");
           setLoading(false);
           return;
@@ -213,14 +214,15 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
         setErrorMsg(errorMsg);
         setLoading(false);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "network_error";
       posthog.capture("reading_generation_failed", {
-        error: err.message ?? "network_error",
+        error: message,
         reading_type: type,
         destination,
       });
       console.error(err);
-      setErrorMsg(err.message || "Failed to connect to generation service.");
+      setErrorMsg(message === "network_error" ? "Failed to connect to generation service." : message);
       setLoading(false);
     }
   };
@@ -230,12 +232,12 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: "75vh", overflow: "hidden" }}>
+    <div className="reading-flow">
       <AnimatePresence mode="wait" custom={dir}>
         {screen === 0 && (
           <motion.div key="type" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
-              <div style={{ maxWidth: "480px", width: "100%" }}>
+            <div className="reading-flow-screen">
+              <div className="reading-flow-panel reading-flow-panel-narrow">
                 <h5 style={{ marginBottom: "0.35rem" }}>Step {displayStep(0)} of {totalSteps}</h5>
                 <h2 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(2rem, 4vw, 3rem)", color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase" }}>
                   What kind of <span style={{ color: "var(--color-acqua)" }}>reading</span>?
@@ -268,7 +270,7 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
                   ))}
                 </div>
 
-                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1.5rem" }}>
+                <div className="reading-flow-actions reading-flow-actions-end">
                   <button className="btn btn-primary" style={{ padding: "0.75rem 1.5rem", borderRadius: "var(--shape-asymmetric-md)" }} onClick={next}>
                     Continue <ArrowRight size={15} />
                   </button>
@@ -280,8 +282,8 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
 
         {screen === 1 && type === "couples" && (
           <motion.div key="partner" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
-              <div style={{ maxWidth: "480px", width: "100%" }}>
+            <div className="reading-flow-screen">
+              <div className="reading-flow-panel reading-flow-panel-narrow">
                 <h5 style={{ marginBottom: "0.35rem" }}>Step {displayStep(1)} of {totalSteps}</h5>
                 <h2 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(2rem, 4vw, 3rem)", color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase" }}>
                   Who is your <span style={{ color: "var(--color-spiced-life)" }}>partner?</span>
@@ -329,7 +331,7 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
                       <input className="input-field" type="text" placeholder="e.g. Alex" value={newPartner.firstName}
                         onChange={e => setNewPartner(p => ({ ...p, firstName: e.target.value }))} />
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                    <div className="form-field-grid reading-flow-field-grid">
                       <div className="input-group">
                         <label className="input-label">Date of birth</label>
                         <input className="input-field" type="date" value={newPartner.birthDate}
@@ -366,7 +368,7 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
                   </div>
                 )}
 
-                <div style={{ display: "flex", gap: "0.6rem" }}>
+                <div className="reading-flow-actions">
                   {screen > minScreen && (
                     <button className="btn btn-secondary" onClick={back} style={{ padding: "0.75rem 1.25rem" }}><ArrowLeft size={14} /> Back</button>
                   )}
@@ -383,17 +385,17 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
 
         {screen === (type === "couples" ? 2 : 1) && (
           <motion.div key="goals" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
-              <div style={{ maxWidth: "540px", width: "100%" }}>
+            <div className="reading-flow-screen">
+              <div className="reading-flow-panel reading-flow-panel-wide">
                 <h5 style={{ marginBottom: "0.35rem" }}>Step {displayStep(type === "couples" ? 2 : 1)} of {totalSteps}</h5>
                 <h2 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(1.8rem, 4vw, 3rem)", color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase" }}>
                   What are you <span style={{ color: "var(--color-spiced-life)" }}>looking for?</span>
                 </h2>
                 <p style={{ color: "var(--text-secondary)", marginBottom: "1.25rem", fontSize: "0.8rem" }}>
-                  Select up to 3 goals. We'll prioritize the planetary lines that matter most to your intention.
+                  Select up to 3 goals. We&apos;ll prioritize the planetary lines that matter most to your intention.
                 </p>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "1.5rem" }}>
+                <div className="reading-flow-goals-grid">
                   {LIFE_GOALS.map(({ id, label, icon: Icon, color }) => {
                     const active = goals.includes(id);
                     return (
@@ -418,7 +420,7 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
                   })}
                 </div>
 
-                <div style={{ display: "flex", gap: "0.6rem" }}>
+                <div className="reading-flow-actions">
                   <button className="btn btn-secondary" onClick={back} style={{ padding: "0.75rem 1.25rem", minHeight: "44px" }}><ArrowLeft size={14} /> Back</button>
                   <button className="btn btn-primary" style={{ flex: 1, justifyContent: "center", padding: "0.75rem", borderRadius: "var(--shape-asymmetric-md)", opacity: goals.length > 0 ? 1 : 0.3 }}
                     disabled={goals.length === 0}
@@ -433,8 +435,8 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
 
         {screen === DEST_SCREEN && (
           <motion.div key="dest" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(1.25rem, 3vw, 3rem)", overflow: "auto" }}>
-              <div style={{ maxWidth: "480px", width: "100%" }}>
+            <div className="reading-flow-screen">
+              <div className="reading-flow-panel reading-flow-panel-narrow">
                 <h5 style={{ marginBottom: "0.35rem" }}>Step {displayStep(DEST_SCREEN)} of {totalSteps}</h5>
                 <h2 style={{ fontFamily: "var(--font-primary)", fontSize: "clamp(2rem, 4vw, 3rem)", color: "var(--text-primary)", lineHeight: 0.9, marginBottom: "0.5rem", textTransform: "uppercase" }}>
                   Where are <span style={{ color: "var(--gold)" }}>you going?</span>
@@ -466,7 +468,7 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
                   </div>
                 )}
 
-                <div style={{ display: "flex", gap: "0.6rem", alignItems: "stretch" }}>
+                <div className="reading-flow-actions">
                   <button className="btn btn-secondary" onClick={back} style={{ padding: "0.75rem 1.25rem", minHeight: "44px" }}><ArrowLeft size={14} /> Back</button>
                   <button className="btn btn-primary" style={{ flex: 1, justifyContent: "center", padding: "0.75rem", borderRadius: "var(--shape-asymmetric-md)", opacity: destination ? 1 : 0.3 }}
                     disabled={!destination || loading}
@@ -481,6 +483,112 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
           </motion.div>
         )}
       </AnimatePresence>
+      <style jsx>{`
+        .reading-flow {
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+          min-height: 75vh;
+          overflow: hidden;
+        }
+
+        .reading-flow-screen {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: clamp(1.25rem, 3vw, 3rem);
+          overflow: auto;
+        }
+
+        .reading-flow-panel {
+          width: 100%;
+        }
+
+        .reading-flow-panel-narrow {
+          max-width: 480px;
+        }
+
+        .reading-flow-panel-wide {
+          max-width: 540px;
+        }
+
+        .reading-flow-actions {
+          display: flex;
+          gap: 0.6rem;
+          align-items: stretch;
+        }
+
+        .reading-flow-actions-end {
+          justify-content: flex-end;
+          margin-top: 1.5rem;
+        }
+
+        .reading-flow-goals-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 0.5rem;
+          margin-bottom: 1.5rem;
+        }
+
+        .reading-flow-field-grid {
+          gap: 0.5rem;
+        }
+
+        @media (max-width: 767px) {
+          .reading-flow {
+            min-height: calc(100dvh - 60px);
+            overflow: visible;
+          }
+
+          .reading-flow-screen {
+            align-items: flex-start;
+            justify-content: flex-start;
+            min-height: calc(100dvh - 60px);
+            padding: clamp(1rem, 5vw, 1.5rem);
+            padding-top: clamp(1.5rem, 7vh, 3rem);
+            padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+          }
+
+          .reading-flow-panel {
+            max-width: none;
+          }
+
+          .reading-flow-goals-grid {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 0.55rem;
+          }
+
+          .reading-flow-actions {
+            gap: 0.65rem;
+          }
+
+          .reading-flow-actions > :global(.btn) {
+            min-height: 46px;
+          }
+
+          .reading-flow-actions-end {
+            justify-content: stretch;
+          }
+
+          .reading-flow-actions-end > :global(.btn) {
+            width: 100%;
+            justify-content: center;
+          }
+        }
+
+        @media (max-width: 374px) {
+          .reading-flow-actions {
+            flex-direction: column;
+          }
+
+          .reading-flow-actions > :global(.btn),
+          .reading-flow-actions > button {
+            width: 100%;
+            justify-content: center;
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/app/page-header-context";
 
 const PAGE_SIZE = 10;
 
-type Reading = {
+export type Reading = {
   id: string;
   destination: string;
   lat: number | null;
@@ -19,10 +19,25 @@ type Reading = {
   score: number;
   travelDate: string;
   travelType: string;
+  typeFilter: Exclude<TypeFilter, "all">;
 };
 
-type SortKey = "recent" | "score" | "travel" | "alpha";
-type TypeFilter = "all" | "trip" | "relocation";
+export type SupabaseReadingRow = {
+  id: string;
+  details?: {
+    destination?: string;
+    destinationLat?: number;
+    destinationLon?: number;
+    travelType?: string;
+    macroScore?: number;
+  } | null;
+  category?: string | null;
+  reading_date: string;
+  reading_score?: number | null;
+};
+
+export type SortKey = "recent" | "score" | "travel" | "alpha";
+export type TypeFilter = "all" | "trip" | "relocation" | "couples";
 
 const SORT_LABELS: Record<SortKey, string> = {
   recent: "Recent",
@@ -30,6 +45,52 @@ const SORT_LABELS: Record<SortKey, string> = {
   travel: "Travel date",
   alpha: "A → Z",
 };
+
+const TYPE_LABELS: Record<TypeFilter, string> = {
+  all: "All",
+  trip: "Trip",
+  relocation: "Relocation",
+  couples: "Couples",
+};
+
+export function toReading(row: SupabaseReadingRow): Reading {
+  const isCouples = row.category === "synastry";
+  const travelType = row.details?.travelType || row.category || "trip";
+  const typeFilter: Exclude<TypeFilter, "all"> = isCouples
+    ? "couples"
+    : travelType === "relocation"
+      ? "relocation"
+      : "trip";
+
+  return {
+    id: row.id,
+    destination: row.details?.destination || "Unknown Destination",
+    lat: typeof row.details?.destinationLat === "number" ? row.details.destinationLat : null,
+    lon: typeof row.details?.destinationLon === "number" ? row.details.destinationLon : null,
+    travelType: isCouples ? "couples" : travelType,
+    typeFilter,
+    travelDate: row.reading_date,
+    score: row.reading_score || row.details?.macroScore || 50,
+  };
+}
+
+export function filterAndSortReadings(readings: Reading[], sort: SortKey, typeFilter: TypeFilter): Reading[] {
+  const byType = readings.filter((reading) => {
+    if (typeFilter === "all") return true;
+    return reading.typeFilter === typeFilter;
+  });
+
+  return [...byType].sort((a, b) => {
+    switch (sort) {
+      case "score": return b.score - a.score;
+      case "travel": return new Date(b.travelDate).getTime() - new Date(a.travelDate).getTime();
+      case "alpha": return a.destination.localeCompare(b.destination);
+      case "recent":
+      default:
+        return readings.indexOf(a) - readings.indexOf(b);
+    }
+  });
+}
 
 function ReadingsContent() {
   const router = useRouter();
@@ -69,39 +130,15 @@ function ReadingsContent() {
         .order("created_at", { ascending: false });
 
       if (data) {
-        setReadings(
-          data.map((r: any) => ({
-            id: r.id,
-            destination: r.details?.destination || "Unknown Destination",
-            lat: typeof r.details?.destinationLat === "number" ? r.details.destinationLat : null,
-            lon: typeof r.details?.destinationLon === "number" ? r.details.destinationLon : null,
-            travelType: r.details?.travelType || r.category || "trip",
-            travelDate: r.reading_date,
-            score: r.reading_score || r.details?.macroScore || 50,
-          }))
-        );
+        const rows = data as SupabaseReadingRow[];
+        setReadings(rows.map(toReading));
       }
       setLoading(false);
     };
     fetchReadings();
   }, []);
 
-  const filtered = useMemo(() => {
-    const byType = readings.filter((r) => {
-      if (typeFilter === "all") return true;
-      return (r.travelType || "").toLowerCase() === typeFilter;
-    });
-    return [...byType].sort((a, b) => {
-      switch (sort) {
-        case "score": return b.score - a.score;
-        case "travel": return new Date(b.travelDate).getTime() - new Date(a.travelDate).getTime();
-        case "alpha": return a.destination.localeCompare(b.destination);
-        case "recent":
-        default:
-          return readings.indexOf(a) - readings.indexOf(b);
-      }
-    });
-  }, [readings, sort, typeFilter]);
+  const filtered = useMemo(() => filterAndSortReadings(readings, sort, typeFilter), [readings, sort, typeFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -135,8 +172,6 @@ function ReadingsContent() {
           typeFilter={typeFilter}
           onSort={(s) => updateParam({ sort: s === "recent" ? null : s, page: null })}
           onType={(t) => updateParam({ type: t === "all" ? null : t, page: null })}
-          totalCount={filtered.length}
-          showingCount={pageItems.length}
           onNew={() => { posthog.capture("new_reading_started", { source: "readings_page" }); router.push("/reading/new"); }}
         />
 
@@ -221,6 +256,9 @@ function ReadingsContent() {
                 <Pagination
                   page={safePage}
                   totalPages={totalPages}
+                  totalCount={filtered.length}
+                  pageStart={pageStart}
+                  showingCount={pageItems.length}
                   onPage={(p) => {
                     updateParam({ page: p === 1 ? null : String(p) });
                     setHoveredId(null);
@@ -233,7 +271,7 @@ function ReadingsContent() {
       </div>
 
       <button
-        className="dashboard-fab"
+        className="dashboard-fab readings-fab"
         onClick={() => { posthog.capture("new_reading_started", { source: "fab" }); router.push("/reading/new"); }}
       >
         + New Reading
@@ -298,6 +336,7 @@ function ReadingsContent() {
           .readings-shell {
             height: auto;
             min-height: calc(100dvh - var(--page-header-height, 64px));
+            padding-bottom: calc(var(--space-2xl) + env(safe-area-inset-bottom));
           }
           .readings-mobile-tabs { display: flex; }
           .readings-split {
@@ -315,6 +354,237 @@ function ReadingsContent() {
             min-height: 60vh;
           }
         }
+
+        @media (max-width: 767px) {
+          .readings-shell {
+            padding: var(--space-sm) var(--space-md) calc(var(--space-2xl) + env(safe-area-inset-bottom));
+          }
+
+          .readings-split {
+            flex: 0 0 auto;
+            min-height: 0;
+          }
+
+          .readings-list-col {
+            min-height: 0;
+          }
+
+          .readings-fab {
+            display: none;
+          }
+        }
+      `}</style>
+      <style jsx global>{`
+        .readings-controls {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: var(--space-md);
+          padding: var(--space-sm) 0;
+          border-bottom: 1px solid var(--surface-border);
+          flex-shrink: 0;
+        }
+
+        .readings-filter-cluster {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: var(--space-md);
+          min-width: 0;
+          width: 100%;
+        }
+
+        .readings-control-group {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          min-width: 0;
+        }
+
+        .readings-control-label {
+          font-family: var(--font-mono);
+          font-size: 0.65rem;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          color: var(--text-tertiary);
+        }
+
+        .readings-control-label {
+          font-size: 0.6rem;
+          letter-spacing: 0.14em;
+        }
+
+        .readings-actions-group {
+          margin-left: auto;
+          display: flex;
+          align-items: center;
+        }
+
+        .readings-new-button {
+          padding: 0.4rem 0.9rem;
+          font-size: 0.75rem;
+        }
+
+        .readings-pagination {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 6px;
+          padding: var(--space-sm) var(--space-md);
+          border-top: 1px solid var(--surface-border);
+          background: var(--surface);
+          flex-shrink: 0;
+        }
+
+        .readings-pagination-label {
+          font-family: var(--font-mono);
+          font-size: 0.6rem;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          color: var(--text-tertiary);
+        }
+
+        .readings-pagination-pages {
+          display: flex;
+          gap: 4px;
+          align-items: center;
+        }
+
+        .readings-pagination-btn {
+          min-width: 30px;
+          height: 30px;
+          padding: 0 0.55rem;
+          border: 1px solid var(--surface-border);
+          border-radius: var(--radius-sm);
+          font-family: var(--font-mono);
+          font-size: 0.7rem;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .readings-pagination-ellipsis {
+          color: var(--text-tertiary);
+          padding: 0 4px;
+          align-self: center;
+        }
+
+        @media (max-width: 767px) {
+          .readings-controls {
+            align-items: stretch;
+            flex-direction: column;
+            gap: 0.7rem;
+            padding: 0.65rem 0 0.85rem;
+          }
+
+          .readings-actions-group {
+            margin-left: 0;
+            justify-content: flex-end;
+            width: auto;
+            align-self: end;
+          }
+
+          .readings-new-button {
+            min-height: 38px;
+            padding: 0.48rem 0.8rem !important;
+            border-radius: var(--radius-full);
+            flex-shrink: 0;
+            white-space: nowrap;
+          }
+
+          .readings-filter-cluster {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+            align-items: end;
+            gap: 0.6rem;
+            width: 100%;
+          }
+
+          .readings-control-group {
+            align-items: stretch;
+            flex-direction: column;
+            gap: 0.35rem;
+          }
+
+          .readings-sort-select,
+          .readings-type-select {
+            min-height: 38px;
+            width: 100%;
+          }
+
+          .readings-pagination {
+            padding: 0.65rem 0.85rem;
+            background: color-mix(in oklab, var(--surface) 78%, var(--bg));
+          }
+
+          .readings-pagination-label {
+            font-size: 0.62rem;
+            color: var(--text-secondary);
+          }
+
+          .readings-pagination-number,
+          .readings-pagination-ellipsis {
+            display: none;
+          }
+
+          .readings-pagination-control {
+            min-width: 42px;
+            height: 36px;
+            border-radius: var(--radius-full);
+          }
+
+          .reading-row {
+            padding: var(--space-md) var(--space-sm) !important;
+            align-items: flex-start !important;
+            gap: var(--space-sm) !important;
+          }
+
+          .reading-row-main {
+            gap: 0.45rem !important;
+          }
+
+          .reading-row-ring {
+            width: 76px !important;
+            height: 76px !important;
+            flex: 0 0 76px !important;
+            overflow: hidden !important;
+            transform: none !important;
+            margin-right: 0 !important;
+          }
+
+          .reading-row-ring > div {
+            transform: scale(0.54);
+            transform-origin: top left;
+          }
+
+          .reading-row-title {
+            white-space: normal !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            font-size: 0.92rem !important;
+          }
+
+          .reading-row-meta {
+            line-height: 1.45 !important;
+          }
+
+          .reading-row-view {
+            padding: 0.32rem 0.7rem !important;
+          }
+        }
+
+        @media (max-width: 374px) {
+          .readings-filter-cluster {
+            grid-template-columns: minmax(0, 1fr) auto;
+          }
+
+          .readings-sort-group {
+            grid-column: 1 / -1;
+          }
+        }
       `}</style>
     </>
   );
@@ -325,92 +595,44 @@ function ControlsBar({
   typeFilter,
   onSort,
   onType,
-  totalCount,
-  showingCount,
   onNew,
 }: {
   sort: SortKey;
   typeFilter: TypeFilter;
   onSort: (s: SortKey) => void;
   onType: (t: TypeFilter) => void;
-  totalCount: number;
-  showingCount: number;
   onNew: () => void;
 }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        flexWrap: "wrap",
-        gap: "var(--space-md)",
-        padding: "var(--space-sm) 0",
-        borderBottom: "1px solid var(--surface-border)",
-        flexShrink: 0,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <Label>Sort</Label>
-        <select value={sort} onChange={(e) => onSort(e.target.value as SortKey)} style={selectStyle}>
-          {Object.entries(SORT_LABELS).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
-          ))}
-        </select>
-      </div>
+    <div className="readings-controls">
+      <div className="readings-filter-cluster">
+        <div className="readings-control-group readings-sort-group">
+          <Label>Sort</Label>
+          <select className="readings-sort-select" value={sort} onChange={(e) => onSort(e.target.value as SortKey)} style={selectStyle}>
+            {Object.entries(SORT_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
+        </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <Label>Type</Label>
-        {(["all", "trip", "relocation"] as TypeFilter[]).map((t) => {
-          const active = typeFilter === t;
-          return (
-            <button
-              key={t}
-              onClick={() => onType(t)}
-              style={{
-                background: active ? "var(--text-primary)" : "transparent",
-                color: active ? "var(--bg)" : "var(--text-secondary)",
-                border: "1px solid var(--surface-border)",
-                borderRadius: "var(--radius-full)",
-                padding: "0.3rem 0.75rem",
-                fontFamily: "var(--font-mono)",
-                fontSize: "0.65rem",
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                cursor: "pointer",
-              }}
-            >
-              {t}
-            </button>
-          );
-        })}
-      </div>
+        <div className="readings-control-group readings-type-group">
+          <Label>Type</Label>
+          <select className="readings-type-select" value={typeFilter} onChange={(e) => onType(e.target.value as TypeFilter)} style={selectStyle}>
+            {Object.entries(TYPE_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
+        </div>
 
-      <div
-        style={{
-          marginLeft: "auto",
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-md)",
-        }}
-      >
-        <span
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: "0.65rem",
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            color: "var(--text-tertiary)",
-          }}
-        >
-          {showingCount} of {totalCount}
-        </span>
-        <button
-          onClick={onNew}
-          className="btn btn-primary"
-          style={{ padding: "0.4rem 0.9rem", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: 6 }}
-        >
-          + New <ArrowRight size={13} />
-        </button>
+        <div className="readings-actions-group">
+          <button
+            onClick={onNew}
+            className="btn btn-primary readings-new-button"
+            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+          >
+            + New <ArrowRight size={13} />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -433,6 +655,7 @@ function ReadingRow({
   const ringColor = BAND_CONFIG[verdict].ring;
   return (
     <motion.div
+      className="reading-row"
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03 }}
@@ -464,12 +687,13 @@ function ReadingRow({
           }}
         />
       )}
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", minWidth: 0, flex: 1 }}>
-        <div style={{ transform: "scale(0.55)", transformOrigin: "left center", marginRight: "-36px", flexShrink: 0 }}>
+      <div className="reading-row-main" style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", minWidth: 0, flex: 1 }}>
+        <div className="reading-row-ring" style={{ transform: "scale(0.55)", transformOrigin: "left center", marginRight: "-36px", flexShrink: 0 }}>
           <ScoreRing score={reading.score} verdict={verdict} />
         </div>
         <div style={{ minWidth: 0 }}>
           <div
+            className="reading-row-title"
             style={{
               fontFamily: "var(--font-body)",
               fontWeight: 600,
@@ -483,6 +707,7 @@ function ReadingRow({
             {reading.destination}
           </div>
           <div
+            className="reading-row-meta"
             style={{
               fontFamily: "var(--font-mono)",
               fontSize: "0.58rem",
@@ -497,6 +722,7 @@ function ReadingRow({
         </div>
       </div>
       <button
+        className="reading-row-view"
         style={{
           background: "transparent",
           border: "1px solid var(--surface-border)",
@@ -519,36 +745,35 @@ function ReadingRow({
 function Pagination({
   page,
   totalPages,
+  totalCount,
+  pageStart,
+  showingCount,
   onPage,
 }: {
   page: number;
   totalPages: number;
+  totalCount: number;
+  pageStart: number;
+  showingCount: number;
   onPage: (p: number) => void;
 }) {
   if (totalPages <= 1) return null;
+  const firstShown = totalCount === 0 ? 0 : pageStart + 1;
+  const lastShown = pageStart + showingCount;
   const pages: number[] = [];
   const window = 1;
   for (let p = Math.max(1, page - window); p <= Math.min(totalPages, page + window); p++) pages.push(p);
 
-  const btn = (label: React.ReactNode, target: number, disabled = false, active = false) => (
+  const btn = (label: React.ReactNode, target: number, disabled = false, active = false, className = "readings-pagination-number") => (
     <button
       key={`${label}-${target}`}
+      className={`readings-pagination-btn ${className}`}
       disabled={disabled}
       onClick={() => onPage(target)}
       style={{
-        minWidth: 30,
-        height: 30,
-        padding: "0 0.55rem",
         background: active ? "var(--text-primary)" : "transparent",
         color: active ? "var(--bg)" : disabled ? "var(--text-tertiary)" : "var(--text-secondary)",
-        border: "1px solid var(--surface-border)",
-        borderRadius: "var(--radius-sm)",
-        fontFamily: "var(--font-mono)",
-        fontSize: "0.7rem",
         cursor: disabled ? "not-allowed" : "pointer",
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
       }}
     >
       {label}
@@ -556,45 +781,26 @@ function Pagination({
   );
 
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        gap: 6,
-        padding: "var(--space-sm) var(--space-md)",
-        borderTop: "1px solid var(--surface-border)",
-        background: "var(--surface)",
-        flexShrink: 0,
-      }}
-    >
-      <span
-        style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: "0.6rem",
-          letterSpacing: "0.1em",
-          textTransform: "uppercase",
-          color: "var(--text-tertiary)",
-        }}
-      >
-        Page {page} of {totalPages}
+    <div className="readings-pagination">
+      <span className="readings-pagination-label">
+        Showing {firstShown}-{lastShown} of {totalCount}
       </span>
-      <div style={{ display: "flex", gap: 4 }}>
-        {btn(<ChevronLeft size={14} />, page - 1, page === 1)}
+      <div className="readings-pagination-pages">
+        {btn(<ChevronLeft size={14} />, page - 1, page === 1, false, "readings-pagination-control")}
         {pages[0] > 1 && (
           <>
             {btn(1, 1, false, page === 1)}
-            {pages[0] > 2 && <span style={{ color: "var(--text-tertiary)", padding: "0 4px", alignSelf: "center" }}>…</span>}
+            {pages[0] > 2 && <span className="readings-pagination-ellipsis">…</span>}
           </>
         )}
         {pages.map((p) => btn(p, p, false, p === page))}
         {pages[pages.length - 1] < totalPages && (
           <>
-            {pages[pages.length - 1] < totalPages - 1 && <span style={{ color: "var(--text-tertiary)", padding: "0 4px", alignSelf: "center" }}>…</span>}
+            {pages[pages.length - 1] < totalPages - 1 && <span className="readings-pagination-ellipsis">…</span>}
             {btn(totalPages, totalPages, false, page === totalPages)}
           </>
         )}
-        {btn(<ChevronRight size={14} />, page + 1, page === totalPages)}
+        {btn(<ChevronRight size={14} />, page + 1, page === totalPages, false, "readings-pagination-control")}
       </div>
     </div>
   );
@@ -693,15 +899,7 @@ function SkeletonBox({ label }: { label: string }) {
 }
 
 const Label = ({ children }: { children: React.ReactNode }) => (
-  <span
-    style={{
-      fontFamily: "var(--font-mono)",
-      fontSize: "0.6rem",
-      letterSpacing: "0.14em",
-      textTransform: "uppercase",
-      color: "var(--text-tertiary)",
-    }}
-  >
+  <span className="readings-control-label">
     {children}
   </span>
 );

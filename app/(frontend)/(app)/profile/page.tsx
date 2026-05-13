@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { LogOut, Save, Loader2, CreditCard } from "lucide-react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { PageHeader } from "@/components/app/page-header-context";
@@ -87,7 +86,7 @@ export default function ProfilePage() {
            lat = geo.lat;
            lon = geo.lon;
         }
-      } catch (e) {
+      } catch {
         setToast("Error finding city coordinates.");
         setSaving(false);
         return;
@@ -143,22 +142,22 @@ export default function ProfilePage() {
   return (
     <>
       <PageHeader title="Your Profile" />
-      <div style={{ maxWidth: "720px", margin: "0 auto", width: "100%", padding: "var(--space-lg) var(--space-md) var(--space-3xl)" }}>
-        <p style={{ fontFamily: "var(--font-body)", color: "var(--text-secondary)", marginBottom: "var(--space-md)" }}>
+      <div className="profile-page">
+        <p className="profile-intro">
           Manage your birth data and account settings.
         </p>
 
 
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
           {/* Birth Data Section */}
-          <section style={{ background: "var(--surface)", padding: "var(--space-lg)", border: "1px solid var(--surface-border)", borderRadius: "var(--shape-asymmetric-md)" }}>
+          <section className="profile-card">
             <div className="input-group" style={{ marginBottom: "1.25rem" }}>
               <label className="input-label">First name</label>
               <input className="input-field" type="text" value={profile.firstName}
                 onChange={(e) => setProfile(p => ({ ...p, firstName: e.target.value }))} />
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "1.25rem" }}>
+            <div className="form-field-grid profile-field-grid">
               <div className="input-group">
                 <label className="input-label">Date of birth</label>
                 <input className="input-field" type="date" value={profile.birthDate}
@@ -171,12 +170,12 @@ export default function ProfilePage() {
                 </label>
                 <input className="input-field" type="time" value={profile.birthTime}
                   disabled={!profile.birthTimeKnown}
-                  style={{ opacity: profile.birthTimeKnown ? 1 : 0.4 }}
+                  style={{ opacity: profile.birthTimeKnown ? 1 : 0.4, minWidth: 0 }}
                   onChange={(e) => setProfile(p => ({ ...p, birthTime: e.target.value }))} />
               </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.25rem" }}>
+            <div className="profile-toggle-row">
               <button onClick={() => setProfile(p => ({ ...p, birthTimeKnown: !p.birthTimeKnown }))} style={{
                 width: "32px", height: "18px", borderRadius: "9px", border: "none", cursor: "pointer",
                 background: profile.birthTimeKnown ? "var(--text-primary)" : "var(--surface-border)",
@@ -187,7 +186,7 @@ export default function ProfilePage() {
                   width: "14px", height: "14px", borderRadius: "50%", background: "var(--bg)", transition: "all 0.2s ease",
                 }} />
               </button>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-tertiary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+              <span className="profile-toggle-label">
                 I don&apos;t know my exact birth time
               </span>
             </div>
@@ -203,7 +202,7 @@ export default function ProfilePage() {
               />
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
+            <div className="form-action-row">
               <button className="btn btn-primary" style={{ padding: "0.8rem 1.75rem", borderRadius: "var(--radius-full)" }} onClick={handleSave} disabled={saving}>
                 <Save size={14} style={{ marginRight: "0.4rem" }} /> {saving ? "Saving..." : "Save changes"}
               </button>
@@ -215,8 +214,8 @@ export default function ProfilePage() {
           <section style={{ paddingTop: "var(--space-md)" }}>
             <h3 style={{ fontFamily: "var(--font-secondary)", fontSize: "1.25rem", marginBottom: "var(--space-md)" }}>Subscription</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <div style={{ padding: "1.25rem", background: "rgba(4,86,251,0.06)", border: "1px solid rgba(4,86,251,0.12)", borderRadius: "var(--radius-md)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div className="profile-subscription-card">
+                <div className="profile-split-row">
                    <div>
                      <span style={{ fontFamily: "var(--font-body)", fontWeight: 600, color: "var(--text-primary)", fontSize: "0.85rem" }}>Astronat Pro</span>
                      <p style={{ margin: "0.2rem 0 0", fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--text-secondary)" }}>
@@ -245,8 +244,8 @@ export default function ProfilePage() {
           {/* Account Section */}
           <section style={{ paddingTop: "var(--space-lg)" }}>
             <h3 style={{ fontFamily: "var(--font-secondary)", fontSize: "1.25rem", marginBottom: "var(--space-md)" }}>Account</h3>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--surface)", border: "1px solid var(--surface-border)", padding: "1.25rem", borderRadius: "var(--shape-asymmetric-md)" }}>
-                <div>
+            <div className="profile-account-card profile-split-row">
+                <div className="profile-account-copy">
                    <p style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>Registered Email</p>
                    <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "var(--text-secondary)", margin: "0.25rem 0 0", letterSpacing: "0.02em" }}>{userEmail}</p>
                 </div>
@@ -262,6 +261,102 @@ export default function ProfilePage() {
           </section>
         </div>
       </div>
+      <style jsx>{`
+        .profile-page {
+          max-width: 720px;
+          margin: 0 auto;
+          width: 100%;
+          padding: var(--space-lg) var(--space-md) var(--space-3xl);
+        }
+
+        .profile-intro {
+          font-family: var(--font-body);
+          color: var(--text-secondary);
+          margin-bottom: var(--space-md);
+        }
+
+        .profile-card,
+        .profile-account-card {
+          background: var(--surface);
+          border: 1px solid var(--surface-border);
+          border-radius: var(--shape-asymmetric-md);
+          padding: var(--space-lg);
+        }
+
+        .profile-field-grid {
+          margin-bottom: 1.25rem;
+        }
+
+        .profile-toggle-row {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-bottom: 1.25rem;
+          min-width: 0;
+        }
+
+        .profile-toggle-label {
+          min-width: 0;
+          font-family: var(--font-mono);
+          font-size: 0.6rem;
+          color: var(--text-tertiary);
+          letter-spacing: 0.05em;
+          line-height: 1.4;
+          text-transform: uppercase;
+        }
+
+        .profile-subscription-card {
+          padding: 1.25rem;
+          background: rgba(4,86,251,0.06);
+          border: 1px solid rgba(4,86,251,0.12);
+          border-radius: var(--radius-md);
+        }
+
+        .profile-split-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: var(--space-sm);
+          min-width: 0;
+        }
+
+        .profile-account-copy {
+          min-width: 0;
+          overflow-wrap: anywhere;
+        }
+
+        @media (max-width: 767px) {
+          .profile-page {
+            padding: var(--space-md) var(--space-md) var(--space-3xl);
+          }
+
+          .profile-intro {
+            font-size: 1.05rem;
+            line-height: 1.55;
+          }
+
+          .profile-card,
+          .profile-account-card {
+            padding: var(--space-md);
+            border-radius: var(--radius-lg);
+          }
+
+          .profile-split-row {
+            align-items: stretch;
+            flex-direction: column;
+          }
+
+          .profile-split-row :global(.btn),
+          .profile-split-row button {
+            width: 100%;
+            justify-content: center;
+          }
+
+          .profile-toggle-row {
+            align-items: flex-start;
+          }
+        }
+      `}</style>
     </>
   );
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeft, Menu, Plus, User, X } from "lucide-react";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import ThemeToggle from "@/app/components/ThemeToggle";
 import {
@@ -23,7 +24,7 @@ export function AppMobileBar() {
   const pathname = usePathname() || "";
   const { header } = usePageHeader();
   const [open, setOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -59,6 +60,8 @@ export function AppMobileBar() {
   };
 
   const showBack = Boolean(header.backTo);
+  const backLabel = header.backLabel ?? "Back";
+  const visibleBackLabel = backLabel.toLowerCase() === "all readings" ? "All" : backLabel;
 
   return (
     <header
@@ -66,6 +69,7 @@ export function AppMobileBar() {
         position: "sticky",
         top: 0,
         zIndex: 1100,
+        isolation: "isolate",
         background: "var(--bg)",
         borderBottom: "1px solid var(--surface-border)",
         height: NAVBAR_HEIGHT,
@@ -78,7 +82,7 @@ export function AppMobileBar() {
       {showBack ? (
         <button
           onClick={handleBack}
-          aria-label={header.backLabel ?? "Back"}
+          aria-label={backLabel}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -92,22 +96,24 @@ export function AppMobileBar() {
             letterSpacing: "0.08em",
             textTransform: "uppercase",
             cursor: "pointer",
-            maxWidth: "60%",
+            maxWidth: "42vw",
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
+            position: "relative",
+            zIndex: 2,
           }}
         >
           <ArrowLeft size={16} />
           <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-            {header.backLabel ?? "Back"}
+            {visibleBackLabel}
           </span>
         </button>
       ) : (
         <Link
           href="/dashboard"
           aria-label="Astro Nat home"
-          style={{ display: "inline-flex", alignItems: "center", padding: "0.25rem 0.5rem" }}
+          style={{ display: "inline-flex", alignItems: "center", padding: "0.25rem 0.5rem", position: "relative", zIndex: 2 }}
         >
           <Image
             src="/logo-stacked.svg"
@@ -124,7 +130,11 @@ export function AppMobileBar() {
       {header.title && (
         <span
           style={{
-            flex: 1,
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "min(42vw, 220px)",
             textAlign: "center",
             fontFamily: "var(--font-primary)",
             fontSize: "0.85rem",
@@ -134,6 +144,8 @@ export function AppMobileBar() {
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
             color: "var(--text-primary)",
+            pointerEvents: "none",
+            zIndex: 1,
           }}
         >
           {header.title}
@@ -145,6 +157,7 @@ export function AppMobileBar() {
         <SheetTrigger
           aria-label={open ? "Close menu" : "Open menu"}
           className="h-10 w-10 inline-flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5 rounded-md transition-colors focus:outline-none text-[var(--text-primary)] relative z-[1200]"
+          style={{ marginLeft: "auto" }}
         >
           {open ? <X size={22} /> : <Menu size={22} />}
         </SheetTrigger>
