@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { PAGE_SIZE } from "./constants";
 import {
   ReadingsClient,
-  PAGE_SIZE,
   toReading,
   type Reading,
   type SortKey,

@@ -10,8 +10,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ScoreRing, getVerdict, BAND_CONFIG } from "@/app/components/ScoreRing";
 import type { AtlasPin } from "@/app/components/ReadingsAtlasMap";
 import { PageHeader } from "@/components/app/page-header-context";
+import { PAGE_SIZE } from "./constants";
 
-export const PAGE_SIZE = 10;
+// Re-export so existing call sites that previously imported PAGE_SIZE from
+// this module keep working. New imports should use ./constants directly.
+export { PAGE_SIZE };
 
 const ReadingsAtlasMap = dynamic(
   () => import("@/app/components/ReadingsAtlasMap").then((m) => ({ default: m.ReadingsAtlasMap })),
