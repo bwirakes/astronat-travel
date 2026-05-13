@@ -115,9 +115,9 @@ export default function UniversalSkySection({
 
             {events.length > 0 && (
                 <div style={KPI_GRID}>
-                    {events.map((event) => {
+                    {events.map((event, index) => {
                         const card = templateForKpiCard(event, primaryGoalId);
-                        return <SkyKpiCard key={event.key} event={event} card={card} />;
+                        return <SkyKpiCard key={`${event.key}-${index}`} event={event} card={card} />;
                     })}
                 </div>
             )}

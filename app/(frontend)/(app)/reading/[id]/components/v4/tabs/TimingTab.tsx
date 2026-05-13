@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import SectionHead from "../../shared/SectionHead";
-import TabSection from "../../shared/TabSection";
+import TabSection, { cleanAiCardText, renderBoldText } from "../../shared/TabSection";
 import type { V4VM } from "./types";
 import { transitOneLiner } from "@/app/lib/transit-copy";
 import type { TransitSpan, UniversalSkySpan } from "@/app/lib/window-scoring";
@@ -1224,7 +1224,7 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                     ))}
                     {headlineSky.map((span, i) => (
                         <SkyGanttRow
-                            key={span.key ?? `hl-sky|${span.kind}|${span.planet}|${span.exactISO}|${i}`}
+                            key={`hl-sky|${span.key ?? `${span.kind}|${span.planet}|${span.exactISO}`}|${i}`}
                             span={span}
                             windowStart={WINDOW_START}
                             windowEnd={WINDOW_END}
@@ -1276,7 +1276,7 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                                 ))}
                                 {backdropSky.map((span, i) => (
                                     <SkyGanttRow
-                                        key={span.key ?? `bd-sky|${span.kind}|${span.planet}|${span.exactISO}|${i}`}
+                                        key={`bd-sky|${span.key ?? `${span.kind}|${span.planet}|${span.exactISO}`}|${i}`}
                                         span={span}
                                         windowStart={WINDOW_START}
                                         windowEnd={WINDOW_END}
@@ -1378,7 +1378,7 @@ export default function TimingTab({ vm, copiedTab }: Props) {
                                     className="m-0 text-[clamp(16px,1.5vw,18px)] leading-[1.6] [text-wrap:pretty]"
                                     style={{ fontFamily: FB, color: "var(--text-primary)", fontWeight: 400 }}
                                 >
-                                    {advice}
+                                    {renderBoldText(cleanAiCardText(advice))}
                                 </span>
                             </li>
                         ))}
@@ -1451,7 +1451,7 @@ export default function TimingTab({ vm, copiedTab }: Props) {
                             color: "var(--text-primary)" 
                         }}
                     >
-                        {vm.tabs.timing.closingVerdict}
+                        {renderBoldText(cleanAiCardText(vm.tabs.timing.closingVerdict))}
                     </p>
                 </div>
             )}

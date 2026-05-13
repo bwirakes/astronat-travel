@@ -207,6 +207,8 @@ const ChartRulerReframeSchema = z.object({
   ruler: z.string(),
   fromHouse: z.number().int().min(1).max(12),
   toHouse: z.number().int().min(1).max(12),
+  dignity: z.string().optional(),
+  dignityMeaning: z.string().optional(),
   headline: z.string(),
   body: z.string(),
 });
@@ -379,6 +381,7 @@ export const TeacherReadingGenerationSchema = TeacherReadingSchema.pick({
   tabs: true,
   overview: true,
   timing: true,
+  chartRulerReframe: true,
 });
 
 /**
