@@ -189,17 +189,13 @@
     outline-offset: 2px;
 }
 
-.tab-panel {
-    display: none;
-}
-
-.tab-panel-active {
-    display: block;
-}
-
 .pane {
-    display: block;
+    display: none;
     margin-bottom: 1rem;
+}
+
+.pane.active {
+    display: block;
 }
 
 .section-hdr {
@@ -311,6 +307,33 @@
     font-size: 10px;
     font-weight: 800;
     margin-top: 3px;
+}
+
+.criteria-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 6px 0 8px;
+}
+
+.criteria-check {
+    display: inline-block;
+    font-size: 9.5px;
+    font-weight: 700;
+    border-radius: 3px;
+    padding: 2px 6px;
+    border: 1px solid #26262b;
+}
+
+.criteria-check-on {
+    color: #74c77b;
+    background: #0a1a0a;
+    border-color: #1a5a1a;
+}
+
+.criteria-check-off {
+    color: #555;
+    background: #101012;
 }
 
 .pill-cell {
@@ -452,6 +475,36 @@
     line-height: 1.65;
 }
 
+.card {
+    background: #101012;
+    border: 1px solid #26262b;
+    border-radius: 7px;
+    padding: 0.9rem;
+    margin-bottom: 0.8rem;
+}
+
+.card-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #e8e6e0;
+    margin-bottom: 0.45rem;
+}
+
+:global(.card) {
+    background: #101012;
+    border: 1px solid #26262b;
+    border-radius: 7px;
+    padding: 0.9rem;
+    margin-bottom: 0.8rem;
+}
+
+:global(.card-title) {
+    font-size: 12px;
+    font-weight: 700;
+    color: #e8e6e0;
+    margin-bottom: 0.45rem;
+}
+
 .stat-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -496,6 +549,18 @@
 .formula b,
 .formula span {
     display: block;
+}
+
+:global(.formula) {
+    background: #0d0d10;
+    border: 1px solid #2a2a2e;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-family: "Courier New", monospace;
+    font-size: 11px;
+    color: #a0c8ff;
+    line-height: 1.8;
+    margin: 0.5rem 0;
 }
 
 .risk-timeline {
@@ -555,6 +620,100 @@
     margin-bottom: 2px;
 }
 
+.risk-zones span {
+    display: inline-block;
+}
+
+.angle-legend {
+    font-size: 9px;
+    color: #666;
+    margin-left: 6px;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.zone-tag {
+    background: #0d1117;
+    font-size: 9.5px;
+    border-radius: 3px;
+    padding: 1px 6px;
+    margin: 1px 3px 1px 0;
+    border-left: 3px solid #88b4d4;
+}
+
+.risk-detail-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 0.9fr);
+    gap: 6px 16px;
+}
+
+.risk-factors {
+    margin-bottom: 5px;
+}
+
+.risk-factors b,
+.risk-triggers b {
+    color: #555;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    display: block;
+    margin-bottom: 3px;
+}
+
+.factor-li {
+    display: flex;
+    gap: 5px;
+    font-size: 10.5px;
+    color: #888;
+    line-height: 1.5;
+    margin-bottom: 1px;
+}
+
+.factor-li::before {
+    content: "•";
+    color: #444;
+    flex-shrink: 0;
+}
+
+.risk-triggers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-bottom: 5px;
+    align-items: center;
+    font-size: 9px;
+    color: #555;
+}
+
+.risk-triggers b {
+    margin-right: 4px;
+}
+
+.trigger-pill {
+    display: inline-block;
+    font-size: 9.5px;
+    font-weight: 700;
+    border-radius: 3px;
+    padding: 1px 6px;
+    border: 1px solid #3d1f00;
+    background: #1a0a00;
+    color: #ff9f47;
+}
+
+.trigger-crit {
+    border-color: #5a0000;
+    background: #1a0000;
+    color: #ff8a8a;
+}
+
+.trigger-eclipse,
+.trigger-moon {
+    border-color: #0f3a42;
+    background: #06181c;
+    color: #74e4ff;
+}
+
 .risk-date {
     font-size: 11px;
     color: #888;
@@ -595,6 +754,257 @@
     color: #9090a0;
     font-size: 11.5px;
     line-height: 1.6;
+}
+
+:global(.section-hdr) {
+    font-size: 11px;
+    font-weight: 700;
+    color: #7eb8f7;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    padding: 4px 0;
+    margin-top: 1rem;
+    border-bottom: 1px solid #1e1e22;
+    margin-bottom: 0.6rem;
+}
+
+:global(.info-box) {
+    background: #0d1117;
+    border-left: 3px solid #3b5bdb;
+    border-radius: 0 6px 6px 0;
+    padding: 8px 12px;
+    margin: 8px 0;
+    font-size: 11.5px;
+    color: #9090a0;
+    line-height: 1.6;
+}
+
+:global(.warn-box) {
+    background: #120d00;
+    border-left: 3px solid #ff9f47;
+    border-radius: 0 6px 6px 0;
+    padding: 8px 12px;
+    margin: 8px 0;
+    font-size: 11.5px;
+    color: #9090a0;
+    line-height: 1.6;
+}
+
+:global(.tech-card) {
+    background: #0c0c12;
+    border: 1px solid #2a2a2e;
+    border-left: 3px solid #66d9e8;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.7rem;
+}
+
+:global(.tech-card.t-worldpt) {
+    border-left-color: #ffd43b;
+}
+
+:global(.tech-card.t-hotz) {
+    border-left-color: #ff7eb8;
+}
+
+:global(.tech-card.t-geophys),
+:global(.tech-card.t-sensitizer) {
+    border-left-color: #a9e34b;
+}
+
+:global(.tech-card.t-koch) {
+    border-left-color: #74e4ff;
+}
+
+:global(.tech-card.t-eclipse) {
+    border-left-color: #e08080;
+}
+
+:global(.tech-card.t-trigger) {
+    border-left-color: #ff9f47;
+}
+
+:global(.tech-card.t-stress) {
+    border-left-color: #da77f2;
+}
+
+:global(.tech-card.t-angle) {
+    border-left-color: #a9e34b;
+}
+
+:global(.tech-title) {
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+    color: #e0ddd7;
+}
+
+:global(.tech-body) {
+    font-size: 11px;
+    color: #9090a0;
+    line-height: 1.65;
+}
+
+:global(.weight-tag) {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    background: #0d1a2a;
+    color: #7eb8f7;
+    border-radius: 3px;
+    padding: 1px 6px;
+    margin-left: 6px;
+}
+
+:global(.phase-block) {
+    background: #080a10;
+    border: 1px solid #1e1e22;
+    border-radius: 5px;
+    padding: 8px 12px;
+    margin: 0.4rem 0;
+}
+
+:global(.phase-title) {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+}
+
+:global(.world-pt-pill),
+:global(.hot-zone-pill),
+:global(.geophys-pill),
+:global(.midcard-pill) {
+    display: inline-block;
+    font-size: 9.5px;
+    border-radius: 3px;
+    padding: 1px 5px;
+    margin: 1px;
+    font-weight: 700;
+}
+
+:global(.world-pt-pill) {
+    background: #2a2200;
+    color: #ffd43b;
+    border: 1px solid #3d3000;
+}
+
+:global(.hot-zone-pill) {
+    background: #1a0d28;
+    color: #ff7eb8;
+    border: 1px solid #3d0028;
+}
+
+:global(.geophys-pill) {
+    background: #101f16;
+    color: #a9e34b;
+    border: 1px solid #1f3d1f;
+}
+
+:global(.midcard-pill) {
+    background: #0d1a28;
+    color: #74b3ff;
+    border: 1px solid #1a3a6a;
+}
+
+:global(.badge) {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 3px;
+    padding: 2px 7px;
+    white-space: nowrap;
+}
+
+:global(.b-flood) {
+    background: #0d2238;
+    color: #74b3ff;
+}
+
+:global(.b-fire) {
+    background: #2a1400;
+    color: #ff7c43;
+}
+
+:global(.b-storm) {
+    background: #1a1a30;
+    color: #b197fc;
+}
+
+:global(.b-quake) {
+    background: #1a1a1a;
+    color: #ced4da;
+}
+
+:global(.b-tornado) {
+    background: #101f16;
+    color: #a9e34b;
+}
+
+:global(.b-aviation) {
+    background: #0d1a28;
+    color: #74e4ff;
+}
+
+:global(.b-conflict) {
+    background: #1a0d0d;
+    color: #ff9090;
+}
+
+:global(.b-compound) {
+    background: #231c08;
+    color: #ffd43b;
+}
+
+:global(.star-pill),
+:global(.pair-pill),
+:global(.geo-pill) {
+    display: inline-block;
+    font-size: 9.5px;
+    font-weight: 700;
+    border-radius: 3px;
+    padding: 1px 6px;
+    margin: 1px 3px 1px 0;
+}
+
+:global(.star-pill) {
+    background: #2a2200;
+    color: #ffd43b;
+}
+
+:global(.pair-pill) {
+    background: #200d28;
+    color: #da77f2;
+}
+
+:global(.geo-pill) {
+    background: #0d2028;
+    color: #66d9e8;
+}
+
+:global(.fp-match) {
+    font-size: 10px;
+    color: #888;
+    margin-left: auto;
+}
+
+:global(.req-list) {
+    margin: 4px 0 4px 12px;
+}
+
+:global(.req-list li) {
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 2px;
+}
+
+:global(.req-list li b) {
+    color: #c0bdb7;
+}
+
+:global(.tick) {
+    color: #51cf66;
 }
 
 @media (max-width: 680px) {

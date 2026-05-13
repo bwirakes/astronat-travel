@@ -13,10 +13,10 @@
  *   - PlaceFieldTab     → "Sky weather right now" section
  */
 import {
-    computeRealtimePositions,
     ZODIAC_SIGNS,
     type ComputedPosition,
 } from "@/lib/astro/transits";
+import { getComputedSkyForDate, UNIVERSAL_SKY_BODIES } from "@/lib/astro/ephemeris-cache";
 import { essentialDignityLabel } from "./dignity";
 import { SIGN_ELEMENT } from "./dignity-tables";
 import { eclipsesInWindow } from "./geodetic/geodetic-events";
@@ -203,9 +203,9 @@ function signOfLongitude(lon: number): string {
  * to find every station (speed sign-flip) for Mercury through Pluto, and pair
  * Rx-stations with their following direct-stations into retrograde windows.
  *
- * Cost: roughly (lookbackDays + lookaheadDays) × 11 SwissEph calls. At ~1ms
- * per call, a typical 30+365 = 395-day scan costs ~4 seconds. Run once at
- * reading-generation time and persisted into the reading; never on read.
+ * Cost: roughly (lookbackDays + lookaheadDays) Postgres cache reads. The
+ * database currently holds daily ephemeris rows for 1900-2049, so this scan
+ * should usually avoid live SwissEph computation entirely.
  *
  * Why this and not the curated `STATIONS` table: the curated table is hand-
  * maintained and intentionally incomplete (only outers + a few inner stations).
@@ -234,7 +234,7 @@ async function scanStationsAndRetrogradeWindows(
     for (let d = 0; d <= totalDays; d++) {
         const t = startTime + d * MS_DAY;
         const date = new Date(t);
-        const positions = await computeRealtimePositions(date);
+        const positions = await getComputedSkyForDate(date, { bodies: UNIVERSAL_SKY_BODIES });
         for (const p of positions) {
             const arr = samplesByPlanet.get(p.name.toLowerCase());
             if (!arr) continue;
@@ -311,8 +311,9 @@ async function scanStationsAndRetrogradeWindows(
 /**
  * Compute the universal sky state at `refDate`.
  *
- * Pure async function. Touches SwissEph WASM via `computeRealtimePositions`
- * and reads the curated `ECLIPSES` table. Performs a daily ephemeris scan
+ * Pure async function. Reads `ephemeris_daily` first via the Postgres-backed
+ * cache and falls back to SwissEph only on cache misses. It also reads the
+ * curated `ECLIPSES` table. Performs a daily ephemeris scan
  * across [refDate − 30, refDate + 365] to detect stations + retrograde
  * windows for Mercury–Pluto (no curated-table dependency for stations).
  *
@@ -325,7 +326,7 @@ export async function computeUniversalSky(
     refDate: Date,
     scanLookaheadDays: number = 365,
 ): Promise<UniversalSkyState> {
-    const positions = await computeRealtimePositions(refDate);
+    const positions = await getComputedSkyForDate(refDate, { bodies: UNIVERSAL_SKY_BODIES });
     const refDateISO = refDate.toISOString().slice(0, 10);
 
     // Index by lowercase planet name (PLANETS-array convention).

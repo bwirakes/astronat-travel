@@ -22,13 +22,13 @@ import {
     computeGlobalPenalty,
     type MatrixNatalPlanet,
     type MatrixACGLine,
-    type MatrixTransit,
     type MatrixParan,
 } from "@/app/lib/house-matrix";
 import { houseFromLongitude } from "@/app/lib/geodetic";
 import { computeEventScores, type OccupancyPlanet } from "@/app/lib/scoring-engine";
-import { computeUniversalSky } from "@/app/lib/universal-sky";
+import { computeUniversalSky, type SkyStation } from "@/app/lib/universal-sky";
 import { determineSect } from "@/app/lib/arabic-parts";
+import { EPHEMERIS_DAILY_BODIES, getComputedSkyForDate } from "@/lib/astro/ephemeris-cache";
 
 export async function POST(req: NextRequest) {
     try {
@@ -51,43 +51,8 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Map raw transit data into per-house scoring format
-        const mappedTransits = mapTransitsToMatrix(transits, natalPlanets, relocatedCusps);
-        const globalPenalty = computeGlobalPenalty(transits);
-
-        // Compute sect from natal Sun position vs relocated ASC
-        const sunEntry = (natalPlanets as MatrixNatalPlanet[]).find(
-            (p) => (p.planet || (p as any).name || "").toLowerCase() === "sun"
-        );
-        const sect = sunEntry
-            ? determineSect(sunEntry.longitude, (relocatedCusps as number[])[0] ?? 0)
-            : undefined;
-
-        const matrixResult = computeHouseMatrix({
-            natalPlanets: natalPlanets as MatrixNatalPlanet[],
-            relocatedCusps: relocatedCusps as number[],
-            acgLines: acgLines as MatrixACGLine[],
-            transits: mappedTransits,
-            parans: parans as MatrixParan[],
-            destLat,
-            destLon,
-            globalPenalty,
-            sect,
-        });
-
-        // Compute Relocated Occupancy (P_occ) for scoring engine
-        const ascLon = relocatedCusps[0] ?? 0;
-        const relocatedPlanets: OccupancyPlanet[] = natalPlanets.map((p: any) => ({
-            name: p.planet,
-            house: houseFromLongitude(p.longitude, ascLon),
-        }));
-
         // Universal sky state — optional refDate from body, defaults to now.
-        // Adds a global sky modifier (current retrogrades, eclipses, node hits)
-        // to E_Final scores. Same data drives the V4 view's PlaceFieldTab §03.
-        // Reject malformed refDate inputs early — `new Date("banana")` parses
-        // to Invalid Date, which would propagate NaN through the 395-day
-        // ephemeris scan inside computeUniversalSky.
+        // Reject malformed refDate inputs early before any ephemeris scan.
         let refDate: Date;
         if (refDateInput == null) {
             refDate = new Date();
@@ -101,7 +66,53 @@ export async function POST(req: NextRequest) {
             }
             refDate = parsed;
         }
-        const universalSky = await computeUniversalSky(refDate);
+        const [universalSky, transitPositions] = await Promise.all([
+            computeUniversalSky(refDate),
+            getComputedSkyForDate(refDate, { bodies: EPHEMERIS_DAILY_BODIES }),
+        ]);
+        const stations = universalSky.stations.map((station: SkyStation) => ({
+            planet: station.planet[0].toUpperCase() + station.planet.slice(1),
+            type: station.direction,
+            dateUtc: `${station.dateISO}T00:00:00Z`,
+            longitude: station.longitude,
+            sign: station.sign,
+        }));
+
+        // Map raw transit data into per-house scoring format
+        const natalPlanetRows = natalPlanets as MatrixNatalPlanet[];
+        const relocatedCuspRows = relocatedCusps as number[];
+        const mappedTransits = mapTransitsToMatrix(transits, natalPlanetRows, relocatedCuspRows);
+        const globalPenalty = computeGlobalPenalty(transits);
+
+        // Compute sect from natal Sun position vs relocated ASC
+        const sunEntry = natalPlanetRows.find(
+            (p) => (p.planet || p.name || "").toLowerCase() === "sun"
+        );
+        const sect = sunEntry
+            ? determineSect(sunEntry.longitude, relocatedCuspRows[0] ?? 0)
+            : undefined;
+
+        const matrixResult = computeHouseMatrix({
+            natalPlanets: natalPlanetRows,
+            relocatedCusps: relocatedCuspRows,
+            acgLines: acgLines as MatrixACGLine[],
+            transits: mappedTransits,
+            parans: parans as MatrixParan[],
+            destLat,
+            destLon,
+            globalPenalty,
+            sect,
+            refDate,
+            transitPositions,
+            stations,
+        });
+
+        // Compute Relocated Occupancy (P_occ) for scoring engine
+        const ascLon = relocatedCuspRows[0] ?? 0;
+        const relocatedPlanets: OccupancyPlanet[] = natalPlanetRows.map((p) => ({
+            name: p.planet || p.name || "",
+            house: houseFromLongitude(p.longitude, ascLon),
+        }));
 
         // Execute Memo Part 2: Vectorizing Life Events
         const eventScores = computeEventScores(matrixResult, relocatedPlanets, universalSky);
