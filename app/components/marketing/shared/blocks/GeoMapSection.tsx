@@ -30,10 +30,10 @@ export function GeoMapSection({ block }: { block: Block }) {
         )}
 
         {/* Sepharial map container */}
-        <div className="bg-[#000000] pt-8 [clip-path:var(--cut-md)] border border-[var(--surface-border)]">
+        <div className="bg-[var(--geo-atlas-panel-bg)] pt-8 [clip-path:var(--cut-md)] border border-[var(--geo-atlas-panel-border)]">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center px-8 mb-4">
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[rgba(248,245,236,0.35)] hidden md:block">
-              Sepharial Geodetic System — 0° Aries anchored to 0° Longitude
+            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--geo-atlas-caption-muted)] hidden md:block">
+              Sepharial Geodetic System - 0° Aries anchored to 0° Longitude
               (Greenwich Meridian)
             </div>
             <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--color-y2k-blue)] border border-[var(--color-y2k-blue)]/30 rounded-full px-3 py-1">
@@ -41,14 +41,14 @@ export function GeoMapSection({ block }: { block: Block }) {
             </div>
           </div>
           <InteractiveGeodeticWorldMap className="w-full h-auto block min-h-[400px]" />
-          <div className="flex flex-wrap gap-8 py-5 px-8 border-t border-[rgba(248,245,236,0.08)] bg-[rgba(248,245,236,0.03)]">
-            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.1em] text-[rgba(248,245,236,0.35)]">
+          <div className="flex flex-wrap gap-8 py-5 px-8 border-t border-[var(--geo-atlas-panel-rule)] bg-[var(--geo-atlas-panel-wash)]">
+            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--geo-atlas-caption-muted)]">
               <span className="w-4 h-1 bg-[rgba(230,122,122,0.7)] shrink-0" />
-              0° Aries — Greenwich Meridian
+              0° Aries - Greenwich Meridian
             </div>
-            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.1em] text-[rgba(248,245,236,0.35)]">
-              <span className="w-4 h-1 bg-[rgba(248,245,236,0.12)] shrink-0" />
-              Longitude bands — each = 30° / one zodiac sign
+            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--geo-atlas-caption-muted)]">
+              <span className="w-4 h-1 bg-[var(--geo-atlas-grid)] shrink-0" />
+              Longitude bands - each = 30° / one zodiac sign
             </div>
           </div>
         </div>

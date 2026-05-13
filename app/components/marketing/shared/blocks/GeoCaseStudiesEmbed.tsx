@@ -3,20 +3,21 @@
 import Link from "next/link";
 import ElonMapSVG from "@/app/geodetic/components/ElonMapSVG";
 import TrumpMapSVG from "@/app/geodetic/components/TrumpMapSVG";
+import PlanetIcon from "@/app/components/PlanetIcon";
 
 const elonPlanets = [
   {
-    sym: "\u2642",
+    planet: "Mars",
     title: "Mars — Geodetic equiv. ~40°W",
     desc: 'Musk\'s natal Mars in Aquarius maps to approximately <strong>40°W longitude</strong> — running through Brazil and the US East Coast/Texas region. His SpaceX Starbase (Boca Chica, Texas, ~97°W), Tesla Gigafactory (Austin), and X headquarters all cluster near this longitude band. Mars in geodetics: drive, industry, physical infrastructure.',
   },
   {
-    sym: "\u2609",
+    planet: "Sun",
     title: "Sun — Geodetic equiv. ~96°E",
     desc: 'His Cancer Sun maps to ~96°E longitude — running through <strong>Southeast Asia, Myanmar, and western China</strong>. Notably, Tesla\'s largest non-US factory is in Shanghai (121°E, within the Sun\'s adjacent band). The geodetic Sun often correlates with visibility and identity — where one\'s public profile is most luminous.',
   },
   {
-    sym: "\u2644",
+    planet: "Saturn",
     title: "Saturn — Geodetic equiv. ~55°E",
     desc: 'Saturn in Taurus maps to ~55°E — the <strong>Arabian Peninsula and Gulf region</strong>. Musk\'s complex relationship with Saudi Arabia (attempted Twitter buyout financing, PIF involvement) and UAE operations has been a recurring source of constraint, negotiation, and structural friction — classically Saturnian themes.',
   },
@@ -24,24 +25,34 @@ const elonPlanets = [
 
 const trumpPlanets = [
   {
-    sym: "\u2609",
+    planet: "Sun",
     title: "Sun — Geodetic equiv. ~82°E",
     desc: 'His Gemini Sun maps to ~82°E — running through <strong>Egypt, East Africa, and western Russia</strong>. Trump\'s most fraught and formative foreign entanglements — Russia investigations, Middle East diplomacy (Abraham Accords), Egypt relations — all orbit this longitude band. The Sun in geodetics: identity, visibility, power projection.',
   },
   {
-    sym: "\u263D",
+    planet: "Moon",
     title: "Moon — Geodetic equiv. ~99°W",
     desc: 'His Sagittarius Moon maps to ~99°W — running through the <strong>American heartland</strong> (Oklahoma, Texas, Kansas). This is precisely Trump\'s electoral base geography. The Moon in geodetics correlates with emotional resonance, public mood, and the "feeling" of a place. His MAGA coalition\'s geographic centre sits almost exactly here.',
   },
   {
-    sym: "\u2642",
+    planet: "Mars",
     title: "Mars — Geodetic equiv. ~146°E",
     desc: "Leo Mars maps to ~146°E — running through <strong>Japan, eastern Australia, and the Pacific</strong>. Trump's trade war with China, confrontational stance toward North Korea, and the pivot of US military posture toward the Indo-Pacific were defining features of his foreign policy. Mars: friction, force, confrontation.",
   },
 ];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function GeoCaseStudiesEmbed(_props: { block: Record<string, any> }) {
+function PlanetBadge({ planet }: { planet: string }) {
+  return (
+    <span
+      className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full border border-[var(--surface-border)] bg-[color-mix(in_oklab,var(--color-y2k-blue)_8%,transparent)] text-[var(--color-y2k-blue)]"
+      aria-hidden="true"
+    >
+      <PlanetIcon planet={planet} size={18} />
+    </span>
+  );
+}
+
+export function GeoCaseStudiesEmbed() {
   return (
     <section className="py-20 border-b border-[var(--surface-border)]">
       <div className="max-w-7xl mx-auto px-6">
@@ -65,9 +76,9 @@ export function GeoCaseStudiesEmbed(_props: { block: Record<string, any> }) {
         </p>
 
         {/* Elon Musk */}
-        <div className="border border-[var(--surface-border)] bg-[var(--bg-raised)] rounded-[2rem] overflow-hidden mb-12 hover:border-[rgba(4,86,251,0.3)] transition-colors group">
+        <div className="border border-[var(--surface-border)] bg-[var(--bg-raised)] [clip-path:var(--cut-md)] overflow-hidden mb-12 hover:border-[rgba(4,86,251,0.3)] transition-colors group">
           <div className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] items-center gap-4 px-6 lg:px-10 py-6 border-b border-[var(--surface-border)]">
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--color-y2k-blue)] bg-[rgba(4,86,251,0.08)] px-3 py-1 hidden md:block">
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--color-eggshell)] bg-[var(--color-y2k-blue)] px-3 py-1 hidden md:block">
               Case Study 01
             </span>
             <div>
@@ -86,46 +97,44 @@ export function GeoCaseStudiesEmbed(_props: { block: Record<string, any> }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2">
-            <div className="border-b lg:border-b-0 lg:border-r border-[var(--surface-border)] bg-[var(--color-charcoal)] flex flex-col">
-              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[rgba(248,245,236,0.35)] px-6 pt-5 pb-2">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+            <div className="border-b lg:border-b-0 lg:border-r border-[var(--surface-border)] bg-[var(--geo-case-map-panel-bg)] flex flex-col">
+              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--geo-case-map-caption)] px-6 pt-5 pb-2">
                 Geodetic Equivalent Lines — Elon Musk
               </div>
-              <ElonMapSVG className="w-full h-auto block flex-1" />
-              <div className="flex flex-wrap gap-4 px-6 pb-5 pt-2 border-t border-[rgba(248,245,236,0.07)]">
-                <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[rgba(248,245,236,0.45)]">
-                  <span className="w-2 h-2 rounded-full bg-[#FFD700]" />
+              <ElonMapSVG className="w-full h-auto block" />
+              <div className="flex flex-wrap gap-4 px-6 pb-5 pt-2 border-t border-[var(--geo-case-map-panel-rule)]">
+                <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--geo-case-map-caption-muted)]">
+                  <span className="w-2 h-2 rounded-full bg-[var(--gold)]" />
                   Sun equiv — ~96°E
                 </div>
-                <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[rgba(248,245,236,0.45)]">
+                <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--geo-case-map-caption-muted)]">
                   <span className="w-2 h-2 rounded-full bg-[var(--color-spiced-life)]" />
                   Mars equiv — ~40°W
                 </div>
-                <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[rgba(248,245,236,0.45)]">
-                  <span className="w-2 h-2 rounded-full bg-[#888]" />
+                <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--geo-case-map-caption-muted)]">
+                  <span className="w-2 h-2 rounded-full bg-[var(--geo-case-map-neutral-soft)]" />
                   Saturn equiv — ~55°E
                 </div>
               </div>
             </div>
             <div className="p-6 lg:p-10 flex flex-col justify-center">
-              <p className="font-secondary text-[1.25rem] italic text-[var(--text-primary)] leading-[1.45] mb-6 pb-6 border-b border-[var(--surface-border)]">
+              <p className="font-secondary text-[1.18rem] text-[var(--text-primary)] leading-[1.45] mb-6 pb-6 border-b border-[var(--surface-border)]">
                 &ldquo;Musk&apos;s Mars equivalent falls along roughly 40°W — a
                 line running directly through his Texas and Florida operational
                 heartland. Mars: ambition, industrial force, launch
                 energy.&rdquo;
               </p>
-              <div className="flex flex-col gap-6">
+              <div className="grid gap-4">
                 {elonPlanets.map((p, i) => (
-                  <div key={i} className="grid grid-cols-[2.5rem_1fr] gap-3">
-                    <span className="font-secondary text-[1.4rem] text-[var(--color-y2k-blue)] text-center">
-                      {p.sym}
-                    </span>
+                  <div key={i} className="grid grid-cols-[2rem_1fr] gap-3 border-l-2 border-[var(--color-y2k-blue)] pl-3">
+                    <PlanetBadge planet={p.planet} />
                     <div>
                       <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-primary)] font-bold mb-0.5">
                         {p.title}
                       </div>
                       <p
-                        className="text-[0.82rem] font-light text-[var(--text-secondary)] leading-relaxed"
+                        className="text-[0.82rem] font-light text-[var(--text-primary)] leading-[1.65] opacity-85"
                         dangerouslySetInnerHTML={{ __html: p.desc }}
                       />
                     </div>
@@ -149,9 +158,9 @@ export function GeoCaseStudiesEmbed(_props: { block: Record<string, any> }) {
         </div>
 
         {/* Trump */}
-        <div className="border border-[var(--surface-border)] bg-[var(--bg-raised)] rounded-[2rem] overflow-hidden hover:border-[rgba(4,86,251,0.3)] transition-colors group">
+        <div className="border border-[var(--surface-border)] bg-[var(--bg-raised)] [clip-path:var(--cut-md)] overflow-hidden hover:border-[rgba(4,86,251,0.3)] transition-colors group">
           <div className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] items-center gap-4 px-6 lg:px-10 py-6 border-b border-[var(--surface-border)]">
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--color-y2k-blue)] bg-[rgba(4,86,251,0.08)] px-3 py-1 hidden md:block">
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--color-eggshell)] bg-[var(--color-y2k-blue)] px-3 py-1 hidden md:block">
               Case Study 02
             </span>
             <div>
@@ -170,46 +179,44 @@ export function GeoCaseStudiesEmbed(_props: { block: Record<string, any> }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2">
-            <div className="border-b lg:border-b-0 lg:border-r border-[var(--surface-border)] bg-[var(--color-charcoal)] flex flex-col">
-              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[rgba(248,245,236,0.35)] px-6 pt-5 pb-2">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+            <div className="border-b lg:border-b-0 lg:border-r border-[var(--surface-border)] bg-[var(--geo-case-map-panel-bg)] flex flex-col">
+              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--geo-case-map-caption)] px-6 pt-5 pb-2">
                 Geodetic Equivalent Lines — Donald Trump
               </div>
-              <TrumpMapSVG className="w-full h-auto block flex-1" />
-              <div className="flex flex-wrap gap-4 px-6 pb-5 pt-2 border-t border-[rgba(248,245,236,0.07)]">
-                <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[rgba(248,245,236,0.45)]">
-                  <span className="w-2 h-2 rounded-full bg-[#FFD700]" />
+              <TrumpMapSVG className="w-full h-auto block" />
+              <div className="flex flex-wrap gap-4 px-6 pb-5 pt-2 border-t border-[var(--geo-case-map-panel-rule)]">
+                <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--geo-case-map-caption-muted)]">
+                  <span className="w-2 h-2 rounded-full bg-[var(--gold)]" />
                   Sun equiv — ~82°E
                 </div>
-                <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[rgba(248,245,236,0.45)]">
-                  <span className="w-2 h-2 rounded-full bg-[rgba(220,220,255,0.9)]" />
+                <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--geo-case-map-caption-muted)]">
+                  <span className="w-2 h-2 rounded-full bg-[var(--geo-case-map-moon)]" />
                   Moon equiv — ~99°W
                 </div>
-                <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[rgba(248,245,236,0.45)]">
+                <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--geo-case-map-caption-muted)]">
                   <span className="w-2 h-2 rounded-full bg-[var(--color-spiced-life)]" />
                   Mars equiv — ~146°E
                 </div>
               </div>
             </div>
             <div className="p-6 lg:p-10 flex flex-col justify-center">
-              <p className="font-secondary text-[1.25rem] italic text-[var(--text-primary)] leading-[1.45] mb-6 pb-6 border-b border-[var(--surface-border)]">
+              <p className="font-secondary text-[1.18rem] text-[var(--text-primary)] leading-[1.45] mb-6 pb-6 border-b border-[var(--surface-border)]">
                 &ldquo;Trump&apos;s birth longitude (73.8°W) falls in Capricorn
                 on the geodetic map — and his entire empire of identity has
                 remained anchored to that New York band throughout his
                 life.&rdquo;
               </p>
-              <div className="flex flex-col gap-6">
+              <div className="grid gap-4">
                 {trumpPlanets.map((p, i) => (
-                  <div key={i} className="grid grid-cols-[2.5rem_1fr] gap-3">
-                    <span className="font-secondary text-[1.4rem] text-[var(--color-y2k-blue)] text-center">
-                      {p.sym}
-                    </span>
+                  <div key={i} className="grid grid-cols-[2rem_1fr] gap-3 border-l-2 border-[var(--color-y2k-blue)] pl-3">
+                    <PlanetBadge planet={p.planet} />
                     <div>
                       <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--text-primary)] font-bold mb-0.5">
                         {p.title}
                       </div>
                       <p
-                        className="text-[0.82rem] font-light text-[var(--text-secondary)] leading-relaxed"
+                        className="text-[0.82rem] font-light text-[var(--text-primary)] leading-[1.65] opacity-85"
                         dangerouslySetInnerHTML={{ __html: p.desc }}
                       />
                     </div>

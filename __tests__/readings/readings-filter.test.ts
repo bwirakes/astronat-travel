@@ -3,7 +3,7 @@ import {
   filterAndSortReadings,
   toReading,
   type SupabaseReadingRow,
-} from "@/app/(frontend)/(app)/readings/page";
+} from "@/app/(frontend)/(app)/readings/ReadingsClient";
 
 const rows: SupabaseReadingRow[] = [
   {

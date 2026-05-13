@@ -1,5 +1,5 @@
-import { AstroAppLoader } from "@/app/components/ui/app-loader-shell";
+import { RouteSkeleton } from "@/app/components/ui/route-skeleton";
 
 export default function ReadingsLoading() {
-  return <AstroAppLoader label="Loading readings..." />;
+  return <RouteSkeleton variant="split" label="Loading readings…" />;
 }
