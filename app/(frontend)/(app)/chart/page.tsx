@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import ChartClient from "./ChartClient";
-import { AstroAppLoader } from "@/app/components/ui/app-loader-shell";
+import { ChartShellSkeleton } from "./ChartShellSkeleton";
+import { PageHeader } from "@/components/app/page-header-context";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, getNatalChart } from "@/lib/db";
 
@@ -31,11 +32,9 @@ async function buildInitialNatalData(userId: string) {
     };
 }
 
-// All async work (auth + natal data) lives in this child so the parent
-// can return synchronously and the Suspense fallback actually streams.
-// Previously the parent awaited buildInitialNatalData inline, which
-// meant the Suspense wrapper was decorative — the page blocked on the
-// data fetch before any JSX returned and the AstroAppLoader never showed.
+// Async shell — auth + data fetch live here so the parent can return
+// synchronously and the page's structural chrome (header, container, shaped
+// skeleton) renders instantly above the Suspense boundary.
 async function ChartShell() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -45,8 +44,14 @@ async function ChartShell() {
 
 export default function ChartPage() {
     return (
-        <Suspense fallback={<AstroAppLoader label="Loading chart..." />}>
-            <ChartShell />
-        </Suspense>
+        <>
+            {/* Registers the context bar title immediately — no waiting on data. */}
+            <PageHeader title="Astro-Nat | Chart Analysis" />
+            <div style={{ width: "100%", padding: "var(--space-md) var(--space-md) var(--space-3xl)" }}>
+                <Suspense fallback={<ChartShellSkeleton />}>
+                    <ChartShell />
+                </Suspense>
+            </div>
+        </>
     );
 }
