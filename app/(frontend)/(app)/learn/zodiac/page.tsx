@@ -14,6 +14,8 @@ import {
   getGuides,
 } from "../_components";
 
+export const revalidate = 3600;
+
 type Modality = "Cardinal" | "Fixed" | "Mutable";
 type Element = "Fire" | "Earth" | "Air" | "Water";
 

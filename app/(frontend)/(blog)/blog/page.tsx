@@ -18,19 +18,19 @@ export default async function BlogIndex() {
       {
         caption: "The Middle East predicted — watch what astrocartography actually reveals about geopolitical hotbeds.",
         href: "https://www.instagram.com/astronatofficial/",
-        image: "/reels/reel1.gif",
+        image: "/reels/reel1.mp4",
         views: "2.1M views",
       },
       {
         caption: "Your Jupiter line is the upgrade you didn't know you needed. Here's what moving to it actually does.",
         href: "https://www.instagram.com/astronatofficial/",
-        image: "/reels/reel2.gif",
+        image: "/reels/reel2.mp4",
         views: "890K views",
       },
       {
         caption: "Venus line vs. Sun line — tested both. Honest results after 6 months living the data.",
         href: "https://www.instagram.com/astronatofficial/",
-        image: "/reels/reel3.gif",
+        image: "/reels/reel3.mp4",
         views: "1.3M views",
       },
     ],

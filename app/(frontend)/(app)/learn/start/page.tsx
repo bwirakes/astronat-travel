@@ -9,6 +9,8 @@ import {
   getGuides,
 } from "../_components";
 
+export const revalidate = 3600;
+
 /**
  * The welcome letter. Sits above the Astro 101 and Guides shelves on the
  * hub — not a "Lesson 0" any more. Astro-Nat voice essay (~600 words) on

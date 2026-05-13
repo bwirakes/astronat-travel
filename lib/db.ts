@@ -1,15 +1,28 @@
+import { unstable_cache } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import type { Profile, Search, PartnerProfile, Reading } from '@/lib/types/database'
 
-// Get authenticated user's profile
+// Get authenticated user's profile. Cached per-user via unstable_cache; the
+// admin client is used inside the cache fn (cookies are forbidden inside
+// cached fns). Callers MUST pass an authenticated user.id — page-level
+// auth gates this; admin bypasses RLS so a wrong userId would leak.
+// Tag: `profile-<userId>`. Revalidated by createProfile/updateLifeGoals
+// and the Stripe webhook (subscription status mirrors onto profile).
 export async function getProfile(userId: string): Promise<Profile | null> {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .single()
-  return data
+  return unstable_cache(
+    async () => {
+      const supabase = createAdminClient()
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+      return data
+    },
+    [`profile-${userId}`],
+    { tags: [`profile-${userId}`], revalidate: 300 }
+  )()
 }
 
 // Create profile after first signup
@@ -20,6 +33,10 @@ export async function createProfile(profile: Omit<Profile, 'created_at' | 'updat
     .insert(profile)
     .select()
     .single()
+  if (data) {
+    const { revalidateTag } = await import('next/cache')
+    revalidateTag(`profile-${profile.id}`, 'max')
+  }
   return data
 }
 
@@ -30,6 +47,8 @@ export async function updateLifeGoals(userId: string, goals: string[]): Promise<
     .from('profiles')
     .update({ life_goals: goals, updated_at: new Date().toISOString() })
     .eq('id', userId)
+  const { revalidateTag } = await import('next/cache')
+  revalidateTag(`profile-${userId}`, 'max')
 }
 
 // Save a destination search (writes to both searches and readings for compat)
@@ -146,18 +165,27 @@ export async function savePartnerNatalChart(partnerId: string, ephemerisData: an
   return data
 }
 
-// Get user's computed natal chart
+// Get user's computed natal chart. Cached per-user; tag `natal-<userId>`.
+// Invalidated by saveNatalChart. The cache is a meaningful win because the
+// chart page reads this on every visit and the underlying data only
+// changes when the user's birth metadata changes (rare).
 export async function getNatalChart(userId: string) {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('natal_charts')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('chart_type', 'natal')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  return data
+  return unstable_cache(
+    async () => {
+      const supabase = createAdminClient()
+      const { data } = await supabase
+        .from('natal_charts')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('chart_type', 'natal')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      return data
+    },
+    [`natal-${userId}`],
+    { tags: [`natal-${userId}`], revalidate: 3600 }
+  )()
 }
 
 // Save natal chart computation (update existing row first, insert if none exists)
@@ -179,7 +207,11 @@ export async function saveNatalChart(userId: string, ephemerisData: any, housePl
     .select()
     .maybeSingle()
 
-  if (!updateError && updated) return updated
+  if (!updateError && updated) {
+    const { revalidateTag } = await import('next/cache')
+    revalidateTag(`natal-${userId}`, 'max')
+    return updated
+  }
 
   // No existing row — insert fresh
   const { data } = await supabase
@@ -192,5 +224,7 @@ export async function saveNatalChart(userId: string, ephemerisData: any, housePl
     })
     .select()
     .single()
+  const { revalidateTag } = await import('next/cache')
+  revalidateTag(`natal-${userId}`, 'max')
   return data
 }

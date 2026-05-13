@@ -9,9 +9,16 @@ export default async function HomePage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) redirect("/login?next=/dashboard");
 
-    const access: ReadingAccess = await getReadingAccess(user.id);
+    // Parallelize the three independent reads. Previously these ran
+    // sequentially (access → profile → readings), serializing 3 round-trips
+    // against Supabase. The total wall-time is now max(3) instead of sum(3).
+    const [access, profileResult, readingsResult] = await Promise.all([
+        getReadingAccess(user.id),
+        supabase.from('profiles').select('first_name, birth_date').eq('id', user.id).maybeSingle(),
+        supabase.from('readings').select('id, category, details, reading_date, reading_score').eq('user_id', user.id).order('created_at', { ascending: false }).limit(3),
+    ]) as [ReadingAccess, { data: { first_name: string | null; birth_date: string | null } | null }, { data: any[] | null }];
 
-    const { data: pData } = await supabase.from('profiles').select('first_name, birth_date').eq('id', user.id).maybeSingle();
+    const pData = profileResult.data;
     if (!pData?.birth_date) redirect("/flow?step=1");
     const profile = pData as { first_name: string | null; birth_date: string };
 
@@ -24,7 +31,7 @@ export default async function HomePage() {
         weatherSummary?: { worstTier: string; severeCount: number; datesToWatch: string[]; windowDays: number };
     }> = [];
 
-    const { data: readings } = await supabase.from('readings').select('id, category, details, reading_date, reading_score').eq('user_id', user.id).order('created_at', { ascending: false }).limit(3);
+    const readings = readingsResult.data;
     if (readings) {
         recentSearches = readings.map(r => {
             const d = (r.details as any) || {};

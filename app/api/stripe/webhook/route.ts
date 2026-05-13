@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import Stripe from 'stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { capturePostHogEvent } from '@/lib/posthog-server'
@@ -91,6 +92,11 @@ async function syncSubscriptionToProfile(
   } else {
     console.log(`[webhook] Fully synced ${subscription.id} for user ${resolvedUserId}`)
   }
+
+  // Invalidate cached profile + access for this user; the next /dashboard
+  // or gated request will refetch from Supabase.
+  revalidateTag(`profile-${resolvedUserId}`, 'max')
+  revalidateTag(`access-${resolvedUserId}`, 'max')
 
   return resolvedUserId
 }
@@ -187,6 +193,8 @@ export async function POST(req: Request) {
             .from('profiles')
             .update({ is_subscribed: true, subscription_status: 'active' })
             .eq('id', userId)
+          revalidateTag(`profile-${userId}`, 'max')
+          revalidateTag(`access-${userId}`, 'max')
         }
       }
 
