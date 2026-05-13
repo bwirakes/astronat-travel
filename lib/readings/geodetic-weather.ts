@@ -13,6 +13,7 @@ import type { RunWeatherInput } from "./types";
 import { getNatalChart, getProfile, saveNatalChart } from "@/lib/db";
 import { SwissEphSingleton, computeRealtimePositions } from "@/lib/astro/transits";
 import { birthToUtc } from "@/lib/astro/birth-utc";
+import { natalCacheMatchesProfile } from "@/lib/astro/chart-cache";
 import { computePersonalLens, type NatalPlanet } from "./personal-lens";
 import { findTravelWindows, defaultRankLabels, type CandidateWindow } from "./travel-windows";
 
@@ -56,7 +57,10 @@ async function loadOrComputeNatalForWeather(
   );
 
   const cached = await getNatalChart(userId);
-  if (cached?.ephemeris_data?.planets && typeof cached?.ephemeris_data?.asc === "number") {
+  if (
+    natalCacheMatchesProfile(cached, profile, dtUtc) &&
+    typeof cached?.ephemeris_data?.asc === "number"
+  ) {
     return {
       planets: cached.ephemeris_data.planets,
       ascLon: cached.ephemeris_data.asc,
@@ -83,7 +87,17 @@ async function loadOrComputeNatalForWeather(
 
   await saveNatalChart(
     userId,
-    { planets: computed, cusps, asc: ascLon, mc: h.ascmc["1"], profile_time: dtUtc.toISOString() },
+    {
+      planets: computed,
+      cusps,
+      asc: ascLon,
+      mc: h.ascmc["1"],
+      profile_time: dtUtc.toISOString(),
+      birth_date: profile.birth_date,
+      birth_time: profile.birth_time,
+      birth_lat: profile.birth_lat,
+      birth_lon: profile.birth_lon,
+    },
     { cusps },
   );
 
