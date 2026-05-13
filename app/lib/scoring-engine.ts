@@ -22,13 +22,14 @@
  * are involved.
  */
 
-import { HouseMatrixResult } from "./house-matrix";
+import { acgLineRawScore, HouseMatrixResult } from "./house-matrix";
 import { W_EVENTS, M_AFFINITY, PLANETS, NUM_HOUSES, LIFE_EVENTS } from "./planet-library";
 import { EVENT_LABELS, verdictBand } from "./verdict";
 import { softCapScore } from "./scoring-flags";
 import { computeStationEventModifier } from "./geodetic/station-event-affinity";
 import type { StationContribution } from "./geodetic/station-scoring";
 import { houseFromLongitude } from "./geodetic";
+import { computeHouseNumber } from "./house-system";
 import type {
     UniversalSkyState,
     DignityTier,
@@ -46,6 +47,9 @@ export interface OccupancyPlanet {
     house: number; // 1-12
     dignityStatus?: "Domicile" | "Exalted" | "Detriment" | "Fall" | string;
     hasLine?: boolean;
+    /** Distance-weighted ACG line strength. 0 = no meaningful line, 1 = exact
+     *  average-strength line, >1 = exact benefic/angular line. */
+    lineStrength?: number;
 }
 
 export interface FinalEventScore {
@@ -346,7 +350,8 @@ export function computePlaceAffinityLayers(
             else if (dLog.includes("fall")) stateIdx = 3;
             if (stateIdx !== -1) S_global[120 + (pIdx * 4) + stateIdx] = 1;
         }
-        if (rp.hasLine) S_global[160 + pIdx] = 1;
+        const lineStrength = Math.max(0, Math.min(1.8, rp.lineStrength ?? (rp.hasLine ? 1 : 0)));
+        if (lineStrength > 0) S_global[160 + pIdx] = lineStrength;
     }
 
     // 4. Layer B
@@ -474,14 +479,21 @@ export function computeEventScores(
 export function buildNatalPlanetRelocatedHouseMap(
     natalPlanets: Array<{ planet?: string; name?: string; longitude: number }>,
     relocatedCusps: number[],
+    birthLat?: number,
 ): Map<string, number> {
     const ascLon = relocatedCusps[0] ?? 0;
+    const getHouseNum = (longitude: number): number => {
+        if (birthLat !== undefined && Math.abs(birthLat) < 66 && relocatedCusps.length >= 12) {
+            return computeHouseNumber(longitude, ascLon, relocatedCusps, birthLat);
+        }
+        return houseFromLongitude(longitude, ascLon);
+    };
     const out = new Map<string, number>();
     for (const p of natalPlanets) {
         const name = (p.planet ?? p.name ?? "").toLowerCase();
         if (!name) continue;
         if (typeof p.longitude !== "number") continue;
-        out.set(name, houseFromLongitude(p.longitude, ascLon));
+        out.set(name, getHouseNum(p.longitude));
     }
     return out;
 }
@@ -494,20 +506,39 @@ export function buildNatalPlanetRelocatedHouseMap(
 export function buildOccupancyPlanets(
     natalPlanets: Array<any>,
     relocatedCusps: number[],
-    acgLines: Array<{ planet?: string; distance_km?: number }>,
+    acgLines: Array<{ planet?: string; angle?: string; distance_km?: number }>,
+    birthLat?: number,
 ): OccupancyPlanet[] {
     const ascLon = relocatedCusps[0] ?? 0;
-    const activeLinePlanets = new Set(
-        (acgLines ?? [])
-            .filter((line) => Number(line?.distance_km ?? Infinity) <= 2000)
-            .map((line) => String(line?.planet ?? "").toLowerCase())
-            .filter(Boolean),
-    );
+    const getHouseNum = (longitude: number): number => {
+        if (birthLat !== undefined && Math.abs(birthLat) < 66 && relocatedCusps.length >= 12) {
+            return computeHouseNumber(longitude, ascLon, relocatedCusps, birthLat);
+        }
+        return houseFromLongitude(longitude, ascLon);
+    };
+    const lineStrengthByPlanet = new Map<string, number>();
+    for (const line of acgLines ?? []) {
+        const planet = String(line?.planet ?? "").toLowerCase();
+        if (!planet) continue;
+        const distance = Number(line?.distance_km ?? Infinity);
+        if (!isFinite(distance) || distance > 2000) continue;
+        // Normalize against a strong benefic ASC line so exact angular contacts
+        // carry more signal than broad background lines, without letting a
+        // malefic sign invert the generic "line active" affinity channel.
+        const raw = Math.abs(acgLineRawScore({
+            planet: line.planet ?? "",
+            angle: line.angle ?? "",
+            distance_km: distance,
+        }));
+        const strength = Math.max(0.1, Math.min(1.8, raw / 36));
+        lineStrengthByPlanet.set(planet, Math.max(lineStrengthByPlanet.get(planet) ?? 0, strength));
+    }
     return natalPlanets.map((p: any) => ({
         name: p.planet ?? p.name,
-        house: houseFromLongitude(p.longitude, ascLon),
+        house: getHouseNum(p.longitude),
         dignityStatus: p.dignityStatus || p.dignity || p.essentialDignity,
-        hasLine: activeLinePlanets.has(String(p.planet ?? p.name ?? "").toLowerCase()),
+        hasLine: (lineStrengthByPlanet.get(String(p.planet ?? p.name ?? "").toLowerCase()) ?? 0) > 0,
+        lineStrength: lineStrengthByPlanet.get(String(p.planet ?? p.name ?? "").toLowerCase()) ?? 0,
     }));
 }
 
@@ -527,6 +558,7 @@ export function buildOccupancyPlanets(
 export function computeFusedReadingHeadline(
     eventScores: FinalEventScore[],
     selectedGoalIndices?: number[] | null,
+    destinationSignal?: number | null,
 ): number {
     if (!eventScores || eventScores.length === 0) return 50;
 
@@ -557,7 +589,10 @@ export function computeFusedReadingHeadline(
     // — sidebar windows would score against a non-stretched math while the
     // hero stretched. Drop the stretch; rely on softCapScore for tail
     // compression.
-    return softCapScore(raw);
+    const blended = typeof destinationSignal === "number" && Number.isFinite(destinationSignal)
+        ? (0.78 * raw) + (0.22 * destinationSignal)
+        : raw;
+    return softCapScore(blended);
 }
 
 function mean(xs: number[]): number {
@@ -587,6 +622,40 @@ export interface FusedReadingInputs {
     skyState?: UniversalSkyState;
 }
 
+function computeDestinationSignal(
+    matrixResult: HouseMatrixResult,
+    relocatedPlanets: OccupancyPlanet[],
+    selectedGoalIndices?: number[] | null,
+): number | null {
+    const housePlaceScores = new Array(12).fill(50);
+    for (const hs of matrixResult.houses ?? []) {
+        const h = hs.house;
+        if (h < 1 || h > 12) continue;
+        const b = (hs as any).breakdown ?? {};
+        const bucket = typeof b.bucketGeodetic === "number" ? b.bucketGeodetic : 50;
+        const chartRuler = typeof b.chartRuler === "number" ? b.chartRuler : 0;
+        const bridge = typeof b.natalBridge === "number" ? b.natalBridge : 0;
+        housePlaceScores[h - 1] = Math.max(0, Math.min(100, bucket + chartRuler * 0.35 + bridge * 0.25));
+    }
+
+    const indices = Array.isArray(selectedGoalIndices) && selectedGoalIndices.length > 0
+        ? selectedGoalIndices
+        : LIFE_EVENTS.map((_, i) => i);
+    const eventSignals = indices
+        .map((idx) => {
+            const weights = W_EVENTS[idx];
+            if (!weights) return null;
+            let signal = 0;
+            for (let i = 0; i < 12; i++) signal += housePlaceScores[i] * weights[i];
+            return signal;
+        })
+        .filter((v): v is number => typeof v === "number");
+
+    if (!eventSignals.length) return null;
+    const lineLift = relocatedPlanets.reduce((sum, p) => sum + Math.max(0, p.lineStrength ?? 0), 0);
+    return Math.max(0, Math.min(100, mean(eventSignals) + Math.min(8, lineLift * 0.8)));
+}
+
 export function computeFusedReadingPackage(inputs: FusedReadingInputs): FusedReadingPackage {
     const layers = computePlaceAffinityLayers(inputs.matrixResult, inputs.relocatedPlanets);
     const tm = computeTransitModifiersAtAnchor(
@@ -603,7 +672,12 @@ export function computeFusedReadingPackage(inputs: FusedReadingInputs): FusedRea
         inputs.matrixResult.stationsResult?.contributions,
     );
     const eventScores = finalizeEventScoresFromLayers(layers, tm, skyModifiers, stationEventModifiers);
-    const readingScore = computeFusedReadingHeadline(eventScores, inputs.selectedGoalIndices);
+    const destinationSignal = computeDestinationSignal(
+        inputs.matrixResult,
+        inputs.relocatedPlanets,
+        inputs.selectedGoalIndices,
+    );
+    const readingScore = computeFusedReadingHeadline(eventScores, inputs.selectedGoalIndices, destinationSignal);
     const drivers = topDriversAtAnchor(inputs.transits, inputs.centerISO, inputs.goalIds, inputs.halfWidthDays ?? HALF_WIDTH_DAYS);
     return { eventScores, readingScore, drivers };
 }
@@ -729,7 +803,12 @@ export function buildFusedScoredWindows(args: BuildFusedScoredWindowsArgs): Scor
             args.natalPlanetHouse,
         );
         const eventScores = finalizeEventScoresFromLayers(layers, tm);
-        const score = computeFusedReadingHeadline(eventScores, args.selectedGoalIndices);
+        const destinationSignal = computeDestinationSignal(
+            args.matrixResult,
+            args.relocatedPlanets,
+            args.selectedGoalIndices,
+        );
+        const score = computeFusedReadingHeadline(eventScores, args.selectedGoalIndices, destinationSignal);
         const drivers = topDriversAtAnchor(args.transits, c.toISOString(), args.goalIds, HALF_WIDTH_DAYS);
         return {
             label,

@@ -93,10 +93,12 @@ export function computeHeroScore(
                         natalPlanets,
                         relocatedCusps,
                         Array.isArray(planetaryLines) ? planetaryLines : [],
+                        typeof details?.birth?.lat === "number" ? details.birth.lat : undefined,
                     );
                     const natalPlanetHouse = buildNatalPlanetRelocatedHouseMap(
                         natalPlanets,
                         relocatedCusps,
+                        typeof details?.birth?.lat === "number" ? details.birth.lat : undefined,
                     );
                     const scored = buildScoredWindows(travelDateISO, {
                         matrixResult,

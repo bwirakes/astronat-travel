@@ -62,19 +62,28 @@ export function setSoftCapTopEnabled(v: boolean): void { _softCapTop = v; }
 export function setClusterScoringEnabled(v: boolean): void { _clusterScoring = v; }
 
 /**
- * Soft-cap upper-tail compression for scores. Hard-clamped to [0, 95] when
- * the flag is on, otherwise to [0, 100] (legacy).
+ * Soft-cap upper-tail compression and lower-tail cushioning for scores.
+ * Hard-clamped to [0, 100] when the flag is off (legacy).
+ *
+ *   raw < 15   → 15 + (raw - 15) * 0.4, clamped at 5
  *   raw ≤ 85   → unchanged
- *   raw > 85   → 85 + (raw - 85) * 0.4   (so 95→89, 100→91, 110→95-clamped)
+ *   raw > 85   → 85 + (raw - 85) * 0.4, clamped at 95
+ *
+ * The lower cushion keeps a harsh stack from reading as absolute zero unless
+ * the raw math is deeply below zero, while still preserving the warning band.
  */
 export function softCapScore(raw: number): number {
     if (!_softCapTop) {
         return Math.max(0, Math.min(100, Math.round(raw)));
     }
+    const FLOOR_KNEE = 15;
+    const FLOOR_SLOPE = 0.4;
+    const FLOOR = 5;
     const KNEE = 85;
     const SLOPE = 0.4;
     const CAP = 95;
     let v = raw;
+    if (v < FLOOR_KNEE) v = FLOOR_KNEE + (v - FLOOR_KNEE) * FLOOR_SLOPE;
     if (v > KNEE) v = KNEE + (v - KNEE) * SLOPE;
-    return Math.max(0, Math.min(CAP, Math.round(v)));
+    return Math.max(FLOOR, Math.min(CAP, Math.round(v)));
 }
