@@ -561,10 +561,10 @@ export function buildAIInput(args: {
   // VM renders.
   const fusedInputs: FusedWindowInputs = {
     matrixResult,
-    relocatedPlanets: buildOccupancyPlanets(natalPlanets, relocatedCusps, acgLines),
+    relocatedPlanets: buildOccupancyPlanets(natalPlanets, relocatedCusps, acgLines, birthLat),
     transits: rawTransits,
     goalIds,
-    natalPlanetHouse: buildNatalPlanetRelocatedHouseMap(natalPlanets, relocatedCusps),
+    natalPlanetHouse: buildNatalPlanetRelocatedHouseMap(natalPlanets, relocatedCusps, birthLat),
   };
 
   const relocation = travelType === "relocation" && travelDate

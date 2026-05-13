@@ -15,11 +15,12 @@ import {
   computeEventScores,
   computeFusedReadingPackage,
   buildNatalPlanetRelocatedHouseMap,
+  buildOccupancyPlanets,
 } from "@/app/lib/scoring-engine";
 import { computeUniversalSky } from "@/app/lib/universal-sky";
 import { solveUniversalSkySpans } from "@/app/lib/window-scoring";
 import { EVENT_LABELS, verdictBand } from "@/app/lib/verdict";
-import { houseFromLongitude, signFromLongitude } from "@/app/lib/geodetic";
+import { signFromLongitude } from "@/app/lib/geodetic";
 import { birthToUtc } from "@/lib/astro/birth-utc";
 import { determineSect, computeLotOfFortune, computeLotOfSpirit } from "@/app/lib/arabic-parts";
 import { GOAL_DEFINITIONS, buildEditorialEvidence, deriveScoreNarrative } from "@/app/lib/reading-tabs";
@@ -313,19 +314,12 @@ export async function runAstrocarto(
     stations: liveStations,
   });
 
-  const ascLon = relocatedCusps[0] ?? 0;
-  const activeLinePlanets = new Set(
-    acgLines
-      .filter((line: any) => Number(line.distance_km ?? Infinity) <= 2000)
-      .map((line: any) => String(line.planet || "").toLowerCase())
-      .filter(Boolean),
+  const relocatedPlanets = buildOccupancyPlanets(
+    natalPlanets,
+    relocatedCusps,
+    acgLines,
+    profile.birth_lat ?? undefined,
   );
-  const relocatedPlanets = natalPlanets.map((p: any) => ({
-    name: p.planet || p.name,
-    house: houseFromLongitude(p.longitude, ascLon),
-    dignityStatus: p.dignityStatus || p.dignity || p.essentialDignity,
-    hasLine: activeLinePlanets.has(String(p.planet || p.name || "").toLowerCase()),
-  }));
   let eventScores = computeEventScores(matrixResult, relocatedPlanets, universalSky);
 
   // Capture the matrix-only macro score before the fused transit headline
@@ -352,7 +346,7 @@ export async function runAstrocarto(
     Array.isArray(relocatedCusps) &&
     relocatedCusps.length >= 12
   ) {
-    const natalPlanetHouse = buildNatalPlanetRelocatedHouseMap(natalPlanets, relocatedCusps);
+    const natalPlanetHouse = buildNatalPlanetRelocatedHouseMap(natalPlanets, relocatedCusps, profile.birth_lat ?? undefined);
     const fused = computeFusedReadingPackage({
       matrixResult,
       relocatedPlanets,
@@ -427,19 +421,12 @@ export async function runAstrocarto(
     // Partner relocated planet states for the affinity matrix — same shape
     // as the user's `relocatedPlanets` (lines 275–280) so the engine sees
     // the partner's chart in the same frame.
-    const pAscLon = pRelocatedCusps[0] ?? 0;
-    const pActiveLinePlanets = new Set(
-      pAcgLines
-        .filter((line: any) => Number(line.distance_km ?? Infinity) <= 2000)
-        .map((line: any) => String(line.planet || "").toLowerCase())
-        .filter(Boolean),
+    const pRelocatedPlanetStates = buildOccupancyPlanets(
+      partnerNatalPlanets,
+      pRelocatedCusps,
+      pAcgLines,
+      partnerProfile.birth_lat ?? undefined,
     );
-    const pRelocatedPlanetStates = partnerNatalPlanets.map((p: any) => ({
-      name: p.planet || p.name,
-      house: houseFromLongitude(p.longitude, pAscLon),
-      dignityStatus: p.dignityStatus || p.dignity || p.essentialDignity,
-      hasLine: pActiveLinePlanets.has(String(p.planet || p.name || "").toLowerCase()),
-    }));
     // Both partners share the same universal sky — same refDate, same
     // location-agnostic snapshot.
     let pEventScores = computeEventScores(pMatrixResult, pRelocatedPlanetStates, universalSky);
@@ -458,7 +445,11 @@ export async function runAstrocarto(
       Array.isArray(pRelocatedCusps) &&
       pRelocatedCusps.length >= 12
     ) {
-      const pNatalPlanetHouse = buildNatalPlanetRelocatedHouseMap(partnerNatalPlanets, pRelocatedCusps);
+      const pNatalPlanetHouse = buildNatalPlanetRelocatedHouseMap(
+        partnerNatalPlanets,
+        pRelocatedCusps,
+        partnerProfile.birth_lat ?? undefined,
+      );
       const pFused = computeFusedReadingPackage({
         matrixResult: pMatrixResult,
         relocatedPlanets: pRelocatedPlanetStates,
@@ -610,10 +601,10 @@ export async function runAstrocarto(
         const jointTransits = [...rawTransits, ...partnerMatrix.rawTransits];
         const jointInputs = {
           matrixResult,
-          relocatedPlanets: _buildOccupancyPlanets(natalPlanets, relocatedCusps, acgLines),
+          relocatedPlanets: _buildOccupancyPlanets(natalPlanets, relocatedCusps, acgLines, profile.birth_lat ?? undefined),
           transits: jointTransits,
           goalIds: goalIds ?? [],
-          natalPlanetHouse: _buildNphMap(natalPlanets, relocatedCusps),
+          natalPlanetHouse: _buildNphMap(natalPlanets, relocatedCusps, profile.birth_lat ?? undefined),
         };
         const ranges = buildRangeHighlights(travelDate, jointInputs);
         const shortDate = (iso: string) => {

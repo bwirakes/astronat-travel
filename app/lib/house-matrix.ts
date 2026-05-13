@@ -1464,9 +1464,9 @@ export function computeHouseMatrix(params: {
         // gated on geodetic-angle activation (not just calendar timing).
         const rawNatal     = base + dignity + lotBonus + worldPoints + chartRulerContribution + chartRulerGlobalLift;
         const rawOccupants = occupants + natalBridge + retrograde + transitRx + 50;
-        const rawTransit   = transitPts + paranPts + 50;
+        const rawTransit   = transitPts + 50;
         const rawGeodetic  = acgLine + geodetic + geodeticTransit + progression
-                           + stationContribution + eclipsePenalty + lunationContribution + 50;
+                           + stationContribution + eclipsePenalty + lunationContribution + paranPts + 50;
 
         // Min-Max Normalize Per Bucket (Symmetrically bounded around 50)
         // We use tight, real-world observable standard deviation bounds rather than

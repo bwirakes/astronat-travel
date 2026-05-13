@@ -52,11 +52,11 @@ const W_EVENTS_WIDE_V1: Matrix2D = [
     [ 0.00, 0.70, 0.00, 0.00, 0.00, 0.00, 0.00, 0.30, 0.00, 0.00, 0.00, 0.00 ], // 1: Wealth
     [ 0.00, 0.00, 0.00, 1.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00 ], // 2: Home
     [ 0.00, 0.00, 0.00, 0.00, 0.40, 0.00, 0.60, 0.00, 0.00, 0.00, 0.00, 0.00 ], // 3: Romance
-    [ 0.30, 0.00, 0.00, 0.00, 0.00, 0.55, 0.00, 0.00, 0.00, 0.00, 0.00, 0.15 ], // 4: Health (+H1 vitality)
+    [ 0.35, 0.00, 0.00, 0.00, 0.00, 0.35, 0.00, 0.00, 0.00, 0.15, 0.00, 0.15 ], // 4: Health (body + routine + structure + rest)
     [ 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.80, 0.00, 0.00, 0.00, 0.20, 0.00 ], // 5: Partnerships
-    [ 0.00, 0.15, 0.00, 0.00, 0.00, 0.25, 0.00, 0.00, 0.00, 0.60, 0.00, 0.00 ], // 6: Career
+    [ 0.10, 0.15, 0.00, 0.00, 0.00, 0.20, 0.00, 0.00, 0.00, 0.40, 0.15, 0.00 ], // 6: Career (presence + resources + work + visibility + networks)
     [ 0.00, 0.00, 0.30, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.70, 0.00 ], // 7: Friendship
-    [ 0.00, 0.00, 0.00, 0.25, 0.00, 0.00, 0.00, 0.20, 0.20, 0.00, 0.00, 0.35 ]  // 8: Spirituality (+H4 roots)
+    [ 0.00, 0.00, 0.00, 0.20, 0.00, 0.00, 0.00, 0.15, 0.35, 0.00, 0.00, 0.30 ]  // 8: Spirituality (roots + mystery + wisdom + retreat)
 ];
 
 export const W_EVENTS: Matrix2D = WIDE_SCORING_V1 ? W_EVENTS_WIDE_V1 : W_EVENTS_BASE;
@@ -112,6 +112,38 @@ function buildAffinityMatrix(): Matrix2D {
     applyModifier(8, 'moon', 3, 10); // Moon Joy H3 brings comfort in local environment
     applyModifier(0, 'sun', 9, 15); // Sun Joy H9 brings clear identity when traveling abroad
 
+    // --- 1b. Goal-specific support channels
+    // Health is more than the H6 illness house: vitality, regulation,
+    // restorative privacy, and sustainable public rhythm should all score.
+    applyModifier(4, 'sun', 1, 10);
+    applyModifier(4, 'sun', 10, 8);
+    applyModifier(4, 'moon', 1, 10);
+    applyModifier(4, 'moon', 4, 8);
+    applyModifier(4, 'moon', 6, 8);
+    applyModifier(4, 'venus', 6, 8);
+    applyModifier(4, 'jupiter', 6, 10);
+    applyModifier(4, 'saturn', 6, 6);
+
+    // Career needs visibility and networks, not just the formal work axis.
+    applyModifier(6, 'sun', 10, 14);
+    applyModifier(6, 'jupiter', 10, 12);
+    applyModifier(6, 'mercury', 10, 10);
+    applyModifier(6, 'mercury', 11, 8);
+    applyModifier(6, 'jupiter', 11, 10);
+    applyModifier(6, 'sun', 1, 8);
+    applyModifier(6, 'mars', 10, 8);
+    applyModifier(6, 'saturn', 10, 8);
+
+    // Spirituality should have routes through meaning and pilgrimage, not only
+    // dark-house retreat.
+    applyModifier(8, 'jupiter', 9, 14);
+    applyModifier(8, 'jupiter', 12, 12);
+    applyModifier(8, 'moon', 4, 8);
+    applyModifier(8, 'moon', 9, 8);
+    applyModifier(8, 'moon', 12, 10);
+    applyModifier(8, 'neptune', 9, 10);
+    applyModifier(8, 'neptune', 12, 12);
+
     // --- 2. Accidental Dignity and Angular Friction 
     ['mars', 'saturn'].forEach(malefic => {
         applyModifier(2, malefic, 4, -20); // H4 = Penalty on Home & Roots
@@ -138,6 +170,21 @@ function buildAffinityMatrix(): Matrix2D {
     applyDignity(1, 'jupiter', 0, 10); // Jupiter Domicile -> +10 Wealth globally
     applyDignity(1, 'jupiter', 1, 15); // Jupiter Exalted -> +15 Wealth globally
     applyLine(1, 'jupiter', 20);       // Jupiter Line Active -> +20 Wealth globally
+
+    // Goal-aware ACG line channels. The scoring engine now feeds this column
+    // with distance-weighted line strength, so exact city lines separate from
+    // broad 2000km background contacts.
+    applyLine(4, 'moon', 12);
+    applyLine(4, 'sun', 12);
+    applyLine(4, 'venus', 8);
+    applyLine(4, 'jupiter', 10);
+    applyLine(6, 'sun', 16);
+    applyLine(6, 'jupiter', 14);
+    applyLine(6, 'mercury', 10);
+    applyLine(6, 'saturn', 8);
+    applyLine(8, 'moon', 10);
+    applyLine(8, 'jupiter', 14);
+    applyLine(8, 'neptune', 14);
 
     // --- 5. Hard-coded Overrides conforming precisely to Part 4 Memo Example ---
     // User Target: Event 4 (Romance). Saturn physically in H5, Mars in H12.

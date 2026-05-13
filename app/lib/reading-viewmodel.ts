@@ -57,8 +57,13 @@ function tryBuildFusedWindowInputs(
             natalPlanets,
             relocatedCusps,
             Array.isArray(planetaryLines) ? planetaryLines : [],
+            typeof reading?.birth?.lat === "number" ? reading.birth.lat : undefined,
         );
-        const natalPlanetHouse = buildNatalPlanetRelocatedHouseMap(natalPlanets, relocatedCusps);
+        const natalPlanetHouse = buildNatalPlanetRelocatedHouseMap(
+            natalPlanets,
+            relocatedCusps,
+            typeof reading?.birth?.lat === "number" ? reading.birth.lat : undefined,
+        );
         return {
             matrixResult,
             relocatedPlanets,
