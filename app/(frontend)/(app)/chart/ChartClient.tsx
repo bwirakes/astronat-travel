@@ -200,7 +200,7 @@ export default function ChartPage({
 
     (async () => {
       try {
-        const r = await fetch(endpoint, { signal: controller.signal });
+        const r = await fetch(endpoint, { signal: controller.signal, cache: "no-store" });
         if (!r.ok) {
           const errBody = await r.json().catch(() => ({}));
           if (r.status === 401) {
