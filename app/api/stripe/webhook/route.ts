@@ -95,8 +95,8 @@ async function syncSubscriptionToProfile(
 
   // Invalidate cached profile + access for this user; the next /dashboard
   // or gated request will refetch from Supabase.
-  revalidateTag(`profile-${resolvedUserId}`)
-  revalidateTag(`access-${resolvedUserId}`)
+  revalidateTag(`profile-${resolvedUserId}`, 'max')
+  revalidateTag(`access-${resolvedUserId}`, 'max')
 
   return resolvedUserId
 }
@@ -193,8 +193,8 @@ export async function POST(req: Request) {
             .from('profiles')
             .update({ is_subscribed: true, subscription_status: 'active' })
             .eq('id', userId)
-          revalidateTag(`profile-${userId}`)
-          revalidateTag(`access-${userId}`)
+          revalidateTag(`profile-${userId}`, 'max')
+          revalidateTag(`access-${userId}`, 'max')
         }
       }
 

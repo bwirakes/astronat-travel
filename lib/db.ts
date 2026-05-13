@@ -35,7 +35,7 @@ export async function createProfile(profile: Omit<Profile, 'created_at' | 'updat
     .single()
   if (data) {
     const { revalidateTag } = await import('next/cache')
-    revalidateTag(`profile-${profile.id}`)
+    revalidateTag(`profile-${profile.id}`, 'max')
   }
   return data
 }
@@ -48,7 +48,7 @@ export async function updateLifeGoals(userId: string, goals: string[]): Promise<
     .update({ life_goals: goals, updated_at: new Date().toISOString() })
     .eq('id', userId)
   const { revalidateTag } = await import('next/cache')
-  revalidateTag(`profile-${userId}`)
+  revalidateTag(`profile-${userId}`, 'max')
 }
 
 // Save a destination search (writes to both searches and readings for compat)
@@ -209,7 +209,7 @@ export async function saveNatalChart(userId: string, ephemerisData: any, housePl
 
   if (!updateError && updated) {
     const { revalidateTag } = await import('next/cache')
-    revalidateTag(`natal-${userId}`)
+    revalidateTag(`natal-${userId}`, 'max')
     return updated
   }
 
@@ -225,6 +225,6 @@ export async function saveNatalChart(userId: string, ephemerisData: any, housePl
     .select()
     .single()
   const { revalidateTag } = await import('next/cache')
-  revalidateTag(`natal-${userId}`)
+  revalidateTag(`natal-${userId}`, 'max')
   return data
 }
