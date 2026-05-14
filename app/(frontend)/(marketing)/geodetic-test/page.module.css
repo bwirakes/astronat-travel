@@ -12,7 +12,6 @@
 
 .sidebar {
     background: #161618;
-    border-right: 1px solid #2a2a2e;
     padding: 1.2rem 1rem 2rem;
     display: flex;
     flex-direction: column;
@@ -21,6 +20,11 @@
     position: sticky;
     top: 0;
     height: 100vh;
+    scrollbar-width: none;
+}
+
+.sidebar::-webkit-scrollbar {
+    display: none;
 }
 
 .main {
