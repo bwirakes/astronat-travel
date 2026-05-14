@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getProfile, getNatalChart, saveNatalChart } from "@/lib/db";
+import { getProfileFresh, getNatalChart, saveNatalChart } from "@/lib/db";
 import { SwissEphSingleton, getHouse, ZODIAC_SIGNS, computeRealtimePositions } from "@/lib/astro/transits";
 import { natalCacheMatchesProfile } from "@/lib/astro/chart-cache";
 
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     // 1. Fetch user profile first — birth metadata is always served from the
     //    profile (source of truth), not from the cached ephemeris blob, because
     //    some code paths save the chart without birth_date/time/city fields.
-    const profile = await getProfile(userId);
+    const profile = await getProfileFresh(userId);
     if (!profile || !profile.birth_date || !profile.birth_time || profile.birth_lat == null || profile.birth_lon == null) {
       return NextResponse.json({ error: "Incomplete birth data in profile" }, { status: 400 });
     }

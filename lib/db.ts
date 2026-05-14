@@ -25,6 +25,19 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   )()
 }
 
+// Fresh profile read for flows where correctness matters more than the
+// short-lived profile cache, e.g. immediately after editing birth data and
+// recomputing the natal chart.
+export async function getProfileFresh(userId: string): Promise<Profile | null> {
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single()
+  return data
+}
+
 // Create profile after first signup
 export async function createProfile(profile: Omit<Profile, 'created_at' | 'updated_at'>): Promise<Profile | null> {
   const supabase = await createClient()
