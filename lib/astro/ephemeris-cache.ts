@@ -1,5 +1,7 @@
 /**
- * Ephemeris cache — read daily planetary positions from Supabase `ephemeris_daily`.
+ * Ephemeris cache — read daily planetary positions from the generated universal
+ * ephemeris first, then Supabase `ephemeris_daily` when wider body coverage is
+ * requested.
  *
  * Falls back to live SwissEph computation + write-through cache on miss.
  * Used by the narrative endpoint to avoid recomputing the same sky for every
@@ -7,6 +9,10 @@
  */
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeRealtimePositions, type ComputedPosition } from "@/lib/astro/transits";
+import {
+  getStaticUniversalSkyForDate,
+  getStaticUniversalSkyForDateRange,
+} from "@/lib/astro/static-universal-ephemeris";
 
 export const EPHEMERIS_DAILY_BODIES = [
   "Sun",
@@ -174,6 +180,10 @@ export async function getSkyForDate(
 ): Promise<CachedSkyPosition[]> {
   const dateStr = dateOnly(date);
   const requestedBodies = normalizeBodySet(options.bodies);
+
+  const staticRows = getStaticUniversalSkyForDate(date, requestedBodies);
+  if (staticRows) return staticRows;
+
   const admin = createAdminClient();
 
   // Cache read
@@ -263,6 +273,16 @@ export async function getSkyForDateRange(
   const cacheKey = `${firstDate}:${lastDate}:${requestedBodies.join(",")}`;
   const cached = _skyRangeCache.get(cacheKey);
   if (cached) return new Map(cached);
+
+  const staticRows = getStaticUniversalSkyForDateRange(startDate, dateStrings.length, requestedBodies);
+  if (staticRows) {
+    if (_skyRangeCache.size >= _SKY_RANGE_CACHE_MAX) {
+      const oldest = _skyRangeCache.keys().next().value;
+      if (oldest !== undefined) _skyRangeCache.delete(oldest);
+    }
+    _skyRangeCache.set(cacheKey, new Map(staticRows));
+    return new Map(staticRows);
+  }
 
   const rows = await fetchCachedRowsForDateRange(firstDate, lastDate, requestedBodies);
 

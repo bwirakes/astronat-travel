@@ -16,10 +16,14 @@ import {
     ZODIAC_SIGNS,
     type ComputedPosition,
 } from "@/lib/astro/transits";
-import { getComputedSkyForDate, getComputedSkyForDateRange, UNIVERSAL_SKY_BODIES } from "@/lib/astro/ephemeris-cache";
+import { getComputedSkyForDate, UNIVERSAL_SKY_BODIES } from "@/lib/astro/ephemeris-cache";
 import { essentialDignityLabel } from "./dignity";
 import { SIGN_ELEMENT } from "./dignity-tables";
-import { eclipsesInWindow } from "./geodetic/geodetic-events";
+import {
+    eclipsesInWindow,
+    retrogradeWindowsInRange,
+    stationsInDateRange,
+} from "./geodetic/geodetic-events";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -89,11 +93,11 @@ export interface SkyEclipse {
 export interface UniversalSkyState {
     refDateISO: string;
     retrogrades: SkyRetrograde[];
-    /** Stations within the next 30 days (refDate → refDate+30). For the
-     *  PlaceFieldTab "Coming up" panel. Detected by daily ephemeris scan,
-     *  not from a curated table. */
+    /** Stations within the nearby date window. For the PlaceFieldTab
+     *  "Coming up" panel and station scoring. Looked up from precomputed
+     *  global station events. */
     stations: SkyStation[];
-    /** All retrograde windows overlapping [refDate−30, refDate+365] —
+    /** All retrograde windows overlapping the configured lookup horizon —
      *  ongoing AND upcoming. For the TimingTab Gantt. Includes a
      *  computed dignity at the Rx-station sign so callers can size the row
      *  prominence. */
@@ -193,119 +197,52 @@ function classifyAspect(lonA: number, lonB: number): { type: AspectKind; orb: nu
     return best;
 }
 
-function signOfLongitude(lon: number): string {
-    const wrapped = ((lon % 360) + 360) % 360;
-    return ZODIAC_SIGNS[Math.floor(wrapped / 30) % 12];
-}
-
 /**
- * Scan the ephemeris daily over [refDate − lookbackDays, refDate + lookaheadDays]
- * to find every station (speed sign-flip) for Mercury through Pluto, and pair
- * Rx-stations with their following direct-stations into retrograde windows.
+ * Look up global station and retrograde windows around the reference date.
  *
- * Cost: roughly (lookbackDays + lookaheadDays) Postgres cache reads. The
- * database currently holds daily ephemeris rows for 1900-2049, so this scan
- * should usually avoid live SwissEph computation entirely.
- *
- * Why this and not the curated `STATIONS` table: the curated table is hand-
- * maintained and intentionally incomplete (only outers + a few inner stations).
- * Mercury Rx three-times-a-year, Venus Rx every 18 months, Mars Rx every 2
- * years — none of these are in the curated table for 2026, so the user's
- * Mercury Rx (Jun 29 → Jul 23 2026 in Cancer→Leo) was invisible. This scan
- * is the source of truth.
+ * Stations are global calendar facts, not user-specific calculations. They are
+ * generated upstream into `STATIONS`, so reading generation should only do a
+ * range lookup instead of scanning hundreds of daily ephemeris rows to
+ * rediscover speed sign-flips.
  */
-async function scanStationsAndRetrogradeWindows(
+function lookupStationsAndRetrogradeWindows(
     refDate: Date,
     lookbackDays: number,
     lookaheadDays: number,
-): Promise<{ stations: SkyStation[]; retrogradeWindows: SkyRetrogradeWindow[] }> {
+): { stations: SkyStation[]; retrogradeWindows: SkyRetrogradeWindow[] } {
     const refTime = refDate.getTime();
     const startTime = refTime - lookbackDays * MS_DAY;
-    const totalDays = lookbackDays + lookaheadDays;
-
-    // Per-planet daily samples. Sun and Moon never go geocentrically retrograde,
-    // so we skip them. True Node has its own dynamics and isn't in MAIN_PLANETS_CAP.
-    const samplesByPlanet = new Map<string, Array<{ time: number; speed: number; longitude: number }>>();
-    for (const cap of MAIN_PLANETS_CAP) {
-        if (cap === "Sun" || cap === "Moon") continue;
-        samplesByPlanet.set(cap.toLowerCase(), []);
-    }
-
-    const positionsByDate = await getComputedSkyForDateRange(new Date(startTime), totalDays + 1, {
-        bodies: UNIVERSAL_SKY_BODIES,
-    });
-
-    for (let d = 0; d <= totalDays; d++) {
-        const t = startTime + d * MS_DAY;
-        const dateISO = new Date(t).toISOString().slice(0, 10);
-        const positions = positionsByDate.get(dateISO) ?? [];
-        for (const p of positions) {
-            const arr = samplesByPlanet.get(p.name.toLowerCase());
-            if (!arr) continue;
-            arr.push({ time: t, speed: p.speed, longitude: p.longitude });
-        }
-    }
-
-    // Detect stations from speed sign-flips, linearly interpolating the
-    // exact crossing time.
-    const stations: SkyStation[] = [];
-    for (const [planet, samples] of samplesByPlanet) {
-        for (let i = 1; i < samples.length; i++) {
-            const prev = samples[i - 1];
-            const cur = samples[i];
-            const direction =
-                prev.speed >= 0 && cur.speed < 0 ? "retrograde" :
-                prev.speed < 0 && cur.speed >= 0 ? "direct" :
-                null;
-            if (!direction) continue;
-            // Speed = 0 lies between the samples — linear interpolation gets
-            // the station date to ~1-day precision, plenty for our use case.
-            const denom = prev.speed - cur.speed;
-            const frac = denom === 0 ? 0.5 : prev.speed / denom;
-            const stationTime = prev.time + frac * (cur.time - prev.time);
-            const stationLon = prev.longitude + frac * (cur.longitude - prev.longitude);
-            stations.push({
-                planet,
-                direction,
-                dateISO: new Date(stationTime).toISOString().slice(0, 10),
-                sign: signOfLongitude(stationLon),
-                longitude: stationLon,
-            });
-        }
-    }
-    stations.sort((a, b) => a.dateISO.localeCompare(b.dateISO));
-
-    // Pair each Rx-station with the next direct-station for the same planet.
-    // An Rx whose direct-station falls beyond `lookaheadDays` will be
-    // dropped (we won't have its closing date). Acceptable — that planet is
-    // still going Rx on the horizon edge.
+    const endTime = refTime + lookaheadDays * MS_DAY;
+    const startDate = new Date(startTime);
+    const endDate = new Date(endTime);
     const refDateISO = refDate.toISOString().slice(0, 10);
-    const retrogradeWindows: SkyRetrogradeWindow[] = [];
-    for (let i = 0; i < stations.length; i++) {
-        const start = stations[i];
-        if (start.direction !== "retrograde") continue;
-        let end: SkyStation | null = null;
-        for (let j = i + 1; j < stations.length; j++) {
-            if (stations[j].planet === start.planet && stations[j].direction === "direct") {
-                end = stations[j];
-                break;
-            }
-        }
-        if (!end) continue;
-        const startMs = new Date(start.dateISO).getTime();
-        const endMs = new Date(end.dateISO).getTime();
-        const midMs = (startMs + endMs) / 2;
-        const planetCap = start.planet[0].toUpperCase() + start.planet.slice(1);
-        retrogradeWindows.push({
-            planet: start.planet,
-            sign: start.sign,
-            entryISO: start.dateISO,
-            midISO: new Date(midMs).toISOString().slice(0, 10),
-            exitISO: end.dateISO,
-            dignity: dignityTier(planetCap, start.sign),
-            isOngoingAtRef: start.dateISO <= refDateISO && refDateISO <= end.dateISO,
-        });
-    }
+
+    const stations: SkyStation[] = stationsInDateRange(startDate, endDate).map((station) => ({
+        planet: station.planet.toLowerCase(),
+        direction: station.type,
+        dateISO: station.dateUtc.slice(0, 10),
+        sign: station.sign,
+        longitude: station.longitude,
+    }));
+
+    const retrogradeWindows: SkyRetrogradeWindow[] = retrogradeWindowsInRange(startDate, endDate).map((window) => {
+        const entryISO = window.entry.dateUtc.slice(0, 10);
+        const exitISO = window.exit.dateUtc.slice(0, 10);
+        const startMs = new Date(window.entry.dateUtc).getTime();
+        const endMs = new Date(window.exit.dateUtc).getTime();
+        const midISO = new Date((startMs + endMs) / 2).toISOString().slice(0, 10);
+        const planetCap = window.planet[0].toUpperCase() + window.planet.slice(1);
+        const planet = window.planet.toLowerCase();
+        return {
+            planet,
+            sign: window.entry.sign,
+            entryISO,
+            midISO,
+            exitISO,
+            dignity: dignityTier(planetCap, window.entry.sign),
+            isOngoingAtRef: entryISO <= refDateISO && refDateISO <= exitISO,
+        };
+    });
 
     return { stations, retrogradeWindows };
 }
@@ -316,19 +253,18 @@ async function scanStationsAndRetrogradeWindows(
  * Compute the universal sky state at `refDate`.
  *
  * Pure async function. Reads `ephemeris_daily` first via the Postgres-backed
- * cache and falls back to SwissEph only on cache misses. It also reads the
- * curated `ECLIPSES` table. Performs a daily ephemeris scan
- * across [refDate − 30, refDate + 365] to detect stations + retrograde
- * windows for Mercury–Pluto (no curated-table dependency for stations).
+ * cache and falls back to SwissEph only on cache misses. Global calendar
+ * events (stations, retrograde windows, eclipses) are looked up from
+ * precomputed event tables/constants instead of being re-derived per reading.
  *
  * @param refDate The reference date (UTC) to anchor the snapshot at.
- * @param scanLookaheadDays How far forward the station/retrograde-window
- *   scan reaches. Default 365 covers both trip readings (90d) and
+ * @param eventLookaheadDays How far forward the station/retrograde-window
+ *   lookup reaches. Default 365 covers both trip readings (90d) and
  *   relocation readings (365d). Caller-overridable for tests.
  */
 export async function computeUniversalSky(
     refDate: Date,
-    scanLookaheadDays: number = 365,
+    eventLookaheadDays: number = 365,
 ): Promise<UniversalSkyState> {
     const positions = await getComputedSkyForDate(refDate, { bodies: UNIVERSAL_SKY_BODIES });
     const refDateISO = refDate.toISOString().slice(0, 10);
@@ -353,19 +289,18 @@ export async function computeUniversalSky(
         });
     }
 
-    // 2. Stations + retrograde windows — daily ephemeris scan.
-    //    Lookback 30d so that an Rx already in progress at refDate (e.g.
-    //    Pluto Rx that started 2 months ago) shows up with its real entry
-    //    date rather than being dropped. Lookahead per param.
+    // 2. Stations + retrograde windows — precomputed global-event lookup.
+    //    Lookback 120d so slow ongoing Rx windows that began months before
+    //    the anchor still carry their real entry date in cards and timelines.
     const { stations: allStations, retrogradeWindows } =
-        await scanStationsAndRetrogradeWindows(refDate, 30, scanLookaheadDays);
+        lookupStationsAndRetrogradeWindows(refDate, 120, eventLookaheadDays);
 
     // Symmetric ±30 day window. Past stations are kept because (a) the
     // geodetic scoring path needs them — a station that just fired is more
     // active than one coming up, and the Gaussian time-decay in
     // `scoreStations` (σ varies by planet, 5–25 days) handles the falloff,
     // and (b) the UI's "Coming up" panel can filter forward on the consumer
-    // side. The full set spanning [refDate − 30, refDate + scanLookaheadDays]
+    // side. The full set spanning [refDate − 120, refDate + eventLookaheadDays]
     // is surfaced via retrogradeWindows for the Gantt.
     const refTime = refDate.getTime();
     const stationsWindowStart = refTime - 30 * MS_DAY;

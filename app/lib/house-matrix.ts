@@ -558,10 +558,9 @@ export function computeHouseMatrix(params: {
     /** A5: precomputed secondary-progression bands. Async by nature, so
      *  the caller resolves them and hands them to the sync engine. */
     progressedBands?: ProgressionsResult;
-    /** A11: live-detected stations from `universal-sky.ts:scanStationsAndRetrogradeWindows`.
-     *  When provided, `scoreStations` uses these instead of the curated
-     *  `STATIONS` table — which omits Mercury/Venus entirely and is sparse
-     *  for 2026+. Pass `universalSky.stations` adapted to `StationEvent`
+    /** A11: precomputed global station events from universal sky. When
+     *  provided, `scoreStations` uses these instead of doing its own broad
+     *  table lookup. Pass `universalSky.stations` adapted to `StationEvent`
      *  shape from the caller. */
     stations?: StationEvent[];
 }): HouseMatrixResult {
