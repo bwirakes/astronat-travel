@@ -15,6 +15,18 @@ import { ORIGINAL_STATS_HTML } from "./original-stats-html";
 import { ORIGINAL_TECHNIQUES_HTML } from "./original-techniques-html";
 import { ORIGINAL_EVENTS_ACCURACY } from "./original-events-accuracy";
 import { ORIGINAL_DASHBOARD_EVENTS } from "./original-events";
+import {
+    CRANE_FRAMEWORK_BODY_HTML,
+    CRANE_FRAMEWORK_SCOPE,
+    CRANE_FRAMEWORK_STYLES,
+} from "./crane-framework-html";
+import { CRANE_TECHNIQUES, CRANE_SUBCRITERIA, CRANE_T18_CAP_RAISED } from "@/app/lib/geodetic/crane-techniques";
+import {
+    ECLIPSES_2026_2027,
+    RETROGRADE_SHADOW_WINDOWS,
+    SIGN_INGRESSES,
+    STELLIUMS_2026_2027,
+} from "@/app/lib/geodetic/events-2026-2027.generated";
 import styles from "./page.module.css";
 
 export const revalidate = 3600;
@@ -725,8 +737,8 @@ function Sidebar({ station2026 }: { station2026: typeof STATIONS }) {
             </SidebarBlock>
 
             <SidebarBlock title="2026 Station Ledger">
-                {station2026.slice(0, 8).map((station) => (
-                    <Kv key={`${station.dateUtc}-${station.planet}`} label={`${station.planet} ${station.type}`} value={`${dateLabel(station.dateUtc)} · ${degreeLabel(station.longitude)}`} />
+                {station2026.map((station) => (
+                    <Kv key={`${station.dateUtc}-${station.planet}-${station.type}`} label={`${station.planet} ${station.type}`} value={`${dateLabel(station.dateUtc)} · ${degreeLabel(station.longitude)}`} />
                 ))}
             </SidebarBlock>
 
@@ -823,6 +835,228 @@ function EventCorrelations() {
 
 function TechniquesGuide() {
     return <div dangerouslySetInnerHTML={{ __html: ORIGINAL_TECHNIQUES_HTML }} />;
+}
+
+function craneStatusClass(status: string): string {
+    if (status === "tested") return "confirm";
+    if (status === "watch") return "ambig";
+    return "ambig";
+}
+
+function CraneWeatherFramework() {
+    return (
+        <>
+            <style dangerouslySetInnerHTML={{ __html: CRANE_FRAMEWORK_STYLES }} />
+            <div className={cx(styles["section-hdr"], "section-hdr")}>CRANE WEATHER FRAMEWORK — T30–T34 + T17b/T18c/T18d</div>
+            <div className={styles.note} style={{ marginBottom: "1rem" }}>
+                <b>Numbering:</b> the validation report proposed these techniques as T25–T29; the dashboard already uses
+                T25–T28 for other techniques, so the Crane additions are renumbered <b>T30–T34</b>. T17b and T18c/T18d
+                are sub-criteria added under existing techniques. T18 maximum cap raised to {CRANE_T18_CAP_RAISED.toFixed(2)}.
+                <br />
+                All rules treat weather-event types only (heat, drought, flood, cyclone, cold-snap, wildfire, freeze).
+                None apply to seismic / accident events.
+            </div>
+
+            <table className={styles.table} style={{ marginBottom: "1.5rem" }}>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Technique</th>
+                        <th>Weight</th>
+                        <th>Status</th>
+                        <th>Applies To</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {CRANE_TECHNIQUES.map((t) => (
+                        <tr key={t.id}>
+                            <td><b>{t.id}</b></td>
+                            <td>
+                                <b>{t.label}</b>
+                                <p style={{ marginTop: 4, color: "var(--muted, #8b949e)" }}>{t.rule}</p>
+                                {t.notes ? <p style={{ marginTop: 4, fontStyle: "italic", color: "var(--muted, #8b949e)" }}>{t.notes}</p> : null}
+                            </td>
+                            <td>+{t.weight.toFixed(2)}</td>
+                            <td className={craneStatusClass(t.status)}>{t.status.toUpperCase()}</td>
+                            <td>{t.appliesTo.join(", ")}</td>
+                        </tr>
+                    ))}
+                    {CRANE_SUBCRITERIA.map((t) => (
+                        <tr key={t.id}>
+                            <td><b>{t.id}</b><br /><small>under {t.parentTechniqueId}</small></td>
+                            <td>
+                                <b>{t.label}</b>
+                                <p style={{ marginTop: 4, color: "var(--muted, #8b949e)" }}>{t.rule}</p>
+                                {t.notes ? <p style={{ marginTop: 4, fontStyle: "italic", color: "var(--muted, #8b949e)" }}>{t.notes}</p> : null}
+                            </td>
+                            <td>+{t.weight.toFixed(2)}</td>
+                            <td className={craneStatusClass(t.status)}>{t.status.toUpperCase()}</td>
+                            <td>{t.appliesTo.join(", ")}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+
+            <div className={cx(styles["section-hdr"], "section-hdr")}>FRAMEWORK REFERENCE — NAT&apos;S SOURCE DOCUMENT</div>
+            <div
+                className={CRANE_FRAMEWORK_SCOPE}
+                dangerouslySetInnerHTML={{ __html: CRANE_FRAMEWORK_BODY_HTML }}
+            />
+        </>
+    );
+}
+
+function formatLongitude(lon: number): string {
+    const norm = ((lon % 360) + 360) % 360;
+    const inSign = norm % 30;
+    const deg = Math.floor(inSign);
+    const minutes = Math.round((inSign - deg) * 60);
+    return `${deg}°${String(minutes).padStart(2, "0")}'`;
+}
+
+function CanonicalEphemeris() {
+    const stationsByBody = new Map<string, typeof RETROGRADE_SHADOW_WINDOWS>();
+    for (const win of RETROGRADE_SHADOW_WINDOWS) {
+        const list = stationsByBody.get(win.body) ?? [];
+        list.push(win);
+        stationsByBody.set(win.body, list);
+    }
+
+    const bodyOrder = ["Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"];
+    const groupedBodies = bodyOrder.filter((b) => stationsByBody.has(b));
+
+    return (
+        <>
+            <div className={cx(styles["section-hdr"], "section-hdr")}>CANONICAL 2026–2027 EPHEMERIS (SWISS EPHEMERIS)</div>
+            <div className={styles.note} style={{ marginBottom: "1rem" }}>
+                All rows below are generated by <code>scripts/generate-2026-2027-events.ts</code> from{" "}
+                <code>swisseph-wasm</code> and validated by{" "}
+                <code>__tests__/canonical-events-2026-2027.test.ts</code>. To refresh:{" "}
+                <code>bun run scripts/generate-2026-2027-events.ts</code>.
+            </div>
+
+            <div className={cx(styles["section-hdr"], "section-hdr")} style={{ marginTop: "1rem" }}>RETROGRADE SHADOW WINDOWS — Pre-Rx · Rx · Direct · Post-Rx</div>
+            {groupedBodies.map((body) => {
+                const wins = stationsByBody.get(body)!;
+                return (
+                    <div key={body} style={{ marginBottom: "1.2rem" }}>
+                        <h4 style={{ marginBottom: 6 }}>{body}</h4>
+                        <table className={styles.table}>
+                            <thead>
+                                <tr>
+                                    <th>Cycle</th>
+                                    <th>Pre-shadow start</th>
+                                    <th>Retrograde station</th>
+                                    <th>Direct station</th>
+                                    <th>Post-shadow end</th>
+                                    <th>Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {wins.map((w, idx) => (
+                                    <tr key={`${body}-${idx}`}>
+                                        <td>#{idx + 1}</td>
+                                        <td>
+                                            {dateLabel(w.preShadowStart.utc)}
+                                            <br /><small>{formatLongitude(w.preShadowStart.longitude)} {w.preShadowStart.sign}</small>
+                                        </td>
+                                        <td>
+                                            <b>{dateLabel(w.retrogradeStation.utc)}</b>
+                                            <br /><small>{formatLongitude(w.retrogradeStation.longitude)} {w.retrogradeStation.sign}</small>
+                                        </td>
+                                        <td>
+                                            <b>{dateLabel(w.directStation.utc)}</b>
+                                            <br /><small>{formatLongitude(w.directStation.longitude)} {w.directStation.sign}</small>
+                                        </td>
+                                        <td>
+                                            {dateLabel(w.postShadowEnd.utc)}
+                                            <br /><small>{formatLongitude(w.postShadowEnd.longitude)} {w.postShadowEnd.sign}</small>
+                                        </td>
+                                        <td>{w.durationDays.toFixed(0)}d</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                );
+            })}
+
+            <div className={cx(styles["section-hdr"], "section-hdr")} style={{ marginTop: "1rem" }}>SIGN INGRESSES (ALL BODIES, 2026–2027)</div>
+            <div className={styles.note} style={{ marginBottom: "0.6rem" }}>
+                Every ingress falls exactly on the destination-sign cusp (0° of the new sign) by definition, so longitude is not shown — the From → To columns convey the cusp crossing.
+            </div>
+            <table className={styles.table}>
+                <thead>
+                    <tr>
+                        <th>Date (UTC)</th>
+                        <th>Body</th>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Direction</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {SIGN_INGRESSES.map((row, idx) => (
+                        <tr key={`${row.utc}-${row.body}-${idx}`}>
+                            <td>{dateLabel(row.utc)}</td>
+                            <td><b>{row.body}</b></td>
+                            <td>{row.fromSign}</td>
+                            <td><b>{row.toSign}</b></td>
+                            <td>{row.retrograde ? "Rx" : "D"}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+
+            <div className={cx(styles["section-hdr"], "section-hdr")} style={{ marginTop: "1rem" }}>ECLIPSES 2026–2027 (SOLAR + LUNAR)</div>
+            <table className={styles.table}>
+                <thead>
+                    <tr>
+                        <th>Date (UTC)</th>
+                        <th>Kind</th>
+                        <th>Type</th>
+                        <th>Sun / Moon°</th>
+                        <th>Sign</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {ECLIPSES_2026_2027.map((row, idx) => (
+                        <tr key={`${row.utc}-${idx}`}>
+                            <td>{dateLabel(row.utc)}</td>
+                            <td><b>{row.kind}</b></td>
+                            <td>{row.eclipseType}</td>
+                            <td>{formatLongitude(row.longitude)}</td>
+                            <td>{row.sign}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+
+            <div className={cx(styles["section-hdr"], "section-hdr")} style={{ marginTop: "1rem" }}>STELLIUMS — 3+ STELLIUM_BODIES WITHIN 5° (2026–2027)</div>
+            <table className={styles.table}>
+                <thead>
+                    <tr>
+                        <th>Start (UTC)</th>
+                        <th>End (UTC)</th>
+                        <th>Duration</th>
+                        <th>Members</th>
+                        <th>Center (start)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {STELLIUMS_2026_2027.map((row, idx) => (
+                        <tr key={`${row.startUtc}-${idx}`}>
+                            <td>{dateLabel(row.startUtc)}</td>
+                            <td>{dateLabel(row.endUtc)}</td>
+                            <td>{row.durationDays.toFixed(1)}d</td>
+                            <td>{row.members.join(" · ")}</td>
+                            <td>{formatLongitude(row.centerLongitudeStart)} {row.centerSignStart}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </>
+    );
 }
 
 function StatsAndFormulas({ station2026, auditGates }: { station2026: typeof STATIONS; auditGates: AuditGate[] }) {
@@ -1378,10 +1612,35 @@ export default async function GeodeticTestPage() {
         buildIngressPanels(),
     ]);
     const eclipsePaths = eclipsePathSummaries(computedData.eclipsePaths);
-    const station2026 = STATIONS.filter((station) => station.dateUtc.startsWith("2026")).sort((a, b) => a.dateUtc.localeCompare(b.dateUtc));
+    // SWE-validated 2026 ledger: derive from RETROGRADE_SHADOW_WINDOWS, traditional planets only,
+    // chronological, both Rx and Direct stations.
+    const TRADITIONAL_BODIES = new Set(["Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"]);
+    const station2026: typeof STATIONS = [];
+    for (const w of RETROGRADE_SHADOW_WINDOWS) {
+        if (!TRADITIONAL_BODIES.has(w.body)) continue;
+        if (w.retrogradeStation.utc.startsWith("2026")) {
+            station2026.push({
+                planet: w.body, type: "retrograde",
+                dateUtc: w.retrogradeStation.utc,
+                longitude: w.retrogradeStation.longitude,
+                sign: w.retrogradeStation.sign,
+            });
+        }
+        if (w.directStation.utc.startsWith("2026")) {
+            station2026.push({
+                planet: w.body, type: "direct",
+                dateUtc: w.directStation.utc,
+                longitude: w.directStation.longitude,
+                sign: w.directStation.sign,
+            });
+        }
+    }
+    station2026.sort((a, b) => a.dateUtc.localeCompare(b.dateUtc));
     const tabs = [
         { id: "tab-events", label: "Event Correlations", children: <EventCorrelations /> },
         { id: "tab-tech", label: "Techniques Guide", children: <TechniquesGuide /> },
+        { id: "tab-crane", label: "Crane Weather Framework", children: <CraneWeatherFramework /> },
+        { id: "tab-ephem", label: "Canonical Ephemeris 2026–27", children: <CanonicalEphemeris /> },
         { id: "tab-stats", label: "Statistics & Formulas", children: <StatsAndFormulas station2026={station2026} auditGates={auditGates} /> },
         { id: "tab-fp", label: "Planetary Fingerprints", children: <PlanetaryFingerprints /> },
         { id: "tab-cal", label: "Risk Calendar 2026", children: <RiskCalendar skyRows={skyRows} ingressPanels={ingressPanels} tnoRows={tnoRows} /> },
