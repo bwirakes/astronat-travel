@@ -18,7 +18,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getProfile, getNatalChart } from "@/lib/db";
+import { getProfileFresh, getNatalChart } from "@/lib/db";
 import { computeHouseMatrix } from "@/app/lib/house-matrix";
 import { resolveACGFull } from "@/lib/astro/acg-lines";
 import { signFromLongitude, houseFromLongitude } from "@/app/lib/geodetic";
@@ -275,7 +275,7 @@ export async function POST(request: Request) {
   const userId = testUserId || user!.id;
 
   // Load profile + natal chart
-  const profile = await getProfile(userId);
+  const profile = await getProfileFresh(userId);
   const natalRow = await getNatalChart(userId);
   if (!profile || !natalRow?.ephemeris_data) {
     return new Response(
