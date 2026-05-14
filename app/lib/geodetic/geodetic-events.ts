@@ -17,6 +17,12 @@ export interface StationEvent {
     sign: string;
 }
 
+export interface RetrogradeWindowEvent {
+    planet: string;
+    entry: StationEvent;
+    exit: StationEvent;
+}
+
 export interface EclipseEvent {
     kind: "solar" | "lunar";
     dateUtc: string;
@@ -66,17 +72,29 @@ export const STATIONS: StationEvent[] = [
     { planet: "Jupiter", type: "retrograde", dateUtc: "2024-10-09T12:00:00Z", longitude:  81.0, sign: "Gemini"    },
     { planet: "Pluto",   type: "direct",     dateUtc: "2024-10-12T12:00:00Z", longitude: 299.0, sign: "Capricorn" },
     { planet: "Saturn",  type: "direct",     dateUtc: "2024-11-15T12:00:00Z", longitude: 342.0, sign: "Pisces"    },
+    { planet: "Mercury", type: "retrograde", dateUtc: "2024-11-26T02:38:37Z", longitude: 262.7, sign: "Sagittarius" },
     { planet: "Mars",    type: "retrograde", dateUtc: "2024-12-06T12:00:00Z", longitude: 126.0, sign: "Leo"       },
     { planet: "Neptune", type: "direct",     dateUtc: "2024-12-07T12:00:00Z", longitude: 357.0, sign: "Pisces"    },
+    { planet: "Mercury", type: "direct",     dateUtc: "2024-12-15T21:02:44Z", longitude: 246.4, sign: "Sagittarius" },
     { planet: "Uranus",  type: "direct",     dateUtc: "2025-01-30T12:00:00Z", longitude:  53.0, sign: "Taurus"    },
     { planet: "Jupiter", type: "direct",     dateUtc: "2025-02-04T12:00:00Z", longitude:  71.0, sign: "Gemini"    },
     { planet: "Mars",    type: "direct",     dateUtc: "2025-02-24T12:00:00Z", longitude: 107.0, sign: "Cancer"    },
+    { planet: "Venus",   type: "retrograde", dateUtc: "2025-03-02T00:37:01Z", longitude:  10.8, sign: "Aries"     },
+    { planet: "Mercury", type: "retrograde", dateUtc: "2025-03-15T06:51:18Z", longitude:   9.6, sign: "Aries"     },
+    { planet: "Mercury", type: "direct",     dateUtc: "2025-04-07T11:13:00Z", longitude: 356.8, sign: "Pisces"    },
+    { planet: "Venus",   type: "direct",     dateUtc: "2025-04-13T01:03:54Z", longitude: 354.6, sign: "Pisces"    },
     { planet: "Pluto",   type: "retrograde", dateUtc: "2025-05-04T12:00:00Z", longitude: 304.0, sign: "Aquarius"  },
     { planet: "Neptune", type: "retrograde", dateUtc: "2025-07-04T12:00:00Z", longitude:   2.0, sign: "Aries"     },
     { planet: "Saturn",  type: "retrograde", dateUtc: "2025-07-12T12:00:00Z", longitude:   1.0, sign: "Aries"     },
+    { planet: "Mercury", type: "retrograde", dateUtc: "2025-07-18T04:45:27Z", longitude: 135.6, sign: "Leo"       },
+    { planet: "Mercury", type: "direct",     dateUtc: "2025-08-11T07:26:09Z", longitude: 124.3, sign: "Leo"       },
     { planet: "Uranus",  type: "retrograde", dateUtc: "2025-09-06T12:00:00Z", longitude:  60.0, sign: "Gemini"    },
     { planet: "Pluto",   type: "direct",     dateUtc: "2025-10-13T12:00:00Z", longitude: 301.0, sign: "Capricorn" },
+    { planet: "Mercury", type: "retrograde", dateUtc: "2025-11-09T18:53:57Z", longitude: 246.8, sign: "Sagittarius" },
+    { planet: "Jupiter", type: "retrograde", dateUtc: "2025-11-11T16:42:09Z", longitude: 115.2, sign: "Cancer"    },
     { planet: "Saturn",  type: "direct",     dateUtc: "2025-11-27T12:00:00Z", longitude: 355.0, sign: "Pisces"    },
+    { planet: "Mercury", type: "direct",     dateUtc: "2025-11-29T17:47:57Z", longitude: 230.7, sign: "Scorpio"   },
+    { planet: "Neptune", type: "direct",     dateUtc: "2025-12-10T12:22:58Z", longitude: 359.4, sign: "Pisces"    },
     { planet: "Uranus",  type: "direct",     dateUtc: "2026-02-04T02:33:00Z", longitude:  57.5, sign: "Taurus"    },
     { planet: "Mercury", type: "retrograde", dateUtc: "2026-02-26T06:49:00Z", longitude: 352.6, sign: "Pisces"    },
     { planet: "Mercury", type: "direct",     dateUtc: "2026-03-20T19:33:00Z", longitude: 338.5, sign: "Pisces"    },
@@ -95,7 +113,44 @@ export const STATIONS: StationEvent[] = [
     { planet: "Saturn",  type: "direct",     dateUtc: "2026-12-10T23:31:00Z", longitude:   7.9, sign: "Aries"     },
     { planet: "Neptune", type: "direct",     dateUtc: "2026-12-12T22:17:00Z", longitude:   1.6, sign: "Aries"     },
     { planet: "Jupiter", type: "retrograde", dateUtc: "2026-12-13T00:58:00Z", longitude: 147.0, sign: "Leo"       },
-    { planet: "Mars",    type: "retrograde", dateUtc: "2027-11-23T12:00:00Z", longitude: 220.0, sign: "Scorpio"   },
+    { planet: "Mars",    type: "retrograde", dateUtc: "2027-01-10T12:58:46Z", longitude: 160.4, sign: "Virgo"     },
+    { planet: "Uranus",  type: "direct",     dateUtc: "2027-02-08T12:29:19Z", longitude:  61.7, sign: "Gemini"    },
+    { planet: "Mercury", type: "retrograde", dateUtc: "2027-02-09T17:35:40Z", longitude: 336.0, sign: "Pisces"    },
+    { planet: "Mercury", type: "direct",     dateUtc: "2027-03-03T12:41:49Z", longitude: 320.9, sign: "Aquarius"  },
+    { planet: "Mars",    type: "direct",     dateUtc: "2027-04-01T14:11:11Z", longitude: 140.9, sign: "Leo"       },
+    { planet: "Jupiter", type: "direct",     dateUtc: "2027-04-13T02:12:47Z", longitude: 137.0, sign: "Leo"       },
+    { planet: "Pluto",   type: "retrograde", dateUtc: "2027-05-08T12:52:13Z", longitude: 307.2, sign: "Aquarius"  },
+    { planet: "Mercury", type: "retrograde", dateUtc: "2027-06-10T18:18:23Z", longitude:  96.4, sign: "Cancer"    },
+    { planet: "Mercury", type: "direct",     dateUtc: "2027-07-04T19:37:19Z", longitude:  87.5, sign: "Gemini"    },
+    { planet: "Neptune", type: "retrograde", dateUtc: "2027-07-09T22:42:57Z", longitude:   6.7, sign: "Aries"     },
+    { planet: "Saturn",  type: "retrograde", dateUtc: "2027-08-09T18:06:53Z", longitude:  27.9, sign: "Aries"     },
+    { planet: "Uranus",  type: "retrograde", dateUtc: "2027-09-15T09:11:46Z", longitude:  70.0, sign: "Gemini"    },
+    { planet: "Mercury", type: "retrograde", dateUtc: "2027-10-07T14:27:39Z", longitude: 214.9, sign: "Scorpio"   },
+    { planet: "Pluto",   type: "direct",     dateUtc: "2027-10-18T03:54:33Z", longitude: 304.7, sign: "Aquarius"  },
+    { planet: "Mercury", type: "direct",     dateUtc: "2027-10-28T14:17:04Z", longitude: 199.3, sign: "Libra"     },
+    { planet: "Neptune", type: "direct",     dateUtc: "2027-12-15T09:09:54Z", longitude:   3.9, sign: "Aries"     },
+    { planet: "Saturn",  type: "direct",     dateUtc: "2027-12-24T02:48:27Z", longitude:  21.0, sign: "Aries"     },
+    { planet: "Jupiter", type: "retrograde", dateUtc: "2028-01-12T08:54:03Z", longitude: 177.5, sign: "Virgo"     },
+    { planet: "Mercury", type: "retrograde", dateUtc: "2028-01-24T10:58:40Z", longitude: 319.7, sign: "Aquarius"  },
+    { planet: "Uranus",  type: "direct",     dateUtc: "2028-02-12T23:50:09Z", longitude:  65.9, sign: "Gemini"    },
+    { planet: "Mercury", type: "direct",     dateUtc: "2028-02-14T12:49:23Z", longitude: 304.0, sign: "Aquarius"  },
+    { planet: "Pluto",   type: "retrograde", dateUtc: "2028-05-09T09:28:50Z", longitude: 308.8, sign: "Aquarius"  },
+    { planet: "Venus",   type: "retrograde", dateUtc: "2028-05-10T23:03:31Z", longitude:  79.7, sign: "Gemini"    },
+    { planet: "Jupiter", type: "direct",     dateUtc: "2028-05-13T20:01:35Z", longitude: 167.5, sign: "Virgo"     },
+    { planet: "Mercury", type: "retrograde", dateUtc: "2028-05-21T08:48:47Z", longitude:  76.3, sign: "Gemini"    },
+    { planet: "Mercury", type: "direct",     dateUtc: "2028-06-14T06:04:32Z", longitude:  67.8, sign: "Gemini"    },
+    { planet: "Venus",   type: "direct",     dateUtc: "2028-06-22T22:14:37Z", longitude:  63.2, sign: "Gemini"    },
+    { planet: "Neptune", type: "retrograde", dateUtc: "2028-07-11T13:07:07Z", longitude:   8.9, sign: "Aries"     },
+    { planet: "Saturn",  type: "retrograde", dateUtc: "2028-08-22T22:18:38Z", longitude:  41.3, sign: "Taurus"    },
+    { planet: "Uranus",  type: "retrograde", dateUtc: "2028-09-19T00:03:21Z", longitude:  74.2, sign: "Gemini"    },
+    { planet: "Mercury", type: "retrograde", dateUtc: "2028-09-19T16:26:54Z", longitude: 198.6, sign: "Libra"     },
+    { planet: "Mercury", type: "direct",     dateUtc: "2028-10-11T10:30:57Z", longitude: 183.5, sign: "Libra"     },
+    { planet: "Pluto",   type: "direct",     dateUtc: "2028-10-19T03:48:45Z", longitude: 306.4, sign: "Aquarius"  },
+    { planet: "Neptune", type: "direct",     dateUtc: "2028-12-16T20:45:40Z", longitude:   6.1, sign: "Aries"     },
+    { planet: "Saturn",  type: "direct",     dateUtc: "2029-01-05T12:38:40Z", longitude:  34.4, sign: "Taurus"    },
+    { planet: "Mercury", type: "retrograde", dateUtc: "2029-01-07T07:50:40Z", longitude: 303.6, sign: "Aquarius"  },
+    { planet: "Mercury", type: "direct",     dateUtc: "2029-01-27T18:49:20Z", longitude: 287.6, sign: "Capricorn" },
+    { planet: "Uranus",  type: "direct",     dateUtc: "2029-02-16T10:51:46Z", longitude:  70.2, sign: "Gemini"    },
 ];
 
 export const ECLIPSES: EclipseEvent[] = [
@@ -196,6 +251,59 @@ export function stationsInWindow(
         if (Math.abs(d) <= windowDays) out.push({ ...s, daysFromTarget: d });
     }
     return out;
+}
+
+export function stationsInDateRange(
+    startDate: Date,
+    endDate: Date,
+    source: StationEvent[] = STATIONS,
+): StationEvent[] {
+    const start = startDate.getTime();
+    const end = endDate.getTime();
+    return source
+        .filter((s) => {
+            const t = new Date(s.dateUtc).getTime();
+            return t >= start && t <= end;
+        })
+        .sort((a, b) => new Date(a.dateUtc).getTime() - new Date(b.dateUtc).getTime());
+}
+
+export function retrogradeWindowsInRange(
+    startDate: Date,
+    endDate: Date,
+    source: StationEvent[] = STATIONS,
+): RetrogradeWindowEvent[] {
+    const start = startDate.getTime();
+    const end = endDate.getTime();
+    const byPlanet = new Map<string, StationEvent[]>();
+
+    for (const station of source) {
+        const stations = byPlanet.get(station.planet) ?? [];
+        stations.push(station);
+        byPlanet.set(station.planet, stations);
+    }
+
+    const windows: RetrogradeWindowEvent[] = [];
+    for (const [planet, stations] of byPlanet) {
+        stations.sort((a, b) => new Date(a.dateUtc).getTime() - new Date(b.dateUtc).getTime());
+        for (let i = 0; i < stations.length; i++) {
+            const entry = stations[i];
+            if (entry.type !== "retrograde") continue;
+
+            const exit = stations.slice(i + 1).find((candidate) => candidate.type === "direct");
+            if (!exit) continue;
+
+            const entryTime = new Date(entry.dateUtc).getTime();
+            const exitTime = new Date(exit.dateUtc).getTime();
+            if (exitTime < start || entryTime > end) continue;
+
+            windows.push({ planet, entry, exit });
+        }
+    }
+
+    return windows.sort(
+        (a, b) => new Date(a.entry.dateUtc).getTime() - new Date(b.entry.dateUtc).getTime(),
+    );
 }
 
 export function eclipsesInWindow(

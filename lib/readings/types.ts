@@ -99,6 +99,11 @@ export interface AstrocartoReadingResult {
    *  markers, imminent ingresses. Rendered by TimingTab beneath the personal
    *  transit Gantt on the same date scale. Optional for back-compat. */
   universalSkySpans?: import("@/app/lib/window-scoring").UniversalSkySpan[];
+  generationTimings?: {
+    totalMs: number;
+    stepsMs: Record<string, number>;
+    orderOfAttack: string[];
+  };
 
   // Synastry add-ons (only present when readingCategory === "synastry")
   partnerNatalPlanets?: any[];
@@ -145,6 +150,7 @@ export interface RunAstrocartoInput {
   readingCategory: "astrocartography" | "synastry" | "natal" | "solar_return" | "mundane";
   partnerId?: string | null;
   supabase: any;
+  aiMode?: "inline" | "skip";
 }
 
 export interface RunWeatherInput {

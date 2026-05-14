@@ -2,14 +2,14 @@
  * transit-solver.ts — Native 12-month transit solver.
  *
  * Scans a date window (default: 90 days before → 9 months after the reference
- * date) every SAMPLE_INTERVAL_DAYS days using the JS SwissEph singleton, finds
+ * date) every SAMPLE_INTERVAL_DAYS days using the daily ephemeris cache, finds
  * aspect hits between transiting planets and natal planets, and returns the top
  * matches sorted chronologically then by orb tightness.
  *
  * This replaces the broken REST call to the Python MCP server in astro-client.ts.
  */
 
-import { SwissEphSingleton, computeRealtimePositions } from "./transits";
+import { UNIVERSAL_SKY_BODIES, getComputedSkyForDateRange } from "./ephemeris-cache";
 import { calculateAspect } from "./aspects";
 
 /** Planets considered benefic for benefic/malefic scoring. */
@@ -40,20 +40,29 @@ const MAX_RESULTS = 200;
 export type SolvePolicy = "proximity" | "chronological";
 
 // ── In-process cache ─────────────────────────────────────────────────────────
-// Each reading fires ~52 SwissEph batches (7-day steps × 360-day window).
 // Cache the result keyed by natal positions + reference week so subsequent
-// readings for different destinations (same user, same week) skip recomputation.
-// This is worker-lifetime cache; for cross-worker persistence use Supabase.
+// readings for different destinations (same user, same week) skip recomputing
+// aspect hits. This is worker-lifetime cache; for cross-worker persistence use
+// Supabase or a dedicated transit-hit cache table.
 
 const _transitCache = new Map<string, TransitHit[]>();
 const _CACHE_MAX = 20; // evict oldest after this many unique keys
+const MS_DAY = 86_400_000;
 
 function _weekNum(d: Date): number {
-  return Math.floor(d.getTime() / (7 * 86_400_000));
+  return Math.floor(d.getTime() / (7 * MS_DAY));
 }
 
 function _natalKey(planets: Array<{ longitude: number }>): string {
   return planets.map(p => Math.round(p.longitude * 10)).join(",");
+}
+
+function _dateOnly(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function _dateFromOnly(dateStr: string): Date {
+  return new Date(`${dateStr}T00:00:00.000Z`);
 }
 
 export interface TransitHit {
@@ -110,16 +119,20 @@ export async function solve12MonthTransits(
 
   const results: TransitHit[] = [];
 
-  const start = new Date(referenceDate.getTime() - windowDaysBefore * 86_400_000);
-  const end   = new Date(referenceDate.getTime() + windowDaysAfter  * 86_400_000);
+  const start = new Date(referenceDate.getTime() - windowDaysBefore * MS_DAY);
+  const end   = new Date(referenceDate.getTime() + windowDaysAfter  * MS_DAY);
 
-  // Ensure SwissEph is initialised once before the loop.
-  await SwissEphSingleton.getInstance();
+  const startDay = _dateFromOnly(_dateOnly(start));
+  const endDay = _dateFromOnly(_dateOnly(end));
+  const dayCount = Math.floor((endDay.getTime() - startDay.getTime()) / MS_DAY) + 1;
+  const positionsByDate = await getComputedSkyForDateRange(startDay, dayCount, {
+    bodies: UNIVERSAL_SKY_BODIES,
+  });
 
   let current = new Date(start);
 
   while (current <= end) {
-    const transitPositions = await computeRealtimePositions(current);
+    const transitPositions = positionsByDate.get(_dateOnly(current)) ?? [];
 
     for (const transit of transitPositions) {
       for (const natal of natalPlanets) {
@@ -138,7 +151,7 @@ export async function solve12MonthTransits(
         const applying = !transit.is_retrograde;
 
         results.push({
-          date: current.toISOString().split("T")[0],
+          date: _dateOnly(current),
           transit_planet: transit.name,
           transit_planet_lon: transit.longitude,
           natal_planet: natalName,
@@ -151,7 +164,7 @@ export async function solve12MonthTransits(
       }
     }
 
-    current = new Date(current.getTime() + SAMPLE_INTERVAL_DAYS * 86_400_000);
+    current = new Date(current.getTime() + SAMPLE_INTERVAL_DAYS * MS_DAY);
   }
 
   // Two-pass cap so no single combo eats the budget.

@@ -8,8 +8,8 @@
 import { getNatalChart, getPartnerNatalChart, getProfile, saveNatalChart, savePartnerNatalChart } from "@/lib/db";
 import { SwissEphSingleton, computeRealtimePositions } from "@/lib/astro/transits";
 import { resolveACGFull, computeParans } from "@/lib/astro/acg-lines";
-import { solve12MonthTransits, type TransitHit } from "@/lib/astro/transit-solver";
-import { computeHouseMatrix, mapTransitsToMatrix, computeGlobalPenalty, computeCurrentSkyPenalty, acgLineRawScore } from "@/app/lib/house-matrix";
+import { solve12MonthTransits } from "@/lib/astro/transit-solver";
+import { computeHouseMatrix, mapTransitsToMatrix, computeGlobalPenalty, computeCurrentSkyPenalty } from "@/app/lib/house-matrix";
 import { isCurrentSkyPenaltyEnabled } from "@/app/lib/scoring-flags";
 import {
   computeEventScores,
@@ -20,16 +20,12 @@ import {
 import { computeUniversalSky } from "@/app/lib/universal-sky";
 import { solveUniversalSkySpans } from "@/app/lib/window-scoring";
 import { EVENT_LABELS, verdictBand } from "@/app/lib/verdict";
-import { signFromLongitude } from "@/app/lib/geodetic";
 import { birthToUtc } from "@/lib/astro/birth-utc";
 import { natalCacheMatchesProfile, natalCuspsFromCache } from "@/lib/astro/chart-cache";
 import { determineSect, computeLotOfFortune, computeLotOfSpirit } from "@/app/lib/arabic-parts";
-import { GOAL_DEFINITIONS, buildEditorialEvidence, deriveScoreNarrative } from "@/app/lib/reading-tabs";
+import { GOAL_DEFINITIONS } from "@/app/lib/reading-tabs";
 
 import { computeProgressedBands } from "@/app/lib/progressions";
-import { writeTeacherReading, type TeacherReadingInput } from "@/lib/ai/prompts/teacher-reading";
-import { TeacherReadingSchema, type Tone } from "@/lib/ai/schemas";
-import { houseTopic, spellAngle, closenessBand, houseVibe } from "./house-topics";
 import { computeSynastryAspects, classifyHouseBucket, computeRecommendation } from "./synastry";
 import { buildAIInput } from "./ai-input-builder";
 import type { AstrocartoReadingResult, RunAstrocartoInput } from "./types";
@@ -191,10 +187,22 @@ export async function relocatedCuspsAt(
 export async function runAstrocarto(
   input: RunAstrocartoInput,
 ): Promise<{ result: AstrocartoReadingResult; partnerId: string | null }> {
+  const totalStartedAt = Date.now();
+  const generationStepsMs: Record<string, number> = {};
+  const timed = async <T>(label: string, fn: () => Promise<T> | T): Promise<T> => {
+    const startedAt = Date.now();
+    try {
+      return await fn();
+    } finally {
+      generationStepsMs[label] = Date.now() - startedAt;
+    }
+  };
+
   const { user, destination, targetLat, targetLon, travelDate, travelType, goals, readingCategory, partnerId, supabase } = input;
+  const aiMode = input.aiMode ?? "inline";
 
   // 1. Profile + natal
-  const profile = await getProfile(user.id);
+  const profile = await timed("profile.load", () => getProfile(user.id));
   if (!profile?.birth_date || !profile.birth_time) {
     throw new Error("Incomplete birth data in profile. Please complete your profile first.");
   }
@@ -202,7 +210,9 @@ export async function runAstrocarto(
     throw new Error("Birth city coordinates not found. Please re-save your profile with a valid birth city.");
   }
 
-  const { planets: natalPlanets, dtUtc: dtUtcBirth } = await loadOrComputeNatal(user.id, profile);
+  const { planets: natalPlanets, dtUtc: dtUtcBirth } = await timed("natal.load_or_compute", () =>
+    loadOrComputeNatal(user.id, profile)
+  );
 
   // 2. Optional partner chart for synastry
   let partnerNatalPlanets: any[] | null = null;
@@ -212,12 +222,14 @@ export async function runAstrocarto(
   let synastryAspects: ReturnType<typeof computeSynastryAspects> = [];
 
   if (readingCategory === "synastry" && partnerId) {
-    const { data: pp } = await supabase
-      .from("partner_profiles")
-      .select("*")
-      .eq("id", partnerId)
-      .eq("owner_id", user.id)
-      .maybeSingle();
+    const { data: pp } = await timed("partner.profile.load", () =>
+      supabase
+        .from("partner_profiles")
+        .select("*")
+        .eq("id", partnerId)
+        .eq("owner_id", user.id)
+        .maybeSingle()
+    );
     partnerProfile = pp;
 
     if (!partnerProfile) {
@@ -227,26 +239,36 @@ export async function runAstrocarto(
       throw new Error("Partner profile is missing birth coordinates. Please re-add the partner with a city from the dropdown.");
     }
 
-    const partnerData = await loadOrComputePartnerNatal(partnerId, partnerProfile);
+    const partnerData = await timed("partner.natal.load_or_compute", () =>
+      loadOrComputePartnerNatal(partnerId, partnerProfile)
+    );
     partnerNatalPlanets = partnerData.planets;
     partnerNatalCusps = partnerData.cusps;
     dtUtcPartner = partnerData.dtUtc;
-    synastryAspects = computeSynastryAspects(natalPlanets, partnerNatalPlanets);
+    synastryAspects = await timed("partner.synastry_aspects", () =>
+      computeSynastryAspects(natalPlanets, partnerData.planets)
+    );
   }
 
   // 3. Relocated cusps + ACG lines + transits at destination
-  const relocatedCusps = await relocatedCuspsAt(dtUtcBirth, targetLat, targetLon);
+  const relocatedCusps = await timed("cusps.relocated", () =>
+    relocatedCuspsAt(dtUtcBirth, targetLat, targetLon)
+  );
   // Natal cusps — same calculation but anchored at the birth coordinates. Used
   // to surface the real natal ASC/IC/DSC/MC alongside the relocated angles in
   // the V4 reading view's Step 7 ("the four angles change").
-  const natalCusps = await relocatedCuspsAt(dtUtcBirth, profile.birth_lat, profile.birth_lon);
+  const natalCusps = await timed("cusps.natal", () =>
+    relocatedCuspsAt(dtUtcBirth, profile.birth_lat as number, profile.birth_lon as number)
+  );
   const natalAngles = {
     ASC: natalCusps[0],
     IC:  natalCusps[3],
     DSC: natalCusps[6],
     MC:  natalCusps[9],
   };
-  const { cityLines: acgLines, allLines: acgAllLines } = await resolveACGFull(dtUtcBirth, targetLat, targetLon);
+  const { cityLines: acgLines, allLines: acgAllLines } = await timed("acg.resolve_lines", () =>
+    resolveACGFull(dtUtcBirth, targetLat, targetLon)
+  );
   const refDate = travelDate ? new Date(travelDate) : new Date();
   // Relocation readings answer "when should I move?" + "what's the year ahead?"
   // — both need even monthly coverage across 12 months from the anchor, not a
@@ -256,34 +278,46 @@ export async function runAstrocarto(
   // — the relocation UI starts at the move month and looks forward.
   // Trip readings keep the default proximity window centered on the anchor.
   const isRelocation = travelType === "relocation";
-  const rawTransits = await solve12MonthTransits(natalPlanets, refDate, {
-    policy: isRelocation ? "chronological" : "proximity",
-    ...(isRelocation ? {
-      maxResults: 400,
-      windowDaysBefore: 0,
-      windowDaysAfter: 450,
-    } : {}),
-  });
+  const rawTransits = await timed("transits.user.solve", () =>
+    solve12MonthTransits(natalPlanets, refDate, {
+      policy: isRelocation ? "chronological" : "proximity",
+      ...(isRelocation ? {
+        maxResults: 400,
+        windowDaysBefore: 0,
+        windowDaysAfter: 450,
+      } : {
+        maxResults: 120,
+        windowDaysBefore: 7,
+        windowDaysAfter: 90,
+      }),
+    })
+  );
   const mappedTransits = mapTransitsToMatrix(rawTransits, natalPlanets, relocatedCusps, profile.birth_lat ?? undefined);
   // A1: raw transit positions at refDate — feed Step 5b (transit-on-geodetic-angle).
   // computeHouseMatrix tolerates undefined; the cost is one extra SwissEph call.
-  const transitPositionsAtRef = await computeRealtimePositions(refDate);
+  const transitPositionsAtRef = await timed("transits.ref_positions", () =>
+    computeRealtimePositions(refDate)
+  );
   // Universal sky state at refDate — location-agnostic snapshot of the sky
   // (current retrogrades, ingresses, aspects, nodes, eclipse window). Feeds
   // computeEventScores as a sky modifier and the V4 view's PlaceFieldTab.
-  const universalSky = await computeUniversalSky(refDate);
+  const universalSky = await timed("sky.universal", () =>
+    computeUniversalSky(refDate, isRelocation ? 365 : 90)
+  );
   const globalPenalty = isCurrentSkyPenaltyEnabled()
     ? computeCurrentSkyPenalty(transitPositionsAtRef, natalPlanets)
     : computeGlobalPenalty(mappedTransits);
   // A5: progressed bands + per-angle hits at refDate (async, day-for-a-year).
   // destLat now passed so we can compute degree-precise hits to geo-ASC and
   // geo-DSC, not just MC/IC.
-  const progressedBands = await computeProgressedBands({
-    birthDateUtc: dtUtcBirth,
-    refDate,
-    destLon: targetLon,
-    destLat: targetLat,
-  });
+  const progressedBands = await timed("progressions.bands", () =>
+    computeProgressedBands({
+      birthDateUtc: dtUtcBirth,
+      refDate,
+      destLon: targetLon,
+      destLat: targetLat,
+    })
+  );
 
   // 4. Sect, Arabic parts, parans
   const sunPlanet = natalPlanets.find((p: any) => (p.planet || p.name || "").toLowerCase() === "sun");
@@ -296,7 +330,7 @@ export async function runAstrocarto(
   const lotOfSpiritLon = sunPlanet && moonPlanet
     ? computeLotOfSpirit(relocatedAsc, sunPlanet.longitude, moonPlanet.longitude, sect)
     : undefined;
-  const parans = computeParans(acgAllLines, targetLat);
+  const parans = await timed("parans.user", () => computeParans(acgAllLines, targetLat));
 
   // 5. House matrix + event scores
   const selectedGoals = parseGoals(goals);
@@ -313,25 +347,27 @@ export async function runAstrocarto(
     longitude: s.longitude,
     sign: s.sign,
   }));
-  const matrixResult = computeHouseMatrix({
-    natalPlanets,
-    relocatedCusps,
-    acgLines,
-    transits: mappedTransits,
-    parans,
-    destLat: targetLat,
-    destLon: targetLon,
-    globalPenalty,
-    birthLat: profile.birth_lat ?? undefined,
-    lotOfFortuneLon,
-    lotOfSpiritLon,
-    sect,
-    selectedGoals,
-    transitPositions: transitPositionsAtRef,
-    refDate,
-    progressedBands,
-    stations: liveStations,
-  });
+  const matrixResult = await timed("matrix.user", () =>
+    computeHouseMatrix({
+      natalPlanets,
+      relocatedCusps,
+      acgLines,
+      transits: mappedTransits,
+      parans,
+      destLat: targetLat,
+      destLon: targetLon,
+      globalPenalty,
+      birthLat: profile.birth_lat ?? undefined,
+      lotOfFortuneLon,
+      lotOfSpiritLon,
+      sect,
+      selectedGoals,
+      transitPositions: transitPositionsAtRef,
+      refDate,
+      progressedBands,
+      stations: liveStations,
+    })
+  );
 
   const relocatedPlanets = buildOccupancyPlanets(
     natalPlanets,
@@ -339,7 +375,9 @@ export async function runAstrocarto(
     acgLines,
     profile.birth_lat ?? undefined,
   );
-  let eventScores = computeEventScores(matrixResult, relocatedPlanets, universalSky);
+  let eventScores = await timed("scores.events.user", () =>
+    computeEventScores(matrixResult, relocatedPlanets, universalSky)
+  );
 
   // Capture the matrix-only macro score before the fused transit headline
   // overwrites it. Legacy range/daily/monthly helpers use this as the
@@ -366,16 +404,18 @@ export async function runAstrocarto(
     relocatedCusps.length >= 12
   ) {
     const natalPlanetHouse = buildNatalPlanetRelocatedHouseMap(natalPlanets, relocatedCusps, profile.birth_lat ?? undefined);
-    const fused = computeFusedReadingPackage({
-      matrixResult,
-      relocatedPlanets,
-      transits: rawTransits as any,
-      centerISO: new Date(travelDate).toISOString(),
-      goalIds: goalIds ?? [],
-      selectedGoalIndices: fusedSelectedGoalIndices,
-      natalPlanetHouse,
-      skyState: universalSky,
-    });
+    const fused = await timed("scores.fused.user", () =>
+      computeFusedReadingPackage({
+        matrixResult,
+        relocatedPlanets,
+        transits: rawTransits as any,
+        centerISO: new Date(travelDate).toISOString(),
+        goalIds: goalIds ?? [],
+        selectedGoalIndices: fusedSelectedGoalIndices,
+        natalPlanetHouse,
+        skyState: universalSky,
+      })
+    );
     eventScores = fused.eventScores;
     fusedMacroScore = fused.readingScore;
     fusedMacroVerdict = EVENT_LABELS[verdictBand(fused.readingScore)] ?? matrixMacroVerdict;
@@ -392,24 +432,36 @@ export async function runAstrocarto(
   // 6. Partner matrix (synastry only) — mirrors the user pipeline at the same destination
   let partnerMatrix: any = null;
   if (readingCategory === "synastry" && partnerNatalPlanets && partnerProfile && dtUtcPartner) {
-    const pRelocatedCusps = await relocatedCuspsAt(dtUtcPartner, targetLat, targetLon);
-    const { cityLines: pAcgLines, allLines: pAcgAllLines } = await resolveACGFull(dtUtcPartner, targetLat, targetLon);
+    const pRelocatedCusps = await timed("partner.cusps.relocated", () =>
+      relocatedCuspsAt(dtUtcPartner, targetLat, targetLon)
+    );
+    const { cityLines: pAcgLines, allLines: pAcgAllLines } = await timed("partner.acg.resolve_lines", () =>
+      resolveACGFull(dtUtcPartner, targetLat, targetLon)
+    );
     // Partner mirrors the user's policy — both partners are evaluating the same
     // trip-vs-relocation framing for the same destination on the same date.
-    const pRawTransits = await solve12MonthTransits(partnerNatalPlanets, refDate, {
-      policy: isRelocation ? "chronological" : "proximity",
-      ...(isRelocation ? {
-        maxResults: 400,
-        windowDaysBefore: 0,
-        windowDaysAfter: 450,
-      } : {}),
-    });
+    const pRawTransits = await timed("partner.transits.solve", () =>
+      solve12MonthTransits(partnerNatalPlanets, refDate, {
+        policy: isRelocation ? "chronological" : "proximity",
+        ...(isRelocation ? {
+          maxResults: 400,
+          windowDaysBefore: 0,
+          windowDaysAfter: 450,
+        } : {
+          maxResults: 120,
+          windowDaysBefore: 7,
+          windowDaysAfter: 90,
+        }),
+      })
+    );
     const pMappedTransits = mapTransitsToMatrix(pRawTransits, partnerNatalPlanets, pRelocatedCusps, partnerProfile.birth_lat ?? undefined);
-    const pTransitPositions = await computeRealtimePositions(refDate);
+    const pTransitPositions = await timed("partner.transits.ref_positions", () =>
+      computeRealtimePositions(refDate)
+    );
     const pGlobalPenalty = isCurrentSkyPenaltyEnabled()
       ? computeCurrentSkyPenalty(pTransitPositions, partnerNatalPlanets)
       : computeGlobalPenalty(pMappedTransits);
-    const pParans = computeParans(pAcgAllLines, targetLat);
+    const pParans = await timed("partner.parans", () => computeParans(pAcgAllLines, targetLat));
 
     const pSun = partnerNatalPlanets.find((p: any) => (p.planet || p.name || "").toLowerCase() === "sun");
     const pMoon = partnerNatalPlanets.find((p: any) => (p.planet || p.name || "").toLowerCase() === "moon");
@@ -418,24 +470,26 @@ export async function runAstrocarto(
     const pLotF = pSun && pMoon ? computeLotOfFortune(pRelocatedAsc, pSun.longitude, pMoon.longitude, pSect) : undefined;
     const pLotS = pSun && pMoon ? computeLotOfSpirit(pRelocatedAsc, pSun.longitude, pMoon.longitude, pSect) : undefined;
 
-    const pMatrixResult = computeHouseMatrix({
-      natalPlanets: partnerNatalPlanets,
-      relocatedCusps: pRelocatedCusps,
-      acgLines: pAcgLines,
-      transits: pMappedTransits,
-      parans: pParans,
-      destLat: targetLat,
-      destLon: targetLon,
-      globalPenalty: pGlobalPenalty,
-      birthLat: partnerProfile.birth_lat ?? undefined,
-      lotOfFortuneLon: pLotF,
-      lotOfSpiritLon: pLotS,
-      sect: pSect,
-      selectedGoals,
-      transitPositions: transitPositionsAtRef,
-      refDate,
-      stations: liveStations,
-    });
+    const pMatrixResult = await timed("partner.matrix", () =>
+      computeHouseMatrix({
+        natalPlanets: partnerNatalPlanets,
+        relocatedCusps: pRelocatedCusps,
+        acgLines: pAcgLines,
+        transits: pMappedTransits,
+        parans: pParans,
+        destLat: targetLat,
+        destLon: targetLon,
+        globalPenalty: pGlobalPenalty,
+        birthLat: partnerProfile.birth_lat ?? undefined,
+        lotOfFortuneLon: pLotF,
+        lotOfSpiritLon: pLotS,
+        sect: pSect,
+        selectedGoals,
+        transitPositions: transitPositionsAtRef,
+        refDate,
+        stations: liveStations,
+      })
+    );
 
     // Partner relocated planet states for the affinity matrix — same shape
     // as the user's `relocatedPlanets` (lines 275–280) so the engine sees
@@ -448,7 +502,9 @@ export async function runAstrocarto(
     );
     // Both partners share the same universal sky — same refDate, same
     // location-agnostic snapshot.
-    let pEventScores = computeEventScores(pMatrixResult, pRelocatedPlanetStates, universalSky);
+    let pEventScores = await timed("partner.scores.events", () =>
+      computeEventScores(pMatrixResult, pRelocatedPlanetStates, universalSky)
+    );
     const pMatrixMacroScore = pMatrixResult.macroScore;
     const pMatrixMacroVerdict = pMatrixResult.macroVerdict;
     let pFusedMacroScore: number | null = null;
@@ -469,16 +525,18 @@ export async function runAstrocarto(
         pRelocatedCusps,
         partnerProfile.birth_lat ?? undefined,
       );
-      const pFused = computeFusedReadingPackage({
-        matrixResult: pMatrixResult,
-        relocatedPlanets: pRelocatedPlanetStates,
-        transits: pRawTransits as any,
-        centerISO: new Date(travelDate).toISOString(),
-        goalIds: goalIds ?? [],
-        selectedGoalIndices: fusedSelectedGoalIndices,
-        natalPlanetHouse: pNatalPlanetHouse,
-        skyState: universalSky,
-      });
+      const pFused = await timed("partner.scores.fused", () =>
+        computeFusedReadingPackage({
+          matrixResult: pMatrixResult,
+          relocatedPlanets: pRelocatedPlanetStates,
+          transits: pRawTransits as any,
+          centerISO: new Date(travelDate).toISOString(),
+          goalIds: goalIds ?? [],
+          selectedGoalIndices: fusedSelectedGoalIndices,
+          natalPlanetHouse: pNatalPlanetHouse,
+          skyState: universalSky,
+        })
+      );
       pEventScores = pFused.eventScores;
       pFusedMacroScore = pFused.readingScore;
       pFusedMacroVerdict = EVENT_LABELS[verdictBand(pFused.readingScore)] ?? pMatrixMacroVerdict;
@@ -529,65 +587,71 @@ export async function runAstrocarto(
   }
 
   // 8. Teacher AI synthesis — graceful fallback if Gemini fails
-  const aiInput = buildAIInput({
-    destination,
-    destinationLat: targetLat,
-    destinationLon: targetLon,
-    travelDate: travelDate ?? null,
-    matrixResult,
-    acgLines,
-    rawTransits,
-    eventScores,
-    natalPlanets,
-    relocatedCusps,
-    natalCusps,
-    natalAngles,
-    travelType: travelType === "relocation" ? "relocation" : "trip",
-    goalIds: goalIds ?? [],
-    // PR-B: feed the personal-cycle compute. All three are already
-    // computed earlier in the pipeline for the matrix; reusing them here
-    // avoids a redundant SwissEph call.
-    transitPositions: transitPositionsAtRef,
-    progressedBands,
-    birthDateUtc: dtUtcBirth,
-    // Geodetics PR — feed the place-character + chart-ruler-reframe blocks.
-    // `parans` is already computed at line 254 from the same ACG line set.
-    parans,
-    birthLat: profile.birth_lat ?? undefined,
-    birthLon: profile.birth_lon ?? undefined,
-  });
+  const aiInput = await timed("ai.input.user", () =>
+    buildAIInput({
+      destination,
+      destinationLat: targetLat,
+      destinationLon: targetLon,
+      travelDate: travelDate ?? null,
+      matrixResult,
+      acgLines,
+      rawTransits,
+      eventScores,
+      natalPlanets,
+      relocatedCusps,
+      natalCusps,
+      natalAngles,
+      travelType: travelType === "relocation" ? "relocation" : "trip",
+      goalIds: goalIds ?? [],
+      // PR-B: feed the personal-cycle compute. All three are already
+      // computed earlier in the pipeline for the matrix; reusing them here
+      // avoids a redundant SwissEph call.
+      transitPositions: transitPositionsAtRef,
+      progressedBands,
+      birthDateUtc: dtUtcBirth,
+      // Geodetics PR — feed the place-character + chart-ruler-reframe blocks.
+      // `parans` is already computed at line 254 from the same ACG line set.
+      parans,
+      birthLat: profile.birth_lat ?? undefined,
+      birthLon: profile.birth_lon ?? undefined,
+    })
+  );
 
   let teacherReading: any = undefined;
-  try {
-    teacherReading = await writeTeacherReading(aiInput, user.id);
-  } catch (err: any) {
-    console.warn("Teacher reading AI failed, persisting without it:", err?.message);
-    // Verbose diagnostics only outside production. Set DEBUG_TEACHER_READING=1
-    // locally to inspect the full raw response and every Zod issue.
-    if (process.env.NODE_ENV !== "production" || process.env.DEBUG_TEACHER_READING === "1") {
-      const issues = err?.cause?.issues ?? err?.issues ?? err?.cause?.cause?.issues;
-      if (issues) {
-        console.warn("Zod issues:", JSON.stringify(issues, null, 2));
-      }
-      if (err?.text) {
-        console.warn(`Raw text length: ${err.text.length} chars`);
-        try {
-          const fs = await import("node:fs");
-          fs.writeFileSync("/tmp/last-teacher-response.json", err.text);
-          console.warn("Full response written to /tmp/last-teacher-response.json");
-        } catch (e) {
-          console.warn("Could not write debug file:", e);
+  if (aiMode === "inline") {
+    try {
+      const { writeTeacherReading } = await import("@/lib/ai/prompts/teacher-reading");
+      teacherReading = await timed("ai.teacher.write", () => writeTeacherReading(aiInput, user.id));
+    } catch (err: any) {
+      console.warn("Teacher reading AI failed, persisting without it:", err?.message);
+      // Verbose diagnostics only outside production. Set DEBUG_TEACHER_READING=1
+      // locally to inspect the full raw response and every Zod issue.
+      if (process.env.NODE_ENV !== "production" || process.env.DEBUG_TEACHER_READING === "1") {
+        const issues = err?.cause?.issues ?? err?.issues ?? err?.cause?.cause?.issues;
+        if (issues) {
+          console.warn("Zod issues:", JSON.stringify(issues, null, 2));
         }
-        try {
-          const parsed = JSON.parse(err.text);
-          console.warn("Top-level keys present:", Object.keys(parsed));
-          const result = TeacherReadingSchema.safeParse(parsed);
-          if (!result.success) {
-            console.warn(`ALL Zod issues (${result.error.issues.length}):`,
-              JSON.stringify(result.error.issues, null, 2));
+        if (err?.text) {
+          console.warn(`Raw text length: ${err.text.length} chars`);
+          try {
+            const fs = await import("node:fs");
+            fs.writeFileSync("/tmp/last-teacher-response.json", err.text);
+            console.warn("Full response written to /tmp/last-teacher-response.json");
+          } catch (e) {
+            console.warn("Could not write debug file:", e);
           }
-        } catch (e: any) {
-          console.warn("Could not JSON.parse or safeParse:", e?.message);
+          try {
+            const { TeacherReadingSchema } = await import("@/lib/ai/schemas");
+            const parsed = JSON.parse(err.text);
+            console.warn("Top-level keys present:", Object.keys(parsed));
+            const result = TeacherReadingSchema.safeParse(parsed);
+            if (!result.success) {
+              console.warn(`ALL Zod issues (${result.error.issues.length}):`,
+                JSON.stringify(result.error.issues, null, 2));
+            }
+          } catch (e: any) {
+            console.warn("Could not JSON.parse or safeParse:", e?.message);
+          }
         }
       }
     }
@@ -603,7 +667,6 @@ export async function runAstrocarto(
   if (readingCategory === "synastry" && partnerMatrix && synastryDerived) {
     try {
       const { buildCouplesAIInput } = await import("./ai-couples-input-builder");
-      const { writeCouplesReading } = await import("@/lib/ai/prompts/couples-reading");
       const { toCouplesViewModel } = await import("@/app/lib/couples-viewmodel");
       const { buildRangeHighlights } = await import("@/app/lib/window-scoring");
       const {
@@ -676,24 +739,51 @@ export async function runAstrocarto(
       };
 
       const vm = toCouplesViewModel(mockReading);
-      const couplesInput = buildCouplesAIInput({
-        viewmodel: vm,
-        travelDate: travelDate ?? null,
-        acgLinesYou: acgLines,
-        acgLinesPartner: partnerMatrix.acgLines,
-        rawTransitsYou: rawTransits,
-        rawTransitsPartner: partnerMatrix.rawTransits,
-        natalPlanetsYou: natalPlanets,
-        natalPlanetsPartner: partnerNatalPlanets ?? [],
-      });
+      const couplesInput = await timed("ai.couples.input", () =>
+        buildCouplesAIInput({
+          viewmodel: vm,
+          travelDate: travelDate ?? null,
+          acgLinesYou: acgLines,
+          acgLinesPartner: partnerMatrix.acgLines,
+          rawTransitsYou: rawTransits,
+          rawTransitsPartner: partnerMatrix.rawTransits,
+          natalPlanetsYou: natalPlanets,
+          natalPlanetsPartner: partnerNatalPlanets ?? [],
+        })
+      );
       couplesChartStructureYou = couplesInput.chartStructureYou;
       couplesChartStructurePartner = couplesInput.chartStructurePartner;
 
-      couplesReading = await writeCouplesReading(couplesInput, user.id);
+      if (aiMode === "inline") {
+        const { writeCouplesReading } = await import("@/lib/ai/prompts/couples-reading");
+        couplesReading = await timed("ai.couples.write", () => writeCouplesReading(couplesInput, user.id));
+      }
     } catch (err: any) {
       console.warn("Couples reading AI failed, persisting without it:", err?.message);
     }
   }
+
+  const universalSkySpans = await timed("sky.spans", () =>
+    solveUniversalSkySpans(
+      (travelDate ?? refDate.toISOString().slice(0, 10)) as string,
+      isRelocation ? 365 : 90,
+      universalSky,
+    )
+  );
+
+  const orderOfAttack = [
+    "profile.load",
+    "natal.load_or_compute",
+    "cusps.relocated",
+    "acg.resolve_lines",
+    "transits.user.solve",
+    "sky.universal",
+    "progressions.bands",
+    "matrix.user",
+    "scores.fused.user",
+    "ai.input.user",
+    "sky.spans",
+  ];
 
   // 9. Assemble final details payload
   const result: AstrocartoReadingResult = {
@@ -771,11 +861,12 @@ export async function runAstrocarto(
     // quiet sky from an old reading whose engine outputs predate the field.
     geodeticEngineVersion: "2026-05-02",
     universalSky,
-    universalSkySpans: solveUniversalSkySpans(
-      (travelDate ?? refDate.toISOString().slice(0, 10)) as string,
-      isRelocation ? 365 : 90,
-      universalSky,
-    ),
+    universalSkySpans,
+    generationTimings: {
+      totalMs: Date.now() - totalStartedAt,
+      stepsMs: generationStepsMs,
+      orderOfAttack,
+    },
     ...(matrixResult.modalityCohorts && matrixResult.modalityCohorts.length > 0
       ? { modalityCohorts: matrixResult.modalityCohorts }
       : {}),

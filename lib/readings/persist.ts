@@ -3,14 +3,21 @@
  * (no I/O on success); this module owns every write to readings/searches.
  */
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database, Json } from "@/lib/supabase/types";
+
+export type ReadingDetails = Record<string, unknown>;
+type ReadingSupabase = SupabaseClient<Database>;
+type ReadingCategory = Database["public"]["Enums"]["reading_category"];
+
 export interface PersistReadingArgs {
-  supabase: any;
+  supabase: ReadingSupabase;
   userId: string;
   partnerId?: string | null;
-  category: "astrocartography" | "synastry" | "natal" | "solar_return" | "mundane";
+  category: ReadingCategory;
   readingDate: string;
   readingScore: number;
-  details: Record<string, any>;
+  details: ReadingDetails;
 }
 
 export async function persistReading({
@@ -30,17 +37,19 @@ export async function persistReading({
       category,
       reading_date: readingDate,
       reading_score: readingScore,
-      details,
+      details: details as Json,
     })
     .select("id")
     .single();
 
   if (error) throw error;
+  const { revalidateTag } = await import("next/cache");
+  revalidateTag(`access-${userId}`, "max");
   return { readingId: data.id };
 }
 
 export interface LogSearchArgs {
-  supabase: any;
+  supabase: ReadingSupabase;
   userId: string;
   destination: string;
   destLat: number;
@@ -50,7 +59,7 @@ export interface LogSearchArgs {
   macroScore: number;
   macroVerdict: string;
   houseScores: { house: number; score: number }[];
-  eventScores: any[];
+  eventScores: unknown[];
   goals: number[];
 }
 
@@ -70,7 +79,7 @@ export async function logSearch(args: LogSearchArgs): Promise<void> {
       houseScores: args.houseScores,
       eventScores: args.eventScores,
       goals: args.goals,
-    },
+    } as Json,
   };
 
   const { error } = await args.supabase.from("searches").insert(payload);
