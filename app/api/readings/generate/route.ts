@@ -131,7 +131,6 @@ export async function POST(req: Request) {
       readingCategory: category,
       partnerId: partner_id ?? null,
       supabase,
-      aiMode: "skip",
     });
     if (result.generationTimings) {
       console.info("[readings/generate] astrocarto timings", {
