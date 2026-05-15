@@ -351,6 +351,8 @@ export interface V4ChartRulerReframe {
     ruler: string;
     fromHouse: number;
     toHouse: number;
+    dignity?: string;
+    dignityMeaning?: string;
     headline: string;
     body: string;
 }
@@ -1612,13 +1614,15 @@ function shiftCopy(name: string, from: number | undefined, to: number): string {
     const toLong = HOUSE_TOPIC_LONG[to] ?? toTopic;
     const action = PLANET_SHIFT_ACTION[lower] ?? "choosing what to do next";
     const planet = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+    const fromHouse = from ?? 1;
+    const toHouse = to ?? from ?? 1;
     if (from === to) {
-        return `Your ${planet} placement keeps ${subject} in the ${ordinal(to)} house, ${toLong}. Here, the place intensifies that same topic instead of redirecting it.`;
+        return `Your ${planet} placement keeps ${subject} in the ${ordinal(toHouse)} house, ${toLong}. Here, the place intensifies that same topic instead of redirecting it.`;
     }
     if (!fromTopic) {
-        return `Your ${planet} placement puts ${subject} into the ${ordinal(to)} house, ${toLong}. In this place, ${action} matter more.`;
+        return `Your ${planet} placement puts ${subject} into the ${ordinal(toHouse)} house, ${toLong}. In this place, ${action} matter more.`;
     }
-    return `Your ${planet} placement shifts from the ${ordinal(from)} house, ${fromLong}, into the ${ordinal(to)} house, ${toLong}. In this place, ${action} matter more.`;
+    return `Your ${planet} placement shifts from the ${ordinal(fromHouse)} house, ${fromLong}, into the ${ordinal(toHouse)} house, ${toLong}. In this place, ${action} matter more.`;
 }
 
 function ordinal(n: number): string {
@@ -1907,6 +1911,8 @@ function deriveChartRulerReframe(reading: any): V4ChartRulerReframe | null {
         ruler: String(raw.ruler ?? ""),
         fromHouse,
         toHouse,
+        dignity: typeof raw.dignity === "string" ? raw.dignity : undefined,
+        dignityMeaning: typeof raw.dignityMeaning === "string" ? raw.dignityMeaning : undefined,
         headline: String(raw.headline ?? ""),
         body: String(raw.body ?? ""),
     };
@@ -2126,7 +2132,7 @@ function fallbackEvidence(scoreNarrative: ScoreNarrative, mode: "lean" | "watch"
     const direct = mode === "lean" ? scoreNarrative.leanIntoEvidence : scoreNarrative.watchOutEvidence;
     if (direct.length) return direct;
     const themes = mode === "lean" ? scoreNarrative.strongestThemes : scoreNarrative.lessEmphasized;
-    return themes.map((theme) => evidenceFromTheme(theme, mode));
+    return themes.map((theme) => evidenceFromTheme(theme));
 }
 
 function listLabels(labels: string[]): string {

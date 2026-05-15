@@ -2,7 +2,7 @@
 
 import SignIcon from "@/app/components/SignIcon";
 import SectionHead from "../../shared/SectionHead";
-import TabSection from "../../shared/TabSection";
+import TabSection, { cleanAiCardText, renderBoldText } from "../../shared/TabSection";
 import type { V4VM } from "./types";
 
 interface Props {
@@ -90,7 +90,7 @@ export default function OverviewTab({ vm, copiedTab, selectTab }: Props) {
 
                 {selectedGoal && (
                     <div
-                        className="mb-[clamp(28px,4vw,40px)] border-l-[3px] pl-[clamp(16px,2vw,22px)]"
+                        className="mb-[clamp(22px,3vw,32px)] border-l-[3px] pl-[clamp(14px,1.6vw,18px)]"
                         style={{ borderColor: "var(--color-y2k-blue)" }}
                     >
                         <span
@@ -100,10 +100,10 @@ export default function OverviewTab({ vm, copiedTab, selectTab }: Props) {
                             You asked about {selectedGoal.label}
                         </span>
                         <p
-                            className="m-0 max-w-[64ch] text-[clamp(20px,2vw,25px)] leading-[1.38] [text-wrap:balance]"
-                            style={{ fontFamily: FONT_PRIMARY, color: "var(--text-primary)" }}
+                            className="m-0 max-w-[68ch] text-[clamp(16px,1.35vw,19px)] leading-[1.55] [text-wrap:pretty]"
+                            style={{ fontFamily: FONT_BODY, color: "var(--text-primary)" }}
                         >
-                            {vm.tabs.overview?.goalExplanation || selectedGoal.outcome}
+                            {renderBoldText(cleanAiCardText(vm.tabs.overview?.goalExplanation || selectedGoal.outcome))}
                         </p>
                     </div>
                 )}
@@ -185,7 +185,7 @@ function AnswerCard({
                             className="absolute left-0 top-[0.72em] h-[4px] w-[4px] rounded-full"
                             style={{ background: accent }}
                         />
-                        {item}
+                        {renderBoldText(cleanAiCardText(item))}
                     </li>
                 ))}
             </ul>
@@ -258,7 +258,7 @@ function TimingSummary({
                     className="m-0 max-w-[72ch] text-[15px] leading-[1.65] [text-wrap:pretty]"
                     style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
                 >
-                    {body}
+                    {renderBoldText(cleanAiCardText(body))}
                 </p>
             </div>
         </article>

@@ -383,29 +383,101 @@ const TASK_INSTRUCTIONS = "\n" + BLOCKS.join("\n\n");
 
 const COMPACT_TASK_INSTRUCTIONS = `Write Astro-Nat's V4 teacher reading from the compressed brief.
 
-Output the full teacher reading schema. The current V4 page depends most on tabs, overview, timing, and chartRulerReframe, but do not make the reading feel abbreviated.
+You have one job: turn supplied astrology evidence into plain travel advice.
+Output ONLY these top-level fields: tabs, overview, timing, chartRulerReframe.
+Do NOT output optional or legacy fields. Do NOT output process notes, placeholders, TODOs, or "see details" text.
 
-Rules:
-- Use brief.tabWritingPlan as an editor's plan, not a script. It describes the reader job, opening move, emotional job, evidence, and target shape.
-- Do not sound like you are filling a rubric. Sentence 1 should sound like a human astrologer giving a travel call.
-- Do not upgrade a warning into a yes. Keep the plan's stance, usefulFor, notFor, and nextMove intact, but write them naturally.
-- If you mention the overall/headline/trip score, use brief.headlineScore / brief.score only. brief.placeBaselineScore is background evidence, not the user-facing score. Category scores are allowed only when clearly labeled, such as "Identity scores 67" or "Health sits at 42."
-- Do not save the answer for sentence 2. If sentence 1 only says "manage expectations" or "balance goals," it has failed.
-- Sentence 1 of each tab lead must be plain travel advice, not astrology. Forbidden in sentence 1: chart, planet, sign, house, geodetic, line, transit, aspect, degree, Grand Trine, T-Square, stellium.
-- Sentences 2-4 of each tab lead MUST include at least one astrology receipt from that tab's evidence. A score or theme label alone is NOT a receipt. A valid receipt names the actual chart signal: house, planet line, geodetic band, relocated rising/chart ruler, angle shift, or dated transit/window. Gloss the receipt in plain English immediately.
-- Every plainEnglishSummary must include one receipt sentence and one so-what sentence. Do not write six sentences of pure coaching copy.
-- If a tab's ideal receipt is missing, say the available evidence is quiet and use the next-best supplied score/driver. Never invent a line, transit, house, or degree.
-- Tab jobs:
-  overview = is this good/mixed/bad travel, good for what, bad for what, next move.
-  life-themes = fit to selected goals.
-  place-field = how the place feels as an environment.
-  what-shifts = how the reader feels/behaves differently there.
-  timing = best window or wait/shorten/avoid stance.
-- Hard length floor: match the original rich output except for \`tabs["what-shifts"].plainEnglishSummary\`, which must be exactly 4 concise sentences. Each tab lead must be 4-5 sentences. All other plainEnglishSummary fields must be exactly 6 sentences. Evidence captions are 1-2 sentences.
-- overview.scoreExplanation is 3 sentences: sentence 1 gives the travel call, sentence 2 cites a concrete astrology receipt (line, house, geodetic band, or dated transit), sentence 3 says what to do next. overview.goalExplanation is 3 sentences and must cite the selected goal score plus one astrology receipt. overview.leanInto and overview.watchOut must each contain exactly 2 paragraphs, 4-5 sentences per paragraph.
-- timing.activationAdvice: exactly 3 practical items. timing.closingVerdict must be 2 sentences and say go, go with caution, shorten, wait, avoid, move now, or reconsider.
-- Fill chartRulerReframe from brief.evidence.shift.chartRuler. If optional legacy/sidebar fields are generated, keep them concise, but never steal depth from tabs/overview/timing.
-- Voice: candid, protective, practical. Use "okay", "just know", "please", and "plan accordingly" lightly. No doom, no fluffy mystery, no profanity.`;
+Source of truth:
+- brief.tabWritingPlan tells you each tab's reader question, stance, usefulFor, notFor, nextMove, evidenceToUse, meaningToSay, and soWhatBullets.
+- brief.evidence contains the only astrology facts you may cite.
+- If a fact is not in brief.evidence, do not mention it.
+- A score or theme label is not an astrology receipt. It can support the verdict, but it does not replace evidence.
+
+Write path for EVERY tab:
+1. Answer the tab's readerQuestion in sentence 1.
+2. Cite ONE exact supplied astrology receipt in sentence 2.
+3. Translate that receipt into lived meaning in the same sentence or the next sentence.
+4. End with a short "So what" bullet block that gives the practical use and the thing to watch.
+
+The exact tab jobs:
+- overview: Is this good, mixed, hard, wait, shorten, avoid, or reconsider? Good for what? Bad for what? What next?
+- life-themes: Does this place support the user's selected goal? What part is helped? What part gets thin?
+- place-field: How does the place feel as an environment? Name mood, pace, body, privacy, visibility, or logistics.
+- what-shifts: How does the reader act, feel, or get perceived differently here? This is the priority tab.
+- timing: When should the reader use this place? Book, shift, front-load, wait, shorten, avoid, move now, or reconsider.
+
+Receipt contract:
+- Valid receipt shape: exact supplied fact -> plain life effect -> practical move.
+- Good: "Venus near the MC makes work more visible, so book the public-facing meeting."
+- Bad: "Venus is near your Midheaven."
+- Bad: "Your Rising shifts to Cancer."
+- Good: "Cancer rises here, so your mood shows faster. Keep day one soft."
+- Never write an astrology-only sentence.
+- Never end a field on astrology.
+- If a sentence names MC, Midheaven, IC, ASC, DSC, Rising, line, transit, geodetic, house, or chart ruler, it must also name a concrete domain: work, sleep, money, body, mood, home, dating, transport, pace, visibility, privacy, or logistics.
+
+Evidence rules:
+- Use only the exact planets, signs, houses, angles, lines, transits, aspects, dates, windows, and structure terms in the brief.
+- Never invent a planet-angle pair. If the brief says Venus-MC, do not write Venus-ASC.
+- Never invent a planet-house pair. If the brief gives Mars H1 -> H10, do not move Mars elsewhere.
+- Never invent a timing window. Copy dates or month labels exactly.
+- If evidence for a tab is quiet, say it is quiet and use the next-best supplied driver. Do not fill the gap with fake astrology.
+
+Length and reading level:
+- ESL reader, 7th-grade level.
+- Average sentence length: 8-14 words.
+- Hard cap: split any sentence over 20 words.
+- Use common words. Prefer "work" over "vocation," "home" over "domestic sphere," "pressure" over "activation."
+- No numeric scores in prose unless the field explicitly asks. Say "this supports career," not "career score of 76."
+
+Required shape:
+- Each tab entry has lead, plainEnglishSummary, evidenceCaption, and nextTabBridge.
+- Each tab lead: 2-3 short sentences plus this exact ending:
+  So what:
+  - **Good for:** [concrete use tied to this tab].
+  - **Watch:** [what shifts, risk, or next move].
+- Each plainEnglishSummary: 2 short sentences plus the same "So what" bullet block.
+- Use markdown hyphen bullets ONLY for the "So what" block. Do not use bullets elsewhere.
+- evidenceCaption: 1 short receipt sentence with lived meaning.
+- nextTabBridge: 1 short sentence that says why the next tab matters.
+
+Overview shape:
+- overview.scoreExplanation: 2 short sentences plus the "So what" bullet block. Sentence 1 gives the travel call. Sentence 2 cites one exact receipt and lived meaning.
+- overview.goalExplanation: 2 short sentences plus the "So what" bullet block. Mention the selected goal in plain words and cite one exact receipt.
+- overview.leanInto: exactly 2 paragraphs. Each paragraph is 2-3 short sentences. Add a "So what" bullet block only when a paragraph introduces a different decision.
+- overview.watchOut: exactly 2 paragraphs. Each paragraph is 2-3 short sentences. Add a "So what" bullet block only when a paragraph introduces a different risk.
+
+What-shifts shape:
+- Lead sentence 1: first-day behavioral change.
+- Lead sentence 2: relocated rising or chart ruler receipt, including chart-ruler dignity when brief.evidence.shift.chartRuler.dignity is supplied.
+- Lead sentence 3: how strangers read the user or how the body/mood changes.
+- "So what" bullet block: one first-day action and one thing not to force.
+- chartRulerReframe.dignity copies brief.evidence.shift.chartRuler.dignity when supplied.
+- chartRulerReframe.dignityMeaning copies brief.evidence.shift.chartRuler.dignityMeaning when supplied.
+- chartRulerReframe.body is exactly 4 short sentences: felt change, exact receipt, dignity meaning when supplied, physical action.
+
+Timing shape:
+- timing.activationAdvice: exactly 3 practical items.
+- timing.closingVerdict: exactly 2 short sentences.
+- closingVerdict must say one of: go, go with caution, shorten, wait, avoid, move now, reconsider.
+
+Forbidden output:
+- "Finalizing the chart ruler"
+- "See the chart ruler details"
+- "See details"
+- "This placement indicates"
+- "This suggests an energetic shift"
+- "align with your truth"
+- "lean into"
+- "leverage"
+- "resonance"
+- Any sentence that sounds like a placeholder or an internal note.
+
+Voice:
+- Nat is candid, protective, and practical.
+- Use "okay", "just know", "please", and "plan accordingly" lightly.
+- No doom. No fluffy mystery. No profanity.
+- Make the reader feel guided, not graded.`;
 
 function verdictFromScore(score: number, travelType: string): "go" | "go_with_caution" | "wait" | "shorten" | "avoid" | "reconsider" | "move_now" {
   if (travelType === "relocation") {
@@ -489,6 +561,101 @@ function backfillSoWhat(object: TeacherReading, input: TeacherReadingInput): Tea
   return out;
 }
 
+const VALIDATION_PLANETS = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"];
+const VALIDATION_ANGLES = ["mc", "midheaven", "ic", "imum coeli", "asc", "ascendant", "dsc", "descendant"];
+
+function normalizeValidationAngle(angle: string) {
+  const lower = angle.toLowerCase();
+  if (lower === "midheaven") return "mc";
+  if (lower === "imum coeli") return "ic";
+  if (lower === "ascendant") return "asc";
+  if (lower === "descendant") return "dsc";
+  return lower;
+}
+
+function teacherPlanetAngleKey(planet: string, angle: string) {
+  return `${planet.toLowerCase()}-${normalizeValidationAngle(angle)}`;
+}
+
+function allowedTeacherPlanetAngles(input: TeacherReadingInput) {
+  const allowed = new Set<string>();
+  const sidebars: any = input.sidebarsData || {};
+  for (const row of sidebars.nearbyLines || []) {
+    if (row?.planet && row?.angle) allowed.add(teacherPlanetAngleKey(row.planet, row.angle));
+  }
+  for (const row of sidebars.personalGeodetic || []) {
+    if (row?.planet && row?.angle) allowed.add(teacherPlanetAngleKey(row.planet, row.angle));
+  }
+  return allowed;
+}
+
+function hasUnsupportedTeacherPlanetAngle(sentence: string, allowed: Set<string>) {
+  const lower = sentence.toLowerCase();
+  for (const planet of VALIDATION_PLANETS) {
+    for (const angle of VALIDATION_ANGLES) {
+      const anglePattern = angle.includes(" ") ? angle.replace(/\s+/g, "\\s+") : angle;
+      const hasPair = new RegExp(`\\b${planet}\\b[^.!?]{0,55}\\b${anglePattern}\\b`).test(lower)
+        || new RegExp(`\\b${anglePattern}\\b[^.!?]{0,55}\\b${planet}\\b`).test(lower);
+      if (hasPair && !allowed.has(teacherPlanetAngleKey(planet, angle))) return true;
+    }
+  }
+  return false;
+}
+
+function stripUnsupportedTeacherReceipts(value: string, input: TeacherReadingInput) {
+  const allowed = allowedTeacherPlanetAngles(input);
+  if (allowed.size === 0) return value;
+  const chunks = value.match(/[^.!?\n]+[.!?]?|\n+/g) ?? [value];
+  const kept = chunks.filter((chunk) => chunk.trim().length === 0 || !hasUnsupportedTeacherPlanetAngle(chunk, allowed));
+  const cleaned = kept.join("").replace(/\n{3,}/g, "\n\n").trim();
+  return cleaned || value.replace(/\b(?:MC|Midheaven|IC|Imum Coeli|ASC|Ascendant|DSC|Descendant)\b/g, "chart angle");
+}
+
+function cleanTeacherCopyText(value: string, input: TeacherReadingInput): string {
+  let out = value
+    .replace(/\s*(?:\*\*)?So what:(?:\*\*)?\s*-\s*(?:\*\*)?Good for:(?:\*\*)?\s*/gi, "\n\nSo what:\n- **Good for:** ")
+    .replace(/\s*(?:\*\*)?So what:(?:\*\*)?\s*(?:\*\*)?Good for:(?:\*\*)?\s*/gi, "\n\nSo what:\n- **Good for:** ")
+    .replace(/\s*(?:\*\*)?So what:(?:\*\*)?\s*-\s*(?:\*\*)?Use:(?:\*\*)?\s*/gi, "\n\nSo what:\n- **Use:** ")
+    .replace(/\s*(?:\*\*)?So what:(?:\*\*)?\s*(?:\*\*)?Use:(?:\*\*)?\s*/gi, "\n\nSo what:\n- **Use:** ")
+    .replace(/\s*-\s*(?:\*\*)?Good for:(?:\*\*)?\s*/gi, "\n- **Good for:** ")
+    .replace(/\s*(?:\*\*)?Watch:(?:\*\*)?\s*/gi, "\n- **Watch:** ")
+    .replace(/\s*-\s*(?:\*\*)?Watch:(?:\*\*)?\s*/gi, "\n- **Watch:** ")
+    .replace(/\s*-\s*(?:\*\*)?Use:(?:\*\*)?\s*/gi, "\n- **Use:** ")
+    .replace(/\b(?:the\s+)?(?:[a-z -]+)?score(?:\s+of|\s+is|\s+sits at)?\s+\d{1,3}\b/gi, "this part of the chart")
+    .replace(/\b(?:scores?|scored)\s+\d{1,3}\b/gi, "is supported")
+    .replace(/\b\d{1,3}\/100\b/g, "this rating")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  out = out.replace(/([^.!?\n]{120,}?),(?=\s+(?:but|and|so|while|which|because)\b)/gi, "$1.");
+  out = out.replace(/([^.!?\n]{120,}?)\s+(?=(?:So what:|- Good for:|- Watch:)\b)/gi, "$1. ");
+  return stripUnsupportedTeacherReceipts(out, input);
+}
+
+function cleanTeacherCopy<T>(value: T, input: TeacherReadingInput): T {
+  if (typeof value === "string") return cleanTeacherCopyText(value, input) as T;
+  if (Array.isArray(value)) return value.map((item) => cleanTeacherCopy(item, input)) as T;
+  if (value && typeof value === "object") {
+    const next: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value)) next[key] = cleanTeacherCopy(child, input);
+    return next as T;
+  }
+  return value;
+}
+
+function keepCurrentTeacherFields(reading: TeacherReading, input: TeacherReadingInput): TeacherReading {
+  const out: any = reading;
+  return cleanTeacherCopy({
+    tabs: out.tabs,
+    overview: out.overview,
+    timing: out.timing,
+    chartRulerReframe: out.chartRulerReframe,
+    soWhat: out.soWhat,
+    riskSummary: out.riskSummary,
+  }, input) as TeacherReading;
+}
+
 function take<T>(items: T[] | undefined, count: number): T[] {
   return Array.isArray(items) ? items.slice(0, count) : [];
 }
@@ -526,6 +693,14 @@ function firstWindow(input: TeacherReadingInput) {
   return sidebars.travelWindows?.[0]?.dates || "the strongest travel window";
 }
 
+function sectionSoWhat(goodFor: string, watch: string, nextMove: string) {
+  return {
+    format: "Append a compact So what block with exactly two markdown hyphen bullets. Put nextMove in the main paragraph, not inside either bullet.",
+    text: `So what:\n- **Good for:** ${goodFor}.\n- **Watch:** ${watch}.`,
+    nextMove,
+  };
+}
+
 function buildTabWritingPlan(input: TeacherReadingInput) {
   const evidence: any = input.editorialEvidence || {};
   const sidebars: any = input.sidebarsData || {};
@@ -551,7 +726,9 @@ function buildTabWritingPlan(input: TeacherReadingInput) {
       notFor: [weakest],
       nextMove: input.macro.travelType === "relocation" ? "wait, reconsider, or choose the cleanest arrival month" : "keep the trip focused",
       evidenceToUse: ["headline score", "one astrology receipt from place/shift/timing evidence", "strongest event score", "weakest event risk"],
-      targetShape: "lead 4-5 sentences: call, chart receipt, use-case, caveat, action.",
+      meaningToSay: `${strongest} is the supported use; ${weakest} is where the trip gets thin. Translate every receipt into the travel decision.`,
+      soWhatBullets: sectionSoWhat(strongest, weakest, input.macro.travelType === "relocation" ? "Choose the cleanest arrival month before committing." : "Keep the trip focused."),
+      targetShape: "lead 2-3 short sentences plus a two-item So what bullet block: call, receipt, action.",
     },
     "life-themes": {
       readerQuestion: `Does this place support ${selectedGoalText}?`,
@@ -563,7 +740,9 @@ function buildTabWritingPlan(input: TeacherReadingInput) {
       notFor: [weakest],
       nextMove: "do not force the weaker goal",
       evidenceToUse: ["selected goal", "goal score", "one astrology receipt from strongest/lean/shift evidence", "weakest event risk"],
-      targetShape: "lead 4-5 sentences: selected-goal fit, astrology receipt, useful detour, not-for caveat, practical boundary.",
+      meaningToSay: `The reader asked about ${selectedGoalText}; say whether the place supports that goal, then name the daily-life limit.`,
+      soWhatBullets: sectionSoWhat(selectedGoalText, weakest, "Do not force the weaker goal."),
+      targetShape: "lead 2-3 short sentences plus a two-item So what bullet block: goal fit, receipt, boundary.",
     },
     "place-field": {
       readerQuestion: "How does this place show up as an environment?",
@@ -575,18 +754,24 @@ function buildTabWritingPlan(input: TeacherReadingInput) {
       notFor: ["hiding from your feelings"],
       nextMove: "pace the city carefully",
       evidenceToUse: ["geodetic band", "nearby lines", "personal geodetic hits"],
-      targetShape: "lead 4-5 sentences: felt place, geodetic/line receipt, what it rewards, what it punishes, behavior hook.",
+      meaningToSay: "The place field should become an environment: emotional volume, social pace, public visibility, home pressure, or body stress.",
+      soWhatBullets: sectionSoWhat("reading your reactions clearly", "hiding from your feelings", "Pace the city carefully."),
+      targetShape: "lead 2-3 short sentences plus a two-item So what bullet block: felt place, receipt, behavior hook.",
     },
     "what-shifts": {
       readerQuestion: "How do I feel or behave differently here?",
-      openingMove: "Start with body, mood, behavior, or first-day reaction. Then cite the relocated rising/chart ruler, angle shift, or house shift that explains the behavioral change.",
+      openingMove: "Start with the first-day behavioral change. Example shape: `You move more carefully here, and people read you as more serious.` Then cite the relocated rising/chart ruler, angle shift, or house shift that explains it.",
       emotionalJob: "Make the shift feel observable and practical.",
       stance: cr?.natalRulerHouse === cr?.relocatedRulerHouse ? "same basic self, but your mood and body react louder" : "changed daily emphasis in your mood and body",
       usefulFor: ["noticing how your mood and body respond in real time"],
       notFor: ["pretending the place has no effect on your mood"],
       nextMove: "name how you feel and behave differently in the first day",
       evidenceToUse: ["relocated rising", "chart ruler", "relocated houses", "angle shifts"],
-      targetShape: "lead 4-5 sentences: felt shift, relocated-chart receipt, first-day example, trap, action.",
+      meaningToSay: cr?.dignity
+        ? `Relocated rising/chart ruler must become stranger perception, body mood, and one first-day action. Mention that ${cr.chartRuler} is ${cr.dignity}, meaning ${cr.dignityMeaning || "its condition changes how smooth the shift feels"}.`
+        : "Relocated rising/chart ruler must become stranger perception, body mood, and one first-day action.",
+      soWhatBullets: sectionSoWhat("tracking your first-day behavior", "forcing your usual persona", "Name the mood shift before making plans."),
+      targetShape: "lead 2 short sentences plus a two-item So what bullet block: felt shift, relocated-chart receipt, first-day action. This is the priority tab.",
     },
     timing: {
       readerQuestion: "When should I use this place?",
@@ -598,7 +783,9 @@ function buildTabWritingPlan(input: TeacherReadingInput) {
       notFor: ["forcing weaker goals"],
       nextMove: "front-load the important plans and keep flexibility",
       evidenceToUse: ["best window", "supportive transits", "friction transits"],
-      targetShape: "lead 4-5 sentences: best window, transit/window receipt, what to schedule, what not to force, fallback.",
+      meaningToSay: "Timing receipts must become schedule advice: book, shift, shorten, wait, or leave empty space.",
+      soWhatBullets: sectionSoWhat(window, "forcing weaker goals into the wrong dates", "Front-load the important plans and keep flexibility."),
+      targetShape: "lead 2-3 short sentences plus a two-item So what bullet block: best window, timing receipt, schedule choice.",
     },
   };
 }
@@ -640,6 +827,8 @@ function compactTeacherSignal(input: TeacherReadingInput) {
           ruler: cr.chartRuler,
           natalRulerHouse: cr.natalRulerHouse,
           relocatedRulerHouse: cr.relocatedRulerHouse,
+          dignity: cr.dignity,
+          dignityMeaning: cr.dignityMeaning,
         } : null,
         angles: compactItems(sidebars.angleShifts, 4, ["angle", "natalSign", "relocatedSign"]),
         houses: compactItems(evidence.shiftDrivers?.relocatedHouses, 5, ["planet", "natalHouse", "relocatedHouse", "topic"]),
@@ -690,7 +879,7 @@ export async function writeTeacherReading(
       maxOutputTokens: 32768,
       providerOptions: {
         google: {
-          thinkingConfig: { thinkingLevel: process.env.GEMINI_THINKING_LEVEL || "minimal" },
+          thinkingConfig: { thinkingLevel: process.env.GEMINI_THINKING_LEVEL || "medium" },
           structuredOutputs: true,
         },
       },
@@ -713,7 +902,7 @@ export async function writeTeacherReading(
     if (backfillReport.patternsBackfilled.length > 0 || backfillReport.clustersBackfilled.length > 0) {
         console.log(`[teacher-reading] chart-structure backfill — clusters:[${backfillReport.clustersBackfilled.join(",")}] patterns:[${backfillReport.patternsBackfilled.join(",")}]`);
     }
-    return backfillSoWhat(generated, input);
+    return keepCurrentTeacherFields(backfillSoWhat(generated, input), input);
   } catch (err: any) {
     console.error(`[teacher-reading] failed after ${Date.now() - t0}ms — finish=${err?.finishReason ?? "?"}, textLen=${err?.text?.length ?? 0}, usage=${JSON.stringify(err?.usage ?? {})}`);
     throw err;

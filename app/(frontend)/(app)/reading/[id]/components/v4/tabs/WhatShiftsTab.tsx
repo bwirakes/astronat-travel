@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import NatalMockupWheel, { type NatalPlanet } from "@/app/components/NatalMockupWheel";
 import PlanetIcon from "@/app/components/PlanetIcon";
 import SectionHead from "../../shared/SectionHead";
@@ -79,6 +79,25 @@ function tightnessOpacity(orb: number): number {
 
 function shortAngleLabel(angleName: string): string {
     return angleName.split(/[\s(·]/)[0] || angleName;
+}
+
+function normalizeAiText(text: string): string {
+    return text
+        .replace(/\s*So what:\s*-\s*Good for:\s*/gi, " **So what:** **Good for:** ")
+        .replace(/\s*-\s*Watch:\s*/gi, " **Watch:** ")
+        .replace(/\s*-\s*Use:\s*/gi, " **Use:** ")
+        .replace(/\n+\s*-\s*/g, " ")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+}
+
+function renderBoldText(text: string): ReactNode[] {
+    return normalizeAiText(text).split(/(\*\*[^*]+\*\*)/g).filter(Boolean).map((part, index) => {
+        if (part.startsWith("**") && part.endsWith("**")) {
+            return <strong key={index}>{part.slice(2, -2)}</strong>;
+        }
+        return part;
+    });
 }
 
 export default function WhatShiftsTab({ vm, isDark, natalWheel, relocatedWheel, copiedTab }: Props) {
@@ -312,6 +331,14 @@ function ChartRulerReframeCallout({ cr }: { cr: NonNullable<V4VM["relocated"]["c
                         >
                             {cr.ruler}
                         </div>
+                        {cr.dignity && (
+                            <div
+                                className="text-[10px] leading-[1.2] mt-[3px] uppercase"
+                                style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)", fontWeight: 700, letterSpacing: "0.08em" }}
+                            >
+                                {cr.dignity}
+                            </div>
+                        )}
                     </div>
                 </div>
                 <div
@@ -336,8 +363,16 @@ function ChartRulerReframeCallout({ cr }: { cr: NonNullable<V4VM["relocated"]["c
                 className="text-[14px] leading-[1.55] m-0 max-w-[760px] [text-wrap:pretty]"
                 style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)", fontWeight: 300 }}
             >
-                {cr.body}
+                {renderBoldText(cr.body)}
             </p>
+            {cr.dignityMeaning && (
+                <p
+                    className="text-[12px] leading-[1.45] m-0 max-w-[760px] [text-wrap:pretty]"
+                    style={{ fontFamily: FONT_BODY, color: "var(--text-tertiary)", fontWeight: 300 }}
+                >
+                    <strong>Dignity:</strong> {cr.dignityMeaning}
+                </p>
+            )}
         </div>
     );
 }

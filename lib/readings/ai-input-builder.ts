@@ -623,6 +623,35 @@ export function buildAIInput(args: {
         natalCusps ?? null,
       ) ?? undefined)
     : undefined;
+  const chartRulerForPrompt = chartRulerCtx
+    ? (() => {
+        const rulerNatal = natalPlanets.find((p: any) =>
+          String(p.planet ?? p.name ?? "").toLowerCase() === chartRulerCtx.chartRuler.toLowerCase()
+        );
+        const dignity = rulerNatal?.dignityStatus
+          || rulerNatal?.dignity
+          || rulerNatal?.essentialDignity
+          || null;
+        const dignityText = dignity ? String(dignity).toLowerCase() : "";
+        const dignityMeaning = dignityText.includes("domicile")
+          ? "clean and strong"
+          : dignityText.includes("exalt")
+            ? "strong but heightened"
+            : dignityText.includes("detriment")
+              ? "less smooth and more effortful"
+              : dignityText.includes("fall")
+                ? "more vulnerable and harder to express cleanly"
+                : dignityText.includes("triplicity") || dignityText.includes("participating")
+                  ? "moderately supported"
+                  : dignityText.includes("peregrine")
+                    ? "unsupported by sign, so it needs practical handling"
+                    : null;
+        return {
+          ...chartRulerCtx,
+          ...(dignity ? { dignity: String(dignity), dignityMeaning } : {}),
+        };
+      })()
+    : undefined;
 
   // ── Modality hits ──────────────────────────────────────────────────────
   // Cross-product: each ModalityCohort × natal planets at 20–29° in matching
@@ -787,7 +816,7 @@ export function buildAIInput(args: {
       ...(aspectsToAngles.length ? { aspectsToAngles } : {}),
       ...(personalGeodetic.length ? { personalGeodetic } : {}),
       ...(paransForPrompt.length ? { parans: paransForPrompt } : {}),
-      ...(chartRulerCtx ? { chartRuler: chartRulerCtx } : {}),
+      ...(chartRulerForPrompt ? { chartRuler: chartRulerForPrompt } : {}),
       ...(modalityHitsForPrompt.length ? { modalityHits: modalityHitsForPrompt } : {}),
       ...(approachingGeoLines.length ? { approachingGeoLines } : {}),
     }
