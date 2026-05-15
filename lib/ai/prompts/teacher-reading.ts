@@ -2,7 +2,7 @@
 import { generateObject } from "ai";
 import { gemini, MODEL } from "@/lib/ai/client";
 import { SHARED_VOICE } from "@/lib/ai/voice";
-import { TeacherReadingSchema, type TeacherReading } from "@/lib/ai/schemas";
+import { TeacherReadingGenerationSchema, type TeacherReading } from "@/lib/ai/schemas";
 import type { TeacherReadingInput } from "@/lib/readings/ai-input-builder";
 import { backfillChartStructureCommentary } from "@/lib/readings/chart-structure-backfill";
 
@@ -40,7 +40,7 @@ Do NOT mix registers. A relocation reading that talks about "your trip" or "your
 
 const BLOCK_EDITOR_ROLE = `# Editor Role
 While writing as Astro-Nat, structure your output like a careful, high-trust travel briefing. The engine has already selected the facts, rankings, and scores. Your job is to sound like Natalia looking at the map and telling the reader how to plan accordingly: conversational, direct, a little sharp, but responsible with uncertainty.
-Write at a 7th-grade vocabulary level for accessibility, but let your prose flow. **OVERRIDE GLOBAL RULES: For the main feature tabs, do NOT use short, choppy sentences.** Let the paragraphs breathe. Use 3-5 sentence paragraphs that synthesize the data beautifully.
+Write at a 7th-grade vocabulary level for accessibility, but keep the page easy to scan. For the main feature tabs, the top copy should read as 4-5 short ESL-friendly sentences in total across \`lead\` + \`plainEnglishSummary\`. Then let the structured guide rows carry the practical advice.
 
 **The Economist Rule (Glossing):** Whenever you cite an astrological term (a planet, angle, or house), you MUST briefly explain what it means in plain English using an appositive phrase in the same sentence. For example: "The Jupiter line, which acts as a powerful engine for growth, sits 24km from your Midheaven, the sector governing your public reputation." Do not assume the reader knows what Saturn or the 4th house means.
 
@@ -52,7 +52,25 @@ Use this order for most prose:
 
 Use \`editorialEvidence.tabs\` for the exact tab IDs, labels, questions, and order. Every tab must advance the page's thesis.`;
 
-const BLOCK_SO_WHAT_CONTRACT = `# The So-What Contract (Non-negotiable)
+const BLOCK_RELOCATION_EVIDENCE_HIERARCHY = `# Relocation Evidence Hierarchy
+
+For relocation-style interpretation, follow this evidence order:
+1. Four corners / angles: ASC, IC, DSC, MC.
+2. Planets, rulers, dignity, benefic/malefic nature, and aspects tied to those corners.
+3. Relevant relocated houses for the user's selected goal.
+4. ACG lines, geodetic signals, and timing as supporting or modifying layers.
+
+Angles describe what the person immediately feels and lives. Houses describe where that experience shows up. Do not let a decent house placement outweigh a strong angular pressure signal. Do not treat angular planets as automatically good: benefics and luminaries can lift, malefics can pressure, and dignity changes how cleanly the planet works.
+
+Use these plain meanings when writing:
+- ASC = body, identity, arrival, vitality.
+- IC = home, sleep, roots, privacy.
+- DSC = partners, clients, attraction, conflict.
+- MC = career, visibility, direction.
+
+First-principles rule: angles are stronger than houses for immediacy; houses are still needed for topic routing.`;
+
+const BLOCK_SO_WHAT_CONTRACT = `# Decision Contract (Non-negotiable)
 Every score, summary, tab, window, and verdict must answer the reader's decision question: **Is this good or bad travel for me, good for what, bad for what, and what should I do next?**
 
 Write every major field for two reader modes at once:
@@ -67,9 +85,9 @@ Use this decision ladder:
 
 For EVERY \`eventScores\` low point below 40, surface a plain-English travel risk somewhere visible: "not for romance," "not for rest," "do not sign contracts," "avoid making this a family reset," etc. For EVERY top event score above 75, surface the best use: "excellent for career visibility," "strong for self-definition," "good for couple repair," etc.
 
-The input may include \`riskSummary\`. Treat it as the deterministic risk source of truth and reflect the same risks in visible prose. A deterministic post-processor will attach structured \`soWhat\` and \`riskSummary\` fields after generation; your job is to make the human-facing sentences match those fields.
+The input may include \`riskSummary\`. Treat it as the deterministic risk source of truth and reflect the same risks in visible prose.
 
-Do not let a beautiful chart receipt replace the so-what. A sentence like "Saturn sits near your IC" is incomplete until it says what that means for the trip: heavier lodging mood, family pressure, solitude, logistics, or the need to keep plans simple.`;
+Do not let a beautiful chart receipt replace the decision. A sentence like "Saturn sits near your IC" is incomplete until it says what that means for the trip: heavier lodging mood, family pressure, solitude, logistics, or the need to keep plans simple.`;
 
 const BLOCK_PERSONAL_CYCLE_BANNER = `# Personal Cycle Banner (Relocation only)
 A relocation reading has a layer above the destination: the user's life-stage cycles (Saturn return, midlife band, progressed lunation phase). When \`relocation.personalCycle.gateActive === true\`, the cycle is the dominant variable — it reframes how the destination should be evaluated, regardless of the place's score.
@@ -91,7 +109,7 @@ The structured fields \`relocation.personalCycle.dominant\`, \`saturnReturn\`, \
 const BLOCK_TABS_RULES = `# The Main Feature (Tabs)
 
 **tabs** — A top-level dictionary containing one entry per \`editorialEvidence.tabs[].id\`. CRITICAL REQUIREMENT: You MUST generate an entry for EVERY single ID listed in \`editorialEvidence.tabs\`. If the input lists \`life-themes\` and \`place-field\`, you MUST generate \`tabs["life-themes"]\` and \`tabs["place-field"]\`. Do not skip any tabs! Each entry must have:
-- \`lead\`: outcome-first opener for that tab.
+- \`lead\`: outcome-first opener for that tab. Write 2 short sentences total.
   - **FIRST SENTENCE GATE — required.** Sentence 1 of every \`lead\` MUST answer that tab's reader question in plain travel language before any astrology receipt appears.
   - Sentence 1 MUST NOT mention chart, planet names, signs, aspects, houses, geodetic, chart ruler, transits, lines, degrees, stelliums, Grand Trines, or T-Squares.
   - If you need astrology evidence, put it in sentence 2 or \`evidenceCaption\`.
@@ -106,32 +124,44 @@ const BLOCK_TABS_RULES = `# The Main Feature (Tabs)
   - \`place-field.lead\`: first sentence says how the place shows up as a lived environment.
   - \`what-shifts.lead\`: first sentence says how the reader feels or behaves differently here.
   - \`timing.lead\`: first sentence says the best window, or the wait/shorten/avoid stance.
-- \`plainEnglishSummary\`: beginner-friendly "what this means for me" copy.
-  - EVERY \`plainEnglishSummary\` MUST contain a so-what sentence: "Good for X, not for Y" or "Use this for X; do not force Y." This is mandatory even when the tab is technical.
+- \`plainEnglishSummary\`: beginner-friendly interpretation copy. Write 2-3 short sentences total. Together, \`lead\` + \`plainEnglishSummary\` should form one clear 4-5 sentence top reading. Do NOT put bullet lists in this field; use \`guideRows\`.
+  - EVERY \`plainEnglishSummary\` MUST contain at least one astrology receipt and translate it immediately for a beginner.
   - For \`life-themes\`: Evaluate the strongest themes through the lens of the user's primary goal FIRST.
   - For \`place-field\`: The core question is "How do I fit in?". Mention how the user's core placements interact with the geography.
-  - For \`what-shifts\`: The core question is "How am I perceived here?". **Exactly 4 concise sentences. This is the top summary at the very top of the tab — orient quickly, then let \`chartRulerReframe\` carry the deeper interpretation.** Use this recipe in order:
+  - \`guideRows\`: exactly 3 compact rows with these labels, in this order:
+    1. \`Best Used For\` — where the place/date is genuinely useful.
+    2. \`Move Carefully With\` — the practical risk, weak area, or thing not to force.
+    3. \`Your Next Move\` — one literal action the reader can take.
+  - Each \`guideRows[].body\` must be useful enough to stand alone: 14-28 words, one concrete astrology receipt, and one concrete action or caution. Weak fragments like "Reading your reactions in real time" or "Pace the city carefully" are not enough.
+  - Good guide-row style:
+    - \`Best Used For\`: "Meetings, portfolio work, and public decisions because the relocated chart ruler points toward the 10th house of reputation."
+    - \`Move Carefully With\`: "Rushing and people-pleasing because Venus is strained here; discipline works better than charm."
+    - \`Your Next Move\`: "Choose one visible goal before you arrive, then let the 10th-house pressure focus your schedule."
+  - You may use \`**bold**\` only inside guide-row bodies to emphasize a skim label or key astrology receipt. Do not use markdown bullets.
+  - For \`what-shifts\`: The core question is "How am I perceived here?". Write 4-5 short sentences total across \`lead\` + \`plainEnglishSummary\`; orient quickly, then let \`chartRulerReframe\` carry the deeper interpretation. Include:
     1. Receipt — name the relocated Rising sign and its ruling planet, then the natal Rising it replaces. ("Capricorn rises here, with Saturn now running the chart instead of natal Taurus's Venus.")
     2. What changes about how the user is perceived — lived terms, how a stranger reads you in the first 30 seconds. Concrete sensory or behavioral detail.
-    3. What's at stake — name ONE concrete domain (work, sleep, conversations, money, dating, friendship, your phone, your apartment, your body, what you eat, who you text). NOT abstract noun-phrases like "your perspective" or "your worldview."
-    4. Goal-tie when \`macro.goalIds\` is non-empty, otherwise one literal first-24-hours action. Do not add a fifth sentence.
+    3. REQUIRED when \`brief.evidence.shift.chartRuler.dignity\` exists: name the dignity exactly once (exalted, detriment, fall, domicile, etc.) and translate it in plain English.
+    4. REQUIRED when \`brief.evidence.shift.chartRuler.planetNature\` is benefic or malefic: name benefic/malefic once and translate it ("benefic = support/ease", "malefic = pressure/discipline"). Do not assume the reader knows the term.
   - For \`timing\`:
     - **Trip**: lead with the strongest candidate window from \`sidebarsData.travelWindows\` ("the week of X is the cleanest door"). Frame as "when to go."
     - **Relocation**: lead with the strongest arrival month from \`relocation.monthlyHighlights.strongest[0]\` ("October opens cleanest"). If \`relocation.monthlyHighlights.hardest.length > 0\`, also name the hardest month and what makes it hard. Frame as "when to arrive" — never "when to visit."
+    - If \`brief.evidence.timing.personalClock.annualProfection\` exists, mention the profection house or time lord in either \`lead\`, \`plainEnglishSummary\`, or one timing \`guideRows\` body. This is the user's yearly theme, so it must not disappear behind transit dates.
+    - If \`brief.evidence.timing.personalClock.progressions\` exists, mention the progressed personal season in either \`lead\`, \`plainEnglishSummary\`, or one timing \`guideRows\` body. Keep it plain: "your slower personal season is asking for..."
 - \`evidenceCaption\`: short chart receipt that cites the evidence clearly.
 - \`nextTabBridge\`: why the next tab matters.`;
 
 const BLOCK_OVERVIEW_RULES = `**overview** (REQUIRED) — A top-level object named EXACTLY \`overview\`. CRITICAL: Do NOT confuse this with \`tabs["overview"]\`. You MUST output this top-level \`overview\` object in addition to \`tabs\`. It contains the answer page feature paragraphs:
 
-- \`scoreExplanation\`: Write 2-3 sentences. Be concrete — no vague generalisations.
-  - **Trip**: Sentence 1 combines the destination, user's primary goal, and dates into an outcome-first opener. Sentence 2 cites the specific planetary lines (with km distances) that drive the score. Sentence 3 names the most impactful transit cluster and its date range.
-  - **Relocation**: Sentence 1 names the destination, user's primary goal, and the year-ahead arc opening (use \`relocation.monthlyHighlights.strongest[0].monthLabel\` as the strongest arrival month). Sentence 2 cites the specific planetary lines (with km distances) — these are the durable factors that compound while you live there. Sentence 3 names the strongest and (if present) hardest months from \`relocation.monthlyHighlights\`, framing the year ahead as an arc rather than a single window.
-  - **So-what requirement**: include an explicit travel verdict in plain English: "good travel for X," "go with caution," "wait until [month/window]," "shorten this," "avoid for X," or "reconsider." Also name the weakest event category as the thing this place is NOT for.
+- \`scoreExplanation\`: Write 4-5 short sentences. Be concrete — no vague generalisations.
+  - **Trip**: Sentence 1 combines the destination, user's primary goal, and dates into an outcome-first opener. Sentence 2 cites the strongest concrete chart receipt behind the score. Sentence 3 names the most impactful transit cluster and its date range. Sentence 4 says what the reader should use the trip for. Sentence 5, when needed, names the main caution.
+  - **Relocation**: Sentence 1 names the destination, user's primary goal, and the year-ahead arc opening (use \`relocation.monthlyHighlights.strongest[0].monthLabel\` as the strongest arrival month). Sentence 2 cites the strongest durable chart receipt. Sentence 3 names the strongest and (if present) hardest months from \`relocation.monthlyHighlights\`, framing the year ahead as an arc rather than a single window. Sentence 4 says what to build first. Sentence 5, when needed, names what not to force.
+  - **Decision requirement**: include an explicit travel verdict in plain English: "good travel for X," "go with caution," "wait until [month/window]," "shorten this," "avoid for X," or "reconsider." Also name the weakest event category as the thing this place is NOT for.
 
 - \`goalExplanation\`: Name the user's goal and explain how the chart supports it.
   - **Trip**: frame across "during your stay."
   - **Relocation**: frame across "your first year here" — what the goal looks like at month 1 vs month 12.
-  - **So-what requirement**: end with the practical use-case: what the user should actually book, schedule, attempt, postpone, or refuse.
+  - **Decision requirement**: end with the practical use-case: what the user should actually book, schedule, attempt, postpone, or refuse.
 
 - \`leanInto\`: You MUST write exactly 2 paragraphs (at least 3 sentences each). Output this as an ARRAY of 2 strings.
   - **Trip**: Paragraph 1 MUST explain the planetary lines and active houses, explicitly citing the exact distances in km and exact house topics from the input. Paragraph 2 MUST explain the supportive transits, explicitly citing the exact transiting planets, natal planets, and date ranges from the input.
@@ -158,13 +188,13 @@ const BLOCK_WINDOWS_RULES = `**windows** — One \`windows\` array entry per can
   - \`score\`: the numeric score (copy from input).
   - \`flavorTitle\`: a punchy 3-5 word editorial title for this window.
   - \`nights\`: the number of nights as a string (copy from input).
-  - \`note\`: ONE sentence on why this window scores this way AND the so-what: "use it for X," "avoid Y," "keep it short," or "book this if your goal is Z."
+  - \`note\`: ONE sentence on why this window scores this way AND the decision: "use it for X," "avoid Y," "keep it short," or "book this if your goal is Z." Use \`drivers\` or \`topHits\` as the evidence. Do not copy an aspect label raw; translate it into what the reader will feel and how to plan.
 - **Relocation**: \`sidebarsData.travelWindows\` will be empty. Instead, output one \`windows\` entry for **EACH** entry in \`relocation.windowsToNarrate\`, **IN ORDER** (the array is already curated to the exact 4 the UI will render — anchor month first, then 3 strongest alternates by arcScore). Do NOT skip entries. Do NOT pick from \`relocation.arrivalCandidates\` directly — \`windowsToNarrate\` is the authoritative shortlist.
   - \`dates\`: the candidate's \`monthLabel\` (e.g. "October 2026"). MUST match \`windowsToNarrate[i].monthLabel\` exactly so the UI lookup keys match.
   - \`score\`: the candidate's \`arcScore\` (copy as-is).
   - \`flavorTitle\`: a punchy 3-5 word editorial title for this arrival arc.
   - \`nights\`: \`"first 90 days"\`.
-  - \`note\`: ONE sentence on the lived outcome of arriving in this month, citing the \`settlingArcDescriptor\` ("front-loaded" / "steady" / "back-loaded") and \`hardestSubmonth\` if present (e.g. "October opens cleanly but November is the test as Saturn squares your relocated 4th"). It MUST also say the so-what: "move in this month if X," "wait if Y," or "use this as the least-rough door." \`relocation.arrivalCandidates\` is still available for cross-referencing the broader 12-month context if useful, but the entries you write MUST be the ones in \`windowsToNarrate\`.
+  - \`note\`: ONE sentence on the lived outcome of arriving in this month, citing the \`settlingArcDescriptor\` ("front-loaded" / "steady" / "back-loaded") and \`hardestSubmonth\` if present (e.g. "October opens cleanly but November is the test as Saturn squares your relocated 4th"). It MUST also say the decision: "move in this month if X," "wait if Y," or "use this as the least-rough door." \`relocation.arrivalCandidates\` is still available for cross-referencing the broader 12-month context if useful, but the entries you write MUST be the ones in \`windowsToNarrate\`.
   - The note must make the arrival-month use case clear: "move now," "wait until [month]," or "reconsider" when appropriate.`;
 
 const BLOCK_SIDEBARS = `# The Sidebars (Micro-text)
@@ -172,7 +202,7 @@ const BLOCK_SIDEBARS = `# The Sidebars (Micro-text)
 For all sidebars, tooltips, and micro-text (\`chrome\`, \`hero\`, \`vibes\`, \`monthAspects\`, \`lineNotes\`, \`geodeticHits\`, \`angleDeltas\`, \`aspectPlains\`, \`weeks\`, \`todos\`, \`glossaryEntries\`):
 **Keep these sharp, punchy, and outcome-oriented. Maximum 2 sentences each.** Use the \`sidebarsData\` for the raw inputs to these fields.
 - For \`monthAspects\`, match \`aspectKey\`.
-- For \`lineNotes\`, use \`<planet-lowercase>-<angle-shortcode>\`.
+- For \`lineNotes\`, write one note for EACH \`brief.evidence.place.lines[]\` entry. Use \`lineKey\` as \`<planet-lowercase>-<angle-shortcode>\` (examples: \`saturn-ASC\`, \`moon-MC\`). Each note must explain what that line does in plain travel language, not just name the planet.
 - For \`geodeticHits\`, use \`<planet-lowercase>-<ASC|IC|DSC|MC>\`.`;
 
 const BLOCK_PLANETS_IN_HOUSES = `# Where Each Planet Lands (Card body + tooltip)
@@ -370,6 +400,7 @@ const BLOCK_HARD_CONSTRAINTS = `# Hard constraints
 const BLOCKS: readonly string[] = [
   BLOCK_READING_MODE,
   BLOCK_EDITOR_ROLE,
+  BLOCK_RELOCATION_EVIDENCE_HIERARCHY,
   BLOCK_SO_WHAT_CONTRACT,
   BLOCK_PERSONAL_CYCLE_BANNER,
   BLOCK_TABS_RULES,
@@ -393,7 +424,26 @@ Rules:
 - Do not save the answer for sentence 2. If sentence 1 only says "manage expectations" or "balance goals," it has failed.
 - Sentence 1 of each tab lead must be plain travel advice, not astrology. Forbidden in sentence 1: chart, planet, sign, house, geodetic, line, transit, aspect, degree, Grand Trine, T-Square, stellium.
 - Sentences 2-4 of each tab lead MUST include at least one astrology receipt from that tab's evidence. A score or theme label alone is NOT a receipt. A valid receipt names the actual chart signal: house, planet line, geodetic band, relocated rising/chart ruler, angle shift, or dated transit/window. Gloss the receipt in plain English immediately.
-- Every plainEnglishSummary must include one receipt sentence and one so-what sentence. Do not write six sentences of pure coaching copy.
+- For relocation-style interpretation, use this hierarchy: four corners/angles first; planets/rulers/aspects/dignity tied to those corners second; relocated houses for the selected goal third; ACG/geodetic/timing as supporting modifiers. Angles describe immediacy: ASC = body/identity/arrival, IC = home/sleep/privacy, DSC = partners/clients/conflict, MC = career/visibility/direction. Houses route the topic, but a decent house placement should not outweigh a strong angular pressure signal.
+- Overview and What Shifts must not lose dignity. If \`brief.evidence.shift.chartRuler\` has \`dignity\`, \`rulerSign\`, or \`planetNature\`, mention the chart ruler's dignity and benefic/malefic nature in both \`tabs["overview"]\` and \`tabs["what-shifts"]\`. Keep it beginner-friendly: "exalted means stronger and more reliable", "detriment means less comfortable and more effortful", "benefic means supportive/easing", "malefic means pressurizing/disciplining."
+- Every plainEnglishSummary must include one receipt sentence and one plain decision sentence. Put practical advice in \`guideRows\`, not in markdown bullets.
+- Each guideRows body must be specific, not generic: name the actual goal, event score, planet/line/house, dignity, window, or risk it is based on.
+- Overview \`leanInto\` and \`watchOut\` are not category labels. Each paragraph must interpret the category: why this place/date helps or hurts, what astrology shows it, and what the reader should do with that information.
+- Timing windows must interpret \`brief.evidence.timing.windows[].drivers\` or \`topHits\`. Do not echo raw aspect strings. Example: if a window has Mars with natal Jupiter and Mercury with natal Sun, write that drive and confidence are louder while speech and decisions are sharper; use it for pitches or action, not overpromising.
+- If \`brief.evidence.prioritySignals\` contains \`mars-asc-body-risk\`, it is a high-priority safety/pacing signal. Mention it in overview or what-shifts and one guide row. Explain Mars on the Ascendant as body heat, speed, cuts, inflammation, accidents, scars, rushed movement, workouts, driving, and impatience. Keep it practical, not fatalistic.
+- If \`brief.evidence.prioritySignals\` contains \`pluto-dsc-relief\`, it is a high-priority nuance signal. Say Pluto does not disappear, but it moves pressure away from the Descendant/partners into the relocated house named in the signal. Frame this as "better, not easy."
+- Timing must synthesize three clocks when present: annual profection = personal yearly theme, progressions = slow personal season, transits/windows = date trigger. If \`brief.evidence.timing.personalClock\` exists, at least one visible timing sentence MUST name either the profection/time lord or the progressed season, and one visible timing sentence MUST name the transit/date trigger. Do not let transits be the whole timing story when profection or progression evidence exists.
+- ACG line evidence includes \`distanceKm\`, \`contribution\`, and \`strength\`. Treat \`exact/very strong\` and \`strong\` lines as possible headline causes. Treat \`moderate/supporting\` lines as supporting clues only. Treat \`background\` lines as context. Do not make a moderate/background line "the reason" unless stronger place, timing, or four-corner evidence agrees.
+- Separate evidence families carefully: ACG lines are time-of-birth line proximity; relocated four corners are \`shift.chartRuler\`, \`shift.angles\`, \`shift.houses\`, and \`shift.aspectsToAngles\`; geodetic evidence is the place's earth-fixed band and personal geodetic hits. Do not blend these as if they are the same signal.
+- If \`brief.evidence.bestUseFallback\` exists, say the selected goal is narrower and name the stronger best use. Do not inflate the selected goal; redirect the trip purpose.
+- If \`brief.evidence.scoreEvidenceProfile\` exists, use it as the evidence hierarchy:
+  - \`supports\` are reasons the score can be trusted upward.
+  - \`confirmedWarnings\` are real score warnings and should shape the travel call.
+  - \`cautions\` are softer context; mention them as watch-outs only when relevant, and do not treat cautions alone like a hard no.
+  - If tier is \`confirmedHard\`, do not make the trip sound broadly good even if a few supports exist. Say what narrow use remains.
+  - If tier is \`mixedStrong\`, name both the strong use and the warning that keeps it from being a clean yes.
+  - If tier is \`cleanStrong\`, you may sound confident, but still keep any supplied cautions practical and specific.
+- In \`tabs["overview"]\`, the guide rows must be interpretive, not generic: use the strongest event score for \`Best Used For\`, the weakest event score or priority signal for \`Move Carefully With\`, and the best timing/window signal for \`Your Next Move\`.
 - If a tab's ideal receipt is missing, say the available evidence is quiet and use the next-best supplied score/driver. Never invent a line, transit, house, or degree.
 - Tab jobs:
   overview = is this good/mixed/bad travel, good for what, bad for what, next move.
@@ -401,8 +451,10 @@ Rules:
   place-field = how the place feels as an environment.
   what-shifts = how the reader feels/behaves differently there.
   timing = best window or wait/shorten/avoid stance.
-- Hard length floor: match the original rich output except for \`tabs["what-shifts"].plainEnglishSummary\`, which must be exactly 4 concise sentences. Each tab lead must be 4-5 sentences. All other plainEnglishSummary fields must be exactly 6 sentences. Evidence captions are 1-2 sentences.
-- overview.scoreExplanation is 3 sentences: sentence 1 gives the travel call, sentence 2 cites a concrete astrology receipt (line, house, geodetic band, or dated transit), sentence 3 says what to do next. overview.goalExplanation is 3 sentences and must cite the selected goal score plus one astrology receipt. overview.leanInto and overview.watchOut must each contain exactly 2 paragraphs, 4-5 sentences per paragraph.
+- Hard length floor: keep each tab opener concise but complete. Each tab lead must be exactly 2 short sentences. Each plainEnglishSummary must be 2-3 short sentences. The rendered top copy should land at 4-5 short sentences total. Every tab must include exactly 3 guideRows with the labels \`Best Used For\`, \`Move Carefully With\`, and \`Your Next Move\`.
+- Guide rows must be a little longer than labels: 14-28 words each, with an astrological basis and a plain action/caution. Do not write fragments.
+- overview.scoreExplanation is 4-5 short sentences: sentence 1 gives the travel call, sentence 2 cites a concrete astrology receipt, sentence 3 names the timing or durable place factor, sentence 4 says what to do next, and sentence 5 names the main caution when needed. overview.goalExplanation is 3 sentences and must cite the selected goal score plus one astrology receipt. overview.leanInto and overview.watchOut must each contain exactly 2 paragraphs, 4-5 sentences per paragraph; every paragraph needs one concrete receipt and one planning implication.
+- If \`brief.evidence.shift.chartRuler\` exists, overview.scoreExplanation sentence 2 or 3 must mention the relocated chart ruler's planet, sign, house, dignity, and benefic/malefic nature when supplied. Example: "Jupiter, a benefic planet, is exalted in Cancer in the relocated 7th house, so partnership support is real and easier to use."
 - timing.activationAdvice: exactly 3 practical items. timing.closingVerdict must be 2 sentences and say go, go with caution, shorten, wait, avoid, move now, or reconsider.
 - Fill chartRulerReframe from brief.evidence.shift.chartRuler. If optional legacy/sidebar fields are generated, keep them concise, but never steal depth from tabs/overview/timing.
 - Voice: candid, protective, practical. Use "okay", "just know", "please", and "plan accordingly" lightly. No doom, no fluffy mystery, no profanity.`;
@@ -421,6 +473,78 @@ function verdictFromScore(score: number, travelType: string): "go" | "go_with_ca
 
 function headlineScore(input: TeacherReadingInput): number {
   return Math.round(input.macro.headlineScore ?? input.macro.overallScore);
+}
+
+function normalizeDignityLabel(dignity: unknown): string {
+  return String(dignity ?? "")
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .trim();
+}
+
+function dignityPlainMeaning(dignity: string): string {
+  if (dignity.includes("exalt")) return "exalted means it works strongly and more reliably";
+  if (dignity.includes("domicile") || dignity.includes("rul")) return "domicile means it is at home and easier to trust";
+  if (dignity.includes("detriment")) return "detriment means it works with more effort and less comfort";
+  if (dignity.includes("fall")) return "fall means it needs extra care and can feel less steady";
+  return `${dignity} describes how comfortably that planet can work`;
+}
+
+function planetNaturePlainMeaning(nature: unknown): string {
+  if (nature === "benefic") return "benefic means it tends to support, connect, and open doors";
+  if (nature === "malefic") return "malefic means it tends to pressure, sharpen, and demand discipline";
+  if (nature === "luminary") return "luminary means it makes the theme visible and personal";
+  return "";
+}
+
+function ordinalHouseLabel(house: unknown): string {
+  const n = Number(house);
+  if (!Number.isFinite(n)) return "";
+  const suffix = n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th";
+  return `${n}${suffix}`;
+}
+
+function chartRulerDignitySentence(input: TeacherReadingInput): string {
+  const cr = input.sidebarsData?.chartRuler as any;
+  if (!cr?.chartRuler) return "";
+  const ruler = cr.chartRuler;
+  const sign = cr.rulerSign ? ` in ${cr.rulerSign}` : "";
+  const houseLabel = ordinalHouseLabel(cr.relocatedRulerHouse);
+  const house = houseLabel ? ` in the relocated ${houseLabel} house` : "";
+  const dignity = normalizeDignityLabel(cr.dignity);
+  const nature = cr.planetNature;
+  const naturePhrase = planetNaturePlainMeaning(nature);
+  const dignityPhrase = dignity ? dignityPlainMeaning(dignity) : "";
+  const descriptors = [
+    nature ? `a ${nature} planet` : "",
+    dignity || "",
+  ].filter(Boolean).join(" and ");
+  const descriptorClause = descriptors ? `, ${descriptors},` : "";
+  const meanings = [naturePhrase, dignityPhrase].filter(Boolean).join("; ");
+  if (!meanings) return "";
+  return `${ruler}${descriptorClause} sits${sign}${house}, so ${meanings}.`;
+}
+
+function hasDignityTerm(text: unknown): boolean {
+  return /\b(exalted|exaltation|detriment|fall|domicile)\b/i.test(String(text ?? ""));
+}
+
+function hasPlanetNatureTerm(text: unknown): boolean {
+  return /\b(benefic|malefic|luminary)\b/i.test(String(text ?? ""));
+}
+
+function hasRequiredChartRulerLanguage(text: unknown, input: TeacherReadingInput): boolean {
+  const cr = input.sidebarsData?.chartRuler as any;
+  const needsDignity = Boolean(normalizeDignityLabel(cr?.dignity));
+  const nature = String(cr?.planetNature ?? "");
+  const needsNature = nature === "benefic" || nature === "malefic" || nature === "luminary";
+  return (!needsDignity || hasDignityTerm(text)) && (!needsNature || hasPlanetNatureTerm(text));
+}
+
+function appendChartRulerSentenceOnce(value: unknown, sentence: string, input: TeacherReadingInput): string {
+  const base = String(value ?? "").trim();
+  if (!sentence || hasRequiredChartRulerLanguage(base, input)) return base;
+  return [base, sentence].filter(Boolean).join(" ");
 }
 
 function backfillSoWhat(object: TeacherReading, input: TeacherReadingInput): TeacherReading {
@@ -476,6 +600,21 @@ function backfillSoWhat(object: TeacherReading, input: TeacherReadingInput): Tea
       };
     }
   }
+  const dignitySentence = chartRulerDignitySentence(input);
+  if (dignitySentence) {
+    out.overview.scoreExplanation = appendChartRulerSentenceOnce(out.overview.scoreExplanation, dignitySentence, input);
+    if (out.tabs?.overview) {
+      out.tabs.overview.plainEnglishSummary = appendChartRulerSentenceOnce(out.tabs.overview.plainEnglishSummary, dignitySentence, input);
+    }
+    if (out.tabs?.["what-shifts"]) {
+      out.tabs["what-shifts"].plainEnglishSummary = appendChartRulerSentenceOnce(out.tabs["what-shifts"].plainEnglishSummary, dignitySentence, input);
+    }
+    if (out.chartRulerReframe) {
+      out.chartRulerReframe.body = appendChartRulerSentenceOnce(out.chartRulerReframe.body, dignitySentence, input);
+    }
+  }
+  ensureTimingPersonalClock(out, input);
+  ensureLineNotes(out, input);
   if (Array.isArray(out.windows)) {
     out.windows = out.windows.map((window: any) => ({
       ...window,
@@ -487,6 +626,67 @@ function backfillSoWhat(object: TeacherReading, input: TeacherReadingInput): Tea
     }));
   }
   return out;
+}
+
+function ensureTimingPersonalClock(out: any, input: TeacherReadingInput) {
+  const timingTab = out.tabs?.timing;
+  const clock = input.sidebarsData?.timingContext;
+  if (!timingTab || !clock) return;
+
+  const existing = [
+    timingTab.lead,
+    timingTab.plainEnglishSummary,
+    ...(timingTab.guideRows || []).map((row: any) => row?.body),
+    out.timing?.closingVerdict,
+  ].filter(Boolean).join(" ");
+
+  const additions: string[] = [];
+  const annual = clock.annualProfection;
+  if (annual && !/\b(profection|time lord|yearly theme)\b/i.test(existing)) {
+    additions.push(`Your annual profection points to ${annual.houseTopic}${annual.timeLord ? `, with ${annual.timeLord} as time lord` : ""}, so keep the timing tied to that yearly theme.`);
+  }
+
+  const progressions = clock.progressions;
+  if (progressions?.summary && !/\b(progressed|secondary progression|slow personal season)\b/i.test(existing)) {
+    additions.push(`Your progressed season says ${progressions.summary.replace(/\.$/, "").toLowerCase()}, so do not force the timing against it.`);
+  }
+
+  if (!additions.length) return;
+  timingTab.plainEnglishSummary = [timingTab.plainEnglishSummary, ...additions]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function ensureLineNotes(out: any, input: TeacherReadingInput) {
+  if (Array.isArray(out.lineNotes) && out.lineNotes.length > 0) return;
+  const lines = input.sidebarsData?.nearbyLines || [];
+  if (!lines.length) {
+    out.lineNotes ||= [];
+    return;
+  }
+  out.lineNotes = lines.slice(0, 6).map((line) => {
+    const planet = String(line.planet || "Planet");
+    const angle = String(line.angle || "").toUpperCase();
+    return {
+      lineKey: `${planet.toLowerCase()}-${angle}`,
+      note: `${planet} on your ${angle} line makes ${angleLineTopic(angle)} louder here; plan around it instead of treating it as background noise.`,
+    };
+  });
+}
+
+function angleLineTopic(angle: string): string {
+  switch (angle) {
+    case "ASC":
+      return "your body, pace, and first impression";
+    case "MC":
+      return "career visibility and public pressure";
+    case "DSC":
+      return "partners, clients, and one-on-one dynamics";
+    case "IC":
+      return "home, rest, and emotional grounding";
+    default:
+      return "that part of life";
+  }
 }
 
 function take<T>(items: T[] | undefined, count: number): T[] {
@@ -543,7 +743,7 @@ function buildTabWritingPlan(input: TeacherReadingInput) {
   return {
     overview: {
       readerQuestion: "Is this trip worth taking, good for what, bad for what, and what should I do next?",
-      openingMove: `Sentence 1 names the travel verdict in human language: "${stance} trip" or equivalent. Sentence 2 or 3 must cite a concrete astrology receipt from place, shift, or timing evidence before returning to the so-what. Do not treat a score by itself as the receipt.`,
+      openingMove: `Sentence 1 names the travel verdict in human language: "${stance} trip" or equivalent. Sentence 2 or 3 must cite a concrete astrology receipt from place, shift, or timing evidence before returning to the decision. Do not treat a score by itself as the receipt.`,
       emotionalJob: "Make the reader feel oriented and protected, not graded.",
       stance,
       score,
@@ -551,7 +751,7 @@ function buildTabWritingPlan(input: TeacherReadingInput) {
       notFor: [weakest],
       nextMove: input.macro.travelType === "relocation" ? "wait, reconsider, or choose the cleanest arrival month" : "keep the trip focused",
       evidenceToUse: ["headline score", "one astrology receipt from place/shift/timing evidence", "strongest event score", "weakest event risk"],
-      targetShape: "lead 4-5 sentences: call, chart receipt, use-case, caveat, action.",
+      targetShape: "lead 2 sentences + summary 2-3 short sentences + guideRows with astrology basis: call, chart receipt, use-case, caveat, action.",
     },
     "life-themes": {
       readerQuestion: `Does this place support ${selectedGoalText}?`,
@@ -563,7 +763,7 @@ function buildTabWritingPlan(input: TeacherReadingInput) {
       notFor: [weakest],
       nextMove: "do not force the weaker goal",
       evidenceToUse: ["selected goal", "goal score", "one astrology receipt from strongest/lean/shift evidence", "weakest event risk"],
-      targetShape: "lead 4-5 sentences: selected-goal fit, astrology receipt, useful detour, not-for caveat, practical boundary.",
+      targetShape: "lead 2 sentences + summary 2-3 short sentences + guideRows with astrology basis: selected-goal fit, astrology receipt, useful detour, not-for caveat, practical boundary.",
     },
     "place-field": {
       readerQuestion: "How does this place show up as an environment?",
@@ -575,7 +775,7 @@ function buildTabWritingPlan(input: TeacherReadingInput) {
       notFor: ["hiding from your feelings"],
       nextMove: "pace the city carefully",
       evidenceToUse: ["geodetic band", "nearby lines", "personal geodetic hits"],
-      targetShape: "lead 4-5 sentences: felt place, geodetic/line receipt, what it rewards, what it punishes, behavior hook.",
+      targetShape: "lead 2 sentences + summary 2-3 short sentences + guideRows with astrology basis: felt place, geodetic/line receipt, what it rewards, what it punishes, behavior hook.",
     },
     "what-shifts": {
       readerQuestion: "How do I feel or behave differently here?",
@@ -586,7 +786,7 @@ function buildTabWritingPlan(input: TeacherReadingInput) {
       notFor: ["pretending the place has no effect on your mood"],
       nextMove: "name how you feel and behave differently in the first day",
       evidenceToUse: ["relocated rising", "chart ruler", "relocated houses", "angle shifts"],
-      targetShape: "lead 4-5 sentences: felt shift, relocated-chart receipt, first-day example, trap, action.",
+      targetShape: "lead 2 sentences + summary 2-3 short sentences + guideRows with astrology basis: felt shift, relocated-chart receipt, first-day example, trap, action.",
     },
     timing: {
       readerQuestion: "When should I use this place?",
@@ -598,7 +798,7 @@ function buildTabWritingPlan(input: TeacherReadingInput) {
       notFor: ["forcing weaker goals"],
       nextMove: "front-load the important plans and keep flexibility",
       evidenceToUse: ["best window", "supportive transits", "friction transits"],
-      targetShape: "lead 4-5 sentences: best window, transit/window receipt, what to schedule, what not to force, fallback.",
+      targetShape: "lead 2 sentences + summary 2-3 short sentences + guideRows with astrology basis: best window, transit/window receipt, what to schedule, what not to force, fallback.",
     },
   };
 }
@@ -629,15 +829,20 @@ function compactTeacherSignal(input: TeacherReadingInput) {
       risks: compactItems(input.riskSummary, 4, ["event", "score", "travelRisk", "mitigation"]),
       leanInto: compactItems(evidence.scoreDrivers?.leanIntoEvidence, 4, ["label", "source", "score", "reason"]),
       watchOut: compactItems(evidence.scoreDrivers?.watchOutEvidence, 4, ["label", "source", "score", "reason"]),
+      bestUseFallback: evidence.scoreDrivers?.bestUseFallback,
+      scoreEvidenceProfile: input.scoreEvidenceProfile,
       place: {
         geodeticBand: sidebars.geodeticBand,
-        lines: compactItems(sidebars.nearbyLines, 4, ["planet", "angle", "distanceKm", "contribution"]),
+        lines: compactItems(sidebars.nearbyLines, 4, ["planet", "angle", "distanceKm", "contribution", "strength"]),
         personalGeodetic: compactItems(sidebars.personalGeodetic, 3, ["planet", "angle", "angleTopic", "closeness"]),
       },
       shift: {
         chartRuler: cr ? {
           relocatedRising: cr.relocatedAscSign,
           ruler: cr.chartRuler,
+          rulerSign: cr.rulerSign,
+          dignity: cr.dignity,
+          planetNature: cr.planetNature,
           natalRulerHouse: cr.natalRulerHouse,
           relocatedRulerHouse: cr.relocatedRulerHouse,
         } : null,
@@ -645,9 +850,11 @@ function compactTeacherSignal(input: TeacherReadingInput) {
         houses: compactItems(evidence.shiftDrivers?.relocatedHouses, 5, ["planet", "natalHouse", "relocatedHouse", "topic"]),
       },
       timing: {
-        windows: compactItems(sidebars.travelWindows, 4, ["rank", "dates", "score", "nights"]),
+        windows: compactItems(sidebars.travelWindows, 4, ["rank", "dates", "score", "nights", "drivers", "topHits"]),
         transits: compactItems(sidebars.topTransits, 5, ["aspect", "dateRange", "tone", "houseTopics"]),
+        personalClock: sidebars.timingContext,
       },
+      prioritySignals: compactItems(sidebars.prioritySignals, 4, ["key", "planet", "angle", "orb", "natalHouse", "relocatedHouse", "summary", "instruction"]),
       ...(chartStructure ? {
         structure: {
           patterns: compactItems(chartStructure.patterns, 3, ["key", "type", "element", "focalPlanet", "planets"]),
@@ -682,7 +889,7 @@ export async function writeTeacherReading(
       model: gemini(MODEL),
       system: SYSTEM,
       prompt: `${COMPACT_TASK_INSTRUCTIONS}\n\n<brief>\n${inputJson}\n</brief>\n\nWrite the teacher reading JSON. Stay strictly inside the brief — do not invent.`,
-      schema: TeacherReadingSchema,
+      schema: TeacherReadingGenerationSchema,
       // Gemini 3.x charges "thinking" tokens against maxOutputTokens. Without
       // capping thinking, the model burns thousands of tokens reasoning and
       // truncates the JSON mid-output. structuredOutputs forces server-side

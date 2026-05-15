@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
-import { CouplesReadingSchema, TeacherReadingSchema } from "@/lib/ai/schemas";
+import { CouplesReadingSchema, TeacherReadingGenerationSchema, TeacherReadingSchema } from "@/lib/ai/schemas";
 import { buildRiskSummary, travelRiskForEvent } from "@/lib/readings/ai-input-builder";
 import { couplesRiskForEvent } from "@/lib/readings/ai-couples-input-builder";
 
@@ -8,37 +8,64 @@ const teacherTabs = {
   overview: {
     lead: "This is the main verdict, with the score translated into a practical travel decision.",
     plainEnglishSummary: "The place is useful, but the reason matters more than the number.",
+    guideRows: [
+      { label: "Best Used For", body: "Focused plans with a clear purpose." },
+      { label: "Move Carefully With", body: "Trying to make one place solve every goal." },
+      { label: "Your Next Move", body: "Choose the main reason before booking." },
+    ],
     evidenceCaption: "Score, goal match, and timing evidence are read together.",
   },
   "life-themes": {
     lead: "The strongest life themes are named in plain English before any astrology jargon.",
     plainEnglishSummary: "This section tells the reader which parts of life the place supports.",
+    guideRows: [
+      { label: "Best Used For", body: "The highest scoring life areas." },
+      { label: "Move Carefully With", body: "The weakest goal area." },
+      { label: "Your Next Move", body: "Plan around the strongest theme." },
+    ],
     evidenceCaption: "Goal-stratified event scores and house themes anchor the claim.",
   },
   "place-field": {
     lead: "The location has its own field, separate from the reader's personal chart.",
     plainEnglishSummary: "This is what the destination asks of most visitors.",
+    guideRows: [
+      { label: "Best Used For", body: "The place's natural atmosphere." },
+      { label: "Move Carefully With", body: "Local pressure that is not personal." },
+      { label: "Your Next Move", body: "Adjust the plan to the field." },
+    ],
     evidenceCaption: "Geodetic and paran evidence explain the local weather of the place.",
   },
   "what-shifts": {
     lead: "The relocated chart explains what changes in the reader's lived experience.",
     plainEnglishSummary: "This section answers how the place changes their daily posture.",
+    guideRows: [
+      { label: "Best Used For", body: "The clearest relocated chart emphasis." },
+      { label: "Move Carefully With", body: "The chart-ruler pressure point." },
+      { label: "Your Next Move", body: "Act from the new house emphasis." },
+    ],
     evidenceCaption: "Rising sign, ruler, houses, and line contacts carry the explanation.",
   },
   timing: {
     lead: "Timing turns the destination score into a go, wait, or redesign decision.",
     plainEnglishSummary: "The calendar matters because a good place can still have rough windows.",
+    guideRows: [
+      { label: "Best Used For", body: "The cleanest date window." },
+      { label: "Move Carefully With", body: "The roughest date pressure." },
+      { label: "Your Next Move", body: "Move the important plan to the better window." },
+    ],
     evidenceCaption: "Monthly scoring and transit pressure explain the recommendation.",
   },
 };
 
 describe("AI reading schema contracts", () => {
-  it("keeps what-shifts intro shorter than the other tab summaries in the teacher prompt", () => {
+  it("keeps tab openers short and moves practical advice into guide rows", () => {
     const prompt = readFileSync("lib/ai/prompts/teacher-reading.ts", "utf8");
 
-    expect(prompt).toContain('tabs["what-shifts"].plainEnglishSummary');
-    expect(prompt).toContain("which must be exactly 4 concise sentences");
-    expect(prompt).toContain('Do not add a fifth sentence');
+    expect(prompt).toContain("what-shifts");
+    expect(prompt).toContain("plainEnglishSummary");
+    expect(prompt).toContain("4-5 short sentences");
+    expect(prompt).toContain("guideRows");
+    expect(prompt).toContain("Best Used For");
   });
 
   it("accepts the current teacher reading contract required by the V4 tabs", () => {
@@ -71,6 +98,86 @@ describe("AI reading schema contracts", () => {
     });
 
     expect(parsed.success).toBe(true);
+  });
+
+  it("keeps cached pre-guide-row teacher readings schema-compatible", () => {
+    const legacyTabs = Object.fromEntries(
+      Object.entries(teacherTabs).map(([id, tab]) => {
+        const rest: Partial<typeof tab> = { ...tab };
+        delete rest.guideRows;
+        return [id, rest];
+      }),
+    );
+
+    const parsed = TeacherReadingSchema.safeParse({
+      tabs: legacyTabs,
+      overview: {
+        scoreExplanation: "A score in the seventies is supportive, but not automatic.",
+        goalExplanation: "For a career trip, the destination is good when visibility has a concrete use.",
+        leanInto: [
+          "Use this place for visible work, targeted meetings, and practical momentum rather than vague exploration.",
+        ],
+        watchOut: [
+          "Do not make the trip carry every goal at once; weaker domains still need pacing and boundaries.",
+        ],
+      },
+      timing: {
+        activationAdvice: [
+          "Arrive during the stronger window and keep the first two days simple.",
+        ],
+        closingVerdict: "Good travel if the goal is focused; mixed if the trip needs to do everything.",
+      },
+      chartRulerReframe: {
+        relocatedRising: "Libra",
+        ruler: "Venus",
+        fromHouse: 2,
+        toHouse: 10,
+        headline: "Your charm becomes more public here",
+        body: "The place moves Venus from private values into visible contribution, so the opportunity is real when you show the work.",
+      },
+    });
+
+    expect(parsed.success).toBe(true);
+  });
+
+  it("requires guide rows for new teacher generations", () => {
+    const legacyTabs = Object.fromEntries(
+      Object.entries(teacherTabs).map(([id, tab]) => {
+        const rest: Partial<typeof tab> = { ...tab };
+        delete rest.guideRows;
+        return [id, rest];
+      }),
+    );
+
+    const parsed = TeacherReadingGenerationSchema.safeParse({
+      tabs: legacyTabs,
+      overview: {
+        scoreExplanation: "A score in the seventies is supportive, but not automatic.",
+        goalExplanation: "For a career trip, the destination is good when visibility has a concrete use.",
+        leanInto: [
+          "Use this place for visible work, targeted meetings, and practical momentum rather than vague exploration.",
+        ],
+        watchOut: [
+          "Do not make the trip carry every goal at once; weaker domains still need pacing and boundaries.",
+        ],
+      },
+      timing: {
+        activationAdvice: [
+          "Arrive during the stronger window and keep the first two days simple.",
+        ],
+        closingVerdict: "Good travel if the goal is focused; mixed if the trip needs to do everything.",
+      },
+      chartRulerReframe: {
+        relocatedRising: "Libra",
+        ruler: "Venus",
+        fromHouse: 2,
+        toHouse: 10,
+        headline: "Your charm becomes more public here",
+        body: "The place moves Venus from private values into visible contribution, so the opportunity is real when you show the work.",
+      },
+    });
+
+    expect(parsed.success).toBe(false);
   });
 
   it("keeps deterministic so-what fields outside the teacher structured-output schema", () => {

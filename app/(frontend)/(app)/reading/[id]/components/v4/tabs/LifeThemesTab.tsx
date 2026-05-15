@@ -15,6 +15,7 @@ import {
     Users,
 } from "lucide-react";
 import TabSection from "../../shared/TabSection";
+import { mergeGuideRows } from "../../shared/ReadingCopy";
 import type { V4VM } from "./types";
 
 interface Props {
@@ -23,6 +24,7 @@ interface Props {
     copiedTab?: {
         lead?: string;
         plainEnglishSummary?: string;
+        guideRows?: Array<{ label: string; body: string }>;
         evidenceCaption?: string;
         nextTabBridge?: string;
     };
@@ -56,6 +58,26 @@ export default function LifeThemesTab({ vm, copiedTab }: Props) {
     const presses = themeBars.length >= 4
         ? prioritizeGoalThemes(themeBars.slice(-4).reverse(), goalThemeIds).slice(0, 3)
         : [];
+    const lifeThemeGuideRows = mergeGuideRows(copiedTab?.guideRows, [
+        {
+            label: "Best Used For",
+            body: lifts[0]
+                ? `${lifts[0].label} has the cleanest support here at ${Math.round(lifts[0].score)}/100; use it as the practical doorway into ${selectedGoal?.label.toLowerCase() || "your goal"}.`
+                : "Use the strongest life area first, then let the weaker areas stay quieter.",
+        },
+        {
+            label: "Move Carefully With",
+            body: presses[0]
+                ? `${presses[0].label} is softer here at ${Math.round(presses[0].score)}/100, so do not make it prove whether the place works.`
+                : "Do not force every life area to move at the same time.",
+        },
+        {
+            label: "Your Next Move",
+            body: selectedGoal
+                ? `Pick one small ${selectedGoal.label.toLowerCase()} experiment, then watch whether the stronger themes make it easier or harder.`
+                : "Pick one small experiment and judge the place by how your real life responds.",
+        },
+    ]);
 
     return (
         <TabSection
@@ -63,6 +85,7 @@ export default function LifeThemesTab({ vm, copiedTab }: Props) {
             title="How this place fits your goals."
             lead={tabLead}
             intro={tabIntro}
+            guideRows={lifeThemeGuideRows}
         >
             {selectedGoals.length > 0 && (
                 <div className="mb-[clamp(40px,5vw,68px)]">

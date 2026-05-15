@@ -38,9 +38,9 @@ let _degreeTheory = readFlag("DEGREE_THEORY_ENABLED", true);
 // 12-month-window aggregate penalty is used (saturates at the cap).
 let _currentSkyPenalty = readFlag("CURRENT_SKY_PENALTY_V1", true);
 // SOFT_CAP_TOP_V1 — compress upper tail of macro + event scores. Above the
-// knee (85), each extra raw point counts at SLOPE (0.4) and the final cap is
-// 95 instead of 100, so 100 outcomes become rare/impossible without making
-// mid-range scores look worse.
+// knee (88), each extra raw point counts at SLOPE (0.65) and the final cap is
+// 97 instead of 100. This keeps 90+ exceptional and rare without erasing true
+// "place + goal + timing all agree" stacks.
 let _softCapTop = readFlag("SOFT_CAP_TOP_V1", true);
 // CLUSTER_SCORING_V1 — surface stelliums (house/sign/orb), dispositor chains,
 // dignified cluster leaders, mutual reception pairs, and downstream amplifier
@@ -66,8 +66,8 @@ export function setClusterScoringEnabled(v: boolean): void { _clusterScoring = v
  * Hard-clamped to [0, 100] when the flag is off (legacy).
  *
  *   raw < 15   → 15 + (raw - 15) * 0.4, clamped at 5
- *   raw ≤ 85   → unchanged
- *   raw > 85   → 85 + (raw - 85) * 0.4, clamped at 95
+ *   raw ≤ 88   → unchanged
+ *   raw > 88   → 88 + (raw - 88) * 0.65, clamped at 97
  *
  * The lower cushion keeps a harsh stack from reading as absolute zero unless
  * the raw math is deeply below zero, while still preserving the warning band.
@@ -79,9 +79,9 @@ export function softCapScore(raw: number): number {
     const FLOOR_KNEE = 15;
     const FLOOR_SLOPE = 0.4;
     const FLOOR = 5;
-    const KNEE = 85;
-    const SLOPE = 0.4;
-    const CAP = 95;
+    const KNEE = 88;
+    const SLOPE = 0.65;
+    const CAP = 97;
     let v = raw;
     if (v < FLOOR_KNEE) v = FLOOR_KNEE + (v - FLOOR_KNEE) * FLOOR_SLOPE;
     if (v > KNEE) v = KNEE + (v - KNEE) * SLOPE;

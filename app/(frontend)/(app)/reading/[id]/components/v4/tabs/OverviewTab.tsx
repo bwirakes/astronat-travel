@@ -3,6 +3,7 @@
 import SignIcon from "@/app/components/SignIcon";
 import SectionHead from "../../shared/SectionHead";
 import TabSection from "../../shared/TabSection";
+import { appendChartRulerDignityNote, mergeGuideRows, RichText } from "../../shared/ReadingCopy";
 import type { V4VM } from "./types";
 
 interface Props {
@@ -39,16 +40,20 @@ export default function OverviewTab({ vm, copiedTab, selectTab }: Props) {
     const watchOut = vm.tabs.overview?.watchOut ?? [];
     const scoreExplanation = vm.tabs.overview?.scoreExplanation || "";
     const aiLead = copiedTab?.lead?.trim() || "";
+    const aiIntro = copiedTab?.plainEnglishSummary?.trim() || "";
     const fallbackLede = aiLead || scoreExplanation || vm.hero.explainer || "";
     // Prefer the AI lead in the dek slot; surface scoreExplanation as the
     // body paragraph below it. If the two are identical (rare, but happens
     // when the model uses scoreExplanation for both) collapse to one.
-    const summary =
-        scoreExplanation && scoreExplanation !== aiLead
+    const rawSummary =
+        aiIntro && aiIntro !== aiLead
+            ? aiIntro
+            : scoreExplanation && scoreExplanation !== aiLead
             ? scoreExplanation
             : !aiLead
                 ? vm.hero.explainer || undefined
                 : undefined;
+    const summary = appendChartRulerDignityNote(rawSummary, vm.relocated.chartRuler);
     const sunSign =
         vm.chart.natal.find((cp) => cp.p?.toLowerCase() === "sun")?.sign
         ?? vm.chart.natal.find((cp) => cp.p?.toLowerCase() === "moon")?.sign
@@ -57,9 +62,30 @@ export default function OverviewTab({ vm, copiedTab, selectTab }: Props) {
         ? sunSign.charAt(0).toUpperCase() + sunSign.slice(1).toLowerCase()
         : null;
     const topTheme = vm.scoreNarrative.strongestThemes[0];
+    const weakestTheme = vm.scoreNarrative.lessEmphasized[0];
     const timing = vm.travelWindows[0];
     const timingTitle = vm.timeline.grain === "month" ? "Arrive then" : "Go then";
     const timingSectionTitle = vm.timeline.grain === "month" ? "Best month to arrive" : "Best timing";
+    const overviewGuideRows = mergeGuideRows(copiedTab?.guideRows, [
+        {
+            label: "Best Used For",
+            body: leanInto[0]
+                || (topTheme ? `${topTheme.label} is the strongest support here at ${Math.round(topTheme.score)}/100, so let it carry the trip.` : "Use this place for the life area that has the clearest score support."),
+        },
+        {
+            label: "Move Carefully With",
+            body: watchOut[0]
+                || (weakestTheme
+                    ? `${weakestTheme.label} is weaker here at ${Math.round(weakestTheme.score)}/100, so keep it low-stakes.`
+                    : "Do not ask this place to solve every life area at once."),
+        },
+        {
+            label: "Your Next Move",
+            body: selectedGoal
+                ? `Choose one ${selectedGoal.label.toLowerCase()} priority, then plan the trip around the strongest supporting theme instead of forcing everything.`
+                : "Choose one clear priority, then keep the itinerary simple enough to protect your energy.",
+        },
+    ]);
 
     return (
         <TabSection
@@ -67,6 +93,8 @@ export default function OverviewTab({ vm, copiedTab, selectTab }: Props) {
             title="At a Glance"
             lead={fallbackLede}
             intro={summary}
+            guideRows={overviewGuideRows}
+            maxSentences={5}
         >
             <div className="relative w-full max-w-none">
                 {/* Macro-Texture: Editorial Wireframe Globe */}
@@ -90,17 +118,17 @@ export default function OverviewTab({ vm, copiedTab, selectTab }: Props) {
 
                 {selectedGoal && (
                     <div
-                        className="mb-[clamp(28px,4vw,40px)] border-l-[3px] pl-[clamp(16px,2vw,22px)]"
+                        className="mb-[clamp(24px,3vw,34px)] border-l-[3px] pl-[clamp(14px,1.8vw,20px)]"
                         style={{ borderColor: "var(--color-y2k-blue)" }}
                     >
                         <span
-                            className="block mb-[8px] text-[11px] tracking-[0.16em] uppercase"
+                            className="block mb-[7px] text-[10px] tracking-[0.16em] uppercase"
                             style={{ color: "var(--color-y2k-blue)", fontFamily: FONT_MONO }}
                         >
                             You asked about {selectedGoal.label}
                         </span>
                         <p
-                            className="m-0 max-w-[64ch] text-[clamp(20px,2vw,25px)] leading-[1.38] [text-wrap:balance]"
+                            className="m-0 max-w-[72ch] text-[clamp(17px,1.6vw,21px)] leading-[1.5] [text-wrap:pretty]"
                             style={{ fontFamily: FONT_PRIMARY, color: "var(--text-primary)" }}
                         >
                             {vm.tabs.overview?.goalExplanation || selectedGoal.outcome}
@@ -109,7 +137,7 @@ export default function OverviewTab({ vm, copiedTab, selectTab }: Props) {
                 )}
 
                 <SectionHead
-                    index="01"
+                    index="00"
                     title="How to use this place"
                     flush
                 />
@@ -132,7 +160,7 @@ export default function OverviewTab({ vm, copiedTab, selectTab }: Props) {
                 {timing && (
                     <>
                         <SectionHead
-                            index="02"
+                            index="01"
                             title={timingSectionTitle}
                         />
                         <TimingSummary
@@ -185,7 +213,7 @@ function AnswerCard({
                             className="absolute left-0 top-[0.72em] h-[4px] w-[4px] rounded-full"
                             style={{ background: accent }}
                         />
-                        {item}
+                        <RichText>{item}</RichText>
                     </li>
                 ))}
             </ul>

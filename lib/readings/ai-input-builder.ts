@@ -2,7 +2,7 @@ import type { EditorialEvidence } from "@/app/lib/reading-tabs";
 import type { TransitHit } from "@/lib/astro/transit-solver";
 import type { Tone } from "@/lib/ai/schemas";
 import { signFromLongitude, houseFromLongitude, houseFromCusps, geodeticMCLongitude, geodeticASCLongitude } from "@/app/lib/geodetic";
-import { acgLineRawScore } from "@/app/lib/house-matrix";
+import { acgLineRawScore, acgLineStrengthBand, type AcgLineStrengthBand } from "@/app/lib/house-matrix";
 import { houseTopic, spellAngle, closenessBand, houseVibe } from "./house-topics";
 import { buildEditorialEvidence, deriveScoreNarrative } from "@/app/lib/reading-tabs";
 import {
@@ -20,6 +20,7 @@ import {
 import {
   buildNatalPlanetRelocatedHouseMap,
   buildOccupancyPlanets,
+  type ScoreEvidenceProfile,
 } from "@/app/lib/scoring-engine";
 import { verdictBand, verdictTone } from "@/app/lib/verdict";
 import { formatTransitDates, transitTone, aspectSentence } from "./ai-input-helpers";
@@ -27,6 +28,7 @@ import {
   computePersonalCycleContext,
   type PersonalCycleContext,
 } from "@/app/lib/personal-cycles";
+import { SIGN_RULERS } from "@/app/lib/astro-constants";
 import type { ComputedPosition } from "@/lib/astro/transits";
 import type { ProgressionsResult } from "@/app/lib/progressions";
 import type { ParanResult } from "@/lib/astro/acg-lines";
@@ -50,6 +52,9 @@ export interface TeacherReadingInput {
 
   /** The core structured data for the AI to base its tabs on */
   editorialEvidence: EditorialEvidence;
+  /** Scoring evidence classification from the fused engine. Confirmed warnings
+   *  may govern the headline; cautions are narrative context only. */
+  scoreEvidenceProfile?: ScoreEvidenceProfile;
 
   /** Deterministic low-score travel risks from the scoring engine. The AI
    *  should reuse these instead of deciding which weak areas matter. */
@@ -64,12 +69,26 @@ export interface TeacherReadingInput {
   sidebarsData: {
     /** Trip-only candidate windows (top hero + range highlights). Empty array
      *  for relocations — see top-level `relocation.arrivalCandidates` instead. */
-    travelWindows: Array<{ rank: number; dates: string; score: number; nights: string }>;
+    travelWindows: Array<{
+      rank: number;
+      dates: string;
+      score: number;
+      nights: string;
+      drivers?: string[];
+      topHits?: Array<{
+        transitPlanet: string;
+        aspect: string;
+        natalPlanet: string;
+        date: string;
+        orb?: number;
+        tone?: Tone;
+      }>;
+    }>;
     topLineDriver?: string;
     geodeticBand?: { sign: string; longitudeRange: string };
     natalSpotlight: Array<{ planet: string; sign: string; role: string }>;
     topTransits: Array<{ aspect: string; dateRange: string; tone: Tone; houseTopics: string[]; aspectKey: string }>;
-    nearbyLines: Array<{ planet: string; angle: string; distanceKm: number; contribution: number }>;
+    nearbyLines: Array<{ planet: string; angle: string; distanceKm: number; contribution: number; strength: AcgLineStrengthBand }>;
     activeHouses: Array<{ topic: string; vibe: string }>;
     angleShifts?: Array<{ angle: "ASC" | "IC" | "DSC" | "MC"; natalSign: string; relocatedSign: string }>;
     planetHouseShifts?: Array<{ planet: string; natalHouse: number; relocatedHouse: number }>;
@@ -82,7 +101,11 @@ export interface TeacherReadingInput {
      *  traditional ruler, and which house it sits in on each chart. Source
      *  for `chartRulerReframe` on what-shifts. Null when ruler isn't in the
      *  natal planet array (rare). */
-    chartRuler?: ChartRulerContext;
+    chartRuler?: ChartRulerContext & {
+      rulerSign?: string;
+      dignity?: string;
+      planetNature?: "benefic" | "malefic" | "luminary" | "neutral";
+    };
     /** Late-degree modality cohorts triggered by an active hard-aspect pair
      *  of outer malefics, joined to natal planets at 20–29° in matching
      *  modality. Source for `modalityHits[]` on what-shifts. */
@@ -109,6 +132,33 @@ export interface TeacherReadingInput {
       orbAtClosest: number;         // degrees, may exceed 3
       withinActivationOrb: boolean; // orbAtClosest ≤ 3
       daysFromTravel: number;       // signed; negative = before travel date
+    }>;
+    timingContext?: {
+      annualProfection?: {
+        age: number;
+        house: number;
+        houseTopic: string;
+        sign?: string;
+        timeLord?: string;
+        timeLordRelocatedHouse?: number;
+        summary: string;
+      };
+      progressions?: {
+        bands: Array<{ planet: string; sign: string; longitudeRange: string; destinationInBand: boolean }>;
+        angleHits: Array<{ planet: string; angle: string; orb: number; severity: number }>;
+        summary: string;
+      };
+    };
+    prioritySignals?: Array<{
+      key: "mars-asc-body-risk" | "pluto-dsc-relief";
+      planet: "Mars" | "Pluto";
+      angle?: "ASC" | "DSC";
+      orb?: number;
+      natalHouse?: number;
+      relocatedHouse?: number;
+      priority: "high";
+      summary: string;
+      instruction: string;
     }>;
 };
 
@@ -220,6 +270,151 @@ export function buildRiskSummary(eventScores: Array<{ eventName: string; finalSc
     }));
 }
 
+function signedAngularDiff(a: number, b: number): number {
+  return ((((a - b) % 360) + 540) % 360) - 180;
+}
+
+function angleOrb(a: number | undefined, b: number | undefined): number | null {
+  if (typeof a !== "number" || typeof b !== "number") return null;
+  return Math.round(Math.abs(signedAngularDiff(a, b)) * 100) / 100;
+}
+
+function ageAtDate(birthDateUtc: Date | undefined, refDate: Date): number | null {
+  if (!birthDateUtc || Number.isNaN(birthDateUtc.getTime())) return null;
+  let age = refDate.getUTCFullYear() - birthDateUtc.getUTCFullYear();
+  const birthdayThisYear = Date.UTC(
+    refDate.getUTCFullYear(),
+    birthDateUtc.getUTCMonth(),
+    birthDateUtc.getUTCDate(),
+  );
+  if (refDate.getTime() < birthdayThisYear) age -= 1;
+  return age >= 0 ? age : null;
+}
+
+function buildAnnualProfectionContext(args: {
+  birthDateUtc?: Date;
+  refDate: Date;
+  natalCusps?: number[];
+  natalPlanets: any[];
+  relocatedCusps: number[];
+}) {
+  const age = ageAtDate(args.birthDateUtc, args.refDate);
+  if (age === null) return undefined;
+  const house = (age % 12) + 1;
+  const houseTopicLabel = houseTopic(house);
+  const cuspLon = args.natalCusps?.[house - 1];
+  const sign = typeof cuspLon === "number" ? signFromLongitude(cuspLon) : undefined;
+  const timeLord = sign ? SIGN_RULERS[sign] : undefined;
+  const timeLordPlanet = timeLord
+    ? args.natalPlanets.find((p) => String(p.name || p.planet).toLowerCase() === timeLord.toLowerCase())
+    : undefined;
+  const timeLordRelocatedHouse = typeof timeLordPlanet?.longitude === "number"
+    ? houseFromCusps(timeLordPlanet.longitude, args.relocatedCusps) ?? houseFromLongitude(timeLordPlanet.longitude, args.relocatedCusps[0] ?? 0)
+    : undefined;
+
+  return {
+    age,
+    house,
+    houseTopic: houseTopicLabel,
+    ...(sign ? { sign } : {}),
+    ...(timeLord ? { timeLord } : {}),
+    ...(timeLordRelocatedHouse ? { timeLordRelocatedHouse } : {}),
+    summary: [
+      `Age ${age} activates a ${house}${house === 1 ? "st" : house === 2 ? "nd" : house === 3 ? "rd" : "th"}-house profection year`,
+      houseTopicLabel ? `focused on ${houseTopicLabel}` : "",
+      timeLord ? `with ${timeLord} as time lord` : "",
+      timeLordRelocatedHouse ? `showing through relocated house ${timeLordRelocatedHouse}` : "",
+    ].filter(Boolean).join(", ") + ".",
+  };
+}
+
+function buildProgressionTimingContext(progressedBands: ProgressionsResult | undefined) {
+  if (!progressedBands) return undefined;
+  const bands = progressedBands.bands.map((band) => ({
+    planet: band.planet,
+    sign: band.sign,
+    longitudeRange: band.longitudeRange,
+    destinationInBand: band.destinationInBand,
+  }));
+  const angleHits = progressedBands.angleHits.slice(0, 4).map((hit) => ({
+    planet: hit.planet,
+    angle: hit.angle,
+    orb: hit.orb,
+    severity: hit.severity,
+  }));
+  const activeBands = bands.filter((band) => band.destinationInBand);
+  const summaryParts = [
+    activeBands.length
+      ? `${activeBands.map((band) => `progressed ${band.planet} in ${band.sign}`).join(" and ")} brackets this longitude`
+      : "No progressed Sun or Moon sign-band directly brackets this longitude",
+    angleHits.length
+      ? `${angleHits[0].planet} is within ${angleHits[0].orb}° of the geodetic ${angleHits[0].angle}`
+      : "",
+  ].filter(Boolean);
+  return {
+    bands,
+    angleHits,
+    summary: summaryParts.join("; ") + ".",
+  };
+}
+
+function buildPrioritySignals(args: {
+  natalPlanets: any[];
+  natalCusps?: number[];
+  natalAngles?: { ASC: number; IC: number; DSC: number; MC: number };
+  relocatedCusps: number[];
+}) {
+  const signals: NonNullable<TeacherReadingInput["sidebarsData"]["prioritySignals"]> = [];
+  const findPlanet = (name: string) =>
+    args.natalPlanets.find((p) => String(p.name || p.planet).toLowerCase() === name.toLowerCase());
+  const mars = findPlanet("Mars");
+  const pluto = findPlanet("Pluto");
+  const relocatedAsc = args.relocatedCusps[0];
+  const marsAscOrb = angleOrb(mars?.longitude, relocatedAsc);
+  if (marsAscOrb !== null && marsAscOrb <= 2) {
+    signals.push({
+      key: "mars-asc-body-risk",
+      planet: "Mars",
+      angle: "ASC",
+      orb: marsAscOrb,
+      priority: "high",
+      summary: `Mars sits within ${marsAscOrb}° of the relocated Ascendant, the body and first-impression point.`,
+      instruction: "Surface physical pacing risk: accidents, cuts, scars, inflammation, impatience, workouts, driving, and rushed transitions. Make it practical, not doom-y.",
+    });
+  }
+
+  const natalDsc = args.natalAngles?.DSC ?? args.natalCusps?.[6];
+  const plutoDscOrb = angleOrb(pluto?.longitude, natalDsc);
+  if (plutoDscOrb !== null && plutoDscOrb <= 3 && typeof pluto?.longitude === "number") {
+    const natalHouse = houseFromCusps(pluto.longitude, args.natalCusps)
+      ?? (args.natalAngles ? houseFromLongitude(pluto.longitude, args.natalAngles.ASC) : undefined);
+    const relocatedHouse = houseFromCusps(pluto.longitude, args.relocatedCusps)
+      ?? houseFromLongitude(pluto.longitude, args.relocatedCusps[0] ?? 0);
+    if (relocatedHouse !== 7) {
+      signals.push({
+        key: "pluto-dsc-relief",
+        planet: "Pluto",
+        angle: "DSC",
+        orb: plutoDscOrb,
+        ...(natalHouse ? { natalHouse } : {}),
+        relocatedHouse,
+        priority: "high",
+        summary: `Natal Pluto is within ${plutoDscOrb}° of the Descendant, but relocates into house ${relocatedHouse}.`,
+        instruction: "Frame this as partial relief: Pluto does not disappear, but pressure moves away from close partners and into a more manageable life area. Say better, not easy.",
+      });
+    }
+  }
+  return signals;
+}
+
+function planetNatureForPrompt(planet: string): "benefic" | "malefic" | "luminary" | "neutral" {
+  const key = planet.toLowerCase();
+  if (key === "venus" || key === "jupiter") return "benefic";
+  if (key === "mars" || key === "saturn") return "malefic";
+  if (key === "sun" || key === "moon") return "luminary";
+  return "neutral";
+}
+
 function geodeticBandForLon(lon: number): { sign: string; longitudeRange: string } {
   const SIGNS = ["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"];
   const norm = ((lon % 360) + 360) % 360;
@@ -307,8 +502,9 @@ export function buildAIInput(args: {
    *  computeChartRulerContext() and produce the chart-ruler reframe block. */
   birthLat?: number;
   birthLon?: number;
+  scoreEvidenceProfile?: ScoreEvidenceProfile;
 }): TeacherReadingInput {
-  const { destination, destinationLat, destinationLon, travelDate, matrixResult, acgLines, rawTransits, eventScores, natalPlanets, relocatedCusps, natalCusps, natalAngles, travelType, goalIds, transitPositions, progressedBands, birthDateUtc, parans: paranInput, birthLat, birthLon } = args;
+  const { destination, destinationLat, destinationLon, travelDate, matrixResult, acgLines, rawTransits, eventScores, natalPlanets, relocatedCusps, natalCusps, natalAngles, travelType, goalIds, transitPositions, progressedBands, birthDateUtc, parans: paranInput, birthLat, birthLon, scoreEvidenceProfile } = args;
 
   const start = travelDate ? new Date(travelDate) : new Date();
   const end = new Date(start);
@@ -364,17 +560,26 @@ export function buildAIInput(args: {
   const nearbyLines = [...(acgLines || [])]
     .sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity))
     .slice(0, 8)
-    .map((l: any) => ({
-      planet: l.planet,
-      angle: spellAngle(l.angle || l.line || ""),
-      closeness: closenessBand(l.distance_km ?? 9999),
-      distanceKm: Math.round(Number(l.distance_km ?? 9999)),
-      contribution: acgLineRawScore({
+    .map((l: any) => {
+      const lineAngle = (l.angle || l.line || "").toString().toUpperCase();
+      const distanceKm = Number(l.distance_km ?? 9999);
+      return {
         planet: l.planet,
-        angle: (l.angle || l.line || "").toString().toUpperCase(),
-        distance_km: Number(l.distance_km ?? 9999),
-      }),
-    }));
+        angle: spellAngle(lineAngle),
+        closeness: closenessBand(l.distance_km ?? 9999),
+        distanceKm: Math.round(distanceKm),
+        contribution: acgLineRawScore({
+          planet: l.planet,
+          angle: lineAngle,
+          distance_km: distanceKm,
+        }),
+        strength: acgLineStrengthBand({
+          planet: l.planet,
+          angle: lineAngle,
+          distance_km: distanceKm,
+        }),
+      };
+    });
 
   const activeHouses = [...(matrixResult.houses || [])]
     .sort((a: any, b: any) => Math.abs(b.score - 50) - Math.abs(a.score - 50))
@@ -623,6 +828,36 @@ export function buildAIInput(args: {
         natalCusps ?? null,
       ) ?? undefined)
     : undefined;
+  const chartRulerForPrompt = (() => {
+    if (!chartRulerCtx) return undefined;
+    const rulerPlanet = natalPlanets.find((p: any) =>
+      String(p.name ?? p.planet).toLowerCase() === chartRulerCtx.chartRuler.toLowerCase(),
+    );
+    const planetNature = planetNatureForPrompt(chartRulerCtx.chartRuler);
+    return {
+      ...chartRulerCtx,
+      ...(rulerPlanet?.sign ? { rulerSign: rulerPlanet.sign } : {}),
+      ...(rulerPlanet?.dignity ? { dignity: String(rulerPlanet.dignity) } : {}),
+      planetNature,
+    };
+  })();
+
+  const timingContext = {
+    annualProfection: buildAnnualProfectionContext({
+      birthDateUtc,
+      refDate: start,
+      natalCusps,
+      natalPlanets,
+      relocatedCusps,
+    }),
+    progressions: buildProgressionTimingContext(progressedBands),
+  };
+  const prioritySignals = buildPrioritySignals({
+    natalPlanets,
+    natalCusps,
+    natalAngles,
+    relocatedCusps,
+  });
 
   // ── Modality hits ──────────────────────────────────────────────────────
   // Cross-product: each ModalityCohort × natal planets at 20–29° in matching
@@ -748,6 +983,7 @@ export function buildAIInput(args: {
       scoreBreakdown,
     },
     editorialEvidence,
+    ...(scoreEvidenceProfile ? { scoreEvidenceProfile } : {}),
     riskSummary: buildRiskSummary(eventScores),
     ...(relocation ? { relocation } : {}),
     ...(hasStructure ? { chartStructure } : {}),
@@ -765,14 +1001,42 @@ export function buildAIInput(args: {
           const d = new Date(iso);
           return `${d.toLocaleString("en-US", { month: "short" })} ${d.getUTCDate()}`;
         };
+        const compactHits = (hits: TransitHit[] | undefined) =>
+          (hits ?? []).slice(0, 3).map((hit) => ({
+            transitPlanet: hit.transit_planet,
+            aspect: hit.aspect,
+            natalPlanet: hit.natal_planet,
+            date: hit.date,
+            orb: typeof hit.orb === "number" ? Number(hit.orb.toFixed(2)) : undefined,
+            tone: transitTone(hit),
+          }));
         if (heroScored) {
-          tw.push({ rank: 1, dates: `${shortDate(heroScored.startISO)} — ${shortDate(heroScored.endISO)}`, score: heroScored.score, nights: "10" });
+          tw.push({
+            rank: 1,
+            dates: `${shortDate(heroScored.startISO)} — ${shortDate(heroScored.endISO)}`,
+            score: heroScored.score,
+            nights: "10",
+            drivers: heroScored.drivers?.slice(0, 3),
+          });
         }
         rangeHighlights.good.slice(0, 2).forEach(g => {
-          tw.push({ rank: tw.length + 1, dates: `${shortDate(g.startISO)} — ${shortDate(g.endISO)}`, score: g.score, nights: "5" });
+          tw.push({
+            rank: tw.length + 1,
+            dates: `${shortDate(g.startISO)} — ${shortDate(g.endISO)}`,
+            score: g.score,
+            nights: "5",
+            topHits: compactHits(g.topHits),
+          });
         });
         if (rangeHighlights.bad[0]) {
-          tw.push({ rank: tw.length + 1, dates: `${shortDate(rangeHighlights.bad[0].startISO)} — ${shortDate(rangeHighlights.bad[0].endISO)}`, score: rangeHighlights.bad[0].score, nights: "5" });
+          const hard = rangeHighlights.bad[0];
+          tw.push({
+            rank: tw.length + 1,
+            dates: `${shortDate(hard.startISO)} — ${shortDate(hard.endISO)}`,
+            score: hard.score,
+            nights: "5",
+            topHits: compactHits(hard.topHits),
+          });
         }
         return tw;
       })(),
@@ -787,9 +1051,11 @@ export function buildAIInput(args: {
       ...(aspectsToAngles.length ? { aspectsToAngles } : {}),
       ...(personalGeodetic.length ? { personalGeodetic } : {}),
       ...(paransForPrompt.length ? { parans: paransForPrompt } : {}),
-      ...(chartRulerCtx ? { chartRuler: chartRulerCtx } : {}),
+      ...(chartRulerForPrompt ? { chartRuler: chartRulerForPrompt } : {}),
       ...(modalityHitsForPrompt.length ? { modalityHits: modalityHitsForPrompt } : {}),
       ...(approachingGeoLines.length ? { approachingGeoLines } : {}),
+      ...(timingContext.annualProfection || timingContext.progressions ? { timingContext } : {}),
+      ...(prioritySignals.length ? { prioritySignals } : {}),
     }
   };
 }

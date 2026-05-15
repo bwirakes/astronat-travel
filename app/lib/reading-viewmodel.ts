@@ -220,6 +220,9 @@ export interface V4GeoTransit {
 export interface V4ChartRuler {
     relocatedAscSign: string;          // "Libra"
     ruler: string;                     // "Venus"
+    rulerSign?: string;
+    dignity?: string;
+    planetNature?: "benefic" | "malefic" | "luminary" | "neutral";
     rulerNatalHouse?: number;
     rulerRelocatedHouse?: number;
     rulerRelocatedHouseSign?: string;
@@ -406,6 +409,10 @@ export interface V4ReadingVM {
         copy: Partial<Record<ReadingTabId, {
             lead?: string;
             plainEnglishSummary?: string;
+            guideRows?: Array<{
+                label: "Best Used For" | "Move Carefully With" | "Your Next Move";
+                body: string;
+            }>;
             evidenceCaption?: string;
             nextTabBridge?: string;
         }>>;
@@ -418,6 +425,7 @@ export interface V4ReadingVM {
         timing?: {
             activationAdvice?: string[];
             closingVerdict?: string;
+            aiWindows?: Array<{ dates: string; note: string; score: number; flavorTitle?: string; nights?: string }>;
         };
     };
 
@@ -890,6 +898,77 @@ const FLAVORS: Array<{ flavor: string; flavorTitle: string; emoji: string }> = [
     { flavor: "Quiet window",  flavorTitle: "Commit to something",  emoji: "✷" },
 ];
 
+const TIMING_PLANET_MEANING: Record<string, string> = {
+    sun: "visibility and confidence",
+    moon: "mood and comfort",
+    mercury: "speech and decisions",
+    venus: "connection, money, and ease",
+    mars: "drive and urgency",
+    jupiter: "growth and appetite",
+    saturn: "pressure and discipline",
+    uranus: "surprise and change",
+    neptune: "dreams and blurred signals",
+    pluto: "power and intensity",
+};
+
+function timingPlanetMeaning(planet: string | undefined): string {
+    const key = String(planet ?? "").toLowerCase();
+    return TIMING_PLANET_MEANING[key] ?? String(planet ?? "the transit").toLowerCase();
+}
+
+function timingAspectVerb(aspect: string | undefined): string {
+    const key = String(aspect ?? "").toLowerCase();
+    if (key.includes("trine") || key.includes("sextile")) return "supports";
+    if (key.includes("square") || key.includes("opposition")) return "pressures";
+    if (key.includes("conjunction") || key.includes("conjunct")) return "turns up";
+    return "activates";
+}
+
+function timingDecision(score: number | undefined): string {
+    if (typeof score !== "number") return "Use the window deliberately and keep the plan simple.";
+    if (score >= 70) return "Use it for your most important plans.";
+    if (score >= 55) return "Use it, but keep expectations practical.";
+    if (score >= 40) return "Keep it short and avoid forcing too many outcomes.";
+    return "Treat it as a caution window, not the trip's main push.";
+}
+
+function interpretTimingHit(hit: any): string {
+    const transitPlanet = hit?.transit_planet ?? hit?.transitPlanet;
+    const natalPlanet = hit?.natal_planet ?? hit?.natalPlanet;
+    const transit = String(transitPlanet ?? "The transit");
+    const natal = String(natalPlanet ?? "your chart");
+    const verb = timingAspectVerb(hit?.aspect);
+    return `${transit} ${verb} ${natal}, so ${timingPlanetMeaning(transitPlanet)} meets ${timingPlanetMeaning(natalPlanet)}`;
+}
+
+function interpretTimingDriver(driver: string): string {
+    const raw = driver.replace(/\s+/g, " ").trim();
+    const match = raw.match(/\b([A-Za-z]+)\s+(conjunction|conjunct|square|opposition|trine|sextile)\s+(?:natal\s+)?([A-Za-z]+)/i);
+    if (match) {
+        return interpretTimingHit({ transitPlanet: match[1], aspect: match[2], natalPlanet: match[3] });
+    }
+    return raw.replace(/\b(conjunction|conjunct|square|opposition|trine|sextile)\s+natal\b/ig, "activating");
+}
+
+function interpretedTimingNote(window: any): string {
+    const hitParts = Array.isArray(window?.topHits) && window.topHits.length
+        ? window.topHits.slice(0, 2).map(interpretTimingHit)
+        : [];
+    const driverParts = hitParts.length
+        ? hitParts
+        : Array.isArray(window?.drivers)
+            ? window.drivers.slice(0, 2).map(interpretTimingDriver)
+            : [];
+    if (!driverParts.length) {
+        return `This is a quieter window, so the score mostly reflects the place itself. ${timingDecision(window?.score)}`;
+    }
+    return `${driverParts.join("; ")}. ${timingDecision(window?.score)}`;
+}
+
+function isRawTimingNote(note: string | undefined): boolean {
+    return /\b(conjunction|conjunct|square|opposition|trine|sextile)\s+natal\b/i.test(String(note ?? ""));
+}
+
 function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateISO: string | null, goalIdsArg: string[] = []): V4TravelWindow[] {
     const promptWindows: any[] | undefined = Array.isArray(reading?.teacherReading?.windows)
         ? reading.teacherReading.windows
@@ -932,7 +1011,7 @@ function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateI
                 nights: "first 90 days",
                 score: c.arcScore,
                 note: c.drivers.length
-                    ? c.drivers.join(" · ")
+                    ? interpretedTimingNote({ score: c.arcScore, drivers: c.drivers })
                     : "No major slow transits in this arc — the place itself carries the score.",
                 startISO: start.toISOString(),
                 endISO: monthEnd.toISOString(),
@@ -975,18 +1054,21 @@ function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateI
     // 1. If a weather forecast is present and has interpretation.travelWindows, use it.
     const wfWindows = reading?.weatherForecast?.interpretation?.travelWindows;
     if (Array.isArray(wfWindows) && wfWindows.length) {
-        return wfWindows.slice(0, 3).map((w: any, i: number) => ({
-            rank: i + 1,
-            flavor: FLAVORS[i]?.flavor ?? "Window",
-            flavorTitle: FLAVORS[i]?.flavorTitle ?? "",
-            emoji: FLAVORS[i]?.emoji ?? "✦",
-            dates: w.label || w.dates || fmtRange(w.startDate ?? w.start ?? "", w.endDate ?? w.end ?? ""),
-            nights: w.nights || nightsBetween(w.startDate ?? w.start ?? "", w.endDate ?? w.end ?? ""),
-            score: typeof w.score === "number" ? Math.round(w.score) : 80,
-            note: w.note || w.rationale || "",
-            startISO: w.startDate ?? w.start ?? "",
-            endISO: w.endDate ?? w.end ?? "",
-        }));
+        return wfWindows.slice(0, 3).map((w: any, i: number) => {
+            const note = w.note || w.rationale || "";
+            return {
+                rank: i + 1,
+                flavor: FLAVORS[i]?.flavor ?? "Window",
+                flavorTitle: FLAVORS[i]?.flavorTitle ?? "",
+                emoji: FLAVORS[i]?.emoji ?? "✦",
+                dates: w.label || w.dates || fmtRange(w.startDate ?? w.start ?? "", w.endDate ?? w.end ?? ""),
+                nights: w.nights || nightsBetween(w.startDate ?? w.start ?? "", w.endDate ?? w.end ?? ""),
+                score: typeof w.score === "number" ? Math.round(w.score) : 80,
+                note: isRawTimingNote(note) ? interpretedTimingNote({ ...w, drivers: [note] }) : note,
+                startISO: w.startDate ?? w.start ?? "",
+                endISO: w.endDate ?? w.end ?? "",
+            };
+        });
     }
 
     // 2. Deterministic scoring from real transitWindows. Engine owns scores
@@ -1034,12 +1116,7 @@ function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateI
                 const datesNorm = normalizeDates(fmtRange(w.startISO, w.endISO));
                 const prose = promptWindows?.find((pw: any) => normalizeDates(pw.dates || "") === datesNorm) || promptWindows?.[i];
                 
-                let detNote = "Quiet week — no major transits nearby. Score reflects the place itself.";
-                if (w.topHits && w.topHits.length) {
-                    detNote = w.topHits.map((h: any) => `${h.transit_planet}${h.retrograde ? " ℞" : ""} ${h.aspect} natal ${h.natal_planet}`).join(" · ");
-                } else if (w.drivers && w.drivers.length) {
-                    detNote = w.drivers.join(" · ");
-                }
+                const detNote = interpretedTimingNote(w);
 
                 return {
                     rank: i + 1,
@@ -1049,7 +1126,7 @@ function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateI
                     dates: fmtRange(w.startISO, w.endISO),
                     nights: nightsBetween(w.startISO, w.endISO),
                     score: w.score,
-                    note: prose?.note || detNote,
+                    note: prose?.note && !isRawTimingNote(prose.note) ? prose.note : detNote,
                     startISO: w.startISO,
                     endISO: w.endISO,
                 };
@@ -1060,6 +1137,7 @@ function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateI
         // score. Prompt prose still wins for flavorTitle/note when present.
         return tw.slice(0, 3).map((w: any, i: number) => {
             const prose = promptWindows?.[i];
+            const rawNote = prose?.note || w.recommendation || w.note || w.transit || "";
             return {
                 rank: i + 1,
                 flavor: FLAVORS[i]?.flavor ?? "Window",
@@ -1068,7 +1146,7 @@ function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateI
                 dates: fmtRange(w.start, w.end),
                 nights: nightsBetween(w.start, w.end),
                 score: typeof w.score === "number" ? w.score : Math.max(60, 90 - i * 6),
-                note: prose?.note || w.recommendation || w.note || w.transit || "",
+                note: isRawTimingNote(rawNote) ? interpretedTimingNote({ ...w, score: w.score, drivers: [rawNote] }) : rawNote,
                 startISO: w.start,
                 endISO: w.end,
             };
@@ -1078,18 +1156,22 @@ function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateI
     // 3. Last resort: no transit data. Honor prompt windows if present, even
     //    though their scores are the AI's guess. Better than a single synthetic.
     if (promptWindows && promptWindows.length) {
-        return promptWindows.slice(0, 3).map((w: any, i: number) => ({
-            rank: i + 1,
-            flavor: FLAVORS[i]?.flavor ?? "Window",
-            flavorTitle: w.flavorTitle ?? FLAVORS[i]?.flavorTitle ?? "",
-            emoji: FLAVORS[i]?.emoji ?? "✦",
-            dates: w.dates ?? "",
-            nights: w.nights ?? "",
-            score: typeof w.score === "number" ? Math.round(w.score) : 80,
-            note: w.note ?? "",
-            startISO: "",
-            endISO: "",
-        }));
+        return promptWindows.slice(0, 3).map((w: any, i: number) => {
+            const note = w.note ?? "";
+            const score = typeof w.score === "number" ? Math.round(w.score) : 80;
+            return {
+                rank: i + 1,
+                flavor: FLAVORS[i]?.flavor ?? "Window",
+                flavorTitle: w.flavorTitle ?? FLAVORS[i]?.flavorTitle ?? "",
+                emoji: FLAVORS[i]?.emoji ?? "✦",
+                dates: w.dates ?? "",
+                nights: w.nights ?? "",
+                score,
+                note: isRawTimingNote(note) ? interpretedTimingNote({ ...w, score, drivers: [note] }) : note,
+                startISO: "",
+                endISO: "",
+            };
+        });
     }
 
     // 3. Last resort: synthesize one window from travelDate + macroScore.
@@ -1618,7 +1700,8 @@ function shiftCopy(name: string, from: number | undefined, to: number): string {
     if (!fromTopic) {
         return `Your ${planet} placement puts ${subject} into the ${ordinal(to)} house, ${toLong}. In this place, ${action} matter more.`;
     }
-    return `Your ${planet} placement shifts from the ${ordinal(from)} house, ${fromLong}, into the ${ordinal(to)} house, ${toLong}. In this place, ${action} matter more.`;
+    const fromHouse = from ?? to;
+    return `Your ${planet} placement shifts from the ${ordinal(fromHouse)} house, ${fromLong}, into the ${ordinal(to)} house, ${toLong}. In this place, ${action} matter more.`;
 }
 
 function ordinal(n: number): string {
@@ -2067,7 +2150,7 @@ function normalizeTabCopy(tabs: Record<string, any>): Record<string, any> {
     if (isRecord(whatShifts) && typeof whatShifts.plainEnglishSummary === "string") {
         out["what-shifts"] = {
             ...whatShifts,
-            plainEnglishSummary: limitSentences(whatShifts.plainEnglishSummary, 4),
+            plainEnglishSummary: limitSentences(whatShifts.plainEnglishSummary, 3),
         };
     }
     return out;
@@ -2126,7 +2209,7 @@ function fallbackEvidence(scoreNarrative: ScoreNarrative, mode: "lean" | "watch"
     const direct = mode === "lean" ? scoreNarrative.leanIntoEvidence : scoreNarrative.watchOutEvidence;
     if (direct.length) return direct;
     const themes = mode === "lean" ? scoreNarrative.strongestThemes : scoreNarrative.lessEmphasized;
-    return themes.map((theme) => evidenceFromTheme(theme, mode));
+    return themes.map((theme) => evidenceFromTheme(theme));
 }
 
 function listLabels(labels: string[]): string {
@@ -2211,7 +2294,7 @@ function normalizeHeadlineScoreText(text: unknown, headlineScore: number | null)
     return text
         .replace(/\b((?:this|the)\s+(?:trip|move|relocation|reading|window)\s+(?:carries|has|scores|lands at|sits at)\s+(?:a\s+)?(?:score\s+of\s+)?)(\d{1,3})(\/100)?\b/gi, (_match, prefix, _num, suffix = "") => `${prefix}${score}${suffix}`)
         .replace(/\b((?:overall|headline|topline)\s+score\s+(?:of\s+|is\s+|at\s+)?)(\d{1,3})(\/100)?\b/gi, (_match, prefix, _num, suffix = "") => `${prefix}${score}${suffix}`)
-        .replace(/\b(a\s+score\s+of\s+)(\d{1,3})\b/gi, (_match, prefix) => `${prefix}${score}`);
+        .replace(/\b(an?\s+score\s+of\s+)(\d{1,3})\b/gi, (_match, prefix) => `${prefix}${score}`);
 }
 
 function normalizeHeadlineScoresInCopy<T>(copy: T, headlineScore: number | null): T {
@@ -2719,6 +2802,15 @@ function deriveChartRuler(reading: any): V4ChartRuler | null {
     const relocatedAscSign = String(raw.relocatedAscSign ?? "");
     const ruler = String(raw.ruler ?? "");
     if (!relocatedAscSign || !ruler) return null;
+    const rulerPlanet = Array.isArray(reading?.natalPlanets)
+        ? reading.natalPlanets.find((p: any) => String(p?.planet ?? p?.name ?? "").toLowerCase() === ruler.toLowerCase())
+        : null;
+    const rulerSign = typeof rulerPlanet?.sign === "string" ? rulerPlanet.sign : undefined;
+    const dignity = typeof rulerPlanet?.dignity === "string"
+        ? rulerPlanet.dignity
+        : typeof rulerPlanet?.dignityStatus === "string"
+        ? rulerPlanet.dignityStatus
+        : undefined;
     const rulerNatalHouse = Number(raw.rulerNatalHouse);
     const rulerRelocatedHouse = Number(raw.rulerRelocatedHouse);
     const rulerRelocatedHouseSign = typeof raw.rulerRelocatedHouseSign === "string"
@@ -2726,11 +2818,22 @@ function deriveChartRuler(reading: any): V4ChartRuler | null {
     return {
         relocatedAscSign,
         ruler,
+        ...(rulerSign ? { rulerSign } : {}),
+        ...(dignity ? { dignity } : {}),
+        planetNature: planetNatureForDisplay(ruler),
         rulerAngular: Boolean(raw.rulerAngular),
         ...(Number.isFinite(rulerNatalHouse) ? { rulerNatalHouse } : {}),
         ...(Number.isFinite(rulerRelocatedHouse) ? { rulerRelocatedHouse } : {}),
         ...(rulerRelocatedHouseSign ? { rulerRelocatedHouseSign } : {}),
     };
+}
+
+function planetNatureForDisplay(planet: string): V4ChartRuler["planetNature"] {
+    const key = planet.toLowerCase();
+    if (key === "venus" || key === "jupiter") return "benefic";
+    if (key === "mars" || key === "saturn") return "malefic";
+    if (key === "sun" || key === "moon") return "luminary";
+    return "neutral";
 }
 
 /** A2: coerce the persisted natalWorldPoints payload into V4WorldPointsView.

@@ -1,12 +1,18 @@
 import { geodeticASCLongitude, geodeticMCLongitude } from "./geodetic";
 import { LIFE_EVENTS, W_EVENTS } from "./planet-library";
 import { BENEFIC_PLANETS, LUMINARIES, STRONG_MALEFICS } from "./astro-constants";
+import type { AcgLineStrengthBand } from "./house-matrix";
 
 export const READING_TABS = [
     {
         id: "overview",
         label: "Overview",
         question: "What can this place help me get?",
+    },
+    {
+        id: "what-shifts",
+        label: "What Shifts",
+        question: "What changes in my chart here?",
     },
     {
         id: "life-themes",
@@ -17,11 +23,6 @@ export const READING_TABS = [
         id: "place-field",
         label: "Geography",
         question: "What does the place itself add?",
-    },
-    {
-        id: "what-shifts",
-        label: "What Shifts",
-        question: "What changes in my chart here?",
     },
     {
         id: "timing",
@@ -179,6 +180,7 @@ export interface AcgEvidence {
     angle: string;
     distanceKm: number;
     contribution: number;
+    strength?: AcgLineStrengthBand;
 }
 
 export interface AngleShiftEvidence {
@@ -217,6 +219,7 @@ export interface ScoreNarrative {
     themes: ThemeScore[];
     strongestThemes: ThemeScore[];
     lessEmphasized: ThemeScore[];
+    bestUseFallback: { goalId?: GoalId; label: string; score: number; selectedBestScore: number; gap: number } | null;
     leanIntoEvidence: EvidencePoint[];
     watchOutEvidence: EvidencePoint[];
     geodetic: {
@@ -240,6 +243,7 @@ export interface EditorialEvidence {
         themes: ThemeScore[];
         strongestThemes: ThemeScore[];
         lessEmphasized: ThemeScore[];
+        bestUseFallback: ScoreNarrative["bestUseFallback"];
         leanIntoEvidence: EvidencePoint[];
         watchOutEvidence: EvidencePoint[];
     };
@@ -423,12 +427,29 @@ export function deriveScoreNarrative(args: {
         eventScores: args.eventScores,
         macroScore: args.macroScore,
     });
+    const selectedGoalIds = new Set(selectedGoals.map((goal) => goal.goalId));
+    const selectedBestScore = selectedGoals.length
+        ? Math.max(...selectedGoals.map((goal) => goal.score))
+        : 0;
+    const bestAlternate = selectedGoals.length
+        ? strongestThemes.find((theme) => !theme.goalId || !selectedGoalIds.has(theme.goalId))
+        : undefined;
+    const bestUseFallback = bestAlternate && bestAlternate.score >= selectedBestScore + 10
+        ? {
+            goalId: bestAlternate.goalId,
+            label: bestAlternate.label,
+            score: bestAlternate.score,
+            selectedBestScore,
+            gap: bestAlternate.score - selectedBestScore,
+        }
+        : null;
 
     return {
         selectedGoals,
         themes,
         strongestThemes,
         lessEmphasized,
+        bestUseFallback,
         leanIntoEvidence: strongestThemes.map((theme) => ({
             label: theme.label,
             body: `${theme.label} is one of the clearest outcomes this place supports.`,
@@ -478,6 +499,7 @@ export function buildEditorialEvidence(args: {
             themes: args.scoreNarrative.themes,
             strongestThemes: args.scoreNarrative.strongestThemes,
             lessEmphasized: args.scoreNarrative.lessEmphasized,
+            bestUseFallback: args.scoreNarrative.bestUseFallback,
             leanIntoEvidence: args.scoreNarrative.leanIntoEvidence,
             watchOutEvidence: args.scoreNarrative.watchOutEvidence,
         },
@@ -490,4 +512,3 @@ export function buildEditorialEvidence(args: {
         ...(args.timingDrivers ? { timingDrivers: args.timingDrivers } : {}),
     };
 }
-

@@ -255,8 +255,21 @@ const EditorialSpineSchema = z.object({
 const TabEditorialSchema = z.object({
   lead: z.string(),
   plainEnglishSummary: z.string(),
+  // Optional for cached V4 readings generated before the tab copy split.
+  // The prompt requires it for new generations; the UI can also recover
+  // guide rows from older "Good for / Watch / Next move" prose.
+  guideRows: z.array(z.object({
+    label: z.enum(["Best Used For", "Move Carefully With", "Your Next Move"]),
+    body: z.string(),
+  })).min(2).max(3).optional(),
   evidenceCaption: z.string(),
   nextTabBridge: z.string().optional(),
+});
+const TabEditorialGenerationSchema = TabEditorialSchema.extend({
+  guideRows: z.array(z.object({
+    label: z.enum(["Best Used For", "Move Carefully With", "Your Next Move"]),
+    body: z.string(),
+  })).min(3).max(3),
 });
 
 // Plain z.string() — .refine() doesn't translate into JSON Schema, so the AI
@@ -375,10 +388,14 @@ export type TeacherReading = z.infer<typeof TeacherReadingSchema>;
 // Lean schema used for the main teacher generation call. The current V4 page
 // only requires tabs, overview, and timing; optional sidebars have deterministic
 // UI fallbacks and can be generated in smaller follow-up calls later.
-export const TeacherReadingGenerationSchema = TeacherReadingSchema.pick({
-  tabs: true,
-  overview: true,
-  timing: true,
+export const TeacherReadingGenerationSchema = TeacherReadingSchema.extend({
+  tabs: z.object({
+    "overview": TabEditorialGenerationSchema,
+    "life-themes": TabEditorialGenerationSchema,
+    "place-field": TabEditorialGenerationSchema,
+    "what-shifts": TabEditorialGenerationSchema,
+    "timing": TabEditorialGenerationSchema,
+  }),
 });
 
 /**
