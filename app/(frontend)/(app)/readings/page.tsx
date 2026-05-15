@@ -60,7 +60,38 @@ export default async function ReadingsPage({
 
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
-  const { data, count } = await q.range(from, to);
+  const { data, count, error } = await q.range(from, to);
+
+  // Diagnostic: a recent preview was showing "1-0 OF 63" — count returned
+  // but data was empty. The original code swallowed any error from the
+  // query, so the real cause never surfaced. Log it loudly until we
+  // identify the root cause; remove once the underlying bug is fixed.
+  if (error) {
+    console.error("[readings] query error:", {
+      user_id: user.id,
+      page,
+      sort,
+      typeFilter,
+      from,
+      to,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+    });
+  } else if ((count ?? 0) > 0 && (data?.length ?? 0) === 0) {
+    console.warn("[readings] count/data mismatch", {
+      user_id: user.id,
+      page,
+      sort,
+      typeFilter,
+      from,
+      to,
+      count,
+      dataLength: data?.length ?? 0,
+    });
+  }
+
   const readings: Reading[] = ((data ?? []) as SupabaseReadingRow[]).map(toReading);
 
   return (
