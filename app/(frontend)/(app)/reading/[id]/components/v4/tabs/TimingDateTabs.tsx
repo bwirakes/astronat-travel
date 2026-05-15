@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 export interface TimingTab {
     id: string;
     label: string;
@@ -15,6 +13,7 @@ interface Props {
     onTabChange: (tabId: string) => void;
     /** Optional per-tab counts to display next to the label. */
     counts?: Record<string, number>;
+    compact?: boolean;
 }
 
 /** Day-offset windows for trip readings (90-day axis, lookback −7d). */
@@ -47,64 +46,91 @@ export function rowInTab(
 }
 
 const FM = "var(--font-mono)";
-const FB = "var(--font-body)";
-
 const CONTAINER: React.CSSProperties = {
     display: "flex",
-    gap: "0.4rem",
+    gap: "0.22rem",
     flexWrap: "wrap",
-    margin: "0 0 var(--space-md) 0",
+    margin: 0,
     padding: "0.25rem",
-    background: "color-mix(in oklab, var(--surface-border) 30%, transparent)",
-    borderRadius: "var(--radius-md)",
+    background: "color-mix(in oklab, var(--surface) 72%, var(--bg))",
+    border: "1px solid color-mix(in oklab, var(--text-primary) 12%, var(--surface-border))",
+    borderRadius: "var(--radius-sm)",
     width: "fit-content",
 };
 
 const BUTTON_BASE: React.CSSProperties = {
-    fontFamily: FB,
-    fontSize: "0.78rem",
-    fontWeight: 500,
-    padding: "0.45rem 0.95rem",
-    borderRadius: "calc(var(--radius-md) - 0.2rem)",
-    // Longhand so the active-state borderColor override doesn't clash.
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontFamily: FM,
+    fontSize: "0.62rem",
+    letterSpacing: "0.13em",
+    textTransform: "uppercase",
+    fontWeight: 600,
+    padding: "0.48rem 0.68rem 0.43rem",
     borderWidth: 1,
     borderStyle: "solid",
     borderColor: "transparent",
+    borderRadius: "calc(var(--radius-sm) - 2px)",
     background: "transparent",
     color: "var(--text-secondary)",
     cursor: "pointer",
-    transition: "background 150ms ease, color 150ms ease",
+    transition: "background 150ms ease, border-color 150ms ease, color 150ms ease, opacity 150ms ease",
     whiteSpace: "nowrap",
+    opacity: 0.8,
 };
 
 const BUTTON_ACTIVE: React.CSSProperties = {
     ...BUTTON_BASE,
-    background: "var(--surface)",
-    color: "var(--text-primary)",
-    fontWeight: 600,
-    borderColor: "var(--surface-border)",
-    boxShadow: "0 1px 2px color-mix(in oklab, black 6%, transparent)",
+    background: "color-mix(in oklab, var(--color-y2k-blue) 7%, var(--surface))",
+    borderColor: "color-mix(in oklab, var(--color-y2k-blue) 34%, var(--surface-border))",
+    color: "var(--color-y2k-blue)",
+    fontWeight: 800,
+    opacity: 1,
 };
 
 const COUNT_BADGE: React.CSSProperties = {
     fontFamily: FM,
-    fontSize: "0.62rem",
-    color: "var(--text-tertiary)",
-    marginLeft: "0.45rem",
-    fontWeight: 500,
+    fontSize: "0.58rem",
+    color: "inherit",
+    marginLeft: "0.32rem",
+    fontWeight: 700,
+    letterSpacing: "0.04em",
+    opacity: 0.62,
 };
+
+function compactTabLabel(tab: TimingTab): { primary: string; caption?: string } {
+    const monthRange = /^Mo\s+(.+)$/i.exec(tab.label);
+    if (monthRange) return { primary: monthRange[1], caption: "months" };
+    return { primary: tab.label };
+}
 
 export default function TimingDateTabs({
     tabs,
     activeTabId,
     onTabChange,
     counts,
+    compact = false,
 }: Props) {
     return (
-        <div style={CONTAINER} role="tablist" aria-label="Timing date range">
+        <div
+            style={{
+                ...CONTAINER,
+                ...(compact
+                    ? {
+                          display: "grid",
+                          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                          width: "100%",
+                      }
+                    : null),
+            }}
+            role="tablist"
+            aria-label="Timing date range"
+        >
             {tabs.map((tab) => {
                 const active = tab.id === activeTabId;
                 const count = counts?.[tab.id];
+                const compactLabel = compactTabLabel(tab);
                 return (
                     <button
                         key={tab.id}
@@ -113,11 +139,50 @@ export default function TimingDateTabs({
                         aria-controls={`timing-tab-panel-${tab.id}`}
                         type="button"
                         onClick={() => onTabChange(tab.id)}
-                        style={active ? BUTTON_ACTIVE : BUTTON_BASE}
+                        style={{
+                            ...(active ? BUTTON_ACTIVE : BUTTON_BASE),
+                            ...(compact
+                                ? {
+                                      padding: "0.55rem 0.42rem 0.5rem",
+                                      textAlign: "center",
+                                      justifyContent: "center",
+                                      gridColumn: tab.id === "all" ? "1 / -1" : undefined,
+                                  }
+                                : null),
+                        }}
                     >
-                        {tab.label}
-                        {typeof count === "number" && (
-                            <span style={COUNT_BADGE}>· {count}</span>
+                        {compact ? (
+                            <span style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                gap: "0.14rem",
+                                lineHeight: 1,
+                            }}>
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.28rem" }}>
+                                    {compactLabel.primary}
+                                    {typeof count === "number" && (
+                                        <span style={{ ...COUNT_BADGE, marginLeft: 0 }}>· {count}</span>
+                                    )}
+                                </span>
+                                {compactLabel.caption && (
+                                    <span style={{
+                                        fontSize: "0.48rem",
+                                        letterSpacing: "0.16em",
+                                        color: "var(--text-tertiary)",
+                                        fontWeight: 600,
+                                    }}>
+                                        {compactLabel.caption}
+                                    </span>
+                                )}
+                            </span>
+                        ) : (
+                            <>
+                                {tab.label}
+                                {typeof count === "number" && (
+                                    <span style={COUNT_BADGE}>· {count}</span>
+                                )}
+                            </>
                         )}
                     </button>
                 );

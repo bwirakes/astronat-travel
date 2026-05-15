@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, type ReactElement, type ReactNode } from "react";
 import SectionHead from "../../shared/SectionHead";
 import TabSection from "../../shared/TabSection";
 import type { V4VM } from "./types";
@@ -15,6 +15,11 @@ import TimingDateTabs, {
     type TimingTab as TimingDateTab,
 } from "./TimingDateTabs";
 import { WINDOW_LABELS, WINDOW_RATIONALES, verdictBand, verdictTone } from "@/app/lib/verdict";
+import {
+    HoverCard,
+    HoverCardContent,
+    HoverCardTrigger,
+} from "@/app/components/ui/hover-card";
 
 // ─── Importance ranking (signal vs noise) ────────────────────────────────────
 // Personal transits are sorted chronologically in the VM, so we re-rank by a
@@ -77,6 +82,10 @@ function plainTransitTitle(span: TransitSpan): string {
     return `${capWord(span.transit_planet)} ${verb} your natal ${capWord(span.natal_planet)}`;
 }
 
+function compactTransitLabel(span: TransitSpan): string {
+    return `${capWord(span.transit_planet)} to ${capWord(span.natal_planet)}`;
+}
+
 interface Props {
     vm: V4VM;
     copiedTab?: {
@@ -90,6 +99,25 @@ interface Props {
 const FM = "var(--font-mono)";
 const FB = "var(--font-body)";
 const FP = "var(--font-primary)";
+
+const GANTT_LABEL_COL = "clamp(205px, 21vw, 270px)";
+const GANTT_GRID = `${GANTT_LABEL_COL} minmax(0, 1fr)`;
+const LEDGER_RULE = "color-mix(in oklab, var(--text-primary) 14%, var(--surface-border))";
+const SKY_LEDGER = "color-mix(in oklab, var(--text-primary) 54%, var(--surface-border))";
+
+function useMediaQuery(query: string): boolean {
+    const [matches, setMatches] = useState(false);
+
+    useEffect(() => {
+        const media = window.matchMedia(query);
+        const onChange = () => setMatches(media.matches);
+        onChange();
+        media.addEventListener("change", onChange);
+        return () => media.removeEventListener("change", onChange);
+    }, [query]);
+
+    return matches;
+}
 
 // ─── Date helpers ────────────────────────────────────────────────────────────
 
@@ -107,6 +135,52 @@ function fmtAnchorOffset(anchorISO: string | null | undefined, days: number): st
     const t = new Date(anchorISO).getTime();
     if (!isFinite(t)) return "";
     return fmtMonthDay(new Date(t + days * 86_400_000).toISOString());
+}
+
+function visibleSpanLabel({
+    anchorISO,
+    entryISO,
+    exactISO,
+    exitISO,
+    entryDay,
+    exactDay,
+    exitDay,
+    windowStart,
+    windowEnd,
+    accent,
+}: {
+    anchorISO: string;
+    entryISO: string;
+    exactISO: string;
+    exitISO: string;
+    entryDay: number;
+    exactDay: number;
+    exitDay: number;
+    windowStart: number;
+    windowEnd: number;
+    accent: string;
+}) {
+    const startsBefore = entryDay < windowStart;
+    const endsAfter = exitDay > windowEnd;
+    const visibleStart = startsBefore ? fmtAnchorOffset(anchorISO, windowStart) : fmtMonthDay(entryISO);
+    const visibleEnd = endsAfter ? fmtAnchorOffset(anchorISO, windowEnd) : fmtMonthDay(exitISO);
+    const exactInWindow = exactDay >= windowStart && exactDay <= windowEnd;
+
+    return (
+        <>
+            {startsBefore && <span style={{ color: "var(--text-tertiary)" }}>← </span>}
+            {visibleStart}
+            {" → "}
+            {exactInWindow && (
+                <>
+                    <span style={{ color: accent, fontWeight: 700 }}>{fmtMonthDay(exactISO)}</span>
+                    {" → "}
+                </>
+            )}
+            {visibleEnd}
+            {endsAfter && <span style={{ color: "var(--text-tertiary)" }}> →</span>}
+        </>
+    );
 }
 
 // ─── Verdict headline ───────────────────────────────────────────────────────
@@ -179,42 +253,6 @@ function VerdictHeadline({ vm }: { vm: V4VM }) {
 function WindowFraming({ vm }: { vm: V4VM }) {
     const isRelocation = vm.timeline.grain === "month";
 
-    // Pick the heaviest personal transit (re-rank because vm.transitSpans
-    // is chronological, not by importance).
-    const topTransit = [...vm.transitSpans]
-        .map((s) => ({ s, score: transitImportance(s, vm.goalIds) }))
-        .sort((a, b) => b.score - a.score)[0]?.s;
-
-    // Pick the heaviest sky event that overlaps the window.
-    const universalSpans = vm.universalSkySpans ?? [];
-    const topSky = [...universalSpans]
-        .filter((s) => {
-            // Trip: prefer spans that overlap the −7→+30d "now" zone.
-            // Relocation: prefer spans inside the first 6 months.
-            const cutoff = isRelocation ? 180 : 30;
-            return s.entryDay <= cutoff && s.exitDay >= -7;
-        })
-        .sort((a, b) => (b.severity ?? 0) - (a.severity ?? 0))[0];
-
-    const topTransitTitle = topTransit ? plainTransitTitle(topTransit) : null;
-    const topTransitExact = topTransit ? fmtMonthDay(topTransit.exactISO) : null;
-    const topSkyCopy = topSky
-        ? templateForSpanShape({
-              kind: topSky.kind,
-              planet: topSky.planet,
-              sign: topSky.sign,
-              dignity: topSky.dignity,
-              aspectType: topSky.aspectType,
-              secondaryPlanet: topSky.secondaryPlanet,
-          })
-        : null;
-    const topSkyRange =
-        topSky && topSky.entryISO !== topSky.exitISO
-            ? `${fmtMonthDay(topSky.entryISO)} — ${fmtMonthDay(topSky.exitISO)}`
-            : topSky
-              ? fmtMonthDay(topSky.exactISO)
-              : null;
-
     const para1 = isRelocation
         ? "Here's the year ahead at this place. Outer planets — Saturn, Jupiter, the slow ones — move through your chart for months at a time. Most pass quietly. A few set the tone. Each bar shows when one transit enters, peaks, and clears."
         : "Here's the next 90 days, slowed down. Outer planets sweep across your natal chart for weeks at a time, and a few set the tone for the whole stretch. Each bar is one transit — when it enters orb (close enough to count), when it's exact, when it clears.";
@@ -224,25 +262,6 @@ function WindowFraming({ vm }: { vm: V4VM }) {
             <p style={{ fontFamily: FB, fontSize: "16px", lineHeight: 1.65, color: "var(--text-secondary)", margin: 0, fontWeight: 300 }}>
                 {para1}
             </p>
-            {(topTransitTitle || topSkyCopy) && (
-                <p style={{ fontFamily: FB, fontSize: "16px", lineHeight: 1.65, color: "var(--text-secondary)", margin: 0, fontWeight: 300 }}>
-                    {topTransitTitle && (
-                        <>
-                            {isRelocation ? "The structural pressure of the year is " : "The loudest thing pressing on you is "}
-                            <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>{topTransitTitle}</strong>
-                            {topTransitExact && <>, exact around {topTransitExact}</>}
-                            {topSkyCopy ? ". " : "."}
-                        </>
-                    )}
-                    {topSkyCopy && (
-                        <>
-                            Above that — affecting everyone — <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>{topSkyCopy.title.toLowerCase()}</strong>
-                            {topSkyRange && <> runs {topSkyRange}</>}.{" "}
-                            <span style={{ color: "var(--text-tertiary)", fontStyle: "italic" }}>That's the assignment for this stretch.</span>
-                        </>
-                    )}
-                </p>
-            )}
         </div>
     );
 }
@@ -470,16 +489,10 @@ function MonthlyFieldSummary({ vm }: { vm: V4VM }) {
     );
 }
 
-function FieldSummary({ vm }: { vm: V4VM }) {
-    // Relocation readings render a 12-month strip from monthlySeries instead
-    // of 90 daily bars from dailySeries. Same visual primitive — fewer, wider
-    // bars; month labels in the tooltip; "Move" anchor instead of "Trip."
-    if (vm.timeline.grain === "month") {
-        return <MonthlyFieldSummary vm={vm} />;
-    }
-
+function DailyFieldSummary({ vm }: { vm: V4VM }) {
     const { dailySeries, timingPercentile, travelWindows, travelDateISO, rangeHighlights } = vm;
     const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+    const [nowTime] = useState(() => Date.now());
     if (!dailySeries.length || !travelWindows[0]) return null;
     const userScore = travelWindows[0].score;
 
@@ -498,14 +511,14 @@ function FieldSummary({ vm }: { vm: V4VM }) {
     const anchorDate = anchor ? fmtMonthDay(anchor.iso) : "";
 
     const daysToTrip = travelDateISO
-        ? Math.round((new Date(travelDateISO).getTime() - Date.now()) / 86_400_000)
+        ? Math.round((new Date(travelDateISO).getTime() - nowTime) / 86_400_000)
         : null;
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
             <p style={{ fontFamily: FB, fontSize: "0.95rem", color: "var(--text-secondary)", margin: 0, lineHeight: 1.55 }}>
                 {daysToTrip !== null && daysToTrip > 0 && (
-                    <>You're <strong style={{ color: "var(--text-primary)", fontWeight: 700 }}>{daysToTrip} {daysToTrip === 1 ? "day" : "days"}</strong> out from this trip. </>
+                    <>You&rsquo;re <strong style={{ color: "var(--text-primary)", fontWeight: 700 }}>{daysToTrip} {daysToTrip === 1 ? "day" : "days"}</strong> out from this trip. </>
                 )}
                 Your dates score <strong style={{ color: "var(--text-primary)", fontWeight: 700 }}>{userScore}/100</strong>
                 {" — "}
@@ -682,6 +695,17 @@ function FieldSummary({ vm }: { vm: V4VM }) {
     );
 }
 
+function FieldSummary({ vm }: { vm: V4VM }) {
+    // Relocation readings render a 12-month strip from monthlySeries instead
+    // of 90 daily bars from dailySeries. Same visual primitive — fewer, wider
+    // bars; month labels in the tooltip; "Move" anchor instead of "Trip."
+    if (vm.timeline.grain === "month") {
+        return <MonthlyFieldSummary vm={vm} />;
+    }
+
+    return <DailyFieldSummary vm={vm} />;
+}
+
 // ─── Transit Gantt ───────────────────────────────────────────────────────────
 
 function planetGlyph(name: string): string {
@@ -689,17 +713,129 @@ function planetGlyph(name: string): string {
     return PLANET_GLYPH[key] ?? "✦";
 }
 
+function TimingHoverContent({
+    accent,
+    eyebrow,
+    title,
+    meta,
+    domain,
+    body,
+}: {
+    accent: string;
+    eyebrow: string;
+    title: string;
+    meta: ReactNode;
+    domain?: string;
+    body?: ReactNode;
+}) {
+    return (
+        <>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.55rem" }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: accent }} />
+                <h4 style={{
+                    fontFamily: FP,
+                    fontSize: "1.15rem",
+                    textTransform: "uppercase",
+                    color: "var(--text-primary)",
+                    letterSpacing: "0.02em",
+                    margin: 0,
+                    lineHeight: 1,
+                }}>
+                    {title}
+                </h4>
+            </div>
+            <div style={{
+                fontFamily: FM,
+                fontSize: "0.6rem",
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                color: "var(--text-tertiary)",
+                marginBottom: "0.75rem",
+            }}>
+                {eyebrow} | {meta}
+            </div>
+            {domain && (
+                <div style={{
+                    fontFamily: FM,
+                    fontSize: "0.6rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.1em",
+                    color: accent,
+                    marginBottom: "0.5rem",
+                }}>
+                    {domain}
+                </div>
+            )}
+            {body && (
+                <p style={{
+                    fontFamily: FB,
+                    fontSize: "0.9rem",
+                    lineHeight: 1.5,
+                    color: "var(--text-secondary)",
+                    margin: 0,
+                }}>
+                    {body}
+                </p>
+            )}
+        </>
+    );
+}
+
+function TimingHoverCard({
+    children,
+    accent,
+    eyebrow,
+    title,
+    meta,
+    domain,
+    body,
+}: {
+    children: ReactElement;
+    accent: string;
+    eyebrow: string;
+    title: string;
+    meta: ReactNode;
+    domain?: string;
+    body?: ReactNode;
+}) {
+    return (
+        <HoverCard openDelay={140} closeDelay={120}>
+            <HoverCardTrigger asChild>
+                {children}
+            </HoverCardTrigger>
+            <HoverCardContent
+                sideOffset={8}
+                className="planet-hover-card-pop"
+                style={{ zIndex: 9999, width: "320px" }}
+            >
+                <TimingHoverContent
+                    accent={accent}
+                    eyebrow={eyebrow}
+                    title={title}
+                    meta={meta}
+                    domain={domain}
+                    body={body}
+                />
+            </HoverCardContent>
+        </HoverCard>
+    );
+}
+
 function GanttRow({
     span,
     windowStart,
     windowEnd,
+    anchorISO,
     todayDay,
+    compact = false,
     headline = false,
 }: {
     span: TransitSpan;
     windowStart: number;
     windowEnd: number;
+    anchorISO: string;
     todayDay: number | null;
+    compact?: boolean;
     /** When true, render at full prominence (top tier). When false, render
      *  smaller and muted — these are the "background" rows below the fold. */
     headline?: boolean;
@@ -715,69 +851,167 @@ function GanttRow({
     const entryPct = toPct(clampedEntry);
     const widthPct = toPct(clampedExit) - entryPct;
 
-    const accent = span.benefic ? "var(--sage)" : "var(--color-spiced-life)";
+    const accent = span.benefic
+        ? "color-mix(in oklab, var(--sage) 84%, var(--text-primary))"
+        : "color-mix(in oklab, var(--color-spiced-life) 88%, var(--text-primary))";
+    const accentSoft = span.benefic
+        ? "var(--sage-soft)"
+        : "color-mix(in oklab, var(--color-spiced-life) 24%, transparent)";
     const meaning = transitOneLiner(span);
     const titleLay = plainTransitTitle(span);
-
-    // Tooltip horizontal anchor: center over the bar, but clamp so it doesn't
-    // overflow the right edge of the track.
-    const centerPct = entryPct + widthPct / 2;
-    const tooltipLeft = Math.max(22, Math.min(78, centerPct));
+    const chartLabel = compactTransitLabel(span);
+    const toneLabel = span.benefic ? "Lift" : "Friction";
 
     // Row size scales with tier — headliners get the full treatment; backdrop
     // rows shrink so the eye isn't fighting equal-weight noise.
-    const rowPad = headline ? "0.7rem 0" : "0.4rem 0";
-    const trackHeight = headline ? 26 : 18;
-    const barHeight = headline ? 12 : 8;
-    const titleSize = headline ? "0.92rem" : "0.78rem";
-    const subSize = headline ? "0.72rem" : "0.66rem";
+    const rowPad = compact ? "1rem 0" : headline ? "0.95rem 0" : "0.65rem 0";
+    const trackHeight = compact ? 28 : headline ? 30 : 22;
+    const barHeight = headline ? 9 : 7;
+    const titleSize = compact ? "1.18rem" : headline ? "1.08rem" : "0.95rem";
+    const subSize = compact ? "0.72rem" : headline ? "0.72rem" : "0.66rem";
 
-    return (
+    const row = (
         <div
-            style={{ display: "grid", gridTemplateColumns: "180px 1fr", gap: "var(--space-sm)", alignItems: "center", padding: rowPad }}
+            style={{
+                display: "grid",
+                gridTemplateColumns: compact ? "minmax(0, 1fr)" : GANTT_GRID,
+                gap: compact ? "0.75rem" : "var(--space-lg)",
+                alignItems: compact ? "stretch" : "center",
+                padding: rowPad,
+                borderTop: `1px solid ${LEDGER_RULE}`,
+                cursor: "zoom-in",
+            }}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
         >
-            {/* Row label — plain English first, chart-receipt second */}
-            <div style={{ display: "flex", alignItems: "flex-start", gap: "0.45rem", minWidth: 0 }}>
-                <span style={{ fontSize: headline ? "1rem" : "0.85rem", color: accent, flexShrink: 0, lineHeight: 1.3 }}>
+            {/* Row label — chart receipt only; interpretation lives in hover. */}
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem", minWidth: 0 }}>
+                <span style={{
+                    fontFamily: FP,
+                    fontSize: headline ? "1.15rem" : "0.95rem",
+                    color: accent,
+                    flexShrink: 0,
+                    lineHeight: 1,
+                    transform: "translateY(0.1rem)",
+                    width: "1.1rem",
+                    textAlign: "center",
+                }}>
                     {planetGlyph(span.transit_planet)}
                 </span>
-                <div style={{ minWidth: 0 }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                    {!compact && (
+                        <div style={{
+                            fontFamily: FM,
+                            fontSize: "0.56rem",
+                            letterSpacing: "0.2em",
+                            textTransform: "uppercase",
+                            color: "var(--text-tertiary)",
+                            fontWeight: 700,
+                            marginBottom: "0.22rem",
+                            lineHeight: 1.65,
+                        }}>
+                            <span style={{ color: accent }}>{toneLabel}</span>
+                            <span> · natal · {span.aspect.toLowerCase()}</span>
+                        </div>
+                    )}
                     <div style={{
-                        fontFamily: FB,
-                        fontSize: titleSize,
-                        fontWeight: headline ? 600 : 500,
-                        color: headline ? "var(--text-primary)" : "var(--text-secondary)",
-                        lineHeight: 1.25,
+                        display: compact ? "flex" : "block",
+                        alignItems: compact ? "flex-start" : undefined,
+                        justifyContent: compact ? "space-between" : undefined,
+                        gap: compact ? "0.75rem" : undefined,
                     }}>
-                        {titleLay}
+                    <div style={{
+                        fontFamily: FP,
+                        fontSize: titleSize,
+                        fontWeight: 500,
+                        color: headline ? "var(--text-primary)" : "var(--text-secondary)",
+                        lineHeight: 1.08,
+                    }}>
+                        {chartLabel}
                         {span.retrograde && (
                             <span style={{ marginLeft: 4, fontFamily: FM, fontSize: "0.7rem", color: "var(--text-tertiary)", fontWeight: 500 }}>℞</span>
                         )}
                     </div>
+                        {compact && (
+                            <span style={{
+                                fontFamily: FM,
+                                fontSize: "0.54rem",
+                                letterSpacing: "0.14em",
+                                textTransform: "uppercase",
+                                color: accent,
+                                border: `1px solid ${accentSoft}`,
+                                borderRadius: "999px",
+                                padding: "0.18rem 0.42rem 0.16rem",
+                                lineHeight: 1,
+                                flexShrink: 0,
+                                transform: "translateY(0.05rem)",
+                            }}>
+                                {toneLabel}
+                            </span>
+                        )}
+                    </div>
+                    {compact && (
+                        <div style={{
+                            fontFamily: FM,
+                            fontSize: "0.54rem",
+                            letterSpacing: "0.16em",
+                            textTransform: "uppercase",
+                            color: "var(--text-tertiary)",
+                            fontWeight: 700,
+                            marginTop: "0.42rem",
+                            lineHeight: 1.45,
+                        }}>
+                            Natal · {span.aspect.toLowerCase()}
+                        </div>
+                    )}
                     <div style={{
                         fontFamily: FM,
                         fontSize: subSize,
                         letterSpacing: "0.06em",
                         color: "var(--text-tertiary)",
-                        marginTop: "0.1rem",
+                        marginTop: "0.32rem",
+                        lineHeight: 1.7,
                     }}>
-                        {fmtMonthDay(span.entryISO)} → <span style={{ color: accent, fontWeight: 600 }}>{fmtMonthDay(span.exactISO)}</span> → {fmtMonthDay(span.exitISO)}
+                        {visibleSpanLabel({
+                            anchorISO,
+                            entryISO: span.entryISO,
+                            exactISO: span.exactISO,
+                            exitISO: span.exitISO,
+                            entryDay: span.entryDay,
+                            exactDay: span.exactDay,
+                            exitDay: span.exitDay,
+                            windowStart,
+                            windowEnd,
+                            accent,
+                        })}
                     </div>
                 </div>
             </div>
 
             {/* Bar track — overflow visible so tooltip can extend out */}
-            <div style={{ position: "relative", height: trackHeight, overflow: "visible" }}>
+            <div style={{
+                position: "relative",
+                height: trackHeight,
+                overflow: "visible",
+                marginLeft: compact ? "1.85rem" : 0,
+            }}>
+                <div style={{
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    top: "50%",
+                    height: 1,
+                    background: LEDGER_RULE,
+                    opacity: 0.9,
+                }} />
                 {/* TODAY line */}
                 {todayDay !== null && todayDay >= windowStart && todayDay <= windowEnd && (
                     <div style={{
                         position: "absolute",
                         left: `${toPct(todayDay)}%`,
-                        top: -4,
-                        bottom: -4,
-                        width: 1,
+                        top: -20,
+                        bottom: -20,
+                        width: 2,
                         background: "var(--color-y2k-blue)",
                         opacity: 0.55,
                         zIndex: 2,
@@ -794,46 +1028,25 @@ function GanttRow({
                     height: barHeight,
                     borderRadius: barHeight / 2,
                     background: accent,
-                    opacity: hovered ? 1 : headline ? 0.75 : 0.45,
+                    opacity: hovered ? 1 : headline ? 0.95 : 0.72,
                     transition: "opacity 150ms ease, transform 150ms ease",
-                    boxShadow: hovered ? `0 2px 8px color-mix(in oklab, ${accent} 40%, transparent)` : "none",
+                    boxShadow: hovered ? `0 0 0 2px ${accentSoft}` : "none",
                 }} />
-
-                {/* Hover tooltip — astrological context for THIS transit */}
-                {hovered && (
-                    <div style={{
-                        position: "absolute",
-                        left: `${tooltipLeft}%`,
-                        bottom: "calc(100% + 10px)",
-                        transform: "translateX(-50%)",
-                        zIndex: 30,
-                        background: "var(--color-charcoal)",
-                        color: "var(--color-eggshell)",
-                        borderRadius: "var(--radius-sm)",
-                        padding: "0.6rem 0.85rem",
-                        minWidth: 240,
-                        maxWidth: 320,
-                        boxShadow: "0 6px 20px rgba(0,0,0,0.32)",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "0.45rem",
-                        pointerEvents: "none",
-                    }}>
-                        <div style={{ fontFamily: FM, fontSize: "0.62rem", letterSpacing: "0.18em", textTransform: "uppercase", color: accent, fontWeight: 700 }}>
-                            {span.transit_planet}{span.retrograde ? " ℞" : ""} {span.aspect} natal {span.natal_planet}
-                        </div>
-                        <div style={{ fontFamily: FM, fontSize: "0.66rem", letterSpacing: "0.04em", color: "var(--color-eggshell)", opacity: 0.7 }}>
-                            {fmtMonthDay(span.entryISO)} → <span style={{ color: accent, fontWeight: 700, opacity: 1 }}>{fmtMonthDay(span.exactISO)}</span> → {fmtMonthDay(span.exitISO)} · {span.peak_orb.toFixed(1)}° orb
-                        </div>
-                        {meaning && (
-                            <div style={{ fontFamily: FB, fontSize: "0.82rem", lineHeight: 1.45, color: "var(--color-eggshell)", fontStyle: "italic" }}>
-                                {meaning}
-                            </div>
-                        )}
-                    </div>
-                )}
             </div>
         </div>
+    );
+
+    return (
+        <TimingHoverCard
+            accent={accent}
+            eyebrow={`${span.transit_planet}${span.retrograde ? " ℞" : ""} ${span.aspect} natal ${span.natal_planet}`}
+            title={titleLay}
+            meta={<>{fmtMonthDay(span.entryISO)} → {fmtMonthDay(span.exactISO)} → {fmtMonthDay(span.exitISO)} · {span.peak_orb.toFixed(1)}° orb</>}
+            domain="Personal transit"
+            body={meaning}
+        >
+            {row}
+        </TimingHoverCard>
     );
 }
 
@@ -862,12 +1075,14 @@ function SkyGanttRow({
     windowStart,
     windowEnd,
     todayDay,
+    compact = false,
     headline = false,
 }: {
     span: UniversalSkySpan;
     windowStart: number;
     windowEnd: number;
     todayDay: number | null;
+    compact?: boolean;
     headline?: boolean;
 }) {
     const [hovered, setHovered] = useState(false);
@@ -882,14 +1097,9 @@ function SkyGanttRow({
     const entryPct = toPct(clampedEntry);
     const widthPct = isZeroWidth ? 0 : toPct(clampedExit) - entryPct;
 
-    // Sky rows use a distinct palette so they don't compete with personal transits.
-    // Benefic = soft sage tint (mirrors personal scheme); challenging = violet/slate.
-    const accent = span.benefic
-        ? "color-mix(in oklab, var(--sage) 70%, var(--text-tertiary))"
-        : "color-mix(in oklab, var(--color-spiced-life) 50%, var(--text-tertiary))";
-
-    const centerPct = entryPct + widthPct / 2;
-    const tooltipLeft = Math.max(22, Math.min(78, centerPct));
+    // Sky rows stay neutral by default so universal events do not read as
+    // personal lift/friction.
+    const accent = SKY_LEDGER;
 
     const kindLabel = fmtSkyKindLabel(span.kind);
     const layCopy = templateForSpanShape({
@@ -901,85 +1111,148 @@ function SkyGanttRow({
         secondaryPlanet: span.secondaryPlanet,
     });
 
-    const rowPad = headline ? "0.7rem 0" : "0.4rem 0";
-    const trackHeight = headline ? 26 : 18;
-    const barHeight = headline ? 10 : 7;
-    const titleSize = headline ? "0.92rem" : "0.78rem";
+    const rowPad = compact ? "1rem 0" : headline ? "0.95rem 0" : "0.65rem 0";
+    const trackHeight = compact ? 28 : headline ? 30 : 22;
+    const barHeight = headline ? 9 : 7;
+    const titleSize = compact ? "1.18rem" : headline ? "1.08rem" : "0.95rem";
 
-    return (
+    const row = (
         <div
             style={{
                 display: "grid",
-                gridTemplateColumns: "180px 1fr",
-                gap: "var(--space-sm)",
-                alignItems: "start",
+                gridTemplateColumns: compact ? "minmax(0, 1fr)" : GANTT_GRID,
+                gap: compact ? "0.75rem" : "var(--space-lg)",
+                alignItems: compact ? "stretch" : "center",
                 padding: rowPad,
+                borderTop: `1px solid ${LEDGER_RULE}`,
+                cursor: "zoom-in",
             }}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
         >
-            {/* Row label — dashed left border marks this as a sky row.
-                Plain-English title leads; chart-receipt comes last. */}
+            {/* Row label — event receipt only; reading lives in hover. */}
             <div style={{
                 display: "flex",
                 alignItems: "flex-start",
-                gap: "0.4rem",
+                gap: "0.75rem",
                 minWidth: 0,
-                paddingLeft: "0.5rem",
-                borderLeft: `1px dashed color-mix(in oklab, ${accent} 60%, transparent)`,
             }}>
-                <span style={{ fontSize: headline ? "1rem" : "0.85rem", color: accent, flexShrink: 0, opacity: 0.85, lineHeight: 1.4 }}>
+                <span style={{
+                    fontFamily: FP,
+                    fontSize: headline ? "1.15rem" : "0.95rem",
+                    color: accent,
+                    flexShrink: 0,
+                    opacity: 0.85,
+                    lineHeight: 1,
+                    transform: "translateY(0.1rem)",
+                    width: "1.1rem",
+                    textAlign: "center",
+                }}>
                     {planetGlyph(span.planet)}
                 </span>
-                <div style={{ minWidth: 0 }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                    {!compact && (
+                        <div style={{
+                            fontFamily: FM,
+                            fontSize: "0.55rem",
+                            letterSpacing: "0.18em",
+                            textTransform: "uppercase",
+                            color: accent,
+                            fontWeight: 700,
+                            marginBottom: "0.22rem",
+                            lineHeight: 1.65,
+                        }}>
+                            Sky · {kindLabel}
+                        </div>
+                    )}
                     <div style={{
-                        fontFamily: FM,
-                        fontSize: "0.55rem",
-                        letterSpacing: "0.18em",
-                        textTransform: "uppercase",
-                        color: "var(--text-tertiary)",
-                        fontWeight: 700,
-                        marginBottom: "0.15rem",
+                        display: compact ? "flex" : "block",
+                        alignItems: compact ? "flex-start" : undefined,
+                        justifyContent: compact ? "space-between" : undefined,
+                        gap: compact ? "0.75rem" : undefined,
                     }}>
-                        SKY · {kindLabel}
-                    </div>
                     <div style={{
-                        fontFamily: FB,
+                        fontFamily: FP,
                         fontSize: titleSize,
-                        fontWeight: headline ? 600 : 500,
+                        fontWeight: 500,
                         color: headline ? "var(--text-primary)" : "var(--text-secondary)",
                         whiteSpace: "normal",
                         wordBreak: "break-word",
-                        lineHeight: 1.25,
+                        lineHeight: 1.08,
                     }}>
-                        {layCopy.title}
+                        {span.label}
                     </div>
-                    {headline && (
+                        {compact && (
+                            <span style={{
+                                fontFamily: FM,
+                                fontSize: "0.54rem",
+                                letterSpacing: "0.14em",
+                                textTransform: "uppercase",
+                                color: accent,
+                                border: `1px solid ${LEDGER_RULE}`,
+                                borderRadius: "999px",
+                                padding: "0.18rem 0.42rem 0.16rem",
+                                lineHeight: 1,
+                                flexShrink: 0,
+                                transform: "translateY(0.05rem)",
+                            }}>
+                                Sky
+                            </span>
+                        )}
+                    </div>
+                    {compact && (
                         <div style={{
-                            fontFamily: FB,
-                            fontSize: "0.72rem",
-                            fontStyle: "italic",
+                            fontFamily: FM,
+                            fontSize: "0.54rem",
+                            letterSpacing: "0.16em",
+                            textTransform: "uppercase",
                             color: "var(--text-tertiary)",
-                            whiteSpace: "normal",
-                            marginTop: "0.15rem",
-                            lineHeight: 1.35,
+                            fontWeight: 700,
+                            marginTop: "0.42rem",
+                            lineHeight: 1.45,
                         }}>
-                            {layCopy.body}
+                            {kindLabel}
                         </div>
                     )}
+                    <div style={{
+                        fontFamily: FM,
+                        fontSize: compact ? "0.72rem" : headline ? "0.72rem" : "0.66rem",
+                        letterSpacing: "0.06em",
+                        color: "var(--text-tertiary)",
+                        marginTop: "0.32rem",
+                        lineHeight: 1.7,
+                    }}>
+                        {isZeroWidth
+                            ? fmtMonthDay(span.exactISO)
+                            : <>{fmtMonthDay(span.entryISO)} → <span style={{ color: accent, fontWeight: 600 }}>{fmtMonthDay(span.exactISO)}</span> → {fmtMonthDay(span.exitISO)}</>}
+                    </div>
                 </div>
             </div>
 
             {/* Bar track */}
-            <div style={{ position: "relative", height: trackHeight, overflow: "visible" }}>
+            <div style={{
+                position: "relative",
+                height: trackHeight,
+                overflow: "visible",
+                marginLeft: compact ? "1.85rem" : 0,
+            }}>
+                <div style={{
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    top: "50%",
+                    height: 1,
+                    background: LEDGER_RULE,
+                    opacity: 0.9,
+                }} />
                 {/* TODAY line */}
                 {todayDay !== null && todayDay >= windowStart && todayDay <= windowEnd && (
                     <div style={{
                         position: "absolute",
                         left: `${toPct(todayDay)}%`,
-                        top: -4,
-                        bottom: -4,
-                        width: 1,
+                        top: -20,
+                        bottom: -20,
+                        width: 2,
                         background: "var(--color-y2k-blue)",
                         opacity: 0.55,
                         zIndex: 2,
@@ -994,14 +1267,14 @@ function SkyGanttRow({
                         top: "50%",
                         transform: "translate(-50%, -50%)",
                         width: 2,
-                        height: headline ? 18 : 14,
+                        height: headline ? 24 : 18,
                         background: accent,
-                        opacity: hovered ? 1 : headline ? 0.7 : 0.45,
+                        opacity: hovered ? 1 : headline ? 0.9 : 0.7,
                         borderRadius: 1,
                         transition: "opacity 150ms ease",
                     }} />
                 ) : (
-                    /* Wide bar — dashed/striped pattern to distinguish from personal */
+                    /* Wide bar — solid neutral for universal sky events. */
                     <div style={{
                         position: "absolute",
                         left: `${entryPct}%`,
@@ -1010,93 +1283,213 @@ function SkyGanttRow({
                         transform: "translateY(-50%)",
                         height: barHeight,
                         borderRadius: barHeight / 2,
-                        background: `repeating-linear-gradient(135deg, ${accent} 0 6px, color-mix(in oklab, ${accent} 30%, transparent) 6px 12px)`,
-                        opacity: hovered ? 0.95 : headline ? 0.6 : 0.4,
-                        transition: "opacity 150ms ease",
+                        background: accent,
+                        opacity: hovered ? 1 : headline ? 0.78 : 0.58,
+                        transition: "opacity 150ms ease, box-shadow 150ms ease",
+                        boxShadow: hovered ? `0 0 0 1px ${LEDGER_RULE}` : "none",
                     }} />
-                )}
-
-                {/* Hover tooltip */}
-                {hovered && (
-                    <div style={{
-                        position: "absolute",
-                        left: `${tooltipLeft}%`,
-                        bottom: "calc(100% + 10px)",
-                        transform: "translateX(-50%)",
-                        zIndex: 30,
-                        background: "var(--color-charcoal)",
-                        color: "var(--color-eggshell)",
-                        borderRadius: "var(--radius-sm)",
-                        padding: "0.6rem 0.85rem",
-                        minWidth: 240,
-                        maxWidth: 320,
-                        boxShadow: "0 6px 20px rgba(0,0,0,0.32)",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "0.45rem",
-                        pointerEvents: "none",
-                    }}>
-                        <div style={{ fontFamily: FM, fontSize: "0.62rem", letterSpacing: "0.18em", textTransform: "uppercase", color: accent, fontWeight: 700 }}>
-                            SKY · {span.label}
-                        </div>
-                        <div style={{ fontFamily: FM, fontSize: "0.66rem", letterSpacing: "0.04em", color: "var(--color-eggshell)", opacity: 0.7 }}>
-                            {isZeroWidth
-                                ? fmtMonthDay(span.exactISO)
-                                : <>{fmtMonthDay(span.entryISO)} → <span style={{ color: accent, fontWeight: 700, opacity: 1 }}>{fmtMonthDay(span.exactISO)}</span> → {fmtMonthDay(span.exitISO)}</>}
-                            {span.dignity && span.dignity !== "neutral" && ` · ${span.dignity}`}
-                        </div>
-                        <div style={{ fontFamily: FB, fontSize: "0.78rem", lineHeight: 1.45, color: "var(--color-eggshell)", opacity: 0.85, fontStyle: "italic" }}>
-                            Affects everyone — independent of where you are.
-                        </div>
-                    </div>
                 )}
             </div>
         </div>
     );
+
+    return (
+        <TimingHoverCard
+            accent={accent}
+            eyebrow={`Sky · ${span.label}`}
+            title={layCopy.title}
+            meta={isZeroWidth
+                ? fmtMonthDay(span.exactISO)
+                : <>{fmtMonthDay(span.entryISO)} → {fmtMonthDay(span.exactISO)} → {fmtMonthDay(span.exitISO)}{span.dignity && span.dignity !== "neutral" ? ` · ${span.dignity}` : ""}</>}
+            domain="Universal sky"
+            body={<>{layCopy.body}<span style={{ display: "block", marginTop: "0.45rem", color: "var(--text-tertiary)" }}>Affects everyone, independent of where you are.</span></>}
+        >
+            {row}
+        </TimingHoverCard>
+    );
 }
 
-// Trip-grain (week) gantt: -7d → +90d centered loosely on the anchor.
-const TRIP_WINDOW_START = -7;
-const TRIP_WINDOW_END = 90;
+// Trip-grain (week) gantt: active tab domain, with "All" spanning -7d → +90d.
 const TRIP_DAY_MARKERS = [-7, 0, 15, 30, 45, 60, 75, 90];
 
-// Relocation-grain (month) gantt: 0 → +365d (12 months from the move anchor).
+// Relocation-grain (month) gantt: active tab domain, with "All" spanning the year.
 // Markers every 60 days = 7 ticks, which keeps the axis readable without
 // overlapping labels at typical container widths.
-const RELO_WINDOW_START = 0;
-const RELO_WINDOW_END = 365;
 const RELO_DAY_MARKERS = [0, 60, 120, 180, 240, 300, 360];
+
+function markersForTimingTab(tab: TimingDateTab, isRelocation: boolean, compact = false): number[] {
+    if (isRelocation) {
+        if (tab.id === "all") return compact ? [0, 180, 360] : RELO_DAY_MARKERS;
+
+        const [start, end] = tab.range;
+        if (compact) return [start, end];
+
+        const markers = [start];
+        for (let day = Math.ceil((start + 1) / 30) * 30; day < end; day += 30) {
+            markers.push(day);
+        }
+        if (markers[markers.length - 1] !== end) markers.push(end);
+        return markers;
+    }
+
+    if (tab.id === "all") return compact ? [-7, 0, 90] : TRIP_DAY_MARKERS;
+    if (tab.id === "now") return compact ? [-7, 0, 30] : [-7, 0, 15, 30];
+
+    const [start, end] = tab.range;
+    return compact ? [start, end] : [start, Math.round((start + end) / 2), end];
+}
+
+type EventLayer = "natal" | "sky";
+
+function EventLayerToggle({
+    activeLayer,
+    onChange,
+    natalCount,
+    skyCount,
+    compact = false,
+}: {
+    activeLayer: EventLayer;
+    onChange: (layer: EventLayer) => void;
+    natalCount: number;
+    skyCount: number;
+    compact?: boolean;
+}) {
+    const layers: Array<{ id: EventLayer; label: string; count: number; hint: string }> = [
+        { id: "natal", label: "Natal", count: natalCount, hint: "Personal transits to your birth chart" },
+        { id: "sky", label: "Sky", count: skyCount, hint: "Universal events affecting everyone" },
+    ];
+
+    return (
+        <div
+            role="tablist"
+            aria-label="Timing event layer"
+            style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.22rem",
+                padding: "0.25rem",
+                background: "color-mix(in oklab, var(--surface) 72%, var(--bg))",
+                border: `1px solid ${LEDGER_RULE}`,
+                borderRadius: "var(--radius-sm)",
+                width: compact ? "100%" : "fit-content",
+            }}
+        >
+            <span style={{
+                fontFamily: FM,
+                fontSize: "0.56rem",
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: "var(--text-tertiary)",
+                fontWeight: 700,
+                whiteSpace: "nowrap",
+                padding: "0 0.42rem",
+                flexShrink: 0,
+            }}>
+                Layer
+            </span>
+            {layers.map((layer) => {
+                const active = layer.id === activeLayer;
+                const disabled = layer.count === 0;
+                return (
+                    <button
+                        key={layer.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        aria-label={`${layer.label} events: ${layer.hint}`}
+                        disabled={disabled}
+                        onClick={() => onChange(layer.id)}
+                        style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontFamily: FM,
+                            fontSize: "0.62rem",
+                            letterSpacing: "0.13em",
+                            textTransform: "uppercase",
+                            fontWeight: active ? 700 : 500,
+                            padding: compact ? "0.55rem 0.42rem 0.5rem" : "0.48rem 0.68rem 0.43rem",
+                            borderWidth: 1,
+                            borderStyle: "solid",
+                            borderRadius: "calc(var(--radius-sm) - 2px)",
+                            borderColor: active
+                                ? "color-mix(in oklab, var(--color-y2k-blue) 34%, var(--surface-border))"
+                                : "transparent",
+                            background: active
+                                ? "color-mix(in oklab, var(--color-y2k-blue) 7%, var(--surface))"
+                                : "transparent",
+                            color: disabled
+                                ? "var(--text-tertiary)"
+                                : active
+                                  ? "var(--color-y2k-blue)"
+                                  : "var(--text-secondary)",
+                            cursor: disabled ? "not-allowed" : "pointer",
+                            opacity: disabled ? 0.45 : 1,
+                            whiteSpace: "nowrap",
+                            flex: compact ? 1 : "0 0 auto",
+                            textAlign: "center",
+                            transition: "background 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease",
+                        }}
+                    >
+                        {layer.label}
+                        <span style={{
+                            marginLeft: "0.32rem",
+                            fontSize: "0.58rem",
+                            color: "inherit",
+                            opacity: active ? 0.72 : 0.58,
+                            fontWeight: 700,
+                            letterSpacing: "0.04em",
+                        }}>
+                            {layer.count}
+                        </span>
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
 
 function TransitGantt({ vm }: { vm: V4VM }) {
     const { transitSpans, travelDateISO } = vm;
     const universalSkySpans = vm.universalSkySpans ?? [];
     const isRelocation = vm.timeline.grain === "month";
+    const isCompact = useMediaQuery("(max-width: 760px)");
+    const [activeLayerState, setActiveLayer] = useState<EventLayer>(() =>
+        transitSpans.length > 0 ? "natal" : "sky",
+    );
+    const activeLayer: EventLayer =
+        activeLayerState === "natal" && transitSpans.length === 0 && universalSkySpans.length > 0
+            ? "sky"
+            : activeLayerState;
 
     // Date-bucket tabs above the Gantt. Filter rows by overlap with the
     // active bucket. Default to "Now" / "Mo 1-3" so users see the most
     // imminent items first; "All" stays available for the wide view.
     const dateTabs: TimingDateTab[] = isRelocation ? RELOCATION_TIMING_TABS : TRIP_TIMING_TABS;
     const [activeTabId, setActiveTabId] = useState<string>(dateTabs[0].id);
+    const [nowTime] = useState(() => Date.now());
     const activeTab = dateTabs.find((t) => t.id === activeTabId) ?? dateTabs[dateTabs.length - 1];
 
     if ((!transitSpans.length && !universalSkySpans.length) || !travelDateISO) return null;
 
     const filteredTransitSpans = transitSpans.filter((s) => rowInTab(s.entryDay, s.exitDay, activeTab));
     const filteredSkySpans = universalSkySpans.filter((s) => rowInTab(s.entryDay, s.exitDay, activeTab));
+    const visibleTransitSpans = activeLayer === "natal" ? filteredTransitSpans : [];
+    const visibleSkySpans = activeLayer === "sky" ? filteredSkySpans : [];
 
-    // Signal vs noise: rank by importance and split into tiers. Top 3 personal
-    // + top 2 sky get full prominence; the rest collapse under a disclosure.
-    const rankedTransits = [...filteredTransitSpans]
+    // Signal vs noise: rank the selected layer by importance and split into
+    // tiers. Interpretive copy stays in hover so the timeline remains scannable.
+    const rankedTransits = [...visibleTransitSpans]
         .map((s) => ({ s, score: transitImportance(s, vm.goalIds) }))
         .sort((a, b) => b.score - a.score);
     const headlineTransits = rankedTransits.slice(0, 3).map((x) => x.s);
     const backdropTransits = rankedTransits.slice(3).map((x) => x.s);
 
-    const rankedSky = [...filteredSkySpans].sort(
+    const rankedSky = [...visibleSkySpans].sort(
         (a, b) => (b.severity ?? 0) - (a.severity ?? 0),
     );
-    const headlineSky = rankedSky.slice(0, 2);
-    const backdropSky = rankedSky.slice(2);
+    const headlineSky = rankedSky.slice(0, 3);
+    const backdropSky = rankedSky.slice(3);
 
     const hasBackdrop = backdropTransits.length + backdropSky.length > 0;
 
@@ -1106,13 +1499,12 @@ function TransitGantt({ vm }: { vm: V4VM }) {
     for (const tab of dateTabs) {
         const personal = transitSpans.filter((s) => rowInTab(s.entryDay, s.exitDay, tab)).length;
         const sky = universalSkySpans.filter((s) => rowInTab(s.entryDay, s.exitDay, tab)).length;
-        tabCounts[tab.id] = personal + sky;
+        tabCounts[tab.id] = activeLayer === "natal" ? personal : sky;
     }
 
-    const WINDOW_START = isRelocation ? RELO_WINDOW_START : TRIP_WINDOW_START;
-    const WINDOW_END = isRelocation ? RELO_WINDOW_END : TRIP_WINDOW_END;
+    const [WINDOW_START, WINDOW_END] = activeTab.range;
     const WINDOW_RANGE = WINDOW_END - WINDOW_START;
-    const DAY_MARKERS = isRelocation ? RELO_DAY_MARKERS : TRIP_DAY_MARKERS;
+    const DAY_MARKERS = markersForTimingTab(activeTab, isRelocation, isCompact);
     const anchorLabel = isRelocation ? "MOVE" : "TRIP";
     const formatTick = (d: number): string => {
         if (d === 0) return anchorLabel;
@@ -1125,30 +1517,67 @@ function TransitGantt({ vm }: { vm: V4VM }) {
 
     const anchorTime = new Date(travelDateISO).getTime();
     const todayDay = isFinite(anchorTime)
-        ? Math.round((Date.now() - anchorTime) / 86_400_000)
+        ? Math.round((nowTime - anchorTime) / 86_400_000)
         : null;
 
     return (
         <div style={{
-            background: "var(--surface)",
-            border: "1px solid var(--surface-border)",
-            borderRadius: "var(--radius-md)",
-            padding: "var(--space-md) var(--space-md) var(--space-sm)",
-            paddingTop: "calc(var(--space-md) + 36px)", // headroom for the small tooltip on top row
+            background: "color-mix(in oklab, var(--surface) 56%, transparent)",
+            borderTop: `1px solid ${LEDGER_RULE}`,
+            borderBottom: `1px solid ${LEDGER_RULE}`,
+            borderRadius: "var(--radius-sm)",
+            padding: isCompact ? "0.85rem 0 0" : "clamp(1rem, 2vw, 1.35rem) 0 0",
             overflow: "visible",
         }}>
-                {/* Date-range tabs — filter rows by overlap with the active bucket */}
-                <TimingDateTabs
-                    tabs={dateTabs}
-                    activeTabId={activeTabId}
-                    onTabChange={setActiveTabId}
-                    counts={tabCounts}
-                />
+                <div style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    gap: isCompact ? "0.6rem" : "var(--space-md)",
+                    flexWrap: "wrap",
+                    margin: isCompact
+                        ? "0 0.85rem 1rem"
+                        : "0 clamp(1rem, 2vw, 1.35rem) var(--space-lg)",
+                }}>
+                    {/* Date-range tabs — filter rows by overlap with the active bucket */}
+                    <TimingDateTabs
+                        tabs={dateTabs}
+                        activeTabId={activeTabId}
+                        onTabChange={setActiveTabId}
+                        counts={tabCounts}
+                        compact={isCompact}
+                    />
+                    <EventLayerToggle
+                        activeLayer={activeLayer}
+                        onChange={setActiveLayer}
+                        natalCount={transitSpans.length}
+                        skyCount={universalSkySpans.length}
+                        compact={isCompact}
+                    />
+                </div>
 
                 {/* Day-marker header */}
-                <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", gap: "var(--space-sm)", marginBottom: "var(--space-sm)" }}>
-                    <div />
-                    <div style={{ position: "relative", height: 32 }}>
+                <div style={{
+                    display: "grid",
+                    gridTemplateColumns: isCompact ? "minmax(0, 1fr)" : GANTT_GRID,
+                    gap: isCompact ? "0.55rem" : "var(--space-lg)",
+                    margin: isCompact ? "0 0.85rem" : "0 clamp(1rem, 2vw, 1.35rem)",
+                    paddingBottom: isCompact ? "0.75rem" : "0.7rem",
+                    borderBottom: `1px solid ${LEDGER_RULE}`,
+                }}>
+                    <div style={{
+                        fontFamily: FM,
+                        fontSize: isCompact ? "0.56rem" : "0.58rem",
+                        letterSpacing: isCompact ? "0.18em" : "0.2em",
+                        textTransform: "uppercase",
+                        color: "var(--text-tertiary)",
+                        fontWeight: 700,
+                        alignSelf: "end",
+                        paddingBottom: "0.1rem",
+                    }}>
+                        Ephemeris
+                    </div>
+                    <div style={{ position: "relative", height: isCompact ? 34 : 38 }}>
                         {DAY_MARKERS.map((d, i) => {
                             const align = i === 0 ? "flex-start" : i === DAY_MARKERS.length - 1 ? "flex-end" : "center";
                             const transform = i === 0 ? "none" : i === DAY_MARKERS.length - 1 ? "translateX(-100%)" : "translateX(-50%)";
@@ -1169,9 +1598,9 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                                     <span
                                         style={{
                                             fontFamily: FM,
-                                            fontSize: "0.68rem",
+                                            fontSize: isCompact ? "0.62rem" : "0.68rem",
                                             fontWeight: 600,
-                                            letterSpacing: "0.06em",
+                                            letterSpacing: isCompact ? "0.03em" : "0.06em",
                                             color: "var(--text-secondary)",
                                             whiteSpace: "nowrap",
                                         }}
@@ -1181,8 +1610,8 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                                     <span
                                         style={{
                                             fontFamily: FM,
-                                            fontSize: "0.66rem",
-                                            letterSpacing: "0.16em",
+                                            fontSize: isCompact ? "0.58rem" : "0.66rem",
+                                            letterSpacing: isCompact ? "0.12em" : "0.16em",
                                             textTransform: "uppercase",
                                             color: "var(--text-tertiary)",
                                             whiteSpace: "nowrap",
@@ -1198,16 +1627,20 @@ function TransitGantt({ vm }: { vm: V4VM }) {
 
                 {/* Tier 1 — Headlines. The 3-5 most consequential rows in
                     this window get full prominence. */}
-                <div style={{ display: "flex", flexDirection: "column" }}>
+                <div style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    margin: isCompact ? "0 0.85rem" : "0 clamp(1rem, 2vw, 1.35rem)",
+                }}>
                     {(headlineTransits.length > 0 || headlineSky.length > 0) && (
                         <div style={{
                             fontFamily: FM,
-                            fontSize: "0.6rem",
-                            letterSpacing: "0.2em",
+                            fontSize: isCompact ? "0.58rem" : "0.6rem",
+                            letterSpacing: isCompact ? "0.18em" : "0.2em",
                             textTransform: "uppercase",
                             color: "var(--text-tertiary)",
                             fontWeight: 700,
-                            marginBottom: "0.4rem",
+                            padding: isCompact ? "0.9rem 0 0.3rem" : "0.85rem 0 0.25rem",
                         }}>
                             What matters most here
                         </div>
@@ -1218,7 +1651,9 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                             span={span}
                             windowStart={WINDOW_START}
                             windowEnd={WINDOW_END}
+                            anchorISO={travelDateISO}
                             todayDay={todayDay}
+                            compact={isCompact}
                             headline
                         />
                     ))}
@@ -1229,11 +1664,12 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                             windowStart={WINDOW_START}
                             windowEnd={WINDOW_END}
                             todayDay={todayDay}
+                            compact={isCompact}
                             headline
                         />
                     ))}
 
-                    {filteredTransitSpans.length === 0 && filteredSkySpans.length === 0 && (
+                    {visibleTransitSpans.length === 0 && visibleSkySpans.length === 0 && (
                         <div style={{
                             padding: "var(--space-md) 0",
                             fontFamily: FB,
@@ -1242,14 +1678,14 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                             fontStyle: "italic",
                             textAlign: "center",
                         }}>
-                            Nothing notable in this window. Try another tab.
+                            No {activeLayer === "natal" ? "natal" : "sky"} events in this date range. Try another tab.
                         </div>
                     )}
 
                     {/* Tier 2 — Backdrop. Lower-importance rows tucked into a
                         disclosure so the headlines breathe. */}
                     {hasBackdrop && (
-                        <details style={{ marginTop: "var(--space-sm)" }}>
+                        <details style={{ marginTop: "0.25rem" }}>
                             <summary style={{
                                 fontFamily: FM,
                                 fontSize: "0.65rem",
@@ -1260,9 +1696,9 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                                 padding: "0.65rem 0",
                                 cursor: "pointer",
                                 listStyle: "none",
-                                borderTop: "1px dashed var(--surface-border)",
+                                borderTop: `1px dashed ${LEDGER_RULE}`,
                             }}>
-                                Background ({backdropTransits.length + backdropSky.length} more) ▾
+                                Additional ({backdropTransits.length + backdropSky.length} more) ▾
                             </summary>
                             <div style={{ paddingTop: "0.3rem" }}>
                                 {backdropTransits.map((span, i) => (
@@ -1271,7 +1707,9 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                                         span={span}
                                         windowStart={WINDOW_START}
                                         windowEnd={WINDOW_END}
+                                        anchorISO={travelDateISO}
                                         todayDay={todayDay}
+                                        compact={isCompact}
                                     />
                                 ))}
                                 {backdropSky.map((span, i) => (
@@ -1281,6 +1719,7 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                                         windowStart={WINDOW_START}
                                         windowEnd={WINDOW_END}
                                         todayDay={todayDay}
+                                        compact={isCompact}
                                     />
                                 ))}
                             </div>
@@ -1288,7 +1727,17 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                     )}
                 </div>
 
-                <div style={{ marginTop: "var(--space-md)", display: "flex", gap: "var(--space-md)", flexWrap: "wrap", alignItems: "center" }}>
+                <div style={{
+                    marginTop: "var(--space-md)",
+                    padding: isCompact
+                        ? "0.8rem 0.85rem 1rem"
+                        : "0.75rem clamp(1rem, 2vw, 1.35rem) 0.9rem",
+                    borderTop: `1px solid ${LEDGER_RULE}`,
+                    display: "flex",
+                    gap: isCompact ? "0.7rem 1rem" : "var(--space-md)",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                         <div style={{ width: 16, height: 5, borderRadius: 3, background: "var(--sage)", opacity: 0.65 }} />
                         <span style={{ fontFamily: FM, fontSize: "0.62rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>Lift</span>
@@ -1302,7 +1751,7 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                             width: 16,
                             height: 5,
                             borderRadius: 3,
-                            background: "repeating-linear-gradient(135deg, var(--text-tertiary) 0 3px, transparent 3px 6px)",
+                            background: SKY_LEDGER,
                             opacity: 0.7,
                         }} />
                         <span style={{ fontFamily: FM, fontSize: "0.62rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>Sky (everyone)</span>
@@ -1313,7 +1762,17 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                             <span style={{ fontFamily: FM, fontSize: "0.62rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-y2k-blue)" }}>Today</span>
                         </div>
                     )}
-                    <span style={{ fontFamily: FB, fontSize: "0.66rem", fontStyle: "italic", color: "var(--text-tertiary)", marginLeft: "auto" }}>Hover any bar for detail</span>
+                    <span style={{
+                        fontFamily: FB,
+                        fontSize: "0.66rem",
+                        fontStyle: "italic",
+                        color: "var(--text-tertiary)",
+                        marginLeft: isCompact ? 0 : "auto",
+                        width: isCompact ? "100%" : "auto",
+                        textAlign: isCompact ? "left" : "right",
+                    }}>
+                        {isCompact ? "Tap any bar for detail" : "Hover any bar for detail"}
+                    </span>
                 </div>
             </div>
     );
