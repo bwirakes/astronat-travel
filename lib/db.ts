@@ -10,6 +10,16 @@ import type { Profile, Search, PartnerProfile, Reading } from '@/lib/types/datab
 // Tag: `profile-<userId>`. Revalidated by createProfile/updateLifeGoals
 // and the Stripe webhook (subscription status mirrors onto profile).
 export async function getProfile(userId: string): Promise<Profile | null> {
+  if (process.env.ASTRO_NAT_SCRIPT_DB === '1') {
+    const supabase = createAdminClient()
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+    return data
+  }
+
   return unstable_cache(
     async () => {
       const supabase = createAdminClient()
@@ -190,6 +200,19 @@ export async function savePartnerNatalChart(partnerId: string, ephemerisData: an
 // chart page reads this on every visit and the underlying data only
 // changes when the user's birth metadata changes (rare).
 export async function getNatalChart(userId: string) {
+  if (process.env.ASTRO_NAT_SCRIPT_DB === '1') {
+    const supabase = createAdminClient()
+    const { data } = await supabase
+      .from('natal_charts')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('chart_type', 'natal')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    return data
+  }
+
   return unstable_cache(
     async () => {
       const supabase = createAdminClient()
@@ -211,6 +234,36 @@ export async function getNatalChart(userId: string) {
 // Save natal chart computation (update existing row first, insert if none exists)
 // Two-step so it works even if the unique constraint migration hasn't run yet.
 export async function saveNatalChart(userId: string, ephemerisData: any, housePlacements: any) {
+  if (process.env.ASTRO_NAT_SCRIPT_DB === '1') {
+    const supabase = createAdminClient()
+    const now = new Date().toISOString()
+    const { data: updated, error: updateError } = await supabase
+      .from('natal_charts')
+      .update({
+        ephemeris_data: ephemerisData,
+        house_placements: housePlacements,
+        updated_at: now,
+      })
+      .eq('user_id', userId)
+      .eq('chart_type', 'natal')
+      .select()
+      .maybeSingle()
+
+    if (!updateError && updated) return updated
+
+    const { data } = await supabase
+      .from('natal_charts')
+      .insert({
+        user_id: userId,
+        chart_type: 'natal',
+        ephemeris_data: ephemerisData,
+        house_placements: housePlacements,
+      })
+      .select()
+      .single()
+    return data
+  }
+
   const supabase = await createClient()
   const now = new Date().toISOString()
 

@@ -15,12 +15,20 @@ export type VerdictBand = "peak" | "solid" | "mixed" | "tight" | "hard";
 
 export type VerdictTone = "lift" | "neutral" | "press";
 
-/** Score → band cuts. Used by the hero, scoring engine, and TimingTab. */
+/** Score → band cuts. Used by the hero, scoring engine, and TimingTab.
+ *
+ * Calibrated for the post-fusion product range:
+ *   85+  exceptional
+ *   70-84 strong
+ *   55-69 usable with focus
+ *   45-54 narrow use
+ *   <45  hard / only if necessary
+ */
 export function verdictBand(score: number): VerdictBand {
-    if (score >= 80) return "peak";
-    if (score >= 65) return "solid";
-    if (score >= 50) return "mixed";
-    if (score >= 35) return "tight";
+    if (score >= 85) return "peak";
+    if (score >= 70) return "solid";
+    if (score >= 55) return "mixed";
+    if (score >= 45) return "tight";
     return "hard";
 }
 
@@ -34,38 +42,38 @@ export function verdictTone(band: VerdictBand): VerdictTone {
  *  press-band labels into a single "Tough match" — the hero only has room
  *  for four bands of nuance. */
 export const HERO_LABELS: Record<VerdictBand, string> = {
-    peak:  "Peak alignment",
-    solid: "Solid window",
-    mixed: "Mixed",
-    tight: "Tough match",
-    hard:  "Tough match",
+    peak:  "Exceptional fit",
+    solid: "Strong fit",
+    mixed: "Usable with focus",
+    tight: "Narrow use",
+    hard:  "Hard match",
 };
 
 /** Per-event label produced by the scoring engine for each LIFE_EVENT. */
 export const EVENT_LABELS: Record<VerdictBand, string> = {
-    peak:  "Highly Productive",
-    solid: "Productive",
-    mixed: "Mixed",
-    tight: "Challenging",
-    hard:  "Hostile",
+    peak:  "Exceptional",
+    solid: "Strong",
+    mixed: "Usable with focus",
+    tight: "Narrow use",
+    hard:  "Hard",
 };
 
 /** Travel-window label used by TimingTab for the user's selected dates. */
 export const WINDOW_LABELS: Record<VerdictBand, string> = {
-    peak:  "Strong window",
-    solid: "Open window",
-    mixed: "Mixed window",
-    tight: "Tight window",
-    hard:  "Challenging window",
+    peak:  "Exceptional window",
+    solid: "Strong window",
+    mixed: "Usable window",
+    tight: "Narrow window",
+    hard:  "Hard window",
 };
 
 /** One-line rationales for the timing-window verdict, keyed by tone so the
  *  copy stays accurate even as labels evolve. */
 export const WINDOW_RATIONALES: Record<VerdictBand, string> = {
-    peak:  "the sky is broadly supportive of what you're going there to do",
+    peak:  "the sky is unusually supportive of what you're going there to do",
     solid: "more support than friction across this stretch",
-    mixed: "real potential, but it'll need some care to land cleanly",
-    tight: "more friction than support — bring patience and right-size your asks",
+    mixed: "usable for the right purpose, with a few limits to respect",
+    tight: "narrow but workable if you keep the ask specific",
     hard:  "the sky is pressing hard against this date — better windows exist nearby",
 };
 
@@ -80,10 +88,10 @@ export function heroBand(score: number): HeroBand {
 }
 
 export const HERO_BAND_LABEL: Record<HeroBand, string> = {
-    peak:  "Peak alignment",
-    solid: "Solid window",
-    mixed: "Mixed",
-    tough: "Tough match",
+    peak:  "Exceptional fit",
+    solid: "Strong fit",
+    mixed: "Usable with focus",
+    tough: "Narrow or hard",
 };
 
 /** Band → palette token. Single source of truth for verdict-coloured chrome

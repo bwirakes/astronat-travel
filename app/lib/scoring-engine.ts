@@ -52,6 +52,17 @@ export interface OccupancyPlanet {
     lineStrength?: number;
 }
 
+type OccupancySourcePlanet = {
+    planet?: string;
+    name?: string;
+    longitude: number;
+    dignityStatus?: string;
+    dignity?: string;
+    essentialDignity?: string;
+};
+
+type TransitHitWithMotion = TransitHit & { applying?: boolean };
+
 export interface FinalEventScore {
     eventName: string;
     baseVolume: number;
@@ -80,12 +91,41 @@ export interface PlaceAffinityLayers {
     affinityModifiers: number[];
 }
 
+export interface ScoreEvidenceProfile {
+    supports: string[];
+    confirmedWarnings: string[];
+    cautions: string[];
+    tier: "cleanStrong" | "mixedStrong" | "mixed" | "thinNeutral" | "confirmedHard";
+    metrics: {
+        selectedAffinity: number;
+        selectedTransit: number;
+        selectedDignity: number;
+        selectedBridge: number;
+        selectedAcgLine: number;
+        strongestRelevantHouse: number;
+        weakestRelevantHouse: number;
+        strongLineCount: number;
+        hardMaleficTimingCount: number;
+        angularMaleficCount: number;
+        dignifiedBeneficCount: number;
+        debilitatedBeneficCount: number;
+    };
+}
+
 // ─── Goal targeting (mirrors window-scoring.ts) ───────────────────────────────
 //
 // Duplicated rather than imported to keep scoring-engine free of direct
 // circular deps with window-scoring.ts. Keys & values must stay identical.
 
 export const GOAL_NATAL_TARGETS: Record<string, string[]> = {
+    identity:   ["sun", "mars", "asc", "jupiter"],
+    wealth:     ["venus", "jupiter", "saturn"],
+    home:       ["moon", "ic"],
+    romance:    ["venus", "moon", "mars"],
+    health:     ["moon", "mercury", "mars", "saturn"],
+    partnerships: ["venus", "moon", "dsc"],
+    friendship: ["mercury", "jupiter"],
+    spirituality: ["jupiter", "neptune", "moon"],
     love:       ["venus", "moon"],
     career:     ["sun", "mars", "saturn", "mc"],
     community:  ["mercury", "jupiter"],
@@ -111,8 +151,8 @@ function goalTargetSet(goalIds: string[]): Set<string> | null {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const HALF_WIDTH_DAYS = 5;          // ±5d transit window — same as window-scoring
-const TRANSIT_ROW_SCALE = 16;       // contribution scale per tightness unit (~14–18)
-export const MAX_TRANSIT_MODIFIER = 12; // hard cap on per-row transit modifier
+const TRANSIT_ROW_SCALE = 17;       // contribution scale per tightness unit (~14–18)
+export const MAX_TRANSIT_MODIFIER = 14; // hard cap on per-row transit modifier
 const GOAL_BOOST = 1.6;
 
 // ─── Tensor math ──────────────────────────────────────────────────────────────
@@ -130,6 +170,57 @@ class TensorMath {
 
 function getEventVerdict(score: number): string {
     return EVENT_LABELS[verdictBand(score)];
+}
+
+function transitAspectMultiplier(aspect: string | undefined): number {
+    const a = (aspect || "").toLowerCase();
+    if (a.includes("conjunction")) return 1.25;
+    if (a.includes("opposition")) return 1.20;
+    if (a.includes("square")) return 1.15;
+    if (a.includes("trine")) return 0.95;
+    if (a.includes("sextile")) return 0.75;
+    return 1;
+}
+
+function transitAspectToneMultiplier(aspect: string | undefined, benefic: boolean | undefined): number {
+    const a = (aspect || "").toLowerCase();
+    const hard = a.includes("square") || a.includes("opposition");
+    const soft = a.includes("trine") || a.includes("sextile");
+    if (hard && benefic) return 0.65;
+    if (soft && benefic === false) return 0.65;
+    return 1;
+}
+
+function transitOrbTightness(aspect: string | undefined, orbInput: number | undefined): number {
+    const orb = Math.max(0, Math.abs(orbInput ?? 3));
+    const a = (aspect || "").toLowerCase();
+    const sigma = a.includes("conjunction") || a.includes("opposition")
+        ? 1.55
+        : a.includes("sextile")
+            ? 1.15
+            : 1.35;
+    return Math.max(0.08, Math.exp(-(orb * orb) / (2 * sigma * sigma)));
+}
+
+function transitSignedTightness(t: TransitHit, goalHit: boolean): number {
+    const goalMul = goalHit ? GOAL_BOOST : 1;
+    const retroMul = t.retrograde ? 0.7 : 1;
+    const applyingMul = (t as TransitHitWithMotion).applying === false ? 0.6 : 1;
+    const tightness = transitOrbTightness(t.aspect, t.orb) * goalMul * retroMul * applyingMul;
+    const sign = t.benefic ? 1 : -1;
+    const a = (t.aspect || "").toLowerCase();
+    const hard = a.includes("square") || a.includes("opposition");
+    const hardConjunction = a.includes("conjunction");
+    const transitPlanet = (t.transit_planet || "").toLowerCase();
+    const hardMalefic = ["mars", "saturn", "pluto", "uranus"].includes(transitPlanet)
+        && !t.benefic
+        && (hard || hardConjunction);
+    const severityMul = hardMalefic ? 1.25 : 1;
+    return tightness
+        * sign
+        * transitAspectMultiplier(t.aspect)
+        * transitAspectToneMultiplier(t.aspect, t.benefic)
+        * severityMul;
 }
 
 // ── Universal Sky Modifier ─────────────────────────────────────────────────
@@ -367,7 +458,7 @@ export function computePlaceAffinityLayers(
  *
  * For each transit hit within ±5d of `centerISO`:
  *   tightness = max(0.2, 1 - |orb|/3) × goalMul × retroMul
- *   signed    = tightness × (benefic ? +1 : -1)
+ *   signed    = tightness × benefic/malefic polarity × aspect geometry
  *   rowDelta[r] += signed × W_EVENTS[r][house-1] × TRANSIT_ROW_SCALE
  *
  * `house` is the relocated house of the natal planet that the transit hits
@@ -396,10 +487,7 @@ export function computeTransitModifiersAtAnchor(
 
         const natalKey = (t.natal_planet || "").toLowerCase();
         const goalHit = goalTargets ? goalTargets.has(natalKey) : false;
-        const goalMul = goalHit ? GOAL_BOOST : 1;
-        const retroMul = t.retrograde ? 0.7 : 1;
-        const tightness = Math.max(0.2, 1 - (t.orb ?? 3) / 3) * goalMul * retroMul;
-        const signed = tightness * (t.benefic ? 1 : -1);
+        const signed = transitSignedTightness(t, goalHit);
 
         const house = natalPlanetHouse.get(natalKey);
         if (!house || house < 1 || house > 12) continue;
@@ -504,7 +592,7 @@ export function buildNatalPlanetRelocatedHouseMap(
  * relocates each natal planet and flags hasLine when an ACG line is ≤ 2000 km.
  */
 export function buildOccupancyPlanets(
-    natalPlanets: Array<any>,
+    natalPlanets: OccupancySourcePlanet[],
     relocatedCusps: number[],
     acgLines: Array<{ planet?: string; angle?: string; distance_km?: number }>,
     birthLat?: number,
@@ -533,8 +621,8 @@ export function buildOccupancyPlanets(
         const strength = Math.max(0.1, Math.min(1.8, raw / 36));
         lineStrengthByPlanet.set(planet, Math.max(lineStrengthByPlanet.get(planet) ?? 0, strength));
     }
-    return natalPlanets.map((p: any) => ({
-        name: p.planet ?? p.name,
+    return natalPlanets.map((p) => ({
+        name: p.planet ?? p.name ?? "Planet",
         house: getHouseNum(p.longitude),
         dignityStatus: p.dignityStatus || p.dignity || p.essentialDignity,
         hasLine: (lineStrengthByPlanet.get(String(p.planet ?? p.name ?? "").toLowerCase()) ?? 0) > 0,
@@ -553,7 +641,7 @@ export function buildOccupancyPlanets(
  *   - 2 selected goals      → 0.65*top + 0.35*second   (sorted desc)
  *   - 3+ selected goals     → 0.50*top + 0.30*second + 0.20*third
  *   - 0 selected goals      → mean of all 9 finalScores
- *   then `50 + (raw - 50) * 1.4` and softCapScore.
+ *   then softCapScore.
  */
 export function computeFusedReadingHeadline(
     eventScores: FinalEventScore[],
@@ -583,12 +671,9 @@ export function computeFusedReadingHeadline(
 
     // Pre-fusion the macro intent stretched (50 + (raw-50)*1.4) was needed
     // because matrix-only macros under-dispersed once goal weighting picked
-    // a single row. Now that every surface scores through the fused engine
-    // (place affinity + transits + sky + station all on one path), the
-    // stretch creates the very inconsistency the fusion is meant to remove
-    // — sidebar windows would score against a non-stretched math while the
-    // hero stretched. Drop the stretch; rely on softCapScore for tail
-    // compression.
+    // a single row. The fused engine is already more volatile because place
+    // affinity, transits, sky, and station all land on the same event rows,
+    // so we first use softCapScore for tail control.
     const blended = typeof destinationSignal === "number" && Number.isFinite(destinationSignal)
         ? (0.78 * raw) + (0.22 * destinationSignal)
         : raw;
@@ -602,11 +687,219 @@ function mean(xs: number[]): number {
     return s / xs.length;
 }
 
+function selectedEventBlend<T>(
+    eventScores: FinalEventScore[],
+    selectedGoalIndices: number[] | null | undefined,
+    valueForIndex: (idx: number) => T,
+    valueToNumber: (value: T) => number,
+): number {
+    const indices = Array.isArray(selectedGoalIndices) && selectedGoalIndices.length > 0
+        ? selectedGoalIndices.filter((idx) => eventScores[idx])
+        : eventScores.map((_, idx) => idx);
+    if (!indices.length) return 0;
+    const sorted = [...indices].sort((a, b) => eventScores[b].finalScore - eventScores[a].finalScore);
+    const picked = sorted.slice(0, Math.min(3, sorted.length));
+    const weights = picked.length === 1
+        ? [1]
+        : picked.length === 2
+            ? [0.65, 0.35]
+            : Array.isArray(selectedGoalIndices) && selectedGoalIndices.length > 0
+                ? [0.50, 0.30, 0.20]
+                : picked.map(() => 1 / picked.length);
+    return picked.reduce((sum, idx, i) => sum + valueToNumber(valueForIndex(idx)) * (weights[i] ?? 0), 0);
+}
+
+function selectedHouseBreakdownBlend(
+    matrixResult: HouseMatrixResult,
+    eventScores: FinalEventScore[],
+    selectedGoalIndices: number[] | null | undefined,
+    key: keyof NonNullable<HouseMatrixResult["houses"][number]["breakdown"]>,
+): number {
+    const byHouse = new Map<number, number>();
+    for (const row of matrixResult.houses ?? []) {
+        const value = row.breakdown?.[key];
+        byHouse.set(row.house, typeof value === "number" ? value : 0);
+    }
+    return selectedEventBlend(
+        eventScores,
+        selectedGoalIndices,
+        (idx) => {
+            const weights = W_EVENTS[idx] ?? [];
+            let sum = 0;
+            for (let h = 1; h <= 12; h++) sum += (weights[h - 1] ?? 0) * (byHouse.get(h) ?? 0);
+            return sum;
+        },
+        (value) => value,
+    );
+}
+
+function relevantHouseStats(
+    matrixResult: HouseMatrixResult,
+    selectedGoalIndices: number[] | null | undefined,
+): { strongest: number; weakest: number } {
+    const houseScores = new Array(12).fill(50);
+    for (const row of matrixResult.houses ?? []) {
+        if (row.house >= 1 && row.house <= 12 && typeof row.score === "number") {
+            houseScores[row.house - 1] = row.score;
+        }
+    }
+    const indices = Array.isArray(selectedGoalIndices) && selectedGoalIndices.length > 0
+        ? selectedGoalIndices
+        : LIFE_EVENTS.map((_, i) => i);
+    const relevant: number[] = [];
+    for (const idx of indices) {
+        const weights = W_EVENTS[idx] ?? [];
+        for (let i = 0; i < 12; i++) {
+            if ((weights[i] ?? 0) >= 0.1) relevant.push(houseScores[i]);
+        }
+    }
+    if (!relevant.length) return { strongest: mean(houseScores), weakest: mean(houseScores) };
+    return {
+        strongest: Math.max(...relevant),
+        weakest: Math.min(...relevant),
+    };
+}
+
+function countWindowHardMalefics(
+    transits: TransitHit[],
+    centerISO: string | null,
+    halfWidthDays: number,
+): number {
+    if (!centerISO) return 0;
+    const center = new Date(centerISO).getTime();
+    if (!isFinite(center)) return 0;
+    const halfMs = halfWidthDays * 86_400_000;
+    let count = 0;
+    for (const t of transits) {
+        const tTime = new Date(t.date).getTime();
+        if (!isFinite(tTime) || Math.abs(tTime - center) > halfMs) continue;
+        const planet = (t.transit_planet || "").toLowerCase();
+        const aspect = (t.aspect || "").toLowerCase();
+        const hard = aspect.includes("square") || aspect.includes("opposition") || aspect.includes("conjunction");
+        if (["mars", "saturn", "pluto", "uranus"].includes(planet)
+            && t.benefic === false
+            && hard
+            && Math.abs(t.orb ?? 3) <= 1.5) {
+            count++;
+        }
+    }
+    return count;
+}
+
+function computeScoreEvidenceProfile(args: {
+    matrixResult: HouseMatrixResult;
+    relocatedPlanets: OccupancyPlanet[];
+    eventScores: FinalEventScore[];
+    transitModifiers: number[];
+    transits: TransitHit[];
+    centerISO: string | null;
+    selectedGoalIndices?: number[] | null;
+    halfWidthDays?: number;
+}): ScoreEvidenceProfile {
+    const selectedAffinity = selectedEventBlend(
+        args.eventScores,
+        args.selectedGoalIndices,
+        (idx) => args.eventScores[idx]?.affinityModifier ?? 0,
+        (value) => value,
+    );
+    const selectedTransit = selectedEventBlend(
+        args.eventScores,
+        args.selectedGoalIndices,
+        (idx) => args.transitModifiers[idx] ?? 0,
+        (value) => value,
+    );
+    const selectedDignity = selectedHouseBreakdownBlend(args.matrixResult, args.eventScores, args.selectedGoalIndices, "dignity");
+    const selectedBridge = selectedHouseBreakdownBlend(args.matrixResult, args.eventScores, args.selectedGoalIndices, "natalBridge");
+    const selectedAcgLine = selectedHouseBreakdownBlend(args.matrixResult, args.eventScores, args.selectedGoalIndices, "acgLine");
+    const { strongest, weakest } = relevantHouseStats(args.matrixResult, args.selectedGoalIndices);
+
+    const strongLineCount = args.relocatedPlanets.filter((p) => (p.lineStrength ?? 0) >= 0.28).length;
+    const hardMaleficTimingCount = countWindowHardMalefics(
+        args.transits,
+        args.centerISO,
+        args.halfWidthDays ?? HALF_WIDTH_DAYS,
+    );
+    const angularMaleficCount = args.relocatedPlanets.filter((p) =>
+        [1, 4, 7, 10].includes(p.house)
+        && ["mars", "saturn", "pluto", "uranus"].includes(p.name.toLowerCase()),
+    ).length;
+    const dignifiedBeneficCount = args.relocatedPlanets.filter((p) =>
+        ["venus", "jupiter"].includes(p.name.toLowerCase())
+        && /domicile|exalted/i.test(String(p.dignityStatus ?? "")),
+    ).length;
+    const debilitatedBeneficCount = args.relocatedPlanets.filter((p) =>
+        ["venus", "jupiter"].includes(p.name.toLowerCase())
+        && /detriment|fall/i.test(String(p.dignityStatus ?? "")),
+    ).length;
+
+    const supports: string[] = [];
+    if (strongest >= 75) supports.push("strong_relevant_house");
+    if (selectedAffinity >= 15) supports.push("positive_planetary_affinity");
+    if (selectedTransit >= 5) supports.push("supportive_timing");
+    if (strongLineCount >= 2) supports.push("exact_or_strong_acg_support");
+    if (selectedDignity >= 10) supports.push("good_dignity");
+    if (selectedBridge >= 8) supports.push("helpful_relocation_bridge");
+    if (dignifiedBeneficCount > 0) supports.push("dignified_benefic");
+
+    const confirmedWarnings: string[] = [];
+    const cautions: string[] = [];
+    if (selectedAffinity <= -5) confirmedWarnings.push("negative_planetary_affinity");
+    if (selectedTransit <= -5) confirmedWarnings.push("negative_timing");
+    if (hardMaleficTimingCount >= 2) confirmedWarnings.push("tight_hard_malefic_timing");
+    else if (hardMaleficTimingCount === 1) cautions.push("single_hard_malefic_timing");
+    if (selectedAcgLine <= -7) confirmedWarnings.push("strong_negative_acg");
+    else if (selectedAcgLine <= -4) cautions.push("moderate_negative_acg");
+    if (weakest <= 45 && supports.length <= 2) confirmedWarnings.push("weak_goal_house_no_compensation");
+    else if (weakest <= 45) cautions.push("weak_relevant_house");
+    if (angularMaleficCount >= 2) cautions.push("angular_malefic_pressure");
+    if (debilitatedBeneficCount > 0) cautions.push("debilitated_benefic");
+
+    let tier: ScoreEvidenceProfile["tier"] = "mixed";
+    if (confirmedWarnings.length >= 3) tier = "confirmedHard";
+    else if (supports.length >= 3 && confirmedWarnings.length <= 1 && cautions.length <= 2) tier = "cleanStrong";
+    else if (supports.length >= 3) tier = "mixedStrong";
+    else if (supports.length <= 1 && confirmedWarnings.length === 0) tier = "thinNeutral";
+
+    return {
+        supports,
+        confirmedWarnings,
+        cautions,
+        tier,
+        metrics: {
+            selectedAffinity: Math.round(selectedAffinity * 100) / 100,
+            selectedTransit: Math.round(selectedTransit * 100) / 100,
+            selectedDignity: Math.round(selectedDignity * 100) / 100,
+            selectedBridge: Math.round(selectedBridge * 100) / 100,
+            selectedAcgLine: Math.round(selectedAcgLine * 100) / 100,
+            strongestRelevantHouse: Math.round(strongest * 100) / 100,
+            weakestRelevantHouse: Math.round(weakest * 100) / 100,
+            strongLineCount,
+            hardMaleficTimingCount,
+            angularMaleficCount,
+            dignifiedBeneficCount,
+            debilitatedBeneficCount,
+        },
+    };
+}
+
+function applyWarningGovernor(score: number, profile: ScoreEvidenceProfile): number {
+    const confirmed = profile.confirmedWarnings.length;
+    const supports = profile.supports.length;
+    let cap: number | null = null;
+    if (confirmed >= 5) cap = Math.min(76, 68 + Math.max(0, supports - 3) * 3);
+    else if (confirmed >= 4) cap = Math.min(84, 76 + Math.max(0, supports - 3) * 3);
+    else if (confirmed >= 3 && supports <= 3) cap = 82;
+    if (cap === null || score <= cap) return score;
+    return Math.round(cap);
+}
+
 // ─── Fused reading package ────────────────────────────────────────────────────
 
 export interface FusedReadingPackage {
     eventScores: FinalEventScore[];
     readingScore: number;        // fused headline
+    ungovernedReadingScore?: number;
+    evidenceProfile?: ScoreEvidenceProfile;
     drivers: string[];           // top transit drivers from the anchor window
 }
 
@@ -631,11 +924,13 @@ function computeDestinationSignal(
     for (const hs of matrixResult.houses ?? []) {
         const h = hs.house;
         if (h < 1 || h > 12) continue;
-        const b = (hs as any).breakdown ?? {};
-        const bucket = typeof b.bucketGeodetic === "number" ? b.bucketGeodetic : 50;
-        const chartRuler = typeof b.chartRuler === "number" ? b.chartRuler : 0;
-        const bridge = typeof b.natalBridge === "number" ? b.natalBridge : 0;
-        housePlaceScores[h - 1] = Math.max(0, Math.min(100, bucket + chartRuler * 0.35 + bridge * 0.25));
+        // Destination signal should represent the durable relocated house
+        // output from the 4-bucket model, not only the geodetic/ACG slice.
+        // The full house score already includes chart-ruler, bridge, occupants,
+        // dignity, and place-bound geodetic evidence, so adding line strength
+        // again here would overweight weak/background ACG contacts.
+        const score = typeof hs.score === "number" ? hs.score : 50;
+        housePlaceScores[h - 1] = Math.max(0, Math.min(100, score));
     }
 
     const indices = Array.isArray(selectedGoalIndices) && selectedGoalIndices.length > 0
@@ -645,15 +940,77 @@ function computeDestinationSignal(
         .map((idx) => {
             const weights = W_EVENTS[idx];
             if (!weights) return null;
-            let signal = 0;
-            for (let i = 0; i < 12; i++) signal += housePlaceScores[i] * weights[i];
-            return signal;
+            let weightedMean = 0;
+            const relevant: Array<{ house: number; score: number; weight: number }> = [];
+            for (let i = 0; i < 12; i++) {
+                const weight = weights[i] ?? 0;
+                weightedMean += housePlaceScores[i] * weight;
+                if (weight >= 0.1) relevant.push({ house: i + 1, score: housePlaceScores[i], weight });
+            }
+
+            const byScore = [...relevant].sort((a, b) => b.score - a.score);
+            const peakSignal = byScore.length === 0
+                ? weightedMean
+                : byScore.length === 1
+                    ? byScore[0].score
+                    : (0.70 * byScore[0].score) + (0.30 * byScore[1].score);
+
+            let cornerDelta = 0;
+            for (const r of relevant) {
+                if (![1, 4, 7, 10].includes(r.house)) continue;
+                cornerDelta += (r.score - 60) * Math.min(1, r.weight * 2) * 0.14;
+            }
+            cornerDelta = Math.max(-7, Math.min(6, cornerDelta));
+
+            let planetCornerDelta = 0;
+            for (const rp of relocatedPlanets) {
+                if (![1, 4, 7, 10].includes(rp.house)) continue;
+                const pIdx = PLANETS.indexOf(rp.name.toLowerCase());
+                if (pIdx === -1) continue;
+                const houseWeight = weights[rp.house - 1] ?? 0;
+                if (houseWeight < 0.05) continue;
+                const eventAffinity = PLANET_EVENT_AFFINITY[pIdx]?.[idx] ?? 0;
+                const planet = rp.name.toLowerCase();
+                const beneficCorner = planet === "venus" || planet === "jupiter";
+                const luminaryCorner = planet === "sun" || planet === "moon";
+                const volatileCorner = planet === "mars" || planet === "pluto" || planet === "uranus";
+                const saturnSensitiveCorner = planet === "saturn" && [1, 4, 7].includes(rp.house);
+                const dignity = String(rp.dignityStatus ?? "").toLowerCase();
+                const dignified = dignity.includes("domicile") || dignity.includes("exalted");
+                const debilitated = dignity.includes("detriment") || dignity.includes("fall");
+                const dignityMul = dignity.includes("domicile") || dignity.includes("exalted")
+                    ? 1.15
+                    : dignity.includes("detriment") || dignity.includes("fall")
+                        ? 0.85
+                        : 1;
+                const lineSupport = (rp.lineStrength ?? 0) >= 0.28;
+                const strongHouse = housePlaceScores[rp.house - 1] >= 70;
+                const trustedBenefic = !beneficCorner || dignified || lineSupport || strongHouse || eventAffinity >= 0.7;
+
+                if ((beneficCorner && trustedBenefic) || luminaryCorner || eventAffinity >= 0.65) {
+                    planetCornerDelta += houseWeight * (1.5 + eventAffinity * 3) * dignityMul;
+                } else if (beneficCorner) {
+                    planetCornerDelta += houseWeight * (0.6 + eventAffinity);
+                }
+                if (beneficCorner && debilitated && !lineSupport) {
+                    planetCornerDelta -= houseWeight * (1.5 + eventAffinity * 2);
+                }
+                if (volatileCorner || saturnSensitiveCorner) {
+                    planetCornerDelta -= houseWeight * (3.5 + Math.max(0.35, eventAffinity) * 5);
+                }
+                if ((rp.lineStrength ?? 0) >= 0.28) {
+                    planetCornerDelta += houseWeight * Math.min(3.5, (rp.lineStrength ?? 0) * 3);
+                }
+            }
+            planetCornerDelta = Math.max(-9, Math.min(6, planetCornerDelta));
+
+            const signal = (0.62 * weightedMean) + (0.38 * peakSignal) + cornerDelta + planetCornerDelta;
+            return Math.max(0, Math.min(100, signal));
         })
         .filter((v): v is number => typeof v === "number");
 
     if (!eventSignals.length) return null;
-    const lineLift = relocatedPlanets.reduce((sum, p) => sum + Math.max(0, p.lineStrength ?? 0), 0);
-    return Math.max(0, Math.min(100, mean(eventSignals) + Math.min(8, lineLift * 0.8)));
+    return Math.max(0, Math.min(100, mean(eventSignals)));
 }
 
 export function computeFusedReadingPackage(inputs: FusedReadingInputs): FusedReadingPackage {
@@ -677,9 +1034,20 @@ export function computeFusedReadingPackage(inputs: FusedReadingInputs): FusedRea
         inputs.relocatedPlanets,
         inputs.selectedGoalIndices,
     );
-    const readingScore = computeFusedReadingHeadline(eventScores, inputs.selectedGoalIndices, destinationSignal);
+    const ungovernedReadingScore = computeFusedReadingHeadline(eventScores, inputs.selectedGoalIndices, destinationSignal);
+    const evidenceProfile = computeScoreEvidenceProfile({
+        matrixResult: inputs.matrixResult,
+        relocatedPlanets: inputs.relocatedPlanets,
+        eventScores,
+        transitModifiers: tm,
+        transits: inputs.transits,
+        centerISO: inputs.centerISO,
+        selectedGoalIndices: inputs.selectedGoalIndices,
+        halfWidthDays: inputs.halfWidthDays,
+    });
+    const readingScore = applyWarningGovernor(ungovernedReadingScore, evidenceProfile);
     const drivers = topDriversAtAnchor(inputs.transits, inputs.centerISO, inputs.goalIds, inputs.halfWidthDays ?? HALF_WIDTH_DAYS);
-    return { eventScores, readingScore, drivers };
+    return { eventScores, readingScore, ungovernedReadingScore, evidenceProfile, drivers };
 }
 
 export function topDriversAtAnchor(
@@ -699,12 +1067,9 @@ export function topDriversAtAnchor(
         if (!isFinite(tTime) || Math.abs(tTime - center) > halfMs) continue;
         const natalKey = (t.natal_planet || "").toLowerCase();
         const goalHit = goalTargets ? goalTargets.has(natalKey) : false;
-        const goalMul = goalHit ? GOAL_BOOST : 1;
-        const retroMul = t.retrograde ? 0.7 : 1;
-        const tightness = Math.max(0.2, 1 - (t.orb ?? 3) / 3) * goalMul * retroMul;
         arr.push({
             note: `${t.transit_planet}${t.retrograde ? " ℞" : ""} ${t.aspect} natal ${t.natal_planet}${goalHit ? " ★" : ""}`,
-            w: tightness * (t.benefic ? 1 : -1),
+            w: transitSignedTightness(t, goalHit),
         });
     }
     return arr.sort((a, b) => Math.abs(b.w) - Math.abs(a.w)).slice(0, 3).map(d => d.note);
@@ -808,7 +1173,17 @@ export function buildFusedScoredWindows(args: BuildFusedScoredWindowsArgs): Scor
             args.relocatedPlanets,
             args.selectedGoalIndices,
         );
-        const score = computeFusedReadingHeadline(eventScores, args.selectedGoalIndices, destinationSignal);
+        const ungovernedScore = computeFusedReadingHeadline(eventScores, args.selectedGoalIndices, destinationSignal);
+        const evidenceProfile = computeScoreEvidenceProfile({
+            matrixResult: args.matrixResult,
+            relocatedPlanets: args.relocatedPlanets,
+            eventScores,
+            transitModifiers: tm,
+            transits: args.transits,
+            centerISO: c.toISOString(),
+            selectedGoalIndices: args.selectedGoalIndices,
+        });
+        const score = applyWarningGovernor(ungovernedScore, evidenceProfile);
         const drivers = topDriversAtAnchor(args.transits, c.toISOString(), args.goalIds, HALF_WIDTH_DAYS);
         return {
             label,

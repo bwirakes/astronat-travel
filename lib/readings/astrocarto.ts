@@ -16,6 +16,7 @@ import {
   computeFusedReadingPackage,
   buildNatalPlanetRelocatedHouseMap,
   buildOccupancyPlanets,
+  type ScoreEvidenceProfile,
 } from "@/app/lib/scoring-engine";
 import { computeUniversalSky } from "@/app/lib/universal-sky";
 import { solveUniversalSkySpans } from "@/app/lib/window-scoring";
@@ -347,16 +348,30 @@ export async function runAstrocarto(
     longitude: s.longitude,
     sign: s.sign,
   }));
+  const canFuseUserScore = Boolean(
+    travelDate &&
+    Array.isArray(rawTransits) &&
+    rawTransits.length > 0 &&
+    rawTransits[0] &&
+    typeof rawTransits[0] === "object" &&
+    "transit_planet" in (rawTransits[0] as object) &&
+    Array.isArray(relocatedCusps) &&
+    relocatedCusps.length >= 12,
+  );
   const matrixResult = await timed("matrix.user", () =>
     computeHouseMatrix({
       natalPlanets,
       relocatedCusps,
       acgLines,
-      transits: mappedTransits,
+      // Fused scoring applies date transits/current sky after the durable place
+      // matrix is built. Keeping legacy mapped transits here double-counted
+      // timing and made the preserved matrixMacroScore read like a cold place
+      // score. Only use the legacy transit channel when fusion cannot run.
+      transits: canFuseUserScore ? [] : mappedTransits,
       parans,
       destLat: targetLat,
       destLon: targetLon,
-      globalPenalty,
+      globalPenalty: canFuseUserScore ? 0 : globalPenalty,
       birthLat: profile.birth_lat ?? undefined,
       lotOfFortuneLon,
       lotOfSpiritLon,
@@ -387,29 +402,23 @@ export async function runAstrocarto(
   const matrixMacroVerdict = matrixResult.macroVerdict;
   let fusedMacroScore: number | null = null;
   let fusedMacroVerdict: string | null = null;
+  let scoreEvidenceProfile: ScoreEvidenceProfile | null = null;
+  let ungovernedMacroScore: number | null = null;
+  const travelDateISO = travelDate ? new Date(travelDate).toISOString() : null;
 
   // Selected goal indices (0-8) for the fused headline weighting — same
   // 65/35 / 50/30/20 blend used by house-matrix's macro-intent stretch.
   const fusedSelectedGoalIndices: number[] | null =
     Array.isArray(selectedGoals) && selectedGoals.length ? selectedGoals : null;
 
-  if (
-    travelDate &&
-    Array.isArray(rawTransits) &&
-    rawTransits.length > 0 &&
-    rawTransits[0] &&
-    typeof rawTransits[0] === "object" &&
-    "transit_planet" in (rawTransits[0] as object) &&
-    Array.isArray(relocatedCusps) &&
-    relocatedCusps.length >= 12
-  ) {
+  if (canFuseUserScore && travelDateISO) {
     const natalPlanetHouse = buildNatalPlanetRelocatedHouseMap(natalPlanets, relocatedCusps, profile.birth_lat ?? undefined);
     const fused = await timed("scores.fused.user", () =>
       computeFusedReadingPackage({
         matrixResult,
         relocatedPlanets,
         transits: rawTransits as any,
-        centerISO: new Date(travelDate).toISOString(),
+        centerISO: travelDateISO,
         goalIds: goalIds ?? [],
         selectedGoalIndices: fusedSelectedGoalIndices,
         natalPlanetHouse,
@@ -418,6 +427,8 @@ export async function runAstrocarto(
     );
     eventScores = fused.eventScores;
     fusedMacroScore = fused.readingScore;
+    ungovernedMacroScore = fused.ungovernedReadingScore ?? fused.readingScore;
+    scoreEvidenceProfile = fused.evidenceProfile ?? null;
     fusedMacroVerdict = EVENT_LABELS[verdictBand(fused.readingScore)] ?? matrixMacroVerdict;
     // Intentional in-place mutation: matrixResult is local to this function
     // and not reused after buildAIInput. Overwriting macroScore/Verdict here
@@ -469,17 +480,27 @@ export async function runAstrocarto(
     const pSect = pSun ? determineSect(pSun.longitude, pRelocatedAsc) : undefined;
     const pLotF = pSun && pMoon ? computeLotOfFortune(pRelocatedAsc, pSun.longitude, pMoon.longitude, pSect) : undefined;
     const pLotS = pSun && pMoon ? computeLotOfSpirit(pRelocatedAsc, pSun.longitude, pMoon.longitude, pSect) : undefined;
+    const canFusePartnerScore = Boolean(
+      travelDate &&
+      Array.isArray(pRawTransits) &&
+      pRawTransits.length > 0 &&
+      pRawTransits[0] &&
+      typeof pRawTransits[0] === "object" &&
+      "transit_planet" in (pRawTransits[0] as object) &&
+      Array.isArray(pRelocatedCusps) &&
+      pRelocatedCusps.length >= 12,
+    );
 
     const pMatrixResult = await timed("partner.matrix", () =>
       computeHouseMatrix({
         natalPlanets: partnerNatalPlanets,
         relocatedCusps: pRelocatedCusps,
         acgLines: pAcgLines,
-        transits: pMappedTransits,
+        transits: canFusePartnerScore ? [] : pMappedTransits,
         parans: pParans,
         destLat: targetLat,
         destLon: targetLon,
-        globalPenalty: pGlobalPenalty,
+        globalPenalty: canFusePartnerScore ? 0 : pGlobalPenalty,
         birthLat: partnerProfile.birth_lat ?? undefined,
         lotOfFortuneLon: pLotF,
         lotOfSpiritLon: pLotS,
@@ -510,16 +531,7 @@ export async function runAstrocarto(
     let pFusedMacroScore: number | null = null;
     let pFusedMacroVerdict: string | null = null;
 
-    if (
-      travelDate &&
-      Array.isArray(pRawTransits) &&
-      pRawTransits.length > 0 &&
-      pRawTransits[0] &&
-      typeof pRawTransits[0] === "object" &&
-      "transit_planet" in (pRawTransits[0] as object) &&
-      Array.isArray(pRelocatedCusps) &&
-      pRelocatedCusps.length >= 12
-    ) {
+    if (canFusePartnerScore && travelDateISO) {
       const pNatalPlanetHouse = buildNatalPlanetRelocatedHouseMap(
         partnerNatalPlanets,
         pRelocatedCusps,
@@ -530,7 +542,7 @@ export async function runAstrocarto(
           matrixResult: pMatrixResult,
           relocatedPlanets: pRelocatedPlanetStates,
           transits: pRawTransits as any,
-          centerISO: new Date(travelDate).toISOString(),
+          centerISO: travelDateISO,
           goalIds: goalIds ?? [],
           selectedGoalIndices: fusedSelectedGoalIndices,
           natalPlanetHouse: pNatalPlanetHouse,
@@ -614,6 +626,7 @@ export async function runAstrocarto(
       parans,
       birthLat: profile.birth_lat ?? undefined,
       birthLon: profile.birth_lon ?? undefined,
+      scoreEvidenceProfile: scoreEvidenceProfile ?? undefined,
     })
   );
 
@@ -797,12 +810,17 @@ export async function runAstrocarto(
     macroScore: matrixResult.macroScore,
     macroVerdict: matrixResult.macroVerdict,
     matrixMacroScore,
+    ...(ungovernedMacroScore != null && ungovernedMacroScore !== fusedMacroScore
+      ? { ungovernedMacroScore }
+      : {}),
+    ...(scoreEvidenceProfile ? { scoreEvidenceProfile } : {}),
     scoreBreakdown: aiInput.macro.scoreBreakdown,
     scoreNarrative: {
       selectedGoals: aiInput.editorialEvidence.selectedGoals,
       themes: aiInput.editorialEvidence.scoreDrivers.themes,
       strongestThemes: aiInput.editorialEvidence.scoreDrivers.strongestThemes,
       lessEmphasized: aiInput.editorialEvidence.scoreDrivers.lessEmphasized,
+      bestUseFallback: aiInput.editorialEvidence.scoreDrivers.bestUseFallback,
       leanIntoEvidence: aiInput.editorialEvidence.scoreDrivers.leanIntoEvidence,
       watchOutEvidence: aiInput.editorialEvidence.scoreDrivers.watchOutEvidence,
       geodetic: {

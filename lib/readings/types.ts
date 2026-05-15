@@ -22,6 +22,12 @@ export interface AstrocartoReadingResult {
    *  range/daily/monthly helpers can use it as the baseline without
    *  double-counting transits. Optional only for legacy rows. */
   matrixMacroScore?: number;
+  /** Fused headline before the warning governor caps or adjusts it. Present
+   *  only when the governor changed the user-facing macro score. */
+  ungovernedMacroScore?: number;
+  /** Engine-owned evidence hierarchy for the final score. Frontend and AI
+   *  should read this instead of reclassifying warnings in components. */
+  scoreEvidenceProfile?: import("@/app/lib/scoring-engine").ScoreEvidenceProfile;
   /** Date+goal-adjusted hero score, persisted at reading-generation time so
    *  the readings list and the reading detail header agree. Computed by
    *  app/lib/hero-score.ts:computeHeroScore. Optional only for legacy rows

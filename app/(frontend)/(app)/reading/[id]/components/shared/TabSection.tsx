@@ -1,15 +1,18 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { ReadingCopyBlock, type ReadingGuideRow, RichTextNode } from "./ReadingCopy";
 
 interface Props {
     kicker: string;
     title: string;
-    /** AI-authored outcome-first opener. Rendered as a drop-cap magazine dek
-     *  between the H2 title and the body summary. */
+    /** AI-authored outcome-first opener rendered as short reading copy. */
     lead?: string;
     /** Plain-English summary or supporting paragraph below the dek. */
     intro?: ReactNode;
+    /** Short practical rows rendered below the interpretation copy. */
+    guideRows?: ReadingGuideRow[];
+    maxSentences?: number;
     /** When true, intro renders as a wide blue-bordered callout (used by Overview).
      *  When false, intro renders as plain body copy capped at 580px. */
     wideIntro?: boolean;
@@ -23,22 +26,11 @@ const FONT_MONO = "var(--font-mono, monospace)";
 
 /**
  * Shared step container for the V4 reading tabs. Hierarchy:
- *   kicker (mono label) → title (short H2) → lead (drop-cap dek) → intro (body para)
+ *   kicker (mono label) → title (short H2) → short copy → guide rows
  */
-export default function TabSection({ kicker, title, lead, intro, wideIntro, titleNoWrap, children }: Props) {
-    // Merge AI lead + summary into a single drop-cap paragraph under the H2.
-    // Avoids the "two sentences competing for the same role" issue while
-    // preserving the longer explainer copy. If lead and intro happen to be
-    // the same string, dedupe so we don't repeat it.
+export default function TabSection({ kicker, title, lead, intro, guideRows, maxSentences, wideIntro, titleNoWrap, children }: Props) {
     const leadText = lead?.trim() ?? "";
     const introText = typeof intro === "string" ? intro.trim() : "";
-    const dekText =
-        leadText && introText && introText !== leadText
-            ? `${leadText} ${introText}`
-            : (leadText || introText);
-    const showDek = dekText.length > 0;
-    // Non-string intro nodes (rare — not used in current tabs) still render
-    // through the wide-intro callout if explicitly requested.
     const showIntroNode =
         !!intro && typeof intro !== "string" && !leadText;
 
@@ -61,37 +53,13 @@ export default function TabSection({ kicker, title, lead, intro, wideIntro, titl
                 >
                     {title}
                 </h2>
-                {showDek && (
-                    <div className="mb-[clamp(32px,3.5vw,48px)] w-full">
-                        <p
-                            className="m-0 [text-wrap:pretty]"
-                            style={{
-                                fontFamily: FONT_BODY,
-                                fontSize: "clamp(17px, 1.3vw, 19px)",
-                                lineHeight: 1.65,
-                                color: "var(--text-primary)",
-                                fontWeight: 400,
-                            }}
-                        >
-                            <span
-                                aria-hidden
-                                style={{
-                                    float: "left",
-                                    fontFamily: FONT_PRIMARY,
-                                    fontSize: "clamp(64px, 7vw, 96px)",
-                                    lineHeight: 0.85,
-                                    color: "var(--color-y2k-blue)",
-                                    marginRight: "0.14em",
-                                    marginTop: "0.06em",
-                                    marginBottom: "-0.08em",
-                                }}
-                            >
-                                {dekText.charAt(0)}
-                            </span>
-                            {dekText.slice(1)}
-                        </p>
-                    </div>
-                )}
+                <ReadingCopyBlock
+                    lead={leadText}
+                    intro={introText && introText !== leadText ? introText : undefined}
+                    guideRows={guideRows}
+                    maxSentences={maxSentences}
+                    wide={wideIntro}
+                />
                 {showIntroNode && (
                     wideIntro ? (
                         <p
@@ -104,14 +72,14 @@ export default function TabSection({ kicker, title, lead, intro, wideIntro, titl
                                 background: "color-mix(in oklab, var(--color-y2k-blue) 7%, transparent)",
                             }}
                         >
-                            {intro}
+                            <RichTextNode>{intro}</RichTextNode>
                         </p>
                     ) : (
                         <p
                             className="text-[16px] leading-[1.6] font-light max-w-[60ch] [text-wrap:pretty] m-0 mb-9"
                             style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
                         >
-                            {intro}
+                            <RichTextNode>{intro}</RichTextNode>
                         </p>
                     )
                 )}

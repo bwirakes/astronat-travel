@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactElement, type ReactNode } from "react";
 import SectionHead from "../../shared/SectionHead";
 import TabSection from "../../shared/TabSection";
+import { mergeGuideRows, RichText } from "../../shared/ReadingCopy";
 import type { V4VM } from "./types";
 import { transitOneLiner } from "@/app/lib/transit-copy";
 import type { TransitSpan, UniversalSkySpan } from "@/app/lib/window-scoring";
@@ -91,6 +92,7 @@ interface Props {
     copiedTab?: {
         lead?: string;
         plainEnglishSummary?: string;
+        guideRows?: Array<{ label: string; body: string }>;
         evidenceCaption?: string;
         nextTabBridge?: string;
     };
@@ -1798,6 +1800,23 @@ export default function TimingTab({ vm, copiedTab }: Props) {
 
     const tabLead = copiedTab?.lead?.trim() || "";
     const tabIntro = copiedTab?.plainEnglishSummary || undefined;
+    const advice = vm.tabs.timing?.activationAdvice ?? [];
+    const mainWindow = vm.travelWindows[0];
+    const timingGuideRows = mergeGuideRows(copiedTab?.guideRows, [
+        {
+            label: "Best Used For",
+            body: advice[0]
+                || (mainWindow ? `Use ${mainWindow.dates} for the focused part of the trip, especially the plans that match your strongest scores.` : "Use the clearest window for the focused part of the trip."),
+        },
+        {
+            label: "Move Carefully With",
+            body: advice[2] || "Keep the calendar flexible around confusing, draining, or over-promised plans.",
+        },
+        {
+            label: "Your Next Move",
+            body: advice[1] || "Put the important plans early, then leave open space for rest, changes, and recovery.",
+        },
+    ]);
 
     return (
         <TabSection
@@ -1805,12 +1824,13 @@ export default function TimingTab({ vm, copiedTab }: Props) {
             title="When to use what this place offers."
             lead={tabLead}
             intro={tabIntro}
+            guideRows={timingGuideRows}
         >
             {/* Verdict — one deterministic sentence carries the intro role */}
             <VerdictHeadline vm={vm} />
 
             {/* AI Activation Advice */}
-            {vm.tabs.timing?.activationAdvice && vm.tabs.timing.activationAdvice.length > 0 && (
+            {advice.length > 0 && (
                 <div 
                     className="mt-[clamp(32px,4vw,48px)] mb-[clamp(48px,6vw,64px)] p-[clamp(24px,3vw,32px)] rounded-[var(--radius-lg)] border"
                     style={{ 
@@ -1825,7 +1845,7 @@ export default function TimingTab({ vm, copiedTab }: Props) {
                         Strategic Advice
                     </h4>
                     <ul className="flex flex-col gap-[16px] m-0 p-0 list-none">
-                        {vm.tabs.timing.activationAdvice.map((advice, i) => (
+                        {advice.map((advice, i) => (
                             <li key={i} className="flex items-start gap-[12px]">
                                 <span 
                                     className="text-[14px] mt-[4px]"
@@ -1837,7 +1857,7 @@ export default function TimingTab({ vm, copiedTab }: Props) {
                                     className="m-0 text-[clamp(16px,1.5vw,18px)] leading-[1.6] [text-wrap:pretty]"
                                     style={{ fontFamily: FB, color: "var(--text-primary)", fontWeight: 400 }}
                                 >
-                                    {advice}
+                                    <RichText>{advice}</RichText>
                                 </span>
                             </li>
                         ))}
@@ -1910,7 +1930,7 @@ export default function TimingTab({ vm, copiedTab }: Props) {
                             color: "var(--text-primary)" 
                         }}
                     >
-                        {vm.tabs.timing.closingVerdict}
+                        <RichText>{vm.tabs.timing.closingVerdict}</RichText>
                     </p>
                 </div>
             )}

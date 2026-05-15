@@ -302,7 +302,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                         className="mx-auto w-full min-w-0"
                         style={{
                             maxWidth: "1200px",
-                            padding: "0 clamp(16px, 3vw, 28px)",
+                            padding: "0 clamp(16px, 4vw, 32px)",
                         }}
                     >
                         <Tabs
@@ -348,6 +348,16 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                                             <OverviewTab vm={vm} copiedTab={copiedTab} selectTab={selectTab} />
                                         </TabsContent>
 
+                                        <TabsContent value="what-shifts" className="mt-0 outline-none data-[state=inactive]:hidden">
+                                            <WhatShiftsTab
+                                                vm={vm}
+                                                isDark={isDark}
+                                                natalWheel={natalWheel}
+                                                relocatedWheel={relocatedWheel}
+                                                copiedTab={copiedTab}
+                                            />
+                                        </TabsContent>
+
                                         <TabsContent value="life-themes" className="mt-0 outline-none data-[state=inactive]:hidden">
                                             <LifeThemesTab vm={vm} reading={reading} copiedTab={copiedTab} />
                                         </TabsContent>
@@ -360,16 +370,6 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                                                 birthIso={birthIso}
                                                 reading={reading}
                                                 relocatedAcgLines={relocatedAcgLines}
-                                                copiedTab={copiedTab}
-                                            />
-                                        </TabsContent>
-
-                                        <TabsContent value="what-shifts" className="mt-0 outline-none data-[state=inactive]:hidden">
-                                            <WhatShiftsTab
-                                                vm={vm}
-                                                isDark={isDark}
-                                                natalWheel={natalWheel}
-                                                relocatedWheel={relocatedWheel}
                                                 copiedTab={copiedTab}
                                             />
                                         </TabsContent>

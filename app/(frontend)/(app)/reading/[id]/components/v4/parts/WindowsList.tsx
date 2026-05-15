@@ -1,5 +1,6 @@
 import React from "react";
-import type { V4VM } from "../HundredOneReadingView";
+import type { V4VM } from "../tabs/types";
+import { RichText } from "../../shared/ReadingCopy";
 
 const FM = "var(--font-mono)";
 const FB = "var(--font-body)";
@@ -14,8 +15,7 @@ export function WindowsList({ vm, limit }: { vm: V4VM, limit?: number }) {
     // Trip readings get matches via the date-range key. Relocation readings
     // use month labels ("October 2026") which won't match the trip-shaped AI
     // notes — they fall through to the deterministic driver string instead.
-    const aiWindows: { dates: string; note: string }[] =
-        (vm.tabs.timing as any)?.aiWindows ?? [];
+    const aiWindows = vm.tabs.timing?.aiWindows ?? [];
     const aiNoteForDates = (dates: string): string | undefined => {
         const norm = normalizeDates(dates);
         return aiWindows.find(w => normalizeDates(w.dates) === norm)?.note;
@@ -72,7 +72,7 @@ export function WindowsList({ vm, limit }: { vm: V4VM, limit?: number }) {
                                 {r.dates}
                             </span>
                             <span style={{ fontFamily: FB, fontSize: "0.88rem", lineHeight: 1.5, color: "var(--text-secondary)" }}>
-                                {r.drivers}
+                                <RichText>{r.drivers}</RichText>
                             </span>
                         </div>
                         <span style={{ fontFamily: FM, fontSize: "0.95rem", color: "var(--text-primary)", fontWeight: 600, whiteSpace: "nowrap", letterSpacing: "0.02em" }}>

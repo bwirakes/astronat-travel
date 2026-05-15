@@ -33,30 +33,22 @@ type Matrix2D = number[][];
  */
 const W_EVENTS_BASE: Matrix2D = [
     // H1    H2    H3    H4    H5    H6    H7    H8    H9   H10   H11   H12
-    [ 0.70, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.30, 0.00, 0.00, 0.00 ], // 0: Identity
-    [ 0.00, 0.70, 0.00, 0.00, 0.00, 0.00, 0.00, 0.30, 0.00, 0.00, 0.00, 0.00 ], // 1: Wealth
-    [ 0.00, 0.00, 0.00, 1.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00 ], // 2: Home
-    [ 0.00, 0.00, 0.00, 0.00, 0.40, 0.00, 0.60, 0.00, 0.00, 0.00, 0.00, 0.00 ], // 3: Romance (0.6 H7 + 0.4 H5)
-    [ 0.00, 0.00, 0.00, 0.00, 0.00, 0.80, 0.00, 0.00, 0.00, 0.00, 0.00, 0.20 ], // 4: Health
-    [ 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.80, 0.00, 0.00, 0.00, 0.20, 0.00 ], // 5: Partnerships
-    [ 0.00, 0.15, 0.00, 0.00, 0.00, 0.25, 0.00, 0.00, 0.00, 0.60, 0.00, 0.00 ], // 6: Career (0.6 H10 + 0.25 H6 + 0.15 H2)
-    [ 0.00, 0.00, 0.30, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.70, 0.00 ], // 7: Friendship
-    [ 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.30, 0.30, 0.00, 0.00, 0.40 ]  // 8: Spirituality
+    [ 0.55, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.30, 0.15, 0.00, 0.00 ], // 0: Identity = body/self + direction + visibility
+    [ 0.00, 0.45, 0.00, 0.00, 0.00, 0.10, 0.00, 0.25, 0.00, 0.15, 0.05, 0.00 ], // 1: Wealth = resources + shared money + work/career/network
+    [ 0.00, 0.10, 0.00, 0.75, 0.00, 0.00, 0.05, 0.00, 0.00, 0.00, 0.00, 0.10 ], // 2: Home = roots + security + close others + privacy
+    [ 0.00, 0.00, 0.00, 0.00, 0.50, 0.00, 0.40, 0.00, 0.00, 0.00, 0.10, 0.00 ], // 3: Romance = joy + partnership + social openings
+    [ 0.35, 0.00, 0.00, 0.15, 0.00, 0.35, 0.00, 0.00, 0.00, 0.00, 0.00, 0.15 ], // 4: Health = body + routines + rest + home base
+    [ 0.00, 0.00, 0.00, 0.00, 0.10, 0.00, 0.70, 0.00, 0.00, 0.00, 0.20, 0.00 ], // 5: Partnerships = others + durable allies + pleasure
+    [ 0.10, 0.15, 0.00, 0.00, 0.00, 0.20, 0.00, 0.00, 0.00, 0.45, 0.10, 0.00 ], // 6: Career = public role + work + resources + allies
+    [ 0.00, 0.00, 0.25, 0.00, 0.10, 0.00, 0.10, 0.00, 0.00, 0.00, 0.55, 0.00 ], // 7: Friendship = tribe + local contact + invitations
+    [ 0.00, 0.00, 0.00, 0.15, 0.00, 0.00, 0.00, 0.15, 0.40, 0.00, 0.00, 0.30 ]  // 8: Spirituality = meaning + retreat + depth + roots
 ];
 
-// WIDE_SCORING_V1: Health and Spirituality gain angular legs so they're not
-// trapped under the cadent-house floor (H6/H12 had a -6 Lilly malus that
-// capped these events near 50, making "Highly Productive" unreachable).
+// WIDE_SCORING_V1 keeps the same house-first goal semantics as the base matrix.
+// The variance widening happens in bucket normalization/weights, not by changing
+// what a life goal means.
 const W_EVENTS_WIDE_V1: Matrix2D = [
-    [ 0.70, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.30, 0.00, 0.00, 0.00 ], // 0: Identity
-    [ 0.00, 0.70, 0.00, 0.00, 0.00, 0.00, 0.00, 0.30, 0.00, 0.00, 0.00, 0.00 ], // 1: Wealth
-    [ 0.00, 0.00, 0.00, 1.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00 ], // 2: Home
-    [ 0.00, 0.00, 0.00, 0.00, 0.40, 0.00, 0.60, 0.00, 0.00, 0.00, 0.00, 0.00 ], // 3: Romance
-    [ 0.35, 0.00, 0.00, 0.00, 0.00, 0.35, 0.00, 0.00, 0.00, 0.15, 0.00, 0.15 ], // 4: Health (body + routine + structure + rest)
-    [ 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.80, 0.00, 0.00, 0.00, 0.20, 0.00 ], // 5: Partnerships
-    [ 0.10, 0.15, 0.00, 0.00, 0.00, 0.20, 0.00, 0.00, 0.00, 0.40, 0.15, 0.00 ], // 6: Career (presence + resources + work + visibility + networks)
-    [ 0.00, 0.00, 0.30, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.70, 0.00 ], // 7: Friendship
-    [ 0.00, 0.00, 0.00, 0.20, 0.00, 0.00, 0.00, 0.15, 0.35, 0.00, 0.00, 0.30 ]  // 8: Spirituality (roots + mystery + wisdom + retreat)
+    ...W_EVENTS_BASE,
 ];
 
 export const W_EVENTS: Matrix2D = WIDE_SCORING_V1 ? W_EVENTS_WIDE_V1 : W_EVENTS_BASE;
@@ -134,6 +126,57 @@ function buildAffinityMatrix(): Matrix2D {
     applyModifier(6, 'mars', 10, 8);
     applyModifier(6, 'saturn', 10, 8);
 
+    // Wealth is not only "money in hand" (H2). Travel readings should also
+    // recognize trade, clients, institutional/shared resources, and useful
+    // networks when the relocated chart supports them.
+    applyModifier(1, 'jupiter', 2, 9);
+    applyModifier(1, 'jupiter', 8, 6);
+    applyModifier(1, 'jupiter', 10, 6);
+    applyModifier(1, 'jupiter', 11, 8);
+    applyModifier(1, 'venus', 2, 8);
+    applyModifier(1, 'venus', 8, 4);
+    applyModifier(1, 'venus', 11, 6);
+    applyModifier(1, 'mercury', 2, 6);
+    applyModifier(1, 'mercury', 6, 4);
+    applyModifier(1, 'mercury', 10, 6);
+    applyModifier(1, 'mercury', 11, 6);
+    applyModifier(1, 'saturn', 2, 3);
+    applyModifier(1, 'saturn', 10, 5);
+    applyModifier(1, 'saturn', 11, 3);
+
+    // Home needs a softer path through Moon/Venus/Jupiter and a constructive
+    // Saturn path for settling, leases, family duty, and long-term roots.
+    applyModifier(2, 'moon', 4, 11);
+    applyModifier(2, 'venus', 4, 9);
+    applyModifier(2, 'jupiter', 4, 8);
+    applyModifier(2, 'sun', 4, 5);
+    applyModifier(2, 'saturn', 4, 3);
+    applyModifier(2, 'moon', 12, 4);
+    applyModifier(2, 'venus', 2, 4);
+
+    // Partnerships need more than Venus romance: Moon for attachment, Jupiter
+    // for goodwill, Mercury for negotiation, and Saturn for commitment when
+    // it is not otherwise flagged as harsh.
+    applyModifier(5, 'venus', 7, 12);
+    applyModifier(5, 'jupiter', 7, 8);
+    applyModifier(5, 'moon', 7, 6);
+    applyModifier(5, 'mercury', 7, 5);
+    applyModifier(5, 'saturn', 7, 2);
+    applyModifier(5, 'venus', 11, 6);
+    applyModifier(5, 'jupiter', 11, 4);
+
+    // Friendship/networking was too dependent on the generic H11 score. Add
+    // concrete channels for local rapport, invitations, allies, and benefic
+    // social lift.
+    applyModifier(7, 'mercury', 3, 8);
+    applyModifier(7, 'mercury', 11, 9);
+    applyModifier(7, 'jupiter', 3, 6);
+    applyModifier(7, 'jupiter', 11, 11);
+    applyModifier(7, 'venus', 5, 4);
+    applyModifier(7, 'venus', 11, 8);
+    applyModifier(7, 'moon', 3, 4);
+    applyModifier(7, 'moon', 11, 6);
+
     // Spirituality should have routes through meaning and pilgrimage, not only
     // dark-house retreat.
     applyModifier(8, 'jupiter', 9, 14);
@@ -144,12 +187,18 @@ function buildAffinityMatrix(): Matrix2D {
     applyModifier(8, 'neptune', 9, 10);
     applyModifier(8, 'neptune', 12, 12);
 
-    // --- 2. Accidental Dignity and Angular Friction 
-    ['mars', 'saturn'].forEach(malefic => {
-        applyModifier(2, malefic, 4, -20); // H4 = Penalty on Home & Roots
-        applyModifier(3, malefic, 7, -25); // H7 = Steep penalty on Romance
-        applyModifier(5, malefic, 7, -25); // H7 = Steep penalty on Marriage
-    });
+    // --- 2. Angular Friction
+    // A malefic on an emotional angle is pressure, not an automatic "no."
+    // The house matrix already scores dignity, sect, bridge, retrograde, live
+    // transits, and stations; keeping these as steep blanket penalties was
+    // double-counting the same warning and making ordinary Mars/Saturn angular
+    // placements read cursed. Mars = heat/conflict; Saturn = weight/commitment.
+    applyModifier(2, 'mars', 4, -10);   // H4 = heat/restlessness at home
+    applyModifier(2, 'saturn', 4, -12); // H4 = weight/responsibility at home
+    applyModifier(3, 'mars', 7, -14);   // H7 = chemistry plus conflict
+    applyModifier(3, 'saturn', 7, -12); // H7 = seriousness, slower warmth
+    applyModifier(5, 'mars', 7, -12);   // H7 = friction in partnership
+    applyModifier(5, 'saturn', 7, -8);  // H7 = commitment pressure, not hostile by default
 
     // --- 3. Cross-Contamination of 'Dark' Houses (H12, H8, H6)
     ['uranus', 'neptune', 'pluto', 'mars', 'saturn'].forEach(afflicted => {
@@ -163,13 +212,47 @@ function buildAffinityMatrix(): Matrix2D {
     // Venus = Love & Aesthetics
     applyDignity(3, 'venus', 0, 10); // Venus Domicile -> +10 Romance globally
     applyDignity(3, 'venus', 1, 15); // Venus Exalted -> +15 Romance globally
+    applyDignity(3, 'venus', 2, -7);
+    applyDignity(3, 'venus', 3, -10);
     applyLine(3, 'venus', 20);       // Venus Line Active -> +20 Romance globally
     applyLine(5, 'venus', 15);       // Venus Line Active -> +15 Partnerships globally
 
     // Jupiter = Wealth & Growth
     applyDignity(1, 'jupiter', 0, 10); // Jupiter Domicile -> +10 Wealth globally
     applyDignity(1, 'jupiter', 1, 15); // Jupiter Exalted -> +15 Wealth globally
+    applyDignity(1, 'jupiter', 2, -6);
+    applyDignity(1, 'jupiter', 3, -9);
+    applyDignity(1, 'venus', 0, 4);
+    applyDignity(1, 'venus', 1, 6);
+    applyDignity(1, 'venus', 2, -4);
+    applyDignity(1, 'venus', 3, -6);
+    applyDignity(1, 'mercury', 0, 4);
+    applyDignity(1, 'mercury', 1, 6);
     applyLine(1, 'jupiter', 20);       // Jupiter Line Active -> +20 Wealth globally
+    applyLine(1, 'venus', 8);
+    applyLine(1, 'mercury', 6);
+
+    // Weak-goal dignity channels.
+    applyDignity(2, 'moon', 0, 6);
+    applyDignity(2, 'moon', 1, 8);
+    applyDignity(2, 'venus', 0, 4);
+    applyDignity(2, 'venus', 1, 5);
+    applyDignity(2, 'moon', 2, -5);
+    applyDignity(2, 'moon', 3, -7);
+    applyDignity(5, 'venus', 0, 6);
+    applyDignity(5, 'venus', 1, 8);
+    applyDignity(5, 'venus', 2, -6);
+    applyDignity(5, 'venus', 3, -8);
+    applyDignity(5, 'jupiter', 0, 4);
+    applyDignity(5, 'jupiter', 1, 5);
+    applyDignity(5, 'jupiter', 2, -4);
+    applyDignity(5, 'jupiter', 3, -5);
+    applyDignity(7, 'mercury', 0, 6);
+    applyDignity(7, 'mercury', 1, 8);
+    applyDignity(7, 'jupiter', 0, 4);
+    applyDignity(7, 'jupiter', 1, 6);
+    applyDignity(7, 'jupiter', 2, -4);
+    applyDignity(7, 'jupiter', 3, -6);
 
     // Goal-aware ACG line channels. The scoring engine now feeds this column
     // with distance-weighted line strength, so exact city lines separate from
@@ -178,6 +261,13 @@ function buildAffinityMatrix(): Matrix2D {
     applyLine(4, 'sun', 12);
     applyLine(4, 'venus', 8);
     applyLine(4, 'jupiter', 10);
+    applyLine(2, 'moon', 10);
+    applyLine(2, 'venus', 8);
+    applyLine(2, 'jupiter', 6);
+    applyLine(5, 'jupiter', 6);
+    applyLine(7, 'mercury', 9);
+    applyLine(7, 'jupiter', 11);
+    applyLine(7, 'venus', 8);
     applyLine(6, 'sun', 16);
     applyLine(6, 'jupiter', 14);
     applyLine(6, 'mercury', 10);
@@ -188,8 +278,8 @@ function buildAffinityMatrix(): Matrix2D {
 
     // --- 5. Hard-coded Overrides conforming precisely to Part 4 Memo Example ---
     // User Target: Event 4 (Romance). Saturn physically in H5, Mars in H12.
-    applyModifier(3, 'saturn', 5, -15); // Saturn H5 Malefic restricting house of pleasure
-    applyModifier(3, 'mars', 12, -10);  // Mars H12 Malefic cross-contamination.
+    applyModifier(3, 'saturn', 5, -10); // Saturn H5 slows pleasure; it needn't erase it
+    applyModifier(3, 'mars', 12, -6);   // Mars H12 cross-contamination, already caught elsewhere
 
     return matrix;
 }

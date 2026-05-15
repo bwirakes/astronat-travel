@@ -6,7 +6,6 @@ import { useState } from "react";
 import AcgLinesCard from "@/app/components/AcgLinesCard";
 import NatalWithGeodeticOverlay from "@/app/components/NatalWithGeodeticOverlay";
 import GeodeticHouseWheel from "../wheels/GeodeticHouseWheel";
-import ReadingGeodeticMap from "../parts/ReadingGeodeticMap";
 import { acgLineRawScore } from "@/app/lib/house-matrix";
 import { geodeticASCLongitude, geodeticMCLongitude, signFromLongitude } from "@/app/lib/geodetic";
 import { geodeticPlanetMeaning } from "@/app/lib/geodetic/planet-meanings";
@@ -15,6 +14,7 @@ import type { PersonalGeodeticHit } from "@/app/lib/reading-tabs";
 import type { V4EclipseHit, V4GeoTransit, V4LunationHit, V4Paran, V4ProgressedBand } from "@/app/lib/reading-viewmodel";
 import SectionHead from "../../shared/SectionHead";
 import TabSection from "../../shared/TabSection";
+import { mergeGuideRows } from "../../shared/ReadingCopy";
 import UniversalSkySection from "./UniversalSkySection";
 import type { V4VM } from "./types";
 
@@ -28,6 +28,7 @@ interface Props {
     copiedTab?: {
         lead?: string;
         plainEnglishSummary?: string;
+        guideRows?: Array<{ label: string; body: string }>;
         evidenceCaption?: string;
         nextTabBridge?: string;
     };
@@ -242,7 +243,6 @@ const SIGN_FLAVOR: Record<string, string> = {
 };
 
 export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocatedAcgLines, copiedTab }: Props) {
-    const [showParans, setShowParans] = useState(false);
     const { lat, lon, city } = vm.location;
     const geoMC  = geodeticMCLongitude(lon);
     const geoASC = geodeticASCLongitude(lon, lat);
@@ -304,6 +304,23 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
     const tabLead = copiedTab?.lead?.trim() || "";
     const tabIntro = copiedTab?.plainEnglishSummary || undefined;
     const hasAiCopy = tabLead.length > 0 || !!tabIntro;
+    const tightestCorner = cornerRows.find((row) => row.hit);
+    const placeGuideRows = mergeGuideRows(copiedTab?.guideRows, [
+        {
+            label: "Best Used For",
+            body: `Use ${city} to read the local field in real time: geo-ASC ${signFromLongitude(geoASC)} and geo-MC ${signFromLongitude(geoMC)} shape how the city meets you.`,
+        },
+        {
+            label: "Move Carefully With",
+            body: tightestCorner?.hit
+                ? `${capitalize(tightestCorner.hit.planet)} is close to the ${ANGLE_FULL[tightestCorner.anchor]}, so reactions around ${ANGLE_TOPIC[tightestCorner.anchor]} can feel louder than usual.`
+                : "Do not treat every reaction as purely personal; the place field itself can turn the volume up.",
+        },
+        {
+            label: "Your Next Move",
+            body: "Move slowly on arrival day, then choose plans that keep your mood, body, and schedule steady.",
+        },
+    ]);
 
     return (
         <TabSection
@@ -311,6 +328,7 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
             title={`${city} · Geodetic field`}
             lead={tabLead}
             intro={tabIntro}
+            guideRows={placeGuideRows}
         >
             {/* Dateline — coordinates, travel date, derived geodetic angles. */}
             <div style={{ ...DATELINE, marginBottom: "var(--space-md)" }}>
@@ -540,57 +558,16 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
                 </>
             )}
 
-            {/* ── §06 Where [city] sits — two-column: sticky map + scrolling prose ─ */}
-            <SectionHead index="06" title={`Where ${city} sits in the zodiac`} flush />
-
-            <div className="grid grid-cols-1 lg:grid-cols-[5fr_6fr] gap-8 lg:gap-10 mt-6">
-                <div className="lg:sticky lg:top-20 lg:self-start">
-                    <ReadingGeodeticMap
-                        lat={lat}
-                        lon={lon}
-                        city={city}
-                        showParans={showParans}
-                        showLegend
-                        onToggleParans={vm.parans.length > 0 ? () => setShowParans((v) => !v) : undefined}
-                        paransCount={vm.parans.length}
-                        parans={vm.parans
-                            .filter((p) => Math.abs(p.latOffset) <= 28)
-                            .map((p) => ({
-                                p1: p.p1, p2: p.p2,
-                                aspect: p.aspect || undefined,
-                                lat: p.lat,
-                                contribution: p.contribution,
-                            }))}
-                    />
-                </div>
-
-                <div>
-                    {vm.geodetic?.placeCharacter?.lead ? (
-                        <p style={{ ...BODY, fontSize: "1.05rem", margin: 0, maxWidth: "640px" }}>
-                            {vm.geodetic.placeCharacter.lead}
-                        </p>
-                    ) : (
-                        <p style={BODY}>
-                            {city} sits where {signFromLongitude(geoMC)} runs overhead and{" "}
-                            {signFromLongitude(geoASC)} rises on the horizon. The shaded band is the slice of
-                            sky this longitude owns.
-                        </p>
-                    )}
-                </div>
-            </div>
-
-            {vm.parans.length > 0 && (
-                <>
-                    <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
-                    <SectionHead index="07" title="Latitude crossings" flush />
-                    <ParansDisclosure
-                        parans={vm.parans}
-                        city={city}
-                        notes={paranNotesByKey(vm.geodetic?.placeCharacter?.parans)}
-                        paransSummary={vm.geodetic?.placeCharacter?.paransSummary ?? ""}
-                    />
-                </>
-            )}
+            {/* ── §06 Earth-fixed geodetic receipts ───────────────────── */}
+            <SectionHead index="06" title="Geodetic angles and parans" flush />
+            <GeodeticAnglesAndParans
+                city={city}
+                cornerRows={cornerRows}
+                parans={vm.parans}
+                placeLead={vm.geodetic?.placeCharacter?.lead ?? ""}
+                paransSummary={vm.geodetic?.placeCharacter?.paransSummary ?? ""}
+                paranNotes={paranNotesByKey(vm.geodetic?.placeCharacter?.parans)}
+            />
 
             <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
 
@@ -1567,98 +1544,107 @@ function LiveLinesList({ lines }: { lines: V4VM["geodetic"] extends infer G
     );
 }
 
-function ParansDisclosure({ parans, city, notes, paransSummary }: {
-    parans: V4Paran[];
+function GeodeticAnglesAndParans({
+    city,
+    cornerRows,
+    parans,
+    placeLead,
+    paransSummary,
+    paranNotes,
+}: {
     city: string;
-    notes: Map<string, { headline: string; body: string }>;
+    cornerRows: Array<{ anchor: Anchor; sign: string; deg: number; hit: PersonalGeodeticHit | undefined }>;
+    parans: V4Paran[];
+    placeLead: string;
     paransSummary: string;
+    paranNotes: Map<string, { headline: string; body: string }>;
 }) {
-    // Top crossings only — sorted by archetype loading (|contribution|) so
-    // the strongest pair leads. Older display showed 8 rows, which crowded
-    // the page with neutral pairs the reader doesn't need.
-    const TOP_N = 3;
     const topParans = [...parans]
         .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
-        .slice(0, TOP_N);
-
-    const lifting = parans.filter((p) => p.contribution > 0).length;
-    const pressing = parans.filter((p) => p.contribution < 0).length;
-    const neutral = parans.length - lifting - pressing;
-    const lead = topParans[0] && (notes.get(`${topParans[0].p1}-${topParans[0].p2}`.toLowerCase())
-        ?? notes.get(`${topParans[0].p2}-${topParans[0].p1}`.toLowerCase()));
-    const summaryParts = [`${parans.length} crossing${parans.length === 1 ? "" : "s"}`];
-    if (lifting) summaryParts.push(`${lifting} lifting`);
-    if (pressing) summaryParts.push(`${pressing} pressing`);
-    if (neutral && !lifting && !pressing) summaryParts.push(`${neutral} neutral`);
-    const summaryLine = summaryParts.join(" · ");
+        .slice(0, 3);
+    const lead = placeLead
+        || `${city}'s longitude gives the place its own fixed zodiac frame. The angles show how the city meets you; the parans show latitude crossings that color the field.`;
 
     return (
-        <details
-            className="parans-disclosure"
-            style={{ marginTop: 0 }}
+        <section
+            className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-0 border-t border-l"
+            style={{ borderColor: "var(--surface-border)" }}
         >
-            <style>{`
-                .parans-disclosure summary::-webkit-details-marker { display: none; }
-                .parans-disclosure[open] summary .parans-toggle::before { content: "Hide ↑"; }
-                .parans-disclosure:not([open]) summary .parans-toggle::before { content: "Show all ↓"; }
-            `}</style>
-            <summary
-                style={{
-                    listStyle: "none",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "baseline",
-                    justifyContent: "space-between",
-                    gap: "1rem",
-                }}
+            <article
+                className="border-r border-b p-[clamp(20px,3vw,30px)]"
+                style={{ borderColor: "var(--surface-border)" }}
             >
-                <div style={{ flex: 1 }}>
-                    {paransSummary ? (
-                        <p style={{ ...BODY, margin: 0, maxWidth: "640px" }}>
-                            {paransSummary}
-                        </p>
-                    ) : (
-                        <>
-                            <div style={{
-                                ...MONO_SM,
-                                color: "var(--text-tertiary)",
-                                letterSpacing: "0.04em",
-                            }}>
-                                {summaryLine}
-                            </div>
-                            {lead?.headline && (
-                                <p style={{ ...BODY, margin: "0.5rem 0 0 0", maxWidth: "640px" }}>
-                                    {lead.headline}
-                                </p>
-                            )}
-                        </>
-                    )}
+                <div style={{ ...MONO_SM, color: "var(--color-y2k-blue)", marginBottom: "0.85rem" }}>
+                    Earth-fixed frame
                 </div>
-                <span
-                    aria-hidden="true"
-                    className="parans-toggle"
-                    style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: "0.7rem",
-                        letterSpacing: "0.16em",
-                        textTransform: "uppercase",
-                        color: "var(--text-tertiary)",
-                        whiteSpace: "nowrap",
-                        paddingTop: "0.2rem",
-                    }}
-                />
-            </summary>
-            <div style={{ marginTop: "var(--space-md)" }}>
-                {!paransSummary && (
-                    <p style={{ ...BODY_MUTED, margin: "0 0 var(--space-md) 0" }}>
-                        Pairs of your natal planets that cross the horizon together at a latitude
-                        near {city}&rsquo;s. Showing the {topParans.length === 1 ? "strongest crossing" : `${topParans.length} strongest crossings`} —
-                        benefic pairs lift the field, malefic pairs press it.
+                <p style={{ ...BODY, margin: "0 0 1.1rem 0", maxWidth: "620px" }}>
+                    {lead}
+                </p>
+                <div
+                    className="grid grid-cols-1 sm:grid-cols-2 gap-0 border-t border-l"
+                    style={{ borderColor: "var(--surface-border)" }}
+                >
+                    {cornerRows.map(({ anchor, sign, deg, hit }) => {
+                        const accent = hit ? familyAccent(hit.family) : "var(--text-tertiary)";
+                        return (
+                            <div
+                                key={`geo-receipt-${anchor}`}
+                                className="border-r border-b p-[14px]"
+                                style={{ borderColor: "var(--surface-border)" }}
+                            >
+                                <div className="flex items-baseline justify-between gap-3">
+                                    <span style={{ ...MONO_SM, color: "var(--text-tertiary)" }}>
+                                        geo-{anchor}
+                                    </span>
+                                    <span
+                                        style={{
+                                            fontFamily: "var(--font-mono)",
+                                            fontSize: "0.76rem",
+                                            color: "var(--text-primary)",
+                                            fontWeight: 700,
+                                        }}
+                                    >
+                                        {sign} {deg}°
+                                    </span>
+                                </div>
+                                <p style={{ ...BODY_CAPTION, margin: "0.55rem 0 0 0" }}>
+                                    {ANGLE_DESC[anchor]} {hit ? (
+                                        <span style={{ color: accent }}>
+                                            {capitalize(hit.planet)} sits {hit.orbDeg}° away, so this corner is louder.
+                                        </span>
+                                    ) : "No natal planet sits close enough to dominate it."}
+                                </p>
+                            </div>
+                        );
+                    })}
+                </div>
+            </article>
+
+            <article
+                className="border-r border-b p-[clamp(20px,3vw,30px)]"
+                style={{ borderColor: "var(--surface-border)" }}
+            >
+                <div style={{ ...MONO_SM, color: "var(--color-y2k-blue)", marginBottom: "0.85rem" }}>
+                    Parans
+                </div>
+                {paransSummary ? (
+                    <p style={{ ...BODY, margin: "0 0 0.7rem 0", maxWidth: "620px" }}>
+                        {paransSummary}
+                    </p>
+                ) : (
+                    <p style={{ ...BODY, margin: "0 0 0.7rem 0", maxWidth: "620px" }}>
+                        Parans are latitude crossings. They do not replace the angles; they add a background tone to the place.
                     </p>
                 )}
-                <ParanList parans={topParans} notes={notes} />
-            </div>
-        </details>
+                {topParans.length ? (
+                    <ParanList parans={topParans} notes={paranNotes} />
+                ) : (
+                    <p style={{ ...BODY_MUTED, margin: 0 }}>
+                        No strong paran crossing is close enough to lead this section.
+                    </p>
+                )}
+            </article>
+        </section>
     );
 }
 

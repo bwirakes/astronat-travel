@@ -322,6 +322,13 @@ const ANGLE_STRENGTH: Record<string, number> = {
 const ACG_SIGMA_KM = 250;
 const ACG_SIGMA_SQ_2 = 2 * ACG_SIGMA_KM * ACG_SIGMA_KM;
 
+export type AcgLineStrengthBand =
+    | "exact/very strong"
+    | "strong"
+    | "moderate/supporting"
+    | "background"
+    | "ignore";
+
 /**
  * Per-line raw contribution to the geodetic bucket — the same math the
  * house matrix runs internally for each line, exposed so the V4 view can
@@ -344,6 +351,20 @@ export function acgLineRawScore(line: { planet: string; angle: string; distance_
     return Math.round(
         baseInfluence * angleScale * Math.exp(-(km * km) / ACG_SIGMA_SQ_2),
     );
+}
+
+/** Narrative band for ACG lines. This intentionally considers both distance
+ * and actual scored contribution so a 484 km Moon-MC line (+3) is a supporting
+ * clue, not the headline cause. */
+export function acgLineStrengthBand(line: { planet: string; angle: string; distance_km: number }): AcgLineStrengthBand {
+    const km = Number(line.distance_km);
+    if (!isFinite(km) || km < 0) return "ignore";
+    const contribution = Math.abs(acgLineRawScore(line));
+    if (km <= 100 || contribution >= 18) return "exact/very strong";
+    if (km <= 250 || contribution >= 10) return "strong";
+    if (km <= 500 || contribution >= 4) return "moderate/supporting";
+    if (km <= 1000 || contribution >= 1) return "background";
+    return "ignore";
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -1109,13 +1130,15 @@ export function computeHouseMatrix(params: {
         );
 
         // ── Step 1: Baseline by house type + global timing penalty ────
-        // Lifted +3 across the board (was 55/50/45) so the cadent floor
-        // sits above the "Severe Friction" band even with max penalty
-        // applied. Pairs with the lowered penalty cap (12 not 25) so the
-        // typical reading no longer starts ~25 pts in the hole.
+        // Relocation/travel scoring should not treat "quiet" as "bad."
+        // Angular houses still start strongest, but cadent houses include H3,
+        // H9, and H12 — short trips, long journeys, foreign lands, retreat —
+        // so they need a usable baseline. Accidental dignity, occupants, line
+        // strength, and timing still decide whether a house becomes excellent
+        // or genuinely hard.
         const angularHouses  = [1, 4, 7, 10];
         const succedentHouses = [2, 5, 8, 11];
-        const baseNatural = angularHouses.includes(h) ? 58 : succedentHouses.includes(h) ? 52 : 48;
+        const baseNatural = angularHouses.includes(h) ? 62 : succedentHouses.includes(h) ? 56 : 54;
         const base = Math.max(10, baseNatural - globalPenalty);
 
         // ── Step 2: Ruler Dignity × Lilly Accidental Points (Gap 3+P0-A) ────

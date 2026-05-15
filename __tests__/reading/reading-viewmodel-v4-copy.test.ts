@@ -65,11 +65,22 @@ function completeTeacherReading() {
     acc[id] = {
       lead: `${id} lead`,
       plainEnglishSummary: `${id} summary`,
+      guideRows: [
+        { label: "Best Used For", body: `${id} best use.` },
+        { label: "Move Carefully With", body: `${id} watch point.` },
+        { label: "Your Next Move", body: `${id} next move.` },
+      ],
       evidenceCaption: `${id} evidence`,
       ...(index < READING_TAB_IDS.length - 1 ? { nextTabBridge: `${id} bridge` } : {}),
     };
     return acc;
-  }, {} as Record<ReadingTabId, { lead: string; plainEnglishSummary: string; evidenceCaption: string; nextTabBridge?: string }>);
+  }, {} as Record<ReadingTabId, {
+    lead: string;
+    plainEnglishSummary: string;
+    guideRows: Array<{ label: "Best Used For" | "Move Carefully With" | "Your Next Move"; body: string }>;
+    evidenceCaption: string;
+    nextTabBridge?: string;
+  }>);
 
   return {
     ...legacyTeacherReading,
@@ -138,7 +149,22 @@ describe("V4 teacherReading completeness", () => {
     expect(Object.keys(vm.tabs.copy)).toEqual([...READING_TAB_IDS]);
   });
 
-  it("shortens what-shifts summary copy to four sentences while preserving the intro beats", () => {
+  it("accepts cached V4 tab copy written before guide rows existed", () => {
+    const teacherReading = completeTeacherReading();
+    for (const tab of Object.values(teacherReading.tabs)) {
+      delete tab.guideRows;
+    }
+
+    expect(hasV4TeacherReading(teacherReading)).toBe(true);
+
+    const vm = toV4ViewModel(baseReading(teacherReading));
+
+    expect(vm.copy.hasCompleteV4TeacherReading).toBe(true);
+    expect(vm.tabs.copy.overview?.lead).toBe("overview lead");
+    expect(vm.tabs.copy.overview?.guideRows).toBeUndefined();
+  });
+
+  it("shortens what-shifts summary copy to three sentences while preserving the intro beats", () => {
     const teacherReading = completeTeacherReading();
     teacherReading.tabs["what-shifts"].plainEnglishSummary = [
       "Capricorn rises here, with Saturn running the chart instead of natal Taurus's Venus.",
@@ -153,9 +179,9 @@ describe("V4 teacherReading completeness", () => {
     const summary = vm.tabs.copy["what-shifts"]?.plainEnglishSummary ?? "";
 
     expect(summary).toContain("Capricorn rises here");
-    expect(summary).toContain("career goal");
-    expect(summary).not.toContain("Watch how your shoulders feel");
-    expect((summary.match(/[.!?](?=\s|$)/g) ?? []).length).toBe(4);
+    expect(summary).toContain("Work is the concrete domain");
+    expect(summary).not.toContain("For your career goal");
+    expect((summary.match(/[.!?](?=\s|$)/g) ?? []).length).toBe(3);
   });
 
   it("writes planet-house fallback shifts as practical consequences, not generic movement labels", () => {
