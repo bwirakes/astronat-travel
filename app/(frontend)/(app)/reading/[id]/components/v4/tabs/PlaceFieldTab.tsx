@@ -6,6 +6,7 @@ import { useState } from "react";
 import AcgLinesCard from "@/app/components/AcgLinesCard";
 import NatalWithGeodeticOverlay from "@/app/components/NatalWithGeodeticOverlay";
 import GeodeticHouseWheel from "../wheels/GeodeticHouseWheel";
+import ReadingGeodeticMap from "../parts/ReadingGeodeticMap";
 import { acgLineRawScore } from "@/app/lib/house-matrix";
 import { geodeticASCLongitude, geodeticMCLongitude, signFromLongitude } from "@/app/lib/geodetic";
 import { geodeticPlanetMeaning } from "@/app/lib/geodetic/planet-meanings";
@@ -14,6 +15,7 @@ import type { PersonalGeodeticHit } from "@/app/lib/reading-tabs";
 import type { V4EclipseHit, V4GeoTransit, V4LunationHit, V4Paran, V4ProgressedBand } from "@/app/lib/reading-viewmodel";
 import SectionHead from "../../shared/SectionHead";
 import TabSection from "../../shared/TabSection";
+import { mergeGuideRows } from "../../shared/ReadingCopy";
 import UniversalSkySection from "./UniversalSkySection";
 import type { V4VM } from "./types";
 
@@ -112,14 +114,9 @@ const MONO_SM: React.CSSProperties = {
     fontWeight: 600,
 };
 
-const DATELINE: React.CSSProperties = {
-    fontFamily: "var(--font-mono)",
-    fontSize: "0.7rem",
-    color: "var(--text-tertiary)",
-    display: "flex",
-    gap: "1.25rem",
-    flexWrap: "wrap",
-    opacity: 0.85,
+const MAP_PANEL: React.CSSProperties = {
+    background: "transparent",
+    padding: 0,
 };
 
 // ─── Sign-aware angle copy ───────────────────────────────────────────────
@@ -243,6 +240,7 @@ const SIGN_FLAVOR: Record<string, string> = {
 
 export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocatedAcgLines, copiedTab }: Props) {
     const { lat, lon, city } = vm.location;
+    const [showMapParans, setShowMapParans] = useState(true);
     const geoMC  = geodeticMCLongitude(lon);
     const geoASC = geodeticASCLongitude(lon, lat);
 
@@ -289,6 +287,15 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
     });
 
     const liveItems = buildLiveItems(vm);
+    const liveEventItems = liveItems.filter((item) => item.kind !== "transit");
+    const activeGeoTransits = [...(vm.geodetic?.activeTransits ?? [])]
+        .sort((a, b) => Math.abs(b.severity) - Math.abs(a.severity));
+    const hasLiveSupport =
+        activeGeoTransits.length > 0 ||
+        liveEventItems.length > 0 ||
+        (vm.geodetic?.liveLines.length ?? 0) > 0 ||
+        !!vm.geodetic?.liveLinesLead ||
+        !!vm.progressions?.bands.some((b) => b.destinationInBand);
     const timing: TimingState = {
         skyHasContent: liveItems.length > 0,
         hasProgressedBand: vm.progressions?.bands.some((b) => b.destinationInBand) ?? false,
@@ -303,23 +310,36 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
     const tabLead = copiedTab?.lead?.trim() || "";
     const tabIntro = copiedTab?.plainEnglishSummary || undefined;
     const hasAiCopy = tabLead.length > 0 || !!tabIntro;
+    const hasHouseFrame = vm.geodeticHouseFrame.cusps.length === 12;
+    const hasLifeAreas = interpretations.length > 0;
+    const optionalSectionStart = 4;
+    const universalSkyIndex = optionalSectionStart;
+    const houseFrameIndex = optionalSectionStart + (vm.universalSky ? 1 : 0);
+    const lifeAreasIndex = houseFrameIndex + (hasHouseFrame ? 1 : 0);
+    const geographyGuideRows = mergeGuideRows(copiedTab?.guideRows, buildCityUseGuideRows({
+        city,
+        selectedGoal: vm.scoreNarrative.selectedGoals[0],
+        cornerRows,
+        liveItem: liveItems[0],
+    }))?.map((row) => {
+        if (row.label === "Best Used For") return { ...row, label: "Use this for", badgeVariant: "overview-use" as const };
+        if (row.label === "Move Carefully With") return { ...row, label: "Don't use this for", badgeVariant: "overview-avoid" as const };
+        return { ...row, label: "Look here first", badgeVariant: "overview-next" as const };
+    });
 
     return (
         <TabSection
             kicker="Geography"
-            title={`${city} · Geodetic field`}
+            title={`${city} · City compatibility (geodetic)`}
             lead={tabLead}
             intro={tabIntro}
+            guideRows={geographyGuideRows}
+            maxSentences={5}
+            quietCopy
+            preserveGuideLabels
+            guideLayout="flow"
+            guideFlowVariant="overview"
         >
-            {/* Dateline — coordinates, travel date, derived geodetic angles. */}
-            <div style={{ ...DATELINE, marginBottom: "var(--space-md)" }}>
-                <span>{lat.toFixed(2)}°, {lon.toFixed(2)}°</span>
-                <span>{vm.travelDateISO ? vm.travelDateISO.slice(0, 10) : "any time"}</span>
-                <span>geo-ASC {signFromLongitude(geoASC)} · geo-MC {signFromLongitude(geoMC)}</span>
-            </div>
-
-            <PlaceGoalLens city={city} goal={vm.scoreNarrative.selectedGoals[0]} />
-
             {/* ── Personalised opener — only shown when no AI dek/intro exists ── */}
             {!hasAiCopy && (
                 <>
@@ -328,46 +348,71 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
                 </>
             )}
 
-            {/* ── §01 What this place activates ────────────────────────── */}
-            <SectionHead index="01" title={`What ${city} activates in your chart`}  flush />
-            <div className="chart-overview-grid" style={{ marginBottom: "var(--space-md)" }}>
+            {/* ── §01 City/paran map ─────────────────────────────────── */}
+            <SectionHead index="01" title={`Where ${city} sits on the geodetic map`}  flush />
+            <div style={{ ...MAP_PANEL, maxWidth: "760px", marginBottom: "var(--space-md)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", marginBottom: "0.75rem" }}>
+                    <div style={KICKER}>City + paran field</div>
+                    <span style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "0.58rem",
+                        letterSpacing: "0.12em",
+                        textTransform: "uppercase",
+                        color: "var(--text-tertiary)",
+                        padding: 0,
+                        background: "transparent",
+                        whiteSpace: "nowrap",
+                    }}>
+                        Earth-fixed
+                    </span>
+                </div>
+                <ReadingGeodeticMap
+                    lat={lat}
+                    lon={lon}
+                    city={city}
+                    parans={vm.parans}
+                    showParans={showMapParans}
+                    onToggleParans={vm.parans.length > 0 ? () => setShowMapParans((v) => !v) : undefined}
+                    paransCount={vm.parans.length}
+                />
+                <p style={{ ...BODY_CAPTION, margin: "0.75rem 0 0 0", maxWidth: "640px" }}>
+                    This is the city layer: the pin is {city}, and the dashed paran latitudes show crossings that color the place before your natal chart is overlaid.
+                </p>
+            </div>
+            <CityFieldReceipts
+                cornerRows={cornerRows}
+                parans={vm.parans}
+                paranNotes={paranNotesByKey(vm.geodetic?.placeCharacter?.parans)}
+            />
+
+            <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
+
+            {/* ── §02 What this place activates ────────────────────────── */}
+            <SectionHead index="02" title={`What ${city} activates in your chart`}  flush />
+            <div
+                style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
+                    gap: "clamp(1.5rem, 4vw, 2.5rem)",
+                    alignItems: "start",
+                    marginBottom: "var(--space-md)",
+                }}
+            >
                 <div>
                     <div style={KICKER}>The four corners</div>
-                    <div style={{ display: "flex", flexDirection: "column" }}>
-                        {cornerRows.map(({ anchor, sign, deg, hit }) => {
-                            const tight = hit && hit.orbDeg <= 3;
-                            const accent = hit ? familyAccent(hit.family) : "var(--text-tertiary)";
-                            return (
-                                <div key={anchor} style={{
-                                    borderBottom: "1px solid var(--surface-border)",
-                                    padding: "0.85rem 0",
-                                    background: tight ? "color-mix(in oklab, var(--gold) 5%, transparent)" : "transparent",
-                                }}>
-                                    <div style={{ display: "flex", alignItems: "baseline", gap: "0.75rem", flexWrap: "wrap" }}>
-                                        <span style={{ ...MONO_SM, color: "var(--text-tertiary)", minWidth: "2.4rem" }}>
-                                            {anchor}
-                                        </span>
-                                        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.85rem", fontWeight: 600, color: "var(--text-primary)" }}>
-                                            {sign} {deg}°
-                                        </span>
-                                        {hit && (
-                                            <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", color: accent, letterSpacing: "0.08em", fontWeight: tight ? 700 : 500 }}>
-                                                {capitalize(hit.planet)} · {hit.orbDeg}° {tight ? "TIGHT" : "close"}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div style={{ ...BODY_CAPTION, marginTop: "0.25rem", paddingLeft: "3.15rem" }}>
-                                        {anchorCopy(anchor, sign, hit)}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
+                    <CornerFlow rows={cornerRows} />
                 </div>
 
-                <div style={{ position: "sticky", top: "var(--space-md)" }}>
+                <div style={{
+                    borderTop: "1px solid var(--surface-border)",
+                    paddingTop: "clamp(2.2rem, 5vw, 3.6rem)",
+                    marginTop: "clamp(2rem, 5vw, 3.5rem)",
+                }}>
                     <div style={KICKER}>Natal × geodetic overlay</div>
-                    <div style={{ width: "100%", maxWidth: "440px", margin: "0 auto", position: "relative" }}>
+                    <p style={{ ...BODY_CAPTION, margin: "0 0 var(--space-md) 0", maxWidth: "34rem" }}>
+                        The wheel below places those four city corners against your natal planets, so the flow above has a chart receipt beside it.
+                    </p>
+                    <div style={{ width: "100%", maxWidth: "520px", margin: "0 auto", position: "relative" }}>
                         <NatalWithGeodeticOverlay
                             isDark={isDark}
                             planets={natalPlanetsForWheel}
@@ -382,12 +427,15 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
 
             <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
 
-            {/* ── §02 What's live now (promoted out of details) ───────── */}
-            <SectionHead index="02" title={`What's live in ${city} now`}  flush />
+            {/* ── §03 What's live now (promoted out of details) ───────── */}
+            <SectionHead index="03" title={`What's live in ${city} now`}  flush />
             {vm.geodetic?.liveLinesLead && (
                 <p style={{ ...BODY, fontSize: "1.05rem", margin: "0 0 var(--space-md) 0", maxWidth: "640px" }}>
                     {vm.geodetic.liveLinesLead}
                 </p>
+            )}
+            {activeGeoTransits.length > 0 && (
+                <ActiveGeoTransits city={city} transits={activeGeoTransits} />
             )}
             {vm.progressions && (
                 <ProgressionsLine bands={vm.progressions.bands} />
@@ -395,9 +443,9 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
             {(vm.geodetic?.liveLines.length ?? 0) > 0 && (
                 <LiveLinesList lines={vm.geodetic!.liveLines} />
             )}
-            {liveItems.length > 0 ? (
-                <LiveNowTable items={liveItems} />
-            ) : (vm.geodetic?.liveLines.length ?? 0) > 0 || vm.geodetic?.liveLinesLead ? null : reading?.geodeticEngineVersion ? (
+            {liveEventItems.length > 0 ? (
+                <LiveNowTable items={liveEventItems} title="Other dated triggers" />
+            ) : hasLiveSupport ? null : reading?.geodeticEngineVersion ? (
                 <p style={BODY_MUTED}>
                     The sky over {city} is quiet right now &mdash; nothing transiting close to its corners.
                 </p>
@@ -408,13 +456,15 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
                 </p>
             )}
 
-            <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
+            {(vm.universalSky || hasHouseFrame || hasLifeAreas) && (
+                <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
+            )}
 
-            {/* ── §03 Universal sky weather (location-agnostic) ────────── */}
+            {/* ── Universal sky weather (location-agnostic) ───────────── */}
             {vm.universalSky && (
                 <UniversalSkySection
                     sky={vm.universalSky}
-                    sectionIndex="03"
+                    sectionIndex={String(universalSkyIndex).padStart(2, "0")}
                     goalIds={vm.goalIds ?? []}
                     travelStartISO={vm.travelDateISO ?? undefined}
                     travelEndISO={
@@ -430,10 +480,10 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
                 />
             )}
 
-            {/* ── §04 The frame (geodetic house wheel) ─────────────────── */}
-            {vm.geodeticHouseFrame.cusps.length === 12 && (
+            {/* ── The frame (geodetic house wheel) ────────────────────── */}
+            {hasHouseFrame && (
                 <>
-                    <SectionHead index="04" title="Where your chart lands on this longitude"  flush />
+                    <SectionHead index={String(houseFrameIndex).padStart(2, "0")} title="Where your chart lands on this longitude"  flush />
                     <p style={BODY}>
                         If you swapped your birthplace&rsquo;s clock for {city}&rsquo;s, your natal
                         planets would re-house themselves like this. House 1 starts at the sign of
@@ -455,10 +505,10 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
                 </>
             )}
 
-            {/* ── §05 Life areas through the city's geodetic frame ─────── */}
-            {interpretations.length > 0 && (
+            {/* ── Life areas through the city's geodetic frame ────────── */}
+            {hasLifeAreas && (
                 <>
-                    <SectionHead index="05" title={`Life areas through ${city}'s geodetic frame`}  flush />
+                    <SectionHead index={String(lifeAreasIndex).padStart(2, "0")} title={`Life areas through ${city}'s geodetic frame`}  flush />
                     <p style={BODY}>
                         Re-domained by longitude — which house each natal planet lands in when{" "}
                         {city}&rsquo;s coordinates set the clock. A <em>≠ natal H{"{n}"}</em> chip
@@ -539,19 +589,6 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
                 </>
             )}
 
-            {/* ── §06 Earth-fixed geodetic receipts ───────────────────── */}
-            <SectionHead index="06" title="Geodetic angles and parans" flush />
-            <GeodeticAnglesAndParans
-                city={city}
-                cornerRows={cornerRows}
-                parans={vm.parans}
-                placeLead={vm.geodetic?.placeCharacter?.lead ?? ""}
-                paransSummary={vm.geodetic?.placeCharacter?.paransSummary ?? ""}
-                paranNotes={paranNotesByKey(vm.geodetic?.placeCharacter?.parans)}
-            />
-
-            <div style={{ ...DIVIDER, margin: "var(--space-xl) 0 var(--space-lg)" }} />
-
             {/* ── Receipts (collapsed) ─────────────────────────────────── */}
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
                 {flatHits.length > 0 && (
@@ -628,43 +665,6 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
 }
 
 // ── Personalised opener (editorial drop-cap lede) ────────────────────────
-
-function PlaceGoalLens({
-    city,
-    goal,
-}: {
-    city: string;
-    goal?: { goalId: string; label: string; score: number; action: string } | undefined;
-}) {
-    if (!goal) return null;
-    const houses = GOAL_HOUSES[goal.goalId] ?? [];
-    const houseText = houses.length
-        ? houses.map((h) => `H${h} ${HOUSE_DOMAIN_SHORT[h] ?? ""}`.trim()).join(" + ")
-        : "timing factors";
-    return (
-        <div
-            style={{
-                borderTop: "1px solid var(--surface-border)",
-                borderBottom: "1px solid var(--surface-border)",
-                padding: "0.8rem 0",
-                margin: "0 0 var(--space-lg) 0",
-                display: "grid",
-                gridTemplateColumns: "minmax(0, 1fr)",
-                gap: "0.25rem",
-                maxWidth: "680px",
-            }}
-        >
-            <div style={{ ...MONO_SM, color: "var(--gold)" }}>
-                Goal lens · {goal.label} · {Math.round(goal.score)}/100 · {houseText}
-            </div>
-            <p style={{ ...BODY_CAPTION, margin: 0 }}>
-                {city}&rsquo;s longitude changes where your natal planets act, so the goal score
-                gets a local texture: which parts of you become louder, quieter, easier, or more
-                reactive in the place itself.
-            </p>
-        </div>
-    );
-}
 
 interface TimingState {
     skyHasContent: boolean;     // active transits OR eclipses OR lunations within orb
@@ -966,11 +966,250 @@ function anchorCopy(anchor: Anchor, sign: string, hit: PersonalGeodeticHit | und
     const flavor = SIGN_FLAVOR[sign] ?? "neutral";
     const label = ANCHOR_LABEL[anchor];
     if (!hit) {
-        return `${label}: ${flavor}. Nothing close enough to push it further.`;
+        return `${sign} makes the ${label.toLowerCase()} feel ${flavor}. This corner is clean, so the sign leads without a loud natal planet taking over.`;
     }
     const planet = capitalize(hit.planet);
-    const verb = PLANET_LEX[hit.planet.toLowerCase()]?.verb ?? "colours";
-    return `${label}: ${flavor}. ${planet} ${verb} it.`;
+    const topic = ANGLE_TOPIC[anchor];
+    return `${planet} sits close to the ${label.toLowerCase()} corner, so ${topic} themes get louder here. ${sign} sets the style: ${flavor}.`;
+}
+
+function CornerFlow({
+    rows,
+}: {
+    rows: Array<{ anchor: Anchor; sign: string; deg: number; hit: PersonalGeodeticHit | undefined }>;
+}) {
+    return (
+        <div role="list" style={{
+            listStyle: "none",
+            margin: "0.15rem 0 0 0",
+            padding: 0,
+            position: "relative",
+        }}>
+            <span
+                aria-hidden
+                style={{
+                    position: "absolute",
+                    left: 27,
+                    top: 30,
+                    bottom: 28,
+                    width: 1,
+                    background: "linear-gradient(180deg, color-mix(in oklab, var(--text-tertiary) 18%, transparent), color-mix(in oklab, var(--color-y2k-blue) 18%, transparent), transparent)",
+                }}
+            />
+            {rows.map((row, index) => (
+                <CornerFlowRow key={row.anchor} row={row} isLast={index === rows.length - 1} />
+            ))}
+        </div>
+    );
+}
+
+function CornerFlowRow({
+    row,
+    isLast,
+}: {
+    row: { anchor: Anchor; sign: string; deg: number; hit: PersonalGeodeticHit | undefined };
+    isLast: boolean;
+}) {
+    const { anchor, sign, deg, hit } = row;
+    const accent = cornerAccent(anchor, hit);
+    const receipt = hit
+        ? `geo-${anchor} · ${sign} ${deg}° · ${capitalize(hit.planet)} ${hit.orbDeg}°`
+        : `geo-${anchor} · ${sign} ${deg}°`;
+    return (
+        <div
+            role="listitem"
+            style={{
+                display: "grid",
+                gridTemplateColumns: "68px minmax(0, 1fr)",
+                gap: "clamp(1rem, 2.4vw, 1.35rem)",
+                position: "relative",
+                padding: isLast ? "0.45rem 0 0 0" : "0.45rem 0 clamp(1.4rem, 3vw, 2rem)",
+            }}
+        >
+            <div style={{ position: "relative", zIndex: 1, display: "flex", justifyContent: "center" }}>
+                <CornerBadge anchor={anchor} sign={sign} hit={hit} />
+            </div>
+            <div
+                style={{
+                    borderBottom: isLast ? "none" : "1px solid var(--surface-border)",
+                    paddingBottom: isLast ? 0 : "clamp(1.15rem, 2.4vw, 1.55rem)",
+                    minWidth: 0,
+                }}
+            >
+                <div style={{
+                    ...MONO_SM,
+                    color: accent,
+                    marginBottom: "0.55rem",
+                    letterSpacing: "0.22em",
+                }}>
+                    {anchor} · {ANGLE_FULL[anchor]}
+                </div>
+                <p style={{
+                    ...BODY,
+                    color: "var(--text-primary)",
+                    margin: 0,
+                    fontSize: "clamp(1.05rem, 2.2vw, 1.35rem)",
+                    lineHeight: 1.45,
+                    maxWidth: "32rem",
+                }}>
+                    {anchorCopy(anchor, sign, hit)}
+                </p>
+                <div style={{
+                    ...MONO_SM,
+                    color: "var(--text-tertiary)",
+                    marginTop: "0.65rem",
+                    fontSize: "0.55rem",
+                    letterSpacing: "0.14em",
+                }}>
+                    {receipt}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function CornerBadge({
+    anchor,
+    sign,
+    hit,
+}: {
+    anchor: Anchor;
+    sign: string;
+    hit: PersonalGeodeticHit | undefined;
+}) {
+    const tone = cornerAccent(anchor, hit);
+    const bg = `color-mix(in oklab, ${tone} ${hit ? 15 : 10}%, transparent)`;
+    return (
+        <span
+            aria-hidden
+            style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 56,
+                height: 56,
+                borderRadius: "var(--shape-organic-1)",
+                color: tone,
+                background: bg,
+                overflow: "hidden",
+                boxShadow: hit ? `0 12px 28px color-mix(in oklab, ${tone} 12%, transparent)` : "none",
+            }}
+        >
+            {hit ? <PlanetGlyphSvg planet={hit.planet} /> : <ZodiacGlyphSvg sign={sign} />}
+        </span>
+    );
+}
+
+function PlanetGlyphSvg({ planet }: { planet: string }) {
+    const key = planet.toLowerCase();
+    return (
+        <svg viewBox="0 0 56 56" width="42" height="42" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            {key === "sun" ? (
+                <>
+                    <circle cx="28" cy="28" r="12" strokeWidth="2" />
+                    <circle cx="28" cy="28" r="2.5" fill="currentColor" stroke="none" />
+                </>
+            ) : key === "moon" ? (
+                <path d="M34 13c-8 2-13 8.5-13 16.2 0 6.5 4 11.8 10.5 13.8-9.7-.4-17.5-7-17.5-15.3C14 18.8 22.6 12.5 34 13Z" fill="currentColor" opacity="0.86" stroke="none" />
+            ) : key === "mercury" ? (
+                <>
+                    <path d="M20 14c2.2 4 13.8 4 16 0" strokeWidth="2" />
+                    <circle cx="28" cy="27" r="8" strokeWidth="2" />
+                    <path d="M28 35v10M22.5 41h11" strokeWidth="2" />
+                </>
+            ) : key === "venus" ? (
+                <>
+                    <circle cx="28" cy="22" r="9" strokeWidth="2" />
+                    <path d="M28 31v14M21.5 38h13" strokeWidth="2" />
+                </>
+            ) : key === "mars" ? (
+                <>
+                    <circle cx="23" cy="32" r="9" strokeWidth="2" />
+                    <path d="M30 25l12-12M35 13h7v7" strokeWidth="2" />
+                </>
+            ) : key === "jupiter" ? (
+                <>
+                    <path d="M17 20c3.2-6.5 14-5.6 10.2 5.5-1.9 5.4-6.1 8.5-11.2 8.5" strokeWidth="2" />
+                    <path d="M34 13v31M18 34h24" strokeWidth="2" />
+                </>
+            ) : key === "saturn" ? (
+                <>
+                    <path d="M24 12v32M18 19h13" strokeWidth="2" />
+                    <path d="M24 29c12-4 17 1 12 8-2.4 3.4-7.2 4.4-11.2 1.7" strokeWidth="2" />
+                </>
+            ) : key === "uranus" ? (
+                <>
+                    <circle cx="28" cy="35" r="6" strokeWidth="2" />
+                    <path d="M28 12v17M18 15v18M38 15v18M14 20h8M34 20h8" strokeWidth="2" />
+                </>
+            ) : key === "neptune" ? (
+                <>
+                    <path d="M16 17c1.6 9 5.6 14 12 14s10.4-5 12-14" strokeWidth="2" />
+                    <path d="M28 12v32M21 41h14M16 17l-3 5M16 17l5 3M40 17l3 5M40 17l-5 3" strokeWidth="2" />
+                </>
+            ) : key === "pluto" ? (
+                <>
+                    <path d="M19 17c2.5 8 15.5 8 18 0" strokeWidth="2" />
+                    <circle cx="28" cy="18" r="5" strokeWidth="2" />
+                    <path d="M28 25v19M21 36h14" strokeWidth="2" />
+                </>
+            ) : (
+                <circle cx="28" cy="28" r="10" fill="currentColor" opacity="0.8" stroke="none" />
+            )}
+        </svg>
+    );
+}
+
+function ZodiacGlyphSvg({ sign }: { sign: string }) {
+    return (
+        <svg viewBox="0 0 56 56" width="42" height="42" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            {sign === "Aries" ? (
+                <path d="M28 42V24c0-9-5.7-14-11.5-10.8C10.7 16.4 11 25 18 29M28 24c0-9 5.7-14 11.5-10.8C45.3 16.4 45 25 38 29" strokeWidth="2" />
+            ) : sign === "Taurus" ? (
+                <>
+                    <circle cx="28" cy="31" r="11" strokeWidth="2" />
+                    <path d="M18 14c2 8 18 8 20 0" strokeWidth="2" />
+                </>
+            ) : sign === "Gemini" ? (
+                <>
+                    <path d="M18 15c6 2 14 2 20 0M18 41c6-2 14-2 20 0M21 17v22M35 17v22" strokeWidth="2" />
+                </>
+            ) : sign === "Cancer" ? (
+                <>
+                    <path d="M39 22c-5-5-17-5-22 1" strokeWidth="2" />
+                    <path d="M17 34c5 5 17 5 22-1" strokeWidth="2" />
+                    <circle cx="21" cy="25" r="5" strokeWidth="2" />
+                    <circle cx="35" cy="31" r="5" strokeWidth="2" />
+                </>
+            ) : sign === "Leo" ? (
+                <path d="M17 36c6 8 15 2 10-8-4-8 1-15 7-13 6 2 6 10 0 12-6 2-7 8-2 12 3 2 7 2 10-1" strokeWidth="2" />
+            ) : sign === "Virgo" ? (
+                <path d="M14 17v23M22 17v23M30 17v23M30 22c5-8 15-4 11 7-2 5-7 9-11 11M38 34l6 7" strokeWidth="2" />
+            ) : sign === "Libra" ? (
+                <>
+                    <path d="M14 37h28M14 29h10c-2-8 10-8 8 0h10" strokeWidth="2" />
+                </>
+            ) : sign === "Scorpio" ? (
+                <path d="M13 17v23M21 17v23M29 17v23M29 22c5-8 14-4 14 5v11M39 37l4 4 4-4" strokeWidth="2" />
+            ) : sign === "Sagittarius" ? (
+                <>
+                    <path d="M17 39l22-22M29 17h10v10M19 22l15 15" strokeWidth="2" />
+                </>
+            ) : sign === "Capricorn" ? (
+                <path d="M13 17v23M13 20c6-8 12-3 12 6v14M25 31c5-10 17-7 17 2 0 10-14 12-18 4" strokeWidth="2" />
+            ) : sign === "Aquarius" ? (
+                <>
+                    <path d="M13 22l7-5 8 5 8-5 7 5M13 36l7-5 8 5 8-5 7 5" strokeWidth="2" />
+                </>
+            ) : sign === "Pisces" ? (
+                <>
+                    <path d="M19 14c7 8 7 20 0 28M37 14c-7 8-7 20 0 28M16 28h24" strokeWidth="2" />
+                </>
+            ) : (
+                <circle cx="28" cy="28" r="10" fill="currentColor" opacity="0.8" stroke="none" />
+            )}
+        </svg>
+    );
 }
 
 // ── What's live now: combine geo-transits + eclipses + lunations ──────────
@@ -987,6 +1226,47 @@ interface LiveItem {
     why: string;                // 1-line plain-English read
 }
 
+function buildCityUseGuideRows({
+    city,
+    selectedGoal,
+    cornerRows,
+    liveItem,
+}: {
+    city: string;
+    selectedGoal?: { goalId: string; label: string; score: number; action: string } | undefined;
+    cornerRows: Array<{ anchor: Anchor; sign: string; deg: number; hit: PersonalGeodeticHit | undefined }>;
+    liveItem?: LiveItem;
+}) {
+    const loudest = cornerRows.find((row) => row.hit);
+    const loudAnchor = loudest
+        ? `${ANCHOR_LABEL[loudest.anchor].toLowerCase()} themes`
+        : "identity, career, partnership, or home-base themes";
+    const useLine = selectedGoal
+        ? `Use ${city} to make your ${selectedGoal.label.toLowerCase()} goal concrete, especially the agreements, boundaries, and shared expectations that need a real-world mirror.`
+        : `Use ${city} to test one concrete life priority, especially where ${loudAnchor} become louder, easier, or less negotiable in real life.`;
+    const avoidLine = liveItem?.tone === "press" || liveItem?.tone === "push"
+        ? `${city} is not the place to rush the pressured part of the plan; keep commitments smaller while ${liveItem.body} is active.`
+        : `${city} is not the place to make every life area perform at once; choose the one priority that actually needs the city.`;
+    const nextMove = selectedGoal?.action
+        ? `Start with one ${selectedGoal.label.toLowerCase()} move: ${selectedGoal.action}.`
+        : `Start with one low-risk city experiment, then watch whether ${loudAnchor} get clearer or noisier.`;
+
+    return [
+        {
+            label: "Best Used For",
+            body: useLine,
+        },
+        {
+            label: "Move Carefully With",
+            body: avoidLine,
+        },
+        {
+            label: "Your Next Move",
+            body: nextMove,
+        },
+    ];
+}
+
 function buildLiveItems(vm: V4VM): LiveItem[] {
     const out: LiveItem[] = [];
 
@@ -997,7 +1277,7 @@ function buildLiveItems(vm: V4VM): LiveItem[] {
             when: "Now",
             body: capitalize(t.planet),
             glyph: planetGlyph(t.planet),
-            aspect: `conj geo-${t.angle}`,
+            aspect: `conj geo-${t.angle} · ${t.orb.toFixed(1)}° orb · H${t.house} ${HOUSE_DOMAIN_SHORT[t.house] ?? ANGLE_TOPIC[t.angle]}`,
             natalContact: t.personalActivation && t.natalContact ? `natal ${capitalize(t.natalContact)}` : "",
             tone: directionToTone(t.direction, t.severity),
             why: liveWhy("transit", t.planet, t.angle, t.natalContact, t.direction),
@@ -1061,27 +1341,146 @@ function liveWhy(_kind: "transit", planet: string, angle: V4GeoTransit["angle"],
     return lead + personalBit;
 }
 
-function LiveNowTable({ items }: { items: LiveItem[] }) {
+function ActiveGeoTransits({ city, transits }: { city: string; transits: V4GeoTransit[] }) {
     return (
-        <div style={{ borderTop: "1px solid var(--surface-border)" }}>
-            <div role="row" style={{
-                display: "grid",
-                gridTemplateColumns: "minmax(56px, auto) minmax(56px, auto) minmax(140px, 1.5fr) minmax(140px, 1fr) minmax(70px, auto)",
-                gap: "0.85rem",
-                padding: "0.5rem 0",
-                borderBottom: "1px solid var(--surface-border)",
+        <div style={{
+            maxWidth: "760px",
+            margin: "0 0 var(--space-md) 0",
+            paddingBottom: "var(--space-md)",
+            borderBottom: "1px solid var(--surface-border)",
+            display: "grid",
+            gap: "0.75rem",
+        }}>
+            <div style={{ ...MONO_SM, color: "var(--color-y2k-blue)", margin: "0 0 0.15rem 0" }}>
+                Active geodetic transits
+            </div>
+            <p style={{ ...BODY_CAPTION, margin: "-0.25rem 0 0.25rem 0", maxWidth: "620px" }}>
+                Current planets contacting {city}&rsquo;s fixed geodetic angles. This is a live snapshot, not a dated transit window.
+            </p>
+            <div>
+                {transits.map((transit, index) => (
+                    <ActiveGeoTransitRow
+                        key={`active-geo-${transit.planet}-${transit.angle}-${transit.house}`}
+                        transit={transit}
+                        hasTopRule={index > 0}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function ActiveGeoTransitRow({ transit, hasTopRule }: { transit: V4GeoTransit; hasTopRule: boolean }) {
+    const tone = toneAccent(directionToTone(transit.direction, transit.severity));
+    const houseTopic = HOUSE_DOMAIN_SHORT[transit.house] ?? ANGLE_TOPIC[transit.angle];
+    return (
+        <div style={{
+            borderTop: hasTopRule ? "1px solid var(--surface-border)" : undefined,
+            padding: hasTopRule ? "1rem 0 0" : "0.5rem 0 0",
+            display: "grid",
+            gap: "0.45rem",
+        }}>
+            <div style={{
+                display: "flex",
+                alignItems: "baseline",
+                justifyContent: "space-between",
+                gap: "0.75rem",
+                flexWrap: "wrap",
+            }}>
+                <div style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: "0.55rem",
+                    flexWrap: "wrap",
+                }}>
+                    <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.1rem", color: "var(--text-primary)", fontWeight: 500 }}>
+                        {capitalize(transit.planet)}
+                    </span>
+                    <span style={{ ...MONO_SM, color: tone.fg }}>
+                        on geo-{transit.angle}
+                    </span>
+                </div>
+                <span style={{
+                    ...MONO_SM,
+                    color: tone.fg,
+                    border: `1px solid ${tone.fg}`,
+                    background: tone.bg,
+                    borderRadius: "999px",
+                    padding: "0.18rem 0.5rem",
+                    whiteSpace: "nowrap",
+                }}>
+                    {transitToneLabel(transit)}
+                </span>
+            </div>
+            <p style={{ ...BODY_CAPTION, margin: 0, maxWidth: "640px", color: "var(--text-secondary)" }}>
+                {activeGeoTransitSentence(transit)}
+            </p>
+            <div style={{
+                display: "flex",
+                gap: "0.55rem",
+                flexWrap: "wrap",
                 fontFamily: "var(--font-mono)",
-                fontSize: "0.55rem",
-                letterSpacing: "0.18em",
+                fontSize: "0.62rem",
+                letterSpacing: "0.12em",
                 textTransform: "uppercase",
                 color: "var(--text-tertiary)",
-                fontWeight: 700,
             }}>
-                <span>When</span><span>Body</span><span>What it does</span><span>Natal contact</span><span style={{ textAlign: "right" }}>Tone</span>
+                <span>{transit.orb.toFixed(1)}° orb</span>
+                <span>H{transit.house} {houseTopic}</span>
+                <span>severity {Math.round(transit.severity)}</span>
+                {transit.personalActivation && transit.natalContact && (
+                    <span style={{ color: tone.fg }}>
+                        natal {capitalize(transit.natalContact)}
+                        {typeof transit.natalOrb === "number" ? ` · ${transit.natalOrb.toFixed(1)}°` : ""}
+                    </span>
+                )}
             </div>
+        </div>
+    );
+}
+
+function activeGeoTransitSentence(transit: V4GeoTransit): string {
+    const planet = capitalize(transit.planet);
+    const angleTopic = ANGLE_TOPIC[transit.angle];
+    const houseTopic = HOUSE_DOMAIN_SHORT[transit.house] ?? angleTopic;
+    const personal = transit.personalActivation && transit.natalContact
+        ? ` It also contacts natal ${capitalize(transit.natalContact)}, so the signal is more personal.`
+        : "";
+    return `${planet} is ${transit.orb.toFixed(1)}° from geo-${transit.angle}, activating the city's ${angleTopic} corner and routing through H${transit.house} ${houseTopic}.${personal}`;
+}
+
+function transitToneLabel(transit: V4GeoTransit): string {
+    if (transit.direction === "benefic" || transit.direction === "luminary") return "support";
+    if (transit.direction === "malefic") return transit.severity < -10 ? "pressure" : "friction";
+    return "neutral";
+}
+
+function LiveNowTable({ items, title = "City transit tracker", note }: { items: LiveItem[]; title?: string; note?: string }) {
+    return (
+        <div style={{
+            display: "grid",
+            gridTemplateColumns: "1fr",
+            gap: 0,
+            maxWidth: "780px",
+            margin: "0 0 var(--space-md) 0",
+        }}>
+            <div style={{
+                ...MONO_SM,
+                color: "var(--color-y2k-blue)",
+                margin: "0 0 0.35rem 0",
+            }}>
+                {title}
+            </div>
+            {note && (
+                <p style={{ ...BODY_CAPTION, margin: "0 0 0.65rem 0", maxWidth: "620px" }}>
+                    {note}
+                </p>
+            )}
+            <div style={{ borderTop: "1px solid var(--surface-border)" }}>
             {items.map((item, i) => (
                 <LiveRow key={`live-${i}`} item={item} />
             ))}
+            </div>
         </div>
     );
 }
@@ -1090,7 +1489,10 @@ function LiveRow({ item }: { item: LiveItem }) {
     const [open, setOpen] = useState(false);
     const tone = toneAccent(item.tone);
     return (
-        <div style={{ borderBottom: "1px solid var(--surface-border)" }}>
+        <div style={{
+            borderBottom: "1px solid var(--surface-border)",
+            background: open ? tone.bg : "transparent",
+        }}>
             <button
                 onClick={() => setOpen(!open)}
                 style={{
@@ -1102,19 +1504,30 @@ function LiveRow({ item }: { item: LiveItem }) {
                     textAlign: "left",
                     color: "var(--text-primary)",
                     display: "grid",
-                    gridTemplateColumns: "minmax(56px, auto) minmax(56px, auto) minmax(140px, 1.5fr) minmax(140px, 1fr) minmax(70px, auto)",
-                    gap: "0.85rem",
-                    alignItems: "baseline",
+                    gridTemplateColumns: "minmax(0, 1fr) auto",
+                    gap: "0.75rem",
+                    alignItems: "center",
                 }}
+                aria-expanded={open}
             >
-                <span style={{ ...MONO_SM, color: "var(--text-tertiary)" }}>{item.when}</span>
-                <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.1rem", color: "var(--text-primary)" }}>
-                    <span style={{ marginRight: "0.4rem" }}>{item.glyph}</span>
-                    <span style={{ fontFamily: "var(--font-body)", fontSize: "0.92rem" }}>{item.body}</span>
-                </span>
-                <span style={{ ...BODY, fontSize: "0.88rem", color: "var(--text-secondary)" }}>{item.aspect}</span>
-                <span style={{ ...BODY_CAPTION, color: item.natalContact ? "var(--text-secondary)" : "var(--text-tertiary)" }}>
-                    {item.natalContact || "—"}
+                <span style={{ minWidth: 0 }}>
+                    <span style={{
+                        display: "flex",
+                        alignItems: "baseline",
+                        gap: "0.55rem",
+                        flexWrap: "wrap",
+                    }}>
+                        <span style={{ fontFamily: "var(--font-primary)", fontSize: "1.05rem", color: "var(--text-primary)", fontWeight: 500 }}>
+                            <span style={{ color: tone.fg, marginRight: "0.35rem" }}>{item.glyph}</span>
+                            {item.body}
+                        </span>
+                        <span style={{ ...MONO_SM, color: tone.fg }}>
+                            {item.when}
+                        </span>
+                    </span>
+                    <span style={{ ...BODY_CAPTION, display: "block", marginTop: "0.2rem", color: "var(--text-secondary)" }}>
+                        {item.aspect}{item.natalContact ? ` · ${item.natalContact}` : ""}
+                    </span>
                 </span>
                 <span style={{
                     fontFamily: "var(--font-mono)",
@@ -1134,7 +1547,7 @@ function LiveRow({ item }: { item: LiveItem }) {
                 </span>
             </button>
             {open && (
-                <p style={{ ...BODY, fontSize: "0.92rem", margin: "0 0 0.85rem 0", paddingLeft: "5rem", maxWidth: "640px" }}>
+                <p style={{ ...BODY, fontSize: "0.92rem", margin: "0 0 0.9rem 0", maxWidth: "640px" }}>
                     {item.why}
                 </p>
             )}
@@ -1143,7 +1556,7 @@ function LiveRow({ item }: { item: LiveItem }) {
 }
 
 function toneAccent(tone: LiveItem["tone"]): { fg: string; bg: string } {
-    if (tone === "lift")    return { fg: "var(--sage, #4a8a6a)", bg: "color-mix(in oklab, var(--sage, #4a8a6a) 8%, transparent)" };
+    if (tone === "lift")    return { fg: "var(--color-y2k-blue)", bg: "color-mix(in oklab, var(--color-y2k-blue) 6%, transparent)" };
     if (tone === "press")   return { fg: "var(--color-spiced-life)", bg: "color-mix(in oklab, var(--color-spiced-life) 8%, transparent)" };
     if (tone === "push")    return { fg: "var(--gold)", bg: "color-mix(in oklab, var(--gold) 10%, transparent)" };
     return { fg: "var(--text-tertiary)", bg: "transparent" };
@@ -1455,6 +1868,23 @@ function familyAccent(family: PersonalGeodeticHit["family"]): string {
     }
 }
 
+function cornerAccent(anchor: Anchor, hit: PersonalGeodeticHit | undefined): string {
+    if (hit) {
+        const planet = hit.planet.toLowerCase();
+        if (planet === "neptune" || planet === "uranus" || planet === "mercury") return "var(--color-y2k-blue)";
+        if (planet === "mars" || planet === "saturn" || planet === "pluto") return "var(--color-spiced-life)";
+        if (planet === "jupiter" || planet === "moon") return "var(--sage)";
+        if (planet === "sun" || planet === "venus") return "var(--gold)";
+        return familyAccent(hit.family);
+    }
+    switch (anchor) {
+        case "ASC": return "var(--gold)";
+        case "MC":  return "var(--color-y2k-blue)";
+        case "DSC": return "var(--color-spiced-life)";
+        case "IC":  return "var(--sage)";
+    }
+}
+
 function planetGlyph(planet: string): string {
     const G: Record<string, string> = {
         sun: "☉", moon: "☽", mercury: "☿", venus: "♀", mars: "♂",
@@ -1525,26 +1955,18 @@ function LiveLinesList({ lines }: { lines: V4VM["geodetic"] extends infer G
     );
 }
 
-function GeodeticAnglesAndParans({
-    city,
+function CityFieldReceipts({
     cornerRows,
     parans,
-    placeLead,
-    paransSummary,
     paranNotes,
 }: {
-    city: string;
     cornerRows: Array<{ anchor: Anchor; sign: string; deg: number; hit: PersonalGeodeticHit | undefined }>;
     parans: V4Paran[];
-    placeLead: string;
-    paransSummary: string;
     paranNotes: Map<string, { headline: string; body: string }>;
 }) {
     const topParans = [...parans]
         .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
         .slice(0, 3);
-    const lead = placeLead
-        || `${city}'s longitude gives the place its own fixed zodiac frame. The angles show how the city meets you; the parans show latitude crossings that color the field.`;
 
     return (
         <section
@@ -1556,48 +1978,38 @@ function GeodeticAnglesAndParans({
                 style={{ borderColor: "var(--surface-border)" }}
             >
                 <div style={{ ...MONO_SM, color: "var(--color-y2k-blue)", marginBottom: "0.85rem" }}>
-                    Earth-fixed frame
+                    City angles
                 </div>
-                <p style={{ ...BODY, margin: "0 0 1.1rem 0", maxWidth: "620px" }}>
-                    {lead}
-                </p>
                 <div
-                    className="grid grid-cols-1 sm:grid-cols-2 gap-0 border-t border-l"
-                    style={{ borderColor: "var(--surface-border)" }}
+                    className="grid grid-cols-2 gap-2"
                 >
-                    {cornerRows.map(({ anchor, sign, deg, hit }) => {
-                        const accent = hit ? familyAccent(hit.family) : "var(--text-tertiary)";
-                        return (
-                            <div
-                                key={`geo-receipt-${anchor}`}
-                                className="border-r border-b p-[14px]"
-                                style={{ borderColor: "var(--surface-border)" }}
-                            >
-                                <div className="flex items-baseline justify-between gap-3">
-                                    <span style={{ ...MONO_SM, color: "var(--text-tertiary)" }}>
-                                        geo-{anchor}
-                                    </span>
-                                    <span
-                                        style={{
-                                            fontFamily: "var(--font-mono)",
-                                            fontSize: "0.76rem",
-                                            color: "var(--text-primary)",
-                                            fontWeight: 700,
-                                        }}
-                                    >
-                                        {sign} {deg}°
-                                    </span>
-                                </div>
-                                <p style={{ ...BODY_CAPTION, margin: "0.55rem 0 0 0" }}>
-                                    {ANGLE_DESC[anchor]} {hit ? (
-                                        <span style={{ color: accent }}>
-                                            {capitalize(hit.planet)} sits {hit.orbDeg}° away, so this corner is louder.
-                                        </span>
-                                    ) : "No natal planet sits close enough to dominate it."}
-                                </p>
+                    {cornerRows.map(({ anchor, sign, deg }) => (
+                        <div
+                            key={`geo-receipt-${anchor}`}
+                            className="p-[12px]"
+                            style={{
+                                border: "1px solid var(--surface-border)",
+                                borderRadius: "var(--radius-sm)",
+                                background: "transparent",
+                            }}
+                        >
+                            <div className="flex items-baseline justify-between gap-2">
+                                <span style={{ ...MONO_SM, color: "var(--text-tertiary)" }}>
+                                    geo-{anchor}
+                                </span>
+                                <span
+                                    style={{
+                                        fontFamily: "var(--font-mono)",
+                                        fontSize: "0.76rem",
+                                        color: "var(--text-primary)",
+                                        fontWeight: 700,
+                                    }}
+                                >
+                                    {sign} {deg}°
+                                </span>
                             </div>
-                        );
-                    })}
+                        </div>
+                    ))}
                 </div>
             </article>
 
@@ -1606,17 +2018,8 @@ function GeodeticAnglesAndParans({
                 style={{ borderColor: "var(--surface-border)" }}
             >
                 <div style={{ ...MONO_SM, color: "var(--color-y2k-blue)", marginBottom: "0.85rem" }}>
-                    Parans
+                    Paran crossings
                 </div>
-                {paransSummary ? (
-                    <p style={{ ...BODY, margin: "0 0 0.7rem 0", maxWidth: "620px" }}>
-                        {paransSummary}
-                    </p>
-                ) : (
-                    <p style={{ ...BODY, margin: "0 0 0.7rem 0", maxWidth: "620px" }}>
-                        Parans are latitude crossings. They do not replace the angles; they add a background tone to the place.
-                    </p>
-                )}
                 {topParans.length ? (
                     <ParanList parans={topParans} notes={paranNotes} />
                 ) : (
