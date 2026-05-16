@@ -1,12 +1,12 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
+import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { X, ArrowRight, Star } from "lucide-react";
-import Link from "next/link";
 import Navbar from "@/app/components/Navbar";
 import Footer from "@/app/components/Footer";
 import AnnouncementBar from "@/app/components/marketing/AnnouncementBar";
@@ -14,8 +14,6 @@ import {
   HeroSection,
   PressStrip,
   StatsStrip,
-  SplitContent,
-  ProcessTimeline,
   InstagramReels,
   StatementBand,
   CardGrid,
@@ -31,7 +29,7 @@ if (typeof window !== "undefined") {
 export default function AppLanding() {
   const container = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [showPopup, setShowPopup] = useState(false);
   const supabase = createClient();
 
@@ -242,6 +240,7 @@ export default function AppLanding() {
         ],
         ctaLabel: "Start My Reading",
         ctaHref: "/flow",
+        checkoutPlan: "single_reading",
         primary: false,
         badge: "Risk-free entry",
       },
@@ -259,6 +258,7 @@ export default function AppLanding() {
         ],
         ctaLabel: "Start Exploring",
         ctaHref: "/flow",
+        checkoutPlan: "explorer_monthly",
         primary: true,
         glyph: "☾",
       },
@@ -276,6 +276,7 @@ export default function AppLanding() {
         ],
         ctaLabel: "Secure My Spot",
         ctaHref: "/flow",
+        checkoutPlan: "founder_lifetime",
         primary: false,
         glyph: "♄",
         urgencyNote: "A few of the 100 lifetime spots remain",

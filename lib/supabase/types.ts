@@ -309,6 +309,65 @@ export type Database = {
           },
         ]
       }
+      user_entitlements: {
+        Row: {
+          created_at: string
+          ends_at: string | null
+          id: string
+          plan_code: string
+          remaining_credits: number | null
+          source: string
+          starts_at: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_session_id: string | null
+          stripe_subscription_id: string | null
+          unlimited: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          plan_code: string
+          remaining_credits?: number | null
+          source?: string
+          starts_at?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_session_id?: string | null
+          stripe_subscription_id?: string | null
+          unlimited?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          plan_code?: string
+          remaining_credits?: number | null
+          source?: string
+          starts_at?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_session_id?: string | null
+          stripe_subscription_id?: string | null
+          unlimited?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_entitlements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       readings: {
         Row: {
           category: Database["public"]["Enums"]["reading_category"]
@@ -632,4 +691,3 @@ export const Constants = {
     },
   },
 } as const
-

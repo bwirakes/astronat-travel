@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { AstroPill } from "@/app/components/ui/astro-pill";
+import { startCheckout } from "@/app/lib/checkout-client";
 
 type UpsellCelebrationCardProps = {
   returnTo?: string;
@@ -21,21 +22,10 @@ export default function UpsellCelebrationCard({ returnTo }: UpsellCelebrationCar
   const handleCheckout = async () => {
     setLoading(true);
     try {
-      const body = returnTo ? JSON.stringify({ returnTo }) : undefined;
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: body ? { "Content-Type": "application/json" } : undefined,
-        body,
-      });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-        return;
-      }
-      alert(data.error || "Unable to start checkout.");
+      await startCheckout("explorer_monthly", returnTo);
     } catch (err) {
       console.error(err);
-    } finally {
+      alert(err instanceof Error ? err.message : "Unable to start checkout.");
       setLoading(false);
     }
   };
@@ -108,7 +98,7 @@ export default function UpsellCelebrationCard({ returnTo }: UpsellCelebrationCar
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
           <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
             <AstroPill variant="accent" size="xs" shape="pill">
-              $19.99/MO
+              $19.97/MO
             </AstroPill>
             <AstroPill variant="ghost" size="xs" shape="pill" style={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.2)" }}>
               CANCEL ANYTIME
@@ -188,7 +178,7 @@ export default function UpsellCelebrationCard({ returnTo }: UpsellCelebrationCar
                 <Loader2 className="animate-spin" size={15} /> Redirecting…
               </>
             ) : (
-              <>Unlock Pro</>
+              <>Unlock Explorer</>
             )}
           </button>
         </div>

@@ -50,7 +50,7 @@ export default function ReadingCreditPill({
           textDecoration: "none",
         }}
       >
-        Unlock — $19.99/mo &rarr;
+        Unlock — $19.97/mo &rarr;
       </Link>
     </span>
   );

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { AstronatCard } from "@/app/components/ui/astronat-card";
 import { AstroPill } from "@/app/components/ui/astro-pill";
+import { startCheckout } from "@/app/lib/checkout-client";
 
 type LockedReadingViewProps = {
   kicker?: string;
@@ -24,21 +25,10 @@ export default function LockedReadingView({
   const handleCheckout = async () => {
     setLoading(true);
     try {
-      const body = returnTo ? JSON.stringify({ returnTo }) : undefined;
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: body ? { "Content-Type": "application/json" } : undefined,
-        body,
-      });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-        return;
-      }
-      alert(data.error || "Unable to start checkout.");
+      await startCheckout("explorer_monthly", returnTo);
     } catch (err) {
       console.error(err);
-    } finally {
+      alert(err instanceof Error ? err.message : "Unable to start checkout.");
       setLoading(false);
     }
   };
@@ -112,7 +102,7 @@ export default function LockedReadingView({
               {kicker}
             </AstroPill>
             <AstroPill variant="accent" size="xs" shape="pill">
-              $19.99/MO
+              $19.97/MO
             </AstroPill>
           </div>
 
@@ -174,7 +164,7 @@ export default function LockedReadingView({
                 <Loader2 className="animate-spin" size={15} /> Redirecting…
               </>
             ) : (
-              <>Unlock Pro — $19.99/mo</>
+              <>Unlock Explorer — $19.97/mo</>
             )}
           </button>
 

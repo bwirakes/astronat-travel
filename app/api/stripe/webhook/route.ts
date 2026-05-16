@@ -2,12 +2,30 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { capturePostHogEvent } from '@/lib/posthog-server'
+import {
+  grantCheckoutEntitlement,
+  recomputeProfileBillingStatus,
+} from '@/lib/billing/entitlements'
+import {
+  getBillingPlanByPriceId,
+  isBillingPlanCode,
+  type BillingPlanCode,
+} from '@/lib/billing/plans'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_fallback', {
   apiVersion: '2026-03-25.dahlia',
 })
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error)
+}
+
+type SubscriptionWithPeriodFields = Stripe.Subscription & {
+  current_period_start?: number
+  current_period_end?: number
+}
 
 // ─── Helper: update profile subscription fields ───────────────────────────────
 async function syncSubscriptionToProfile(
@@ -43,11 +61,12 @@ async function syncSubscriptionToProfile(
   }
 
   const status = subscription.status // 'active' | 'trialing' | 'past_due' | 'canceled' | etc.
-  const isActive = status === 'active' || status === 'trialing'
-
+  const customerId = typeof subscription.customer === 'string'
+    ? subscription.customer
+    : subscription.customer?.id ?? null
   // In Stripe API >= 2025, current_period_end is on each subscription item.
   // We read it from the first item if available; cast to any to stay forward-compat.
-  const sub = subscription as any
+  const sub = subscription as SubscriptionWithPeriodFields
   const periodEnd: number | null =
     sub.current_period_end ??
     sub.items?.data?.[0]?.current_period_end ??
@@ -56,29 +75,14 @@ async function syncSubscriptionToProfile(
   const endsAt = periodEnd ? new Date(periodEnd * 1000).toISOString() : null
   const startsAt = sub.current_period_start ? new Date(sub.current_period_start * 1000).toISOString() : null
 
-  // 1. Sync Fast Boolean to Profiles (for RLS Performance)
-  const { error: profileError } = await supabase
-    .from('profiles')
-    .update({
-      is_subscribed: isActive,
-      subscription_status: status,
-      subscription_id: subscription.id,
-      subscription_ends_at: endsAt,
-    })
-    .eq('id', resolvedUserId)
-
-  if (profileError) {
-    console.error('[webhook] Failed to update profile:', profileError.message)
-  }
-
-  // 2. Sync Full Record to Subscriptions Table (Source of Truth)
+  // Sync full record to Subscriptions Table (Source of Truth)
   // Use stripe_subscription_id for upsert logic if the table schema supports it, 
   // currently we treat stripe_subscription_id as UNIQUE in our migration.
   const { error: subError } = await supabase
     .from('subscriptions')
     .upsert({
       user_id: resolvedUserId,
-      stripe_customer_id: typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id,
+      stripe_customer_id: customerId,
       stripe_subscription_id: subscription.id,
       status: status,
       current_period_start: startsAt,
@@ -92,7 +96,34 @@ async function syncSubscriptionToProfile(
     console.log(`[webhook] Fully synced ${subscription.id} for user ${resolvedUserId}`)
   }
 
+  if (customerId) {
+    const { error: profileCustomerError } = await supabase
+      .from('profiles')
+      .update({ stripe_customer_id: customerId })
+      .eq('id', resolvedUserId)
+
+    if (profileCustomerError) {
+      console.error('[webhook] Failed to persist profile Stripe customer ID:', profileCustomerError.message)
+    }
+  }
+
+  await recomputeProfileBillingStatus(supabase, resolvedUserId)
+
   return resolvedUserId
+}
+
+async function resolvePlanCodeFromSession(session: Stripe.Checkout.Session): Promise<BillingPlanCode | null> {
+  const metadataPlan = session.metadata?.plan_code || session.metadata?.plan
+  if (isBillingPlanCode(metadataPlan)) {
+    return metadataPlan
+  }
+
+  const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
+    limit: 1,
+    expand: ['data.price'],
+  })
+  const priceId = lineItems.data[0]?.price?.id
+  return getBillingPlanByPriceId(priceId)?.code ?? null
 }
 
 // ─── Helper: fire welcome email via internal route ────────────────────────────
@@ -130,8 +161,8 @@ async function sendWelcomeEmail(supabase: ReturnType<typeof createAdminClient>, 
     } else {
       console.log('[webhook] Welcome email dispatched for', email)
     }
-  } catch (err: any) {
-    console.error('[webhook] sendWelcomeEmail threw:', err.message)
+  } catch (err: unknown) {
+    console.error('[webhook] sendWelcomeEmail threw:', errorMessage(err))
   }
 }
 
@@ -143,9 +174,9 @@ export async function POST(req: Request) {
 
   try {
     event = stripe.webhooks.constructEvent(body, sig, endpointSecret)
-  } catch (err: any) {
-    console.error(`Webhook signature verification failed: ${err.message}`)
-    return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 })
+  } catch (err: unknown) {
+    console.error(`Webhook signature verification failed: ${errorMessage(err)}`)
+    return NextResponse.json({ error: `Webhook Error: ${errorMessage(err)}` }, { status: 400 })
   }
 
   const supabase = createAdminClient()
@@ -162,17 +193,28 @@ export async function POST(req: Request) {
         break
       }
 
+      const planCode = await resolvePlanCodeFromSession(session)
+
+      if (!planCode) {
+        console.warn('[webhook] Could not resolve billing plan for session', session.id)
+        break
+      }
+
+      const customerId = typeof session.customer === 'string'
+        ? session.customer
+        : session.customer?.id ?? null
+
       // Record the purchase
       const { error: purchaseError } = await supabase.from('purchases').insert({
         user_id: userId,
         stripe_session_id: session.id,
-        product: 'subscription_pro',
+        product: planCode,
       })
       if (purchaseError) {
         console.error('[webhook] Error inserting purchase:', purchaseError.message)
       }
 
-      // If there's a subscription on the session, sync it immediately
+      // Subscription plan: sync subscription state immediately.
       if (session.subscription) {
         const subscriptionId = typeof session.subscription === 'string'
           ? session.subscription
@@ -182,12 +224,19 @@ export async function POST(req: Request) {
           const sub = await stripe.subscriptions.retrieve(subscriptionId)
           await syncSubscriptionToProfile(supabase, sub, userId)
         } else {
-          // Mark subscribed even without full sub object yet (payment completed)
-          await supabase
-            .from('profiles')
-            .update({ is_subscribed: true, subscription_status: 'active' })
-            .eq('id', userId)
+          await recomputeProfileBillingStatus(supabase, userId)
         }
+      }
+
+      // One-time plans: grant credits/lifetime access.
+      if (session.mode === 'payment' && session.payment_status === 'paid') {
+        await grantCheckoutEntitlement({
+          supabase,
+          userId,
+          planCode,
+          stripeCustomerId: customerId,
+          stripeSessionId: session.id,
+        })
       }
 
       // Send welcome email — only after subscription is confirmed
@@ -198,7 +247,7 @@ export async function POST(req: Request) {
         event: 'subscription_activated',
         properties: {
           stripe_session_id: session.id,
-          product: 'subscription_pro',
+          product: planCode,
         },
       })
 

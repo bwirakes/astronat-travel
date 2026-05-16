@@ -10,7 +10,16 @@ export async function GET() {
 
   if (!user) {
     return NextResponse.json(
-      { hasSubscription: false, freeUsed: false, canRead: false, readingsTotal: 0, authenticated: false },
+      {
+        hasSubscription: false,
+        hasLifetimeAccess: false,
+        freeUsed: false,
+        canRead: false,
+        readingsTotal: 0,
+        paidCredits: 0,
+        accessSource: "none",
+        authenticated: false,
+      },
       { status: 200 },
     );
   }

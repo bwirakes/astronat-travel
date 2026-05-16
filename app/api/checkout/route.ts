@@ -3,10 +3,15 @@ import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { capturePostHogEvent } from '@/lib/posthog-server'
+import { getBillingPlan, isBillingPlanCode, type BillingPlanCode } from '@/lib/billing/plans'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_fallback', {
   apiVersion: '2026-03-25.dahlia', 
 })
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error)
+}
 
 export async function POST(req: Request) {
   try {
@@ -33,8 +38,8 @@ export async function POST(req: Request) {
         stripeCustomerId = profile?.stripe_customer_id ?? null
         firstName = profile?.first_name ?? null
       }
-    } catch (e: any) {
-      console.warn('[checkout] Profile fetch threw (non-fatal):', e.message)
+    } catch (e: unknown) {
+      console.warn('[checkout] Profile fetch threw (non-fatal):', errorMessage(e))
     }
 
     // If they don't have one, create a Stripe customer
@@ -52,8 +57,8 @@ export async function POST(req: Request) {
         await adminClient
           .from('profiles')
           .upsert({ id: user.id, stripe_customer_id: stripeCustomerId })
-      } catch (e: any) {
-        console.warn('[checkout] Could not persist stripe_customer_id (non-fatal):', e.message)
+      } catch (e: unknown) {
+        console.warn('[checkout] Could not persist stripe_customer_id (non-fatal):', errorMessage(e))
       }
     }
 
@@ -75,34 +80,60 @@ export async function POST(req: Request) {
 
     console.log('[checkout] Derived baseUrl:', baseUrl, '| APP_URL:', process.env.NEXT_PUBLIC_APP_URL, '| VERCEL_URL:', process.env.VERCEL_URL, '| origin:', req.headers.get('origin'))
 
-    // Optional body: { returnTo?: string } — where to send the user after subscribing
+    // Optional body: { plan?: BillingPlanCode, returnTo?: string }
+    // Default to Explorer to preserve existing frontend callers until the
+    // pricing cards pass an explicit plan.
+    let planCode: BillingPlanCode = "explorer_monthly"
     let returnTo: string | null = null
     try {
       const body = await req.clone().json().catch(() => ({}))
+      if (isBillingPlanCode(body?.plan)) {
+        planCode = body.plan
+      }
       if (typeof body?.returnTo === 'string' && body.returnTo.startsWith('/')) {
         returnTo = body.returnTo
       }
     } catch {}
+    const plan = getBillingPlan(planCode)
 
     const successUrl = returnTo
       ? `${baseUrl}/api/checkout/success?session_id={CHECKOUT_SESSION_ID}&returnTo=${encodeURIComponent(returnTo)}`
       : `${baseUrl}/api/checkout/success?session_id={CHECKOUT_SESSION_ID}`
     const cancelUrl = returnTo ? `${baseUrl}${returnTo}` : `${baseUrl}/dashboard`
 
-    // Create a Checkout Session for Subscription
+    // Create a Checkout Session for the selected plan.
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       customer: stripeCustomerId,
       line_items: [
         {
-          price: 'price_1TGqfnDCYzkth9F1V1O7ov0d', // $19.99/mo Monthly Subscription
+          price: plan.stripePriceId,
           quantity: 1,
         },
       ],
-      mode: 'subscription',
+      mode: plan.mode,
       success_url: successUrl,
       cancel_url: cancelUrl,
       client_reference_id: user.id,
+      metadata: {
+        plan_code: plan.code,
+      },
+      subscription_data: plan.mode === 'subscription'
+        ? {
+            metadata: {
+              plan_code: plan.code,
+              supabase_user_id: user.id,
+            },
+          }
+        : undefined,
+      payment_intent_data: plan.mode === 'payment'
+        ? {
+            metadata: {
+              plan_code: plan.code,
+              supabase_user_id: user.id,
+            },
+          }
+        : undefined,
     })
 
     await capturePostHogEvent({
@@ -111,14 +142,15 @@ export async function POST(req: Request) {
       properties: {
         stripe_session_id: session.id,
         stripe_customer_id: stripeCustomerId,
+        plan_code: plan.code,
         return_to: returnTo,
       },
     })
 
     return NextResponse.json({ url: session.url })
 
-  } catch (error: any) {
-    console.error('[checkout] Fatal error:', error.message, error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error: unknown) {
+    console.error('[checkout] Fatal error:', errorMessage(error), error)
+    return NextResponse.json({ error: errorMessage(error) }, { status: 500 })
   }
 }

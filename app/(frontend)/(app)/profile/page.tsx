@@ -2,12 +2,37 @@
 
 import { useState, useEffect } from "react";
 import { LogOut, Save, Loader2, CreditCard } from "lucide-react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { PageHeader } from "@/components/app/page-header-context";
 import CityAutocomplete from "@/app/components/CityAutocomplete";
+import { startCheckout, type CheckoutPlanCode } from "@/app/lib/checkout-client";
 
+const UPGRADE_OPTIONS: Array<{
+  plan: CheckoutPlanCode;
+  label: string;
+  price: string;
+  note: string;
+}> = [
+  {
+    plan: "single_reading",
+    label: "Single Reading",
+    price: "$9.97",
+    note: "One paid reading credit.",
+  },
+  {
+    plan: "explorer_monthly",
+    label: "Explorer",
+    price: "$19.97/mo",
+    note: "Unlimited while active.",
+  },
+  {
+    plan: "founder_lifetime",
+    label: "Founder",
+    price: "$397.97",
+    note: "Lifetime unlimited.",
+  },
+];
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -24,6 +49,7 @@ export default function ProfilePage() {
   const [toast, setToast] = useState("");
   const [subscription, setSubscription] = useState<{status: string, current_period_end: number | string} | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
+  const [upgradeLoadingPlan, setUpgradeLoadingPlan] = useState<CheckoutPlanCode | null>(null);
   const [userEmail, setUserEmail] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -87,7 +113,7 @@ export default function ProfilePage() {
            lat = geo.lat;
            lon = geo.lon;
         }
-      } catch (e) {
+      } catch {
         setToast("Error finding city coordinates.");
         setSaving(false);
         return;
@@ -131,6 +157,17 @@ export default function ProfilePage() {
       }
     } catch {
       setBillingLoading(false);
+    }
+  };
+
+  const handleUpgrade = async (plan: CheckoutPlanCode) => {
+    setUpgradeLoadingPlan(plan);
+    try {
+      await startCheckout(plan, "/profile");
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : "Unable to start checkout.");
+      setUpgradeLoadingPlan(null);
     }
   };
 
@@ -232,15 +269,43 @@ export default function ProfilePage() {
                      >
                         {billingLoading ? <Loader2 className="animate-spin" size={14}/> : <><CreditCard size={14} style={{ marginRight: '0.3rem' }}/> Manage</>}
                      </button>
-                   ) : (
-                     <button className="btn btn-primary" onClick={() => router.push('/flow?demo=true')} style={{ padding: "0.5rem 1rem", fontSize: "0.75rem", borderRadius: "var(--radius-sm)" }}>
-                        Upgrade
-                     </button>
-                   )}
-                </div>
-              </div>
-            </div>
-          </section>
+	                   ) : null}
+	                </div>
+                  {!subscription && (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "0.65rem", marginTop: "1rem" }}>
+                      {UPGRADE_OPTIONS.map((option) => (
+                        <button
+                          key={option.plan}
+                          type="button"
+                          onClick={() => handleUpgrade(option.plan)}
+                          disabled={upgradeLoadingPlan !== null}
+                          style={{
+                            textAlign: "left",
+                            padding: "0.85rem",
+                            background: option.plan === "explorer_monthly" ? "var(--color-y2k-blue)" : "var(--surface)",
+                            color: option.plan === "explorer_monthly" ? "white" : "var(--text-primary)",
+                            border: "1px solid var(--surface-border)",
+                            borderRadius: "var(--radius-sm)",
+                            cursor: upgradeLoadingPlan ? "wait" : "pointer",
+                            opacity: upgradeLoadingPlan && upgradeLoadingPlan !== option.plan ? 0.55 : 1,
+                          }}
+                        >
+                          <span style={{ display: "block", fontFamily: "var(--font-body)", fontSize: "0.78rem", fontWeight: 700 }}>
+                            {option.label}
+                          </span>
+                          <span style={{ display: "block", fontFamily: "var(--font-mono)", fontSize: "0.7rem", marginTop: "0.25rem" }}>
+                            {upgradeLoadingPlan === option.plan ? <Loader2 className="animate-spin" size={13}/> : option.price}
+                          </span>
+                          <span style={{ display: "block", fontFamily: "var(--font-body)", fontSize: "0.68rem", lineHeight: 1.35, opacity: 0.72, marginTop: "0.35rem" }}>
+                            {option.note}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+	              </div>
+	            </div>
+	          </section>
 
           {/* Account Section */}
           <section style={{ paddingTop: "var(--space-lg)" }}>

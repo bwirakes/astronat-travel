@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getReadingAccess } from "@/lib/access";
-import { runAstrocarto } from "@/lib/readings/astrocarto";
-import { runGeodeticWeather } from "@/lib/readings/geodetic-weather";
-import { persistReading, logSearch } from "@/lib/readings/persist";
-import { computeHeroScore } from "@/app/lib/hero-score";
-import { capturePostHogEvent } from "@/lib/posthog-server";
+import { createPendingReading } from "@/lib/readings/persist";
 
 /**
- * /api/readings/generate — thin dispatcher.
- * Auth, parse, gate, route to the appropriate compute pipeline, persist, return.
- * All math + AI synthesis lives in lib/readings/* and lib/ai/*.
+ * /api/readings/generate — fast job creation.
+ * Auth, parse, gate, create a pending reading row, and return immediately.
+ * The reading page calls /api/readings/[id]/complete while showing the
+ * destination loading shell, so users are not trapped on the form during LLM
+ * generation.
  */
 
 const FREE_TIER_LIMIT = {
@@ -46,38 +44,35 @@ export async function POST(req: Request) {
       weather,
     } = body;
 
-    // ── Geodetic weather branch ──────────────────────────────────────────
+    const requestedCategory = readingCategory ?? "astrocartography";
+    const category: "astrocartography" | "synastry" | "mundane" =
+      requestedCategory === "geodetic-weather"
+        ? "mundane"
+        : requestedCategory === "synastry"
+          ? "synastry"
+          : "astrocartography";
+    const readingDate = requestedCategory === "geodetic-weather"
+      ? (weather?.startDate || new Date().toISOString().slice(0, 10))
+      : (travelDate || new Date().toISOString());
+
     if (readingCategory === "geodetic-weather") {
-      const { result, macroScore, startDate } = await runGeodeticWeather({
-        user,
-        destination,
-        weather,
-        supabase,
-        origin: new URL(req.url).origin,
-      });
-      const hero = computeHeroScore(result as any, startDate);
-      const { readingId } = await persistReading({
+      const { readingId } = await createPendingReading({
         supabase,
         userId: user.id,
-        category: "mundane",
-        readingDate: startDate,
-        readingScore: hero.score,
-        details: { ...result, heroWindowScore: hero.score, heroScoreSource: hero.source },
-      });
-      await capturePostHogEvent({
-        distinctId: user.id,
-        event: "reading_generated",
-        properties: {
-          reading_id: readingId,
-          reading_category: "geodetic-weather",
+        category,
+        readingDate,
+        details: {
+          generationStage: "Queued",
+          generationInput: body,
+          generationAccessSource: access.accessSource,
           destination,
-          macro_score: hero.score,
+          travelDate: readingDate,
+          travelType: "trip",
         },
       });
-      return NextResponse.json({ success: true, readingId });
+      return NextResponse.json({ success: true, readingId, processing: true });
     }
 
-    // ── Astrocartography / Synastry branch ───────────────────────────────
     if (!destination || !targetLat || !targetLon) {
       return NextResponse.json(
         { error: "Missing required geospatial payload." },
@@ -85,69 +80,34 @@ export async function POST(req: Request) {
       );
     }
 
-    const { result, partnerId } = await runAstrocarto({
-      user,
-      destination,
-      targetLat,
-      targetLon,
-      travelDate,
-      travelType,
-      goals,
-      readingCategory: readingCategory ?? "astrocartography",
-      partnerId: partner_id ?? null,
-      supabase,
-    });
-
-    const readingDate = travelDate || new Date().toISOString();
-    const hero = computeHeroScore(result as any, readingDate);
-    const { readingId } = await persistReading({
+    const { readingId } = await createPendingReading({
       supabase,
       userId: user.id,
-      partnerId,
-      category: readingCategory ?? "astrocartography",
+      partnerId: requestedCategory === "synastry" ? partner_id ?? null : null,
+      category,
       readingDate,
-      readingScore: hero.score,
-      details: { ...result, heroWindowScore: hero.score, heroScoreSource: hero.source },
-    });
-
-    // Non-blocking: log to searches table for analytics
-    await logSearch({
-      supabase,
-      userId: user.id,
-      destination: result.destination,
-      destLat: targetLat,
-      destLon: targetLon,
-      travelDate: travelDate ?? null,
-      travelType: travelType ?? "trip",
-      macroScore: result.macroScore,
-      macroVerdict: result.macroVerdict,
-      houseScores: result.houses.map((h: any) => ({ house: h.house, score: h.score })),
-      eventScores: result.eventScores,
-      goals: result.goals,
-    });
-
-    await capturePostHogEvent({
-      distinctId: user.id,
-      event: "reading_generated",
-      properties: {
-        reading_id: readingId,
-        reading_category: readingCategory ?? "astrocartography",
-        destination: result.destination,
+      details: {
+        generationStage: "Queued",
+        generationInput: body,
+        generationAccessSource: access.accessSource,
+        destination,
+        destinationLat: targetLat,
+        destinationLon: targetLon,
         travel_type: travelType ?? "trip",
-        macro_score: result.macroScore,
-        has_partner: !!partnerId,
+        travelType: travelType ?? "trip",
+        travelDate: travelDate ?? null,
         goals: goals ?? [],
       },
     });
 
-    return NextResponse.json({ success: true, readingId });
-  } catch (error: any) {
+    return NextResponse.json({ success: true, readingId, processing: true });
+  } catch (error: unknown) {
     console.error("Failed to generate reading:", error);
     return NextResponse.json(
       {
         error: "Internal Server Error",
-        message: error.message,
-        stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+        message: error instanceof Error ? error.message : String(error),
+        stack: process.env.NODE_ENV === "development" && error instanceof Error ? error.stack : undefined,
       },
       { status: 500 },
     );

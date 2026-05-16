@@ -2,10 +2,11 @@
 import React, { useRef, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Moon, Sun, AlertCircle, Compass, FileText, CalendarDays, Heart, MapPin, Plane, Users } from "lucide-react";
+import { ArrowRight, Moon, Sun, AlertCircle, Compass, FileText, CalendarDays, Heart, MapPin, Plane, Users, Loader2 } from "lucide-react";
 import { NatalWheelSVG } from "@/app/components/natal/NatalWheelSVG";
 import { AcgMap } from "@/app/components/AcgMap";
 import InteractiveGeodeticWorldMap from "@/app/geodetic/components/InteractiveGeodeticWorldMap";
+import { startCheckout, type CheckoutPlanCode } from "@/app/lib/checkout-client";
 
 // Helper for Payload Rich Text mapping if needed, though for now we can assume
 // Payload sends down raw HTML (if using Lexical HTML converter) or we handle basic mapping.
@@ -862,6 +863,18 @@ export const StatementBand: React.FC<any> = ({ block }) => {
 export const CardGrid: React.FC<any> = ({ block }) => {
   const isPricing = block.variant === "pricing";
   const sectionTheme = getBlockTheme(block.sectionBg);
+  const [checkoutLoadingPlan, setCheckoutLoadingPlan] = useState<string | null>(null);
+
+  const handlePricingCheckout = async (plan: CheckoutPlanCode) => {
+    setCheckoutLoadingPlan(plan);
+    try {
+      await startCheckout(plan);
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : "Unable to start checkout.");
+      setCheckoutLoadingPlan(null);
+    }
+  };
 
   return (
     <section id={block.anchorId ?? undefined} className={`py-14 md:py-20 theme-block-h ${sectionTheme.bgClass} ${sectionTheme.textClass}`}>
@@ -935,7 +948,30 @@ export const CardGrid: React.FC<any> = ({ block }) => {
                        </li>
                     ))}
                   </ul>
-                  {p.ctaLabel && (
+                  {p.ctaLabel && p.checkoutPlan ? (
+                    <button
+                      type="button"
+                      onClick={() => handlePricingCheckout(p.checkoutPlan)}
+                      disabled={checkoutLoadingPlan === p.checkoutPlan}
+                      className={`w-full py-4 text-center font-mono text-[9px] uppercase tracking-widest transition-colors flex items-center justify-center gap-2 disabled:cursor-wait disabled:opacity-70 ${
+                        p.primary
+                          ? 'bg-[var(--color-y2k-blue)] text-white hover:bg-[var(--color-charcoal)]'
+                          : p.urgencyNote
+                          ? 'bg-[var(--color-spiced-life)] text-white hover:opacity-90'
+                          : 'bg-[var(--color-charcoal)] text-white hover:bg-[var(--color-y2k-blue)]'
+                      }`}
+                    >
+                      {checkoutLoadingPlan === p.checkoutPlan ? (
+                        <>
+                          Redirecting <Loader2 size={12} className="animate-spin opacity-70" />
+                        </>
+                      ) : (
+                        <>
+                          {p.ctaLabel} <ArrowRight size={12} className="opacity-70" />
+                        </>
+                      )}
+                    </button>
+                  ) : p.ctaLabel && (
                     <Link
                       href={p.ctaHref || "#"}
                       className={`w-full py-4 text-center font-mono text-[9px] uppercase tracking-widest transition-colors flex items-center justify-center gap-2 ${
