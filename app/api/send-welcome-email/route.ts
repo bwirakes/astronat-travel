@@ -80,7 +80,7 @@ export async function POST(req: Request) {
     }
 
     const { data, error } = await resend.emails.send({
-      from: 'AstroNat <onboarding@resend.dev>',
+      from: 'AstroNat <hello@astronat.io>',
       to: [email],
       subject: 'Welcome to AstroNat — System Unlocked 🪐',
       html: buildHtml(firstName || ''),
