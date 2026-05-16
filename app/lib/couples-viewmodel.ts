@@ -639,7 +639,7 @@ function normalizePlanets(raw: unknown): Array<{ planet: string; longitude: numb
 }
 
 /** Build per-partner chart-structure cards. Mirrors the teacher path's
- *  buildStructureCards in LifeThemesTab — pairs each engine-detected pattern
+ *  the reading UI's chart-structure cards — pairs each engine-detected pattern
  *  or stellium with the LLM's commentary entry (matched by key) and falls
  *  back to the engine's livedTheme + member roster when the LLM omitted it.
  *  The deterministic backfill in writeCouplesReading already populates the

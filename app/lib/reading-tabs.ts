@@ -15,11 +15,6 @@ export const READING_TABS = [
         question: "What changes in my chart here?",
     },
     {
-        id: "life-themes",
-        label: "Life Themes",
-        question: "Which parts of life get louder here?",
-    },
-    {
         id: "place-field",
         label: "Geography",
         question: "What does the place itself add?",

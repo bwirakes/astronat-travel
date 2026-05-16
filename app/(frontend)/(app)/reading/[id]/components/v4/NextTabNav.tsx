@@ -10,10 +10,9 @@ interface Props {
 }
 
 const NEXT_TAB_MAP: Partial<Record<ReadingTabId, { id: ReadingTabId; label: string; fallbackBridge: string }>> = {
-    "overview": { id: "life-themes", label: "Life Themes", fallbackBridge: "Curious to see how your goals move? Read your Life Themes." },
-    "life-themes": { id: "place-field", label: "Geography", fallbackBridge: "Where in the world are these energies strongest? Explore your Geography." },
-    "place-field": { id: "what-shifts", label: "What Shifts", fallbackBridge: "What shifts when you travel? Compare your Natal and Relocated charts." },
-    "what-shifts": { id: "timing", label: "Timeline", fallbackBridge: "When do these transits hit? View your Timeline." },
+    "overview": { id: "what-shifts", label: "What Shifts", fallbackBridge: "What changes when you use this place? Compare your natal and relocated chart." },
+    "what-shifts": { id: "place-field", label: "Geography", fallbackBridge: "Where in the world are these energies strongest? Explore your Geography." },
+    "place-field": { id: "timing", label: "Timeline", fallbackBridge: "When do these transits hit? View your Timeline." },
 };
 
 export default function NextTabNav({ activeTab, selectTab, bridgeText }: Props) {

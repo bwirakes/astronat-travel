@@ -108,25 +108,24 @@ The structured fields \`relocation.personalCycle.dominant\`, \`saturnReturn\`, \
 
 const BLOCK_TABS_RULES = `# The Main Feature (Tabs)
 
-**tabs** — A top-level dictionary containing one entry per \`editorialEvidence.tabs[].id\`. CRITICAL REQUIREMENT: You MUST generate an entry for EVERY single ID listed in \`editorialEvidence.tabs\`. If the input lists \`life-themes\` and \`place-field\`, you MUST generate \`tabs["life-themes"]\` and \`tabs["place-field"]\`. Do not skip any tabs! Each entry must have:
+**tabs** — A top-level dictionary containing one entry per \`editorialEvidence.tabs[].id\`. CRITICAL REQUIREMENT: You MUST generate an entry for EVERY single ID listed in \`editorialEvidence.tabs\`. If the input lists \`overview\` and \`place-field\`, you MUST generate \`tabs["overview"]\` and \`tabs["place-field"]\`. Do not skip any tabs! Each entry must have:
 - \`lead\`: outcome-first opener for that tab. Write 2 short sentences total.
   - **FIRST SENTENCE GATE — required.** Sentence 1 of every \`lead\` MUST answer that tab's reader question in plain travel language before any astrology receipt appears.
   - Sentence 1 MUST NOT mention chart, planet names, signs, aspects, houses, geodetic, chart ruler, transits, lines, degrees, stelliums, Grand Trines, or T-Squares.
   - If you need astrology evidence, put it in sentence 2 or \`evidenceCaption\`.
-  - BAD \`life-themes.lead\`: "You arrive with a Water Grand Trine, which opens emotional flow."
-  - GOOD \`life-themes.lead\`: "For your home and wealth goals, this is mixed, okay: useful for contacts and movement, not for settling or money ease."
+  - BAD \`overview.lead\`: "You arrive with a Water Grand Trine, which opens emotional flow."
+  - GOOD \`overview.lead\`: "For your home and wealth goals, this is mixed, okay: useful for contacts and movement, not for settling or money ease."
   - BAD \`place-field.lead\`: "Jakarta occupies the Cancer geodetic band."
   - GOOD \`place-field.lead\`: "Jakarta feels emotionally loud for you, so just know this is not the place to hide from your own reactions."
   - BAD \`what-shifts.lead\`: "Taurus rises here and Venus rules the chart."
   - GOOD \`what-shifts.lead\`: "You still feel like yourself here, but your mood and body react faster than usual."
   - \`overview.lead\`: first sentence says whether the trip/move is good, mixed, hard, wait, shorten, avoid, or reconsider.
-  - \`life-themes.lead\`: first sentence says whether the destination supports, strains, or mixes the user's selected goals.
   - \`place-field.lead\`: first sentence says how the place shows up as a lived environment.
   - \`what-shifts.lead\`: first sentence says how the reader feels or behaves differently here.
   - \`timing.lead\`: first sentence says the best window, or the wait/shorten/avoid stance.
 - \`plainEnglishSummary\`: beginner-friendly interpretation copy. Write 2-3 short sentences total. Together, \`lead\` + \`plainEnglishSummary\` should form one clear 4-5 sentence top reading. Do NOT put bullet lists in this field; use \`guideRows\`.
   - EVERY \`plainEnglishSummary\` MUST contain at least one astrology receipt and translate it immediately for a beginner.
-  - For \`life-themes\`: Evaluate the strongest themes through the lens of the user's primary goal FIRST.
+  - For \`overview\`: Evaluate the strongest themes through the lens of the user's selected goals FIRST.
   - For \`place-field\`: The core question is "How do I fit in?". Mention how the user's core placements interact with the geography.
   - \`guideRows\`: exactly 3 compact rows with these labels, in this order:
     1. \`Best Used For\` — where the place/date is genuinely useful.
@@ -344,7 +343,7 @@ For each surfaced cluster:
 - \`headline\` — ≤ 80 chars. Lead with the lived outcome, NOT astrology jargon. "Three planets pile into your career sector — work isn't a thing you do, it's the room you live in" beats "You have a stellium in the 10th house." Use the input's \`livedTheme\` as a starting register but rewrite in Astro-Nat voice.
 - \`body\` — 2–4 sentences. ALWAYS gloss "stellium" the first time it appears in the reading: "a stellium — three or more planets crammed into one zone of the chart, which forces that area to dominate." If the cluster has a \`dispositor\`, name where it sits: "and Saturn — the planet that rules the sign holding the cluster — is sitting in your 12th, which means the whole pile-up runs through your private inner work before it shows up publicly." If \`mutualReceptionPair\` is present, mention it once as a small structural note (the two planets sit in each other's signs, amplifying the cluster's coherence).
 
-**Final dispositor** — when \`chartStructure.finalDispositor\` is set, mention it explicitly in the \`life-themes\` tab lead AND in the body of the relevant cluster commentary entry: "Your chart has a final dispositor — every planet's energy chains back to [planet]. That makes [planet]'s placement the master key. What [planet] does, the whole chart does." Gloss "final dispositor" the first time. Skip when \`finalDispositor\` is absent.
+**Final dispositor** — when \`chartStructure.finalDispositor\` is set, mention it explicitly in the \`overview\` tab lead or summary AND in the body of the relevant cluster commentary entry: "Your chart has a final dispositor — every planet's energy chains back to [planet]. That makes [planet]'s placement the master key. What [planet] does, the whole chart does." Gloss "final dispositor" the first time. Skip when \`finalDispositor\` is absent.
 
 **\`patternCommentary\`** (REQUIRED when \`chartStructure.patterns\` is non-empty — this is not optional; if you skip it when patterns exist, the reading is incomplete)
 One entry per pattern. The \`patternKey\` MUST match \`patterns[].key\` verbatim.
@@ -365,9 +364,9 @@ One entry per pattern. The \`patternKey\` MUST match \`patterns[].key\` verbatim
   \`\`\`
 
 **Tab cross-references** — when a cluster or pattern sits in a house tied to a specific tab, name it in that tab's lead too. Patterns especially matter — they shape the chart's central tensions, so they belong in the structural tabs:
-- House stellium in H1, H10 → reference in \`tabs["life-themes"].lead\` and \`tabs["place-field"].lead\`
+- House stellium in H1, H10 → reference in \`tabs["overview"].lead\` and \`tabs["place-field"].lead\`
 - House stellium in any house → may also be referenced in \`overview.leanInto\` paragraph 1 (durable place factors)
-- **Patterns (Grand Trine, T-Square)** → MUST be named explicitly in \`tabs["life-themes"].lead\` when present. The pattern's element (Grand Trine) or focal planet (T-Square) is the chart's central tension and belongs in the life-themes opening.
+- **Patterns (Grand Trine, T-Square)** → MUST be named explicitly in \`tabs["overview"].plainEnglishSummary\` when present. The pattern's element (Grand Trine) or focal planet (T-Square) is the chart's central tension and belongs in the overview opening.
 
 **Bind-to-data rule (critical):** ANY mention of "Grand Trine," "T-Square," "stellium," or "cluster" in body prose (tab leads, overview, leanInto, etc.) MUST in the same sentence or the sentence immediately following name the actual member planets, AND for Grand Trines the element, AND for T-Squares the focal planet. Vague mentions like "you arrive with a Grand Trine" with no planet names are forbidden — the reader will rightly ask "which planets?" and the prose has not answered. Correct: "you arrive with a Water Grand Trine — Pluto, the True Node, and Venus running as one closed circuit." Incorrect: "you arrive with a Grand Trine that allows gifts to flow effortlessly."
 
@@ -447,7 +446,7 @@ Rules:
 - If a tab's ideal receipt is missing, say the available evidence is quiet and use the next-best supplied score/driver. Never invent a line, transit, house, or degree.
 - Tab jobs:
   overview = is this good/mixed/bad travel, good for what, bad for what, next move.
-  life-themes = fit to selected goals.
+  overview also carries the selected-goal fit formerly handled by Life Themes.
   place-field = how the place feels as an environment.
   what-shifts = how the reader feels/behaves differently there.
   timing = best window or wait/shorten/avoid stance.
@@ -742,28 +741,17 @@ function buildTabWritingPlan(input: TeacherReadingInput) {
 
   return {
     overview: {
-      readerQuestion: "Is this trip worth taking, good for what, bad for what, and what should I do next?",
-      openingMove: `Sentence 1 names the travel verdict in human language: "${stance} trip" or equivalent. Sentence 2 or 3 must cite a concrete astrology receipt from place, shift, or timing evidence before returning to the decision. Do not treat a score by itself as the receipt.`,
-      emotionalJob: "Make the reader feel oriented and protected, not graded.",
+      readerQuestion: `Is this trip worth taking, does it support ${selectedGoalText}, good for what, bad for what, and what should I do next?`,
+      openingMove: `Sentence 1 names the travel verdict in human language: "${stance} trip" or equivalent. Sentence 2 or 3 must cite a concrete astrology receipt from place, shift, or timing evidence, then connect it to ${selectedGoalText}. Do not treat a score by itself as the receipt.`,
+      emotionalJob: "Make the reader feel oriented, protected, and remembered.",
       stance,
+      goals: primaryGoals,
       score,
       usefulFor: [strongest],
       notFor: [weakest],
       nextMove: input.macro.travelType === "relocation" ? "wait, reconsider, or choose the cleanest arrival month" : "keep the trip focused",
-      evidenceToUse: ["headline score", "one astrology receipt from place/shift/timing evidence", "strongest event score", "weakest event risk"],
-      targetShape: "lead 2 sentences + summary 2-3 short sentences + guideRows with astrology basis: call, chart receipt, use-case, caveat, action.",
-    },
-    "life-themes": {
-      readerQuestion: `Does this place support ${selectedGoalText}?`,
-      openingMove: `Start with ${selectedGoalText}, not a generic strongest theme. Then cite the selected goal score or closest event score AND one astrology receipt that explains the goal fit; contrast it with the weakest event risk.`,
-      emotionalJob: "Make the reader feel the app remembered what they asked for.",
-      stance,
-      goals: primaryGoals,
-      usefulFor: [strongest],
-      notFor: [weakest],
-      nextMove: "do not force the weaker goal",
-      evidenceToUse: ["selected goal", "goal score", "one astrology receipt from strongest/lean/shift evidence", "weakest event risk"],
-      targetShape: "lead 2 sentences + summary 2-3 short sentences + guideRows with astrology basis: selected-goal fit, astrology receipt, useful detour, not-for caveat, practical boundary.",
+      evidenceToUse: ["headline score", "selected goal", "goal score", "one astrology receipt from place/shift/timing evidence", "strongest event score", "weakest event risk"],
+      targetShape: "lead 2 sentences + summary 2-3 short sentences + guideRows with astrology basis: call, selected-goal fit, chart receipt, use-case, caveat, action.",
     },
     "place-field": {
       readerQuestion: "How does this place show up as an environment?",

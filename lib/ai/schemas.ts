@@ -320,7 +320,6 @@ export const TeacherReadingSchema = z.object({
   editorialSpine: EditorialSpineSchema.optional(),
   tabs: z.object({
     "overview": TabEditorialSchema,
-    "life-themes": TabEditorialSchema,
     "place-field": TabEditorialSchema,
     "what-shifts": TabEditorialSchema,
     "timing": TabEditorialSchema,
@@ -391,7 +390,6 @@ export type TeacherReading = z.infer<typeof TeacherReadingSchema>;
 export const TeacherReadingGenerationSchema = TeacherReadingSchema.extend({
   tabs: z.object({
     "overview": TabEditorialGenerationSchema,
-    "life-themes": TabEditorialGenerationSchema,
     "place-field": TabEditorialGenerationSchema,
     "what-shifts": TabEditorialGenerationSchema,
     "timing": TabEditorialGenerationSchema,

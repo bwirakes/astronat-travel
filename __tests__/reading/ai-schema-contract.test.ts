@@ -7,23 +7,13 @@ import { couplesRiskForEvent } from "@/lib/readings/ai-couples-input-builder";
 const teacherTabs = {
   overview: {
     lead: "This is the main verdict, with the score translated into a practical travel decision.",
-    plainEnglishSummary: "The place is useful, but the reason matters more than the number.",
+    plainEnglishSummary: "The place is useful, but the reason matters more than the number. Selected goals belong in overview now.",
     guideRows: [
       { label: "Best Used For", body: "Focused plans with a clear purpose." },
       { label: "Move Carefully With", body: "Trying to make one place solve every goal." },
       { label: "Your Next Move", body: "Choose the main reason before booking." },
     ],
     evidenceCaption: "Score, goal match, and timing evidence are read together.",
-  },
-  "life-themes": {
-    lead: "The strongest life themes are named in plain English before any astrology jargon.",
-    plainEnglishSummary: "This section tells the reader which parts of life the place supports.",
-    guideRows: [
-      { label: "Best Used For", body: "The highest scoring life areas." },
-      { label: "Move Carefully With", body: "The weakest goal area." },
-      { label: "Your Next Move", body: "Plan around the strongest theme." },
-    ],
-    evidenceCaption: "Goal-stratified event scores and house themes anchor the claim.",
   },
   "place-field": {
     lead: "The location has its own field, separate from the reader's personal chart.",
@@ -63,9 +53,11 @@ describe("AI reading schema contracts", () => {
 
     expect(prompt).toContain("what-shifts");
     expect(prompt).toContain("plainEnglishSummary");
+    expect(prompt).toContain("overview also carries the selected-goal fit");
     expect(prompt).toContain("4-5 short sentences");
     expect(prompt).toContain("guideRows");
     expect(prompt).toContain("Best Used For");
+    expect(prompt).not.toContain('"life-themes"');
   });
 
   it("accepts the current teacher reading contract required by the V4 tabs", () => {
