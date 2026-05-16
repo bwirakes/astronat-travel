@@ -17,7 +17,24 @@ import TimingTab from "./tabs/TimingTab";
 import NextTabNav from "./NextTabNav";
 import LearnFooter from "../shared/LearnFooter";
 import { destinationFlag } from "@/app/lib/country-flag";
+import { Compass, Globe2, Sparkles, Clock } from "lucide-react";
 import "./reading-shell.css";
+
+function TabGlyph({ id }: { id: string }) {
+    const props = { size: 16, strokeWidth: 1.75, "aria-hidden": true as const };
+    switch (id) {
+        case "overview":
+            return <Compass {...props} />;
+        case "what-shifts":
+            return <Sparkles {...props} />;
+        case "place-field":
+            return <Globe2 {...props} />;
+        case "timing":
+            return <Clock {...props} />;
+        default:
+            return null;
+    }
+}
 
 const FONT_PRIMARY = "var(--font-primary, serif)";
 const FONT_BODY = "var(--font-body, system-ui)";
@@ -164,9 +181,9 @@ function ReadingHeroBanner({
 
     return (
         <div
-            className="reading-hero-banner relative overflow-hidden rounded-[8px] px-[clamp(18px,4vw,44px)] py-[clamp(22px,3.8vw,42px)]"
+            className="reading-hero-banner relative overflow-hidden rounded-t-[8px] rounded-b-0 px-[clamp(18px,4vw,44px)] py-[clamp(22px,3.8vw,42px)]"
             style={{
-                minHeight: "clamp(210px, 24vw, 286px)",
+                minHeight: "clamp(186px, 20vw, 244px)",
                 background: "linear-gradient(180deg, #0456fb 0%, #0a63ff 100%)",
             }}
         >
@@ -181,7 +198,7 @@ function ReadingHeroBanner({
             <div
                 aria-hidden
                 className="absolute inset-x-[-18%] bottom-[-47%] h-[64%] rounded-[50%]"
-                style={{ background: "#F8F5EC" }}
+                style={{ background: "var(--reading-tabs-surface)" }}
             />
             <div
                 aria-hidden
@@ -190,7 +207,7 @@ function ReadingHeroBanner({
             >
                 <span
                     className="absolute -right-[18%] -top-[10%] h-[70%] w-[70%] rounded-full"
-                    style={{ background: "#F8F5EC" }}
+                    style={{ background: "var(--reading-tabs-surface)" }}
                 />
             </div>
             <div
@@ -408,11 +425,16 @@ export default function HundredOneReadingView({ reading, narrative, showUpsell, 
                                             className="reading-tab-trigger"
                                             style={{ flex: "1 1 0", minWidth: 0 }}
                                         >
-                                            <span
-                                                className="text-[10px] sm:text-[11px] tracking-[0.08em] sm:tracking-[0.18em] uppercase"
-                                                style={{ fontFamily: FONT_MONO }}
-                                            >
-                                                {tab.label}
+                                            <span className="inline-flex items-center gap-[clamp(6px,0.7vw,10px)]">
+                                                <span className="hidden sm:inline-flex">
+                                                    <TabGlyph id={tab.id} />
+                                                </span>
+                                                <span
+                                                    className="text-[13px] sm:text-[15px] tracking-[0.1em] sm:tracking-[0.18em] uppercase"
+                                                    style={{ fontFamily: FONT_MONO }}
+                                                >
+                                                    {tab.label}
+                                                </span>
                                             </span>
                                         </TabsTrigger>
                                     ))}
