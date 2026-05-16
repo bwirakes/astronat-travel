@@ -78,9 +78,9 @@ export interface AstrocartoReadingResult {
 
   /** Engine-detected stelliums + dispositors + aspect patterns for the user's
    *  natal chart, computed against the relocated houses. Persisted so the V4
-   *  reading view can render the "Chart structure" section in LifeThemesTab
-   *  without re-deriving from natalPlanets. Absent when the chart has nothing
-   *  to surface (no clusters, no patterns, no final dispositor). */
+   *  reading view can render chart-structure commentary without re-deriving
+   *  from natalPlanets. Absent when the chart has nothing to surface
+   *  (no clusters, no patterns, no final dispositor). */
   chartStructure?: import("./chart-structure").ChartStructure;
   /** Couples variant — one structure per partner. Same shape, persisted only
    *  on synastry readings whose AI input carried the corresponding fields. */

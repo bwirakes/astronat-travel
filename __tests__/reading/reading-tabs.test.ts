@@ -5,9 +5,8 @@ describe("reading tab score narrative", () => {
   it("keeps tab definitions as the shared source of tab IDs and labels", () => {
     expect(READING_TABS.map((tab) => tab.id)).toEqual([
       "overview",
-      "life-themes",
-      "place-field",
       "what-shifts",
+      "place-field",
       "timing",
     ]);
     expect(READING_TAB_IDS).toEqual(READING_TABS.map((tab) => tab.id));
@@ -32,7 +31,7 @@ describe("reading tab score narrative", () => {
     expect(goals[0].outcome).toContain("visible work");
   });
 
-  it("falls back to W_EVENTS house weighting for selected goals", () => {
+  it("falls back to the career W_EVENTS house weighting for selected goals", () => {
     const goals = deriveGoalScores({
       goalIds: ["career"],
       houses: [
@@ -42,7 +41,7 @@ describe("reading tab score narrative", () => {
       ],
     });
 
-    expect(goals[0].score).toBe(81);
+    expect(goals[0].score).toBe(64);
   });
 
   it("separates overall and personal geodetic evidence", () => {

@@ -11,7 +11,6 @@ import { toV4ViewModel } from "@/app/lib/reading-viewmodel";
 import { READING_TAB_IDS, type ReadingTabId } from "@/app/lib/reading-tabs";
 import { type NatalData } from "@/app/components/AcgMap";
 import OverviewTab from "./tabs/OverviewTab";
-import LifeThemesTab from "./tabs/LifeThemesTab";
 import PlaceFieldTab from "./tabs/PlaceFieldTab";
 import WhatShiftsTab from "./tabs/WhatShiftsTab";
 import TimingTab from "./tabs/TimingTab";
@@ -24,6 +23,10 @@ import "./reading-shell.css";
 const FONT_PRIMARY = "var(--font-primary, serif)";
 const FONT_BODY = "var(--font-body, system-ui)";
 const FONT_MONO = "var(--font-mono, monospace)";
+const READING_SHELL_STYLE = {
+    maxWidth: "1180px",
+    padding: "0 clamp(24px, 5vw, 72px)",
+};
 
 const MAP_PLANET_NAMES = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"] as const;
 
@@ -217,7 +220,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                     return (
                         <div
                             className="mx-auto"
-                            style={{ maxWidth: "1200px", padding: "0 clamp(16px, 4vw, 32px)" }}
+                            style={READING_SHELL_STYLE}
                         >
                             <section
                                 className="flex flex-wrap items-end justify-between gap-x-[clamp(16px,2.4vw,28px)] gap-y-[14px] pt-2 pb-[clamp(16px,2vw,22px)] border-b"
@@ -300,10 +303,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                 >
                     <div
                         className="mx-auto w-full min-w-0"
-                        style={{
-                            maxWidth: "1200px",
-                            padding: "0 clamp(16px, 4vw, 32px)",
-                        }}
+                        style={READING_SHELL_STYLE}
                     >
                         <Tabs
                             value={activeTab}
@@ -345,7 +345,18 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                                 <div ref={panelsRef} className="flex-1" style={{ minWidth: 0, width: "100%" }}>
                                     <main className="min-w-0">
                                         <TabsContent value="overview" className="mt-0 outline-none data-[state=inactive]:hidden">
-                                            <OverviewTab vm={vm} copiedTab={copiedTab} selectTab={selectTab} />
+                                            <OverviewTab
+                                                vm={vm}
+                                                copiedTab={copiedTab}
+                                                selectTab={selectTab}
+                                                natalForMap={natalForMap}
+                                                birthIso={birthIso}
+                                                birthLocation={{
+                                                    lat: reading?.birth?.lat ?? reading?.birthLat,
+                                                    lon: reading?.birth?.lon ?? reading?.birthLon,
+                                                    city: reading?.birth?.place ?? reading?.birthPlace,
+                                                }}
+                                            />
                                         </TabsContent>
 
                                         <TabsContent value="what-shifts" className="mt-0 outline-none data-[state=inactive]:hidden">
@@ -356,10 +367,6 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                                                 relocatedWheel={relocatedWheel}
                                                 copiedTab={copiedTab}
                                             />
-                                        </TabsContent>
-
-                                        <TabsContent value="life-themes" className="mt-0 outline-none data-[state=inactive]:hidden">
-                                            <LifeThemesTab vm={vm} reading={reading} copiedTab={copiedTab} />
                                         </TabsContent>
 
                                         <TabsContent value="place-field" className="mt-0 outline-none data-[state=inactive]:hidden">

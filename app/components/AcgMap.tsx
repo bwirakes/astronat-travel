@@ -42,6 +42,10 @@ interface AcgMapProps {
   highlightCity?: { lat: number; lon: number; name: string; score?: number };
   /** If true, smaller/compact map for embedding in cards */
   compact?: boolean;
+  /** Optional explicit container height for embedded map variants. */
+  height?: number | string;
+  /** Fill the container with a cropped map instead of preserving the wide 2:1 map shape. */
+  fillContainer?: boolean;
   /** If true, click anywhere on map to get score for that lat/lon */
   interactive?: boolean;
   /** If true (default when interactive), auto-zoom to the highlighted city
@@ -64,6 +68,21 @@ const projectLat = (lat: number) => (90 - lat) * (500 / 180);
 const unprojectLon = (x: number, w: number) => (((x / w) * 360 - 180 + 540) % 360) - 180;
 const unprojectLat = (y: number, h: number) => 90 - (y / h) * 180;
 
+function clamp(n: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, n));
+}
+
+function focusViewBox(city: GeoPoint | null, enabled: boolean): string {
+  if (!enabled || !city) return "0 0 1000 500";
+  const width = 560;
+  const height = 320;
+  const cx = projectLon(city.lon);
+  const cy = projectLat(city.lat);
+  const x = clamp(cx - width / 2, 0, 1000 - width);
+  const y = clamp(cy - height / 2, 0, 500 - height);
+  return `${x} ${y} ${width} ${height}`;
+}
+
 // ── Astronomy Helpers ──────────────────────────────────────────
 
 function haversine(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -85,6 +104,14 @@ interface AcgLine {
   curve_segments?: GeoPoint[][];
   color: string;
   declination: number;
+}
+
+interface ServerAcgLine {
+  planet: string;
+  angle_type: AcgLine['angle'];
+  longitude?: number | null;
+  curve_segments?: GeoPoint[][];
+  declination?: number;
 }
 
 // ── Colors ─────────────────────────────────────────────────────
@@ -123,7 +150,7 @@ const MapControls = ({ hasCity }: { hasCity: boolean }) => {
 
 export function AcgMap({ 
     natal, birthDateTimeUTC, birthLon, birthLat, birthCity, highlightCity, 
-    compact = false, interactive = false, 
+    compact = false, height, fillContainer = false, interactive = false,
     onLocationClick, onLinesCalculated,
     autoZoomToCity = true,
 }: AcgMapProps) {
@@ -133,7 +160,8 @@ export function AcgMap({
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
+    const id = requestAnimationFrame(() => setIsClient(true));
+    return () => cancelAnimationFrame(id);
   }, []);
 
   const handleMouseMove = (e: React.MouseEvent, line: AcgLine) => {
@@ -147,7 +175,7 @@ export function AcgMap({
     setHoveredLine(null);
   };
   
-  const [serverLines, setServerLines] = useState<any[]>([]);
+  const [serverLines, setServerLines] = useState<ServerAcgLine[]>([]);
   const birthPlace = useMemo(() => {
     if (typeof birthLat !== "number" || typeof birthLon !== "number") return null;
     if (!Number.isFinite(birthLat) || !Number.isFinite(birthLon)) return null;
@@ -158,6 +186,10 @@ export function AcgMap({
     };
   }, [birthLat, birthLon, birthCity]);
   const focusCity = highlightCity ?? birthPlace;
+  const mapViewBox = useMemo(
+    () => focusViewBox(focusCity, fillContainer),
+    [focusCity, fillContainer],
+  );
 
   useEffect(() => {
     if (birthDateTimeUTC) {
@@ -258,8 +290,9 @@ export function AcgMap({
 
   const mapContent = (
       <svg
-        viewBox="0 0 1000 500"
-        style={{ width: '100%', height: 'auto', display: 'block', touchAction: 'none' }}
+        viewBox={mapViewBox}
+        preserveAspectRatio={fillContainer ? "xMidYMid slice" : "xMidYMid meet"}
+        style={{ width: '100%', height: fillContainer ? '100%' : 'auto', display: 'block', touchAction: 'none' }}
         onClick={(e) => {
           if (!interactive || !onLocationClick) return;
           const svg = e.currentTarget;
@@ -490,8 +523,7 @@ export function AcgMap({
   return (
     <div style={{
       width: '100%',
-      // Made height dynamically taller! 
-      height: compact ? '250px' : '450px',
+      height: height ?? (compact ? '250px' : '450px'),
       borderRadius: compact ? 'var(--radius-sm)' : 'var(--radius-md)',
       overflow: 'hidden',
       border: '1px solid var(--surface-border)',
@@ -527,7 +559,7 @@ export function AcgMap({
 
               <TransformComponent 
                  wrapperStyle={{ width: "100%", height: "100%", cursor: 'grab', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                 contentStyle={{ width: "100%", height: "auto" }}
+                 contentStyle={{ width: "100%", height: fillContainer ? "100%" : "auto" }}
               >
                 {mapContent}
               </TransformComponent>
