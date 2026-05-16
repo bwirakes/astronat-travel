@@ -5,6 +5,12 @@ import { RichText } from "../../shared/ReadingCopy";
 const FM = "var(--font-mono)";
 const FB = "var(--font-body)";
 
+function scoreTone(score: number): "good" | "moderate" | "hard" {
+    if (score >= 70) return "good";
+    if (score >= 55) return "moderate";
+    return "hard";
+}
+
 export function WindowsList({ vm, limit }: { vm: V4VM, limit?: number }) {
     const primary = vm.travelWindows[0];
     if (!primary) return null;
@@ -45,38 +51,36 @@ export function WindowsList({ vm, limit }: { vm: V4VM, limit?: number }) {
     return (
         <div style={{ display: "flex", flexDirection: "column" }}>
             {rows.map((r, i) => {
-                const accent =
-                    r.kind === "your"  ? "var(--color-y2k-blue)" :
-                    r.kind === "best"  ? "var(--sage)" :
-                                         "var(--color-spiced-life)";
+                const tone = scoreTone(r.score);
+                const scoreLabel =
+                    tone === "good" ? "Good" :
+                    tone === "moderate" ? "Moderate" :
+                    "Hard";
+                const label =
+                    r.kind === "your" ? "Your dates" :
+                    r.kind === "worst" ? `Watch ${i}` :
+                    `Window ${i}`;
                 return (
                     <div
+                        className={`travel-window-row travel-window-row--${tone}`}
                         key={i}
-                        style={{
-                            display: "grid",
-                            gridTemplateColumns: "minmax(140px, 0.9fr) minmax(0, 2.4fr) auto",
-                            columnGap: "var(--space-lg)",
-                            alignItems: "baseline",
-                            padding: "1rem 0",
-                            borderBottom: "1px solid var(--surface-border)",
-                        }}
                     >
-                        <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem" }}>
-                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: accent, display: "inline-block", flexShrink: 0, alignSelf: "center" }} />
-                            <span style={{ fontFamily: FM, fontSize: "0.65rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-tertiary)", fontWeight: 600 }}>
-                                {r.label}
+                        <div className="travel-window-label" style={{ fontFamily: FM }}>
+                            <span className="travel-window-dot" aria-hidden="true" />
+                            <span>
+                                {label}
                             </span>
                         </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", minWidth: 0 }}>
-                            <span style={{ fontFamily: "var(--font-secondary, var(--font-primary))", fontSize: "1.15rem", color: "var(--text-primary)", lineHeight: 1.2, letterSpacing: "-0.005em" }}>
+                        <div className="travel-window-copy">
+                            <span className="travel-window-dates">
                                 {r.dates}
                             </span>
-                            <span style={{ fontFamily: FB, fontSize: "0.88rem", lineHeight: 1.5, color: "var(--text-secondary)" }}>
+                            <span className="travel-window-note" style={{ fontFamily: FB }}>
                                 <RichText>{r.drivers}</RichText>
                             </span>
                         </div>
-                        <span style={{ fontFamily: FM, fontSize: "0.95rem", color: "var(--text-primary)", fontWeight: 600, whiteSpace: "nowrap", letterSpacing: "0.02em" }}>
-                            {r.score}<span style={{ color: "var(--text-tertiary)", fontWeight: 400 }}>/100</span>
+                        <span className="travel-window-score" aria-label={`${scoreLabel} importance score: ${r.score} out of 100`}>
+                            <span>{r.score}</span><span>/100</span>
                         </span>
                     </div>
                 );
