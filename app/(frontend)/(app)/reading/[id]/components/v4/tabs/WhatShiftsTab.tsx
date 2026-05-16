@@ -5,7 +5,7 @@ import NatalMockupWheel, { type NatalPlanet } from "@/app/components/NatalMockup
 import PlanetIcon from "@/app/components/PlanetIcon";
 import SectionHead from "../../shared/SectionHead";
 import TabSection from "../../shared/TabSection";
-import { appendChartRulerDignityNote, mergeGuideRows, RichText } from "../../shared/ReadingCopy";
+import { appendChartRulerDignityNote, RichText } from "../../shared/ReadingCopy";
 import type { V4VM } from "./types";
 import { geodeticPlanetMeaning } from "@/app/lib/geodetic/planet-meanings";
 import { PLANET_COLORS } from "@/app/lib/planet-data";
@@ -91,26 +91,6 @@ export default function WhatShiftsTab({ vm, isDark, natalWheel, relocatedWheel, 
     const tabLead = copiedTab?.lead?.trim() || "";
     const tabIntro = appendChartRulerDignityNote(copiedTab?.plainEnglishSummary || vm.chrome.step7Intro, vm.relocated.chartRuler) || "";
     const hasAiCopy = tabLead.length > 0 || !!copiedTab?.plainEnglishSummary;
-    const chartRuler = vm.relocated.chartRulerReframe;
-    const firstAspect = vm.relocated.aspectsToAngles[0];
-    const whatShiftsGuideRows = mergeGuideRows(copiedTab?.guideRows, [
-        {
-            label: "Best Used For",
-            body: chartRuler
-                ? `Notice how ${chartRuler.relocatedRising} rising and ${chartRuler.ruler} moving from H${chartRuler.fromHouse} to H${chartRuler.toHouse} changes your daily choices.`
-                : "Notice which parts of your chart become louder when the houses rotate around this place.",
-        },
-        {
-            label: "Move Carefully With",
-            body: firstAspect
-                ? `Watch the ${firstAspect.planet} to ${firstAspect.toAngle} contact; tight angle aspects make small situations feel more personal.`
-                : "Do not treat every mood or delay as permanent; the relocated chart shows pressure points, not a fixed sentence.",
-        },
-        {
-            label: "Your Next Move",
-            body: "Track the first day simply: sleep, appetite, messages, movement, and where your body relaxes or tightens.",
-        },
-    ]);
 
     return (
         <TabSection
@@ -119,7 +99,6 @@ export default function WhatShiftsTab({ vm, isDark, natalWheel, relocatedWheel, 
             titleNoWrap
             lead={tabLead}
             intro={tabIntro}
-            guideRows={whatShiftsGuideRows}
             maxSentences={5}
         >
             {/* ─ Synthesized fallback lead — only shown when no AI copy ─ */}

@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactElement, type ReactNode } from "react";
 import SectionHead from "../../shared/SectionHead";
 import TabSection from "../../shared/TabSection";
-import { mergeGuideRows, RichText } from "../../shared/ReadingCopy";
+import { RichText } from "../../shared/ReadingCopy";
 import type { V4VM } from "./types";
 import { transitOneLiner } from "@/app/lib/transit-copy";
 import type { TransitSpan, UniversalSkySpan } from "@/app/lib/window-scoring";
@@ -1802,21 +1802,24 @@ export default function TimingTab({ vm, copiedTab }: Props) {
     const tabIntro = copiedTab?.plainEnglishSummary || undefined;
     const advice = vm.tabs.timing?.activationAdvice ?? [];
     const mainWindow = vm.travelWindows[0];
-    const timingGuideRows = mergeGuideRows(copiedTab?.guideRows, [
+    const timingGuideRows = [
         {
-            label: "Best Used For",
+            label: "Green-light window",
+            badgeVariant: "timing-window" as const,
             body: advice[0]
-                || (mainWindow ? `Use ${mainWindow.dates} for the focused part of the trip, especially the plans that match your strongest scores.` : "Use the clearest window for the focused part of the trip."),
+                || (mainWindow ? `${mainWindow.dates} has the most lift. Put the plans you care about most inside this stretch.` : "Use the clearest window for the focused part of the trip."),
         },
         {
-            label: "Move Carefully With",
-            body: advice[2] || "Keep the calendar flexible around confusing, draining, or over-promised plans.",
+            label: "Keep an eye here",
+            badgeVariant: "timing-watch" as const,
+            body: advice[2] || "Treat these like weather-check days: keep promises smaller, add buffer, and avoid overbooking.",
         },
         {
-            label: "Your Next Move",
-            body: advice[1] || "Put the important plans early, then leave open space for rest, changes, and recovery.",
+            label: "How to pace it",
+            badgeVariant: "timing-pace" as const,
+            body: advice[1] || "Book the important thing first, then leave open space around it for rest, changes, and recovery.",
         },
-    ]);
+    ];
 
     return (
         <TabSection
@@ -1825,45 +1828,10 @@ export default function TimingTab({ vm, copiedTab }: Props) {
             lead={tabLead}
             intro={tabIntro}
             guideRows={timingGuideRows}
+            preserveGuideLabels
         >
             {/* Verdict — one deterministic sentence carries the intro role */}
             <VerdictHeadline vm={vm} />
-
-            {/* AI Activation Advice */}
-            {advice.length > 0 && (
-                <div 
-                    className="mt-[clamp(32px,4vw,48px)] mb-[clamp(48px,6vw,64px)] p-[clamp(24px,3vw,32px)] rounded-[var(--radius-lg)] border"
-                    style={{ 
-                        background: "var(--surface)", 
-                        borderColor: "var(--surface-border)" 
-                    }}
-                >
-                    <h4 
-                        className="m-0 mb-5 text-[11px] tracking-[0.2em] uppercase"
-                        style={{ fontFamily: FM, color: "var(--color-y2k-blue)" }}
-                    >
-                        Strategic Advice
-                    </h4>
-                    <ul className="flex flex-col gap-[16px] m-0 p-0 list-none">
-                        {advice.map((advice, i) => (
-                            <li key={i} className="flex items-start gap-[12px]">
-                                <span 
-                                    className="text-[14px] mt-[4px]"
-                                    style={{ color: "var(--color-y2k-blue)" }}
-                                >
-                                    ✦
-                                </span>
-                                <span 
-                                    className="m-0 text-[clamp(16px,1.5vw,18px)] leading-[1.6] [text-wrap:pretty]"
-                                    style={{ fontFamily: FB, color: "var(--text-primary)", fontWeight: 400 }}
-                                >
-                                    <RichText>{advice}</RichText>
-                                </span>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
 
             {/* §1 — Top travel windows (trip) / Best months to arrive (relocation) */}
             {showAlternates && (

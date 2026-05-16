@@ -14,7 +14,6 @@ import type { PersonalGeodeticHit } from "@/app/lib/reading-tabs";
 import type { V4EclipseHit, V4GeoTransit, V4LunationHit, V4Paran, V4ProgressedBand } from "@/app/lib/reading-viewmodel";
 import SectionHead from "../../shared/SectionHead";
 import TabSection from "../../shared/TabSection";
-import { mergeGuideRows } from "../../shared/ReadingCopy";
 import UniversalSkySection from "./UniversalSkySection";
 import type { V4VM } from "./types";
 
@@ -304,23 +303,6 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
     const tabLead = copiedTab?.lead?.trim() || "";
     const tabIntro = copiedTab?.plainEnglishSummary || undefined;
     const hasAiCopy = tabLead.length > 0 || !!tabIntro;
-    const tightestCorner = cornerRows.find((row) => row.hit);
-    const placeGuideRows = mergeGuideRows(copiedTab?.guideRows, [
-        {
-            label: "Best Used For",
-            body: `Use ${city} to read the local field in real time: geo-ASC ${signFromLongitude(geoASC)} and geo-MC ${signFromLongitude(geoMC)} shape how the city meets you.`,
-        },
-        {
-            label: "Move Carefully With",
-            body: tightestCorner?.hit
-                ? `${capitalize(tightestCorner.hit.planet)} is close to the ${ANGLE_FULL[tightestCorner.anchor]}, so reactions around ${ANGLE_TOPIC[tightestCorner.anchor]} can feel louder than usual.`
-                : "Do not treat every reaction as purely personal; the place field itself can turn the volume up.",
-        },
-        {
-            label: "Your Next Move",
-            body: "Move slowly on arrival day, then choose plans that keep your mood, body, and schedule steady.",
-        },
-    ]);
 
     return (
         <TabSection
@@ -328,7 +310,6 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
             title={`${city} · Geodetic field`}
             lead={tabLead}
             intro={tabIntro}
-            guideRows={placeGuideRows}
         >
             {/* Dateline — coordinates, travel date, derived geodetic angles. */}
             <div style={{ ...DATELINE, marginBottom: "var(--space-md)" }}>
