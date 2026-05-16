@@ -4,7 +4,6 @@ import Link from "next/link";
 import styles from "./learn-footer.module.css";
 
 const FONT_PRIMARY = "var(--font-primary, serif)";
-const FONT_BODY = "var(--font-body, system-ui)";
 const FONT_MONO = "var(--font-mono, monospace)";
 
 const ARTICLES = [
@@ -64,7 +63,7 @@ const ARTICLES = [
 
 export default function LearnFooter() {
     return (
-        <section className="w-full mt-[clamp(40px,6vw,80px)] border-t-[3px] pt-[clamp(20px,3vw,32px)]" style={{ borderColor: "var(--text-primary)" }}>
+        <section className="w-full mt-[clamp(40px,6vw,80px)] pt-[clamp(20px,3vw,32px)]">
             <div className="flex justify-between items-end mb-[clamp(32px,5vw,48px)]">
                 <h2
                     className="m-0 leading-none tracking-[-0.01em] uppercase"

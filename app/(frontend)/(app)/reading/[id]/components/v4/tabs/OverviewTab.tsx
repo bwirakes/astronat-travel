@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import SectionHead from "../../shared/SectionHead";
 import TabSection from "../../shared/TabSection";
-import { appendChartRulerDignityNote, mergeGuideRows, RichText } from "../../shared/ReadingCopy";
+import { appendChartRulerDignityNote, GuideRowBadge, mergeGuideRows, RichText } from "../../shared/ReadingCopy";
 import type { V4VM } from "./types";
 
 interface Props {
@@ -108,7 +108,11 @@ export default function OverviewTab({ vm, copiedTab, selectTab, natalForMap, bir
                 ? `Choose one ${selectedGoal.label.toLowerCase()} priority, then plan the trip around the strongest supporting theme instead of forcing everything.`
                 : "Choose one clear priority, then keep the itinerary simple enough to protect your energy.",
         },
-    ]);
+    ])?.map((row) => {
+        if (row.label === "Best Used For") return { ...row, label: "Use this for", badgeVariant: "overview-use" as const };
+        if (row.label === "Move Carefully With") return { ...row, label: "Don't use this for", badgeVariant: "overview-avoid" as const };
+        return { ...row, label: "Do next", badgeVariant: "overview-next" as const };
+    });
 
     return (
         <TabSection
@@ -118,6 +122,8 @@ export default function OverviewTab({ vm, copiedTab, selectTab, natalForMap, bir
             intro={summary}
             guideRows={overviewGuideRows}
             maxSentences={5}
+            quietCopy
+            preserveGuideLabels
         >
             <div className="relative w-full max-w-none">
                 {/* Macro-Texture: Editorial Wireframe Globe */}
@@ -160,14 +166,20 @@ export default function OverviewTab({ vm, copiedTab, selectTab, natalForMap, bir
                     style={{ borderColor: "var(--surface-border)" }}
                 >
                         <AnswerCard
-                            label="Strongest operating signal"
+                            label="Use this for"
+                            subhead={topTheme ? `${topTheme.label} has the most support here` : "The clearest yes in this location"}
                             items={leanInto.length ? leanInto.slice(0, 2) : [topTheme?.label || "This is the clearest thing to build the reading around."]}
                             accent="var(--sage)"
+                            badgeIndex={0}
+                            badgeVariant="theme-use"
                         />
                         <AnswerCard
-                            label="Constraint to respect"
+                            label="Don't use this for"
+                            subhead={weakestTheme ? `${weakestTheme.label} needs a lighter touch` : "The place cannot carry everything at once"}
                             items={watchOut.length ? watchOut.slice(0, 2) : ["Do not make this place carry every goal at once."]}
                             accent="var(--color-spiced-life)"
+                            badgeIndex={1}
+                            badgeVariant="theme-avoid"
                         />
                 </section>
 
@@ -646,41 +658,49 @@ function ThemeChip({ label, score }: { label: string; score: number; tone: "lift
 
 function AnswerCard({
     label,
+    subhead,
     items,
     accent,
+    badgeIndex,
+    badgeVariant,
 }: {
     label: string;
+    subhead: string;
     items: string[];
     accent: string;
+    badgeIndex: number;
+    badgeVariant: "theme-use" | "theme-avoid";
 }) {
     return (
         <article
             className="min-w-0 w-full text-left p-[clamp(22px,3vw,32px)] border-r border-b"
             style={{ borderColor: "var(--surface-border)" }}
         >
-            <div
-                className="mb-[16px] h-[3px] w-[42px]"
-                style={{ background: accent }}
-            />
-            <span
-                className="block mb-[10px] text-[11px] tracking-[0.16em] uppercase"
-                style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}
-            >
-                {label}
-            </span>
+            <div className="mb-[18px] flex items-start gap-3">
+                <GuideRowBadge label={label} index={badgeIndex} variant={badgeVariant} />
+                <div className="min-w-0">
+                    <span
+                        className="block mb-[7px] text-[11px] tracking-[0.16em] uppercase"
+                        style={{ fontFamily: FONT_MONO, color: accent, fontWeight: 700 }}
+                    >
+                        {label}
+                    </span>
+                    <h3
+                        className="m-0 max-w-[24ch] text-[clamp(18px,1.7vw,23px)] leading-[1.12] font-normal [text-wrap:balance]"
+                        style={{ fontFamily: FONT_PRIMARY, color: "var(--text-primary)" }}
+                    >
+                        {subhead}
+                    </h3>
+                </div>
+            </div>
             <ul className="m-0 p-0 list-none flex flex-col gap-[14px]">
                 {items.map((item, index) => (
                     <li
                         key={`${label}-${index}`}
-                        className="relative pl-[18px] text-[15px] leading-[1.6] [text-wrap:pretty]"
+                        className="text-[15px] leading-[1.6] [text-wrap:pretty]"
                         style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
                     >
-                        <span
-                            aria-hidden
-                            className="absolute left-0 top-[0.72em] h-[4px] w-[4px] rounded-full"
-                            style={{ background: accent }}
-                        />
-                        <RichText>{compactCardItem(item)}</RichText>
+                        <RichText autoEmphasis={false} allowBold={false}>{compactCardItem(item)}</RichText>
                     </li>
                 ))}
             </ul>

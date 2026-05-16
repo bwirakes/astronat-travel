@@ -152,7 +152,7 @@ function buildBirthIso(reading: any): string | undefined {
  * V4 "101" — first-time-friendly reading view.
  * Tabbed shell that routes to per-tab components in ./tabs.
  */
-export default function HundredOneReadingView({ reading, narrative, narrativeLoading, showUpsell, paramId }: Props) {
+export default function HundredOneReadingView({ reading, narrative, showUpsell, paramId }: Props) {
     const vm = useMemo(() => toV4ViewModel(reading, narrative), [reading, narrative]);
     const natalForMap = useMemo(() => buildNatalDataForMap(reading), [reading]);
     const birthIso = useMemo(() => buildBirthIso(reading), [reading]);
@@ -223,8 +223,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                             style={READING_SHELL_STYLE}
                         >
                             <section
-                                className="flex flex-wrap items-end justify-between gap-x-[clamp(16px,2.4vw,28px)] gap-y-[14px] pt-2 pb-[clamp(16px,2vw,22px)] border-b"
-                                style={{ borderColor: "var(--surface-border)" }}
+                                className="flex flex-wrap items-end justify-between gap-x-[clamp(16px,2.4vw,28px)] gap-y-[14px] pt-2 pb-[clamp(20px,3vw,34px)]"
                             >
                                 <div className="flex flex-col gap-[6px] min-w-0">
                                     <span
@@ -297,8 +296,7 @@ export default function HundredOneReadingView({ reading, narrative, narrativeLoa
                 })()}
 
                 <section
-                    className="pt-[10px] pb-12 border-t"
-                    style={{ borderColor: "var(--surface-border)" }}
+                    className="pt-[10px] pb-12"
                     aria-label="Reading content"
                 >
                     <div

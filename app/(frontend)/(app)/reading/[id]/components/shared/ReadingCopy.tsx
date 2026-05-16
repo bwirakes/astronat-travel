@@ -1,12 +1,23 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
+import { AbstractSaturn, AsteriskStarburst, MonolineStar, OrbitalPaths, PhaseMoon, Sunburst } from "@/app/components/ui/svg-shapes";
 
 export type ReadingGuideLabel = "Best Used For" | "Move Carefully With" | "Your Next Move";
+export type ReadingGuideBadgeVariant =
+    | "overview-use"
+    | "overview-avoid"
+    | "overview-next"
+    | "timing-window"
+    | "timing-watch"
+    | "timing-pace"
+    | "theme-use"
+    | "theme-avoid";
 
 export interface ReadingGuideRow {
     label: ReadingGuideLabel | string;
     body: string;
+    badgeVariant?: ReadingGuideBadgeVariant;
 }
 
 type ChartRulerDisplay = {
@@ -29,6 +40,8 @@ const GUIDE_LABELS = [
     "Good for",
     "Use this for",
     "Useful for",
+    "Don't use this for",
+    "Do not use this for",
     "Watch",
     "Watch out",
     "Move carefully with",
@@ -44,7 +57,7 @@ const GUIDE_LABELS = [
 
 function normalizeGuideLabel(label: string): ReadingGuideLabel {
     const clean = label.toLowerCase().replace(/[^a-z ]/g, "").trim();
-    if (clean.includes("move carefully") || clean.includes("watch") || clean.includes("avoid") || clean.includes("not for") || clean.includes("do not force")) {
+    if (clean.includes("move carefully") || clean.includes("watch") || clean.includes("avoid") || clean.includes("not for") || clean.includes("dont use") || clean.includes("do not use") || clean.includes("do not force")) {
         return "Move Carefully With";
     }
     if (clean.includes("next") || clean.includes("do this") || clean.includes("try") || clean.includes("practical") || clean.includes("so what")) {
@@ -76,10 +89,10 @@ function cleanGuideBody(text: string): string {
 }
 
 function displayGuideLabel(label: string): string {
-    const normalized = normalizeGuideLabel(label);
-    if (normalized === "Best Used For") return "Best For";
-    if (normalized === "Move Carefully With") return "Be Careful With";
-    return "Do Next";
+    if (label === "Best Used For") return "Best For";
+    if (label === "Move Carefully With") return "Be Careful With";
+    if (label === "Your Next Move") return "Do Next";
+    return label;
 }
 
 function sentenceParts(text: string): string[] {
@@ -223,16 +236,19 @@ export function structureReadingCopy({
     intro,
     guideRows,
     maxSentences = 5,
+    preserveGuideLabels = false,
 }: {
     lead?: string;
     intro?: string;
     guideRows?: ReadingGuideRow[];
     maxSentences?: number;
+    preserveGuideLabels?: boolean;
 }): { paragraphs: string[]; guideRows: ReadingGuideRow[] } {
     const explicitRows = (guideRows ?? [])
         .map((row) => ({
-            label: normalizeGuideLabel(row.label),
+            label: preserveGuideLabels ? cleanMarkdownShell(row.label) : normalizeGuideLabel(row.label),
             body: sentenceLimit(String(row.body ?? ""), 1),
+            badgeVariant: row.badgeVariant,
         }))
         .filter((row) => row.body)
         .slice(0, 3);
@@ -275,12 +291,22 @@ export function structureReadingCopy({
 /** Tiny rich-text renderer for AI-authored strings. It only supports
  *  **bold**. Single-star or underscore italics are stripped because italic body
  *  copy is harder to skim for ESL readers. */
-export function RichText({ children }: { children: string }) {
+export function RichText({
+    children,
+    autoEmphasis = true,
+    allowBold = true,
+}: {
+    children: string;
+    autoEmphasis?: boolean;
+    allowBold?: boolean;
+}) {
     const normalized = children
         .replace(/(^|[^\*])\*([^\*\n][^\*\n]*?)\*(?!\*)/g, "$1$2")
         .replace(/(^|[^_])_([^_\n][^_\n]*?)_(?!_)/g, "$1$2");
+    const plain = allowBold ? normalized : normalized.replace(/\*\*([^*]+)\*\*/g, "$1");
     const parts = normalized.split(/(\*\*[^*]+\*\*)/g);
     const renderAutoEmphasis = (text: string, keyPrefix: string) => {
+        if (!autoEmphasis) return text;
         const chunks = text.split(IMPORTANT_TERM_RE);
         const matches = text.match(IMPORTANT_TERM_RE) ?? [];
         return chunks.flatMap((chunk, index) => {
@@ -297,6 +323,9 @@ export function RichText({ children }: { children: string }) {
             return nodes;
         });
     };
+    if (!allowBold) {
+        return <>{renderAutoEmphasis(plain, "rt-plain")}</>;
+    }
     return (
         <>
             {parts.map((part, index) => (
@@ -315,9 +344,15 @@ export function RichText({ children }: { children: string }) {
 export function ReadingGuideRows({
     rows,
     accent = "var(--color-y2k-blue)",
+    autoEmphasis = true,
+    allowBold = true,
+    preserveLabels = false,
 }: {
     rows: ReadingGuideRow[];
     accent?: string;
+    autoEmphasis?: boolean;
+    allowBold?: boolean;
+    preserveLabels?: boolean;
 }) {
     if (!rows.length) return null;
     return (
@@ -328,28 +363,145 @@ export function ReadingGuideRows({
                     className="min-w-0 py-4 md:px-5 md:first:pl-0 md:border-l md:first:border-l-0"
                     style={{ borderColor: "var(--surface-border)" }}
                 >
-                    <span
-                        className="block mb-2 text-[10px] tracking-[0.16em] uppercase"
-                        style={{ fontFamily: FONT_MONO, color: accent, fontWeight: 700 }}
-                    >
-                        {displayGuideLabel(row.label)}
-                    </span>
-                    <span className="flex items-start gap-2">
-                        <span
-                            aria-hidden
-                            className="mt-[0.62em] h-[5px] w-[5px] shrink-0 rounded-full"
-                            style={{ background: accent }}
-                        />
-                        <span
-                            className="block text-[14px] leading-[1.55] [text-wrap:pretty]"
-                            style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
-                        >
-                            <RichText>{row.body}</RichText>
-                        </span>
-                    </span>
+                    <div className="flex items-start gap-3">
+                        <GuideRowBadge label={row.label} index={index} variant={row.badgeVariant} />
+                        <div className="min-w-0">
+                            <span
+                                className="block mb-1.5 text-[10px] tracking-[0.16em] uppercase"
+                                style={{ fontFamily: FONT_MONO, color: accent, fontWeight: 700 }}
+                            >
+                                {preserveLabels ? row.label : displayGuideLabel(row.label)}
+                            </span>
+                            <span
+                                className="block text-[14px] leading-[1.55] [text-wrap:pretty]"
+                                style={{ fontFamily: FONT_BODY, color: "var(--text-secondary)" }}
+                            >
+                                <RichText autoEmphasis={autoEmphasis} allowBold={allowBold}>{row.body}</RichText>
+                            </span>
+                        </div>
+                    </div>
                 </li>
             ))}
         </ul>
+    );
+}
+
+export function GuideRowBadge({
+    label,
+    index,
+    variant,
+}: {
+    label: string;
+    index: number;
+    variant?: ReadingGuideBadgeVariant;
+}) {
+    const clean = label.toLowerCase();
+    const resolvedVariant = variant ?? (
+        clean.includes("watch") || clean.includes("careful") || clean.includes("eye") || clean.includes("don't") || clean.includes("dont") || clean.includes("not use")
+            ? "timing-watch"
+            : clean.includes("window") || clean.includes("best") || clean.includes("green") || clean.includes("use this")
+                ? "timing-window"
+                : clean.includes("schedule") || clean.includes("pace") || clean.includes("next") || /\bdo\b/.test(clean)
+                    ? "timing-pace"
+                    : index === 1
+                        ? "timing-watch"
+                        : index === 2
+                            ? "timing-pace"
+                            : "timing-window"
+    );
+    const tone = resolvedVariant.includes("avoid") || resolvedVariant.includes("watch")
+        ? "var(--color-spiced-life)"
+        : resolvedVariant.includes("use") || resolvedVariant.includes("theme")
+            ? "var(--sage)"
+            : resolvedVariant.includes("window")
+                ? "var(--amber)"
+                : "var(--color-y2k-blue)";
+    const bg = `color-mix(in oklab, ${tone} 16%, transparent)`;
+
+    return (
+        <span
+            aria-hidden
+            className="relative mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[var(--shape-organic-1)]"
+            style={{ background: bg, color: tone }}
+        >
+            {resolvedVariant === "overview-use" ? (
+                <>
+                    <AsteriskStarburst size={15} className="absolute right-[6px] top-[5px] opacity-75" />
+                    <svg viewBox="0 0 44 44" className="relative h-9 w-9" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="22" cy="22" r="12.8" fill="currentColor" opacity="0.11" strokeWidth="1.4" />
+                        <path d="M22 8v5M22 31v5M8 22h5M31 22h5M12.1 12.1l3.4 3.4M28.5 28.5l3.4 3.4M31.9 12.1l-3.4 3.4M15.5 28.5l-3.4 3.4" strokeWidth="1.3" opacity="0.85" />
+                        <path d="M22 15.5l2.2 4.3 4.8.7-3.5 3.3.8 4.7-4.3-2.2-4.3 2.2.8-4.7-3.5-3.3 4.8-.7Z" fill="currentColor" stroke="none" opacity="0.82" />
+                    </svg>
+                </>
+            ) : resolvedVariant === "overview-avoid" ? (
+                <>
+                    <PhaseMoon size={28} className="absolute left-[8px] top-[8px] opacity-70" />
+                    <MonolineStar size={12} className="absolute right-[7px] top-[8px] opacity-75" />
+                    <svg viewBox="0 0 44 44" className="relative h-9 w-9" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="22" cy="22" r="11.4" fill="currentColor" opacity="0.1" strokeWidth="1.4" />
+                        <path d="M15 29c5.7-1.2 10.2-5.4 12-11.1" strokeWidth="1.55" opacity="0.85" />
+                        <path d="M29 14.5l2 2 2-2M10 31l1.8 1.8 1.8-1.8" strokeWidth="1.25" opacity="0.68" />
+                    </svg>
+                </>
+            ) : resolvedVariant === "overview-next" ? (
+                <>
+                    <OrbitalPaths size={35} className="absolute inset-[4px] opacity-28" />
+                    <svg viewBox="0 0 44 44" className="relative h-9 w-9" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 9l3.6 9.4L35 22l-9.4 3.6L22 35l-3.6-9.4L9 22l9.4-3.6Z" fill="currentColor" opacity="0.15" strokeWidth="1.5" />
+                        <path d="M22 12v20M12 22h20" strokeWidth="1.45" opacity="0.75" />
+                        <path d="M29.5 14.5l2.8-2.8M31.6 11.4h-4M31.6 11.4v4" strokeWidth="1.35" />
+                    </svg>
+                </>
+            ) : resolvedVariant === "theme-use" ? (
+                <svg viewBox="0 0 44 44" className="relative h-9 w-9" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 27l7-10 7 6 8-12" strokeWidth="1.45" opacity="0.72" />
+                    <circle cx="11" cy="27" r="2.3" fill="currentColor" stroke="none" />
+                    <circle cx="18" cy="17" r="2.1" fill="currentColor" stroke="none" opacity="0.85" />
+                    <circle cx="25" cy="23" r="2.1" fill="currentColor" stroke="none" opacity="0.85" />
+                    <circle cx="33" cy="11" r="2.4" fill="currentColor" stroke="none" />
+                    <path d="M27 31l2.1 1.2 2.1-1.2-1.2 2.1 1.2 2.1-2.1-1.2-2.1 1.2 1.2-2.1Z" fill="currentColor" stroke="none" opacity="0.75" />
+                </svg>
+            ) : resolvedVariant === "theme-avoid" ? (
+                <>
+                    <AsteriskStarburst size={12} className="absolute right-[7px] top-[7px] opacity-65" />
+                    <svg viewBox="0 0 44 44" className="relative h-9 w-9" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 9c5 3.2 8 3.4 12 3.3-.4 10.2-4 17.2-12 22.7-8-5.5-11.6-12.5-12-22.7 4 .1 7-.1 12-3.3Z" fill="currentColor" opacity="0.11" strokeWidth="1.45" />
+                        <path d="M16 25c3.3-1.2 8.7-1.2 12 0M17 18c1.2 1.1 2.4 1.1 3.6 0M23.4 18c1.2 1.1 2.4 1.1 3.6 0" strokeWidth="1.45" opacity="0.78" />
+                    </svg>
+                </>
+            ) : resolvedVariant === "timing-window" ? (
+                <>
+                    <Sunburst size={34} className="absolute inset-[5px] opacity-30" />
+                    <AsteriskStarburst size={12} className="absolute right-[7px] top-[6px] opacity-80" />
+                    <svg viewBox="0 0 44 44" className="relative h-9 w-9" fill="none">
+                        <circle cx="22" cy="22" r="12.5" fill="currentColor" opacity="0.92" />
+                        <path d="M15.5 20.5c1.7 2 3.8 2 5.5 0M23 20.5c1.7 2 3.8 2 5.5 0" stroke="var(--text-primary)" strokeWidth="1.65" strokeLinecap="round" opacity="0.72" />
+                        <path d="M16.5 27c3.1 3 7.9 3 11 0" stroke="var(--text-primary)" strokeWidth="1.8" strokeLinecap="round" opacity="0.72" />
+                        <path d="M13 31c5.3 3.5 12.7 3.5 18 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.26" />
+                    </svg>
+                </>
+            ) : resolvedVariant === "timing-watch" ? (
+                <>
+                    <MonolineStar size={13} className="absolute right-[7px] top-[7px] opacity-75" />
+                    <PhaseMoon size={27} className="absolute left-[9px] top-[9px] opacity-90" />
+                    <svg viewBox="0 0 44 44" className="relative h-9 w-9" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M15 30c3.8 2 8.4 1.4 11.8-1.7" strokeWidth="1.6" opacity="0.45" />
+                        <path d="M29.5 14.5l2 2 2-2M9.5 29.5l1.7 1.7 1.7-1.7" strokeWidth="1.35" opacity="0.72" />
+                    </svg>
+                </>
+            ) : (
+                <>
+                    <OrbitalPaths size={36} className="absolute inset-[4px] opacity-36" />
+                    <AbstractSaturn size={31} className="absolute inset-[6.5px] opacity-85" />
+                    <svg viewBox="0 0 44 44" className="relative h-9 w-9" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="22" cy="22" r="6.5" fill="currentColor" opacity="0.18" strokeWidth="1.4" />
+                        <path d="M10.5 24c5.6-4.1 17.4-5.4 23-2.5" strokeWidth="1.7" opacity="0.82" />
+                        <path d="M12.5 28.5c5.8 2 13.8.9 19-2.4" strokeWidth="1.3" opacity="0.5" />
+                        <circle cx="31.5" cy="14.5" r="1.9" fill="currentColor" stroke="none" />
+                    </svg>
+                </>
+            )}
+        </span>
     );
 }
 
@@ -360,6 +512,9 @@ export function ReadingCopyBlock({
     wide,
     maxSentences = 3,
     accent = "var(--color-y2k-blue)",
+    autoEmphasis = true,
+    allowBold = true,
+    preserveGuideLabels = false,
 }: {
     lead?: string;
     intro?: string;
@@ -367,8 +522,11 @@ export function ReadingCopyBlock({
     wide?: boolean;
     maxSentences?: number;
     accent?: string;
+    autoEmphasis?: boolean;
+    allowBold?: boolean;
+    preserveGuideLabels?: boolean;
 }) {
-    const structured = structureReadingCopy({ lead, intro, guideRows, maxSentences });
+    const structured = structureReadingCopy({ lead, intro, guideRows, maxSentences, preserveGuideLabels });
     if (!structured.paragraphs.length && !structured.guideRows.length) return null;
     const bodyStyle: CSSProperties = {
         fontFamily: FONT_BODY,
@@ -389,11 +547,11 @@ export function ReadingCopyBlock({
             <div className="flex flex-col gap-3">
                 {structured.paragraphs.map((paragraph, index) => (
                     <p key={index} className="m-0 [text-wrap:pretty]" style={bodyStyle}>
-                        <RichText>{paragraph}</RichText>
+                        <RichText autoEmphasis={autoEmphasis} allowBold={allowBold}>{paragraph}</RichText>
                     </p>
                 ))}
             </div>
-            <ReadingGuideRows rows={structured.guideRows} accent={accent} />
+            <ReadingGuideRows rows={structured.guideRows} accent={accent} autoEmphasis={autoEmphasis} allowBold={allowBold} preserveLabels={preserveGuideLabels} />
         </div>
     );
 }
