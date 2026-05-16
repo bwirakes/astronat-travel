@@ -1,9 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import {
   filterAndSortReadings,
+  prepareReadingsPage,
   toReading,
   type SupabaseReadingRow,
-} from "@/app/(frontend)/(app)/readings/ReadingsClient";
+} from "@/app/(frontend)/(app)/readings/readings-data";
 
 const rows: SupabaseReadingRow[] = [
   {
@@ -65,5 +66,18 @@ describe("readings filters", () => {
 
     const allByScore = filterAndSortReadings(readings, "score", "all").map((reading) => reading.id);
     expect(allByScore).toEqual(["relocation-1", "trip-1", "couples-1"]);
+  });
+
+  it("clamps an out-of-range page instead of reporting an empty nonzero total", () => {
+    const prepared = prepareReadingsPage(readings, {
+      page: 13,
+      sort: "recent",
+      typeFilter: "all",
+      pageSize: 10,
+    });
+
+    expect(prepared.page).toBe(1);
+    expect(prepared.total).toBe(3);
+    expect(prepared.readings.map((reading) => reading.id)).toEqual(["trip-1", "relocation-1", "couples-1"]);
   });
 });

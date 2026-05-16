@@ -1,14 +1,14 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { ReadingsClient } from "./ReadingsClient";
 import {
-  ReadingsClient,
   PAGE_SIZE,
   toReading,
   type Reading,
   type SortKey,
   type SupabaseReadingRow,
   type TypeFilter,
-} from "./ReadingsClient";
+} from "./readings-data";
 
 const VALID_SORTS: ReadonlySet<SortKey> = new Set<SortKey>(["recent", "score", "travel", "alpha"]);
 const VALID_TYPES: ReadonlySet<TypeFilter> = new Set<TypeFilter>(["all", "trip", "relocation", "couples"]);
@@ -29,45 +29,66 @@ export default async function ReadingsPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/readings");
 
-  let q = supabase
-    .from("readings")
-    .select("id, category, details, reading_date, reading_score", { count: "exact" })
-    .eq("user_id", user.id);
+  const buildQuery = () => {
+    let q = supabase
+      .from("readings")
+      .select("id, category, details, reading_date, reading_score", { count: "exact" })
+      .eq("user_id", user.id);
 
-  if (typeFilter === "couples") {
-    q = q.eq("category", "synastry");
-  } else if (typeFilter === "relocation") {
-    q = q.or("details->>travelType.eq.relocation");
-  } else if (typeFilter === "trip") {
-    q = q.neq("category", "synastry").or("details->>travelType.eq.trip,category.eq.astrocartography");
+    if (typeFilter === "couples") {
+      q = q.eq("category", "synastry");
+    } else if (typeFilter === "relocation") {
+      q = q.or("details->>travelType.eq.relocation");
+    } else if (typeFilter === "trip") {
+      q = q.neq("category", "synastry").or("details->>travelType.eq.trip,category.eq.astrocartography");
+    }
+
+    switch (sort) {
+      case "score":
+        return q.order("reading_score", { ascending: false, nullsFirst: false });
+      case "travel":
+        return q.order("reading_date", { ascending: false });
+      case "alpha":
+        return q.order("details->destination", { ascending: true });
+      case "recent":
+      default:
+        return q.order("created_at", { ascending: false });
+    }
+  };
+
+  const fetchPage = async (pageToFetch: number) => {
+    const from = (pageToFetch - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    return buildQuery().range(from, to);
+  };
+
+  let { data, count, error } = await fetchPage(page);
+
+  if (error) {
+    console.error("[readings] failed to load readings", error);
   }
 
-  switch (sort) {
-    case "score":
-      q = q.order("reading_score", { ascending: false, nullsFirst: false });
-      break;
-    case "travel":
-      q = q.order("reading_date", { ascending: false });
-      break;
-    case "alpha":
-      q = q.order("details->destination", { ascending: true });
-      break;
-    case "recent":
-    default:
-      q = q.order("created_at", { ascending: false });
-      break;
+  const total = count ?? data?.length ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+
+  if (!error && safePage !== page) {
+    const retry = await fetchPage(safePage);
+    data = retry.data;
+    count = retry.count;
+    error = retry.error;
+    if (error) {
+      console.error("[readings] failed to load clamped readings page", error);
+    }
   }
 
-  const from = (page - 1) * PAGE_SIZE;
-  const to = from + PAGE_SIZE - 1;
-  const { data, count } = await q.range(from, to);
   const readings: Reading[] = ((data ?? []) as SupabaseReadingRow[]).map(toReading);
 
   return (
     <ReadingsClient
       readings={readings}
-      total={count ?? readings.length}
-      page={page}
+      total={count ?? total}
+      page={safePage}
       sort={sort}
       typeFilter={typeFilter}
     />
