@@ -4,6 +4,17 @@
    that don't compose cleanly with Tailwind utilities (mostly !important
    widths and pseudo-elements). Everything else lives inline on the components. */
 
+/* The banner itself keeps its fixed palette in every theme — it's a piece
+   of brand artwork, not a surface. Only the tab strip below adapts so the
+   reading page doesn't dump a cream slab onto a dark background. */
+:root {
+  --reading-tabs-surface: var(--bg);
+}
+
+[data-theme="light"] {
+  --reading-tabs-surface: var(--color-eggshell);
+}
+
 /* Higher-specificity selector (.class + [attribute]) — needed to beat
    shadcn's `inline-flex w-fit` that ships in TabsList's class list.
    Same-specificity !important rules can lose to layered Tailwind utilities
@@ -15,8 +26,8 @@
   flex-direction: row !important;
   flex-wrap: nowrap !important;
   flex-shrink: 0;
-  background: var(--color-eggshell);
-  padding: 16px 0 18px;
+  background: var(--reading-tabs-surface);
+  padding: 4px 0 18px;
   border-radius: 0;
   gap: 0;
   height: auto !important;
@@ -48,18 +59,16 @@
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: color-mix(in oklab, var(--color-charcoal) 70%, transparent);
+  color: color-mix(in oklab, var(--text-primary) 70%, transparent);
   transition: color 120ms ease;
 }
 .reading-tab-trigger:hover {
-  color: var(--color-charcoal);
+  color: var(--text-primary);
 }
-/* Override shadcn's default focus ring — the boxy outline around the
-   selected tab reads "cheap form input" against the editorial register.
-   The active ::after underline + color shift carry the active state
-   on its own. Keyboard focus still gets a subtle ring via the inset
-   shadow below for a11y, but it sits inside the trigger and doesn't
-   visually box the text. */
+/* Override shadcn's default focus ring — the boxy outline reads "cheap
+   form input" against the editorial register. Active state carries via
+   the inset bottom border below; keyboard focus echoes the same shape so
+   it doesn't visually box the text. */
 .reading-tab-trigger:focus-visible {
   outline: none !important;
   box-shadow: inset 0 -3px 0 var(--text-primary) !important;
@@ -67,8 +76,9 @@
 .reading-tab-trigger[data-active],
 .reading-tab-trigger[aria-selected="true"] {
   background: transparent;
-  color: var(--color-charcoal);
-  box-shadow: none !important;
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--text-primary) !important;
 }
 
 .reading-tab-trigger::after {
@@ -88,7 +98,7 @@
     border-left: 0 !important;
     border-right: 0 !important;
     border-radius: 0 !important;
-    box-shadow: inset 0 -1px 0 #F8F5EC;
+    box-shadow: inset 0 -1px 0 var(--reading-tabs-surface);
   }
 
   .reading-tabs-wrap {
@@ -285,6 +295,9 @@
 }
 
 @media (min-width: 640px) {
+  /* Desktop: tabs stretch evenly across the banner's width so the strip
+     reads as a proper tab bar matched to the banner above (not a cluster
+     hanging in one corner). The glyph + label fill each column. */
   .reading-tab-trigger {
     padding: 14px clamp(14px, 2vw, 22px);
     /* On larger viewports there's room to keep every label on one line. */
