@@ -859,3 +859,234 @@ body[data-app-drawer-open="true"] .app-hide-when-drawer-open {
     padding: 0.78rem 1.25rem;
   }
 }
+
+/* ── Reading guide flow ─────────────────────────────────────
+   A spacious, timeline-like treatment for the Overview/Timing
+   practical guidance blocks. */
+.reading-guide-responsive__flow {
+  display: none;
+}
+
+.reading-guide-responsive__compact {
+  display: block;
+}
+
+.reading-guide-responsive__compact > ul {
+  margin-top: clamp(34px, 4vw, 56px);
+  margin-bottom: clamp(42px, 5vw, 72px);
+}
+
+.reading-guide-responsive__compact > ul > li {
+  padding-top: clamp(22px, 2.4vw, 34px);
+  padding-bottom: clamp(24px, 2.8vw, 40px);
+}
+
+.reading-guide-responsive__compact > ul > li > div {
+  gap: clamp(14px, 1.6vw, 22px);
+}
+
+.timing-verdict-headline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.reading-guide-flow::before {
+  content: "";
+  position: absolute;
+  left: 27px;
+  top: 26px;
+  bottom: 26px;
+  width: 1px;
+  border-radius: 999px;
+  background: var(--guide-flow-line, var(--surface-border));
+  opacity: 0.48;
+}
+
+.reading-guide-flow__item {
+  animation: reading-guide-flow-rise 900ms var(--ease) both;
+  animation-delay: var(--guide-flow-delay, 0ms);
+}
+
+.reading-guide-flow__badge > span {
+  box-shadow: 0 14px 30px color-mix(in oklab, var(--text-primary) 8%, transparent);
+  transform-origin: center;
+  animation: reading-guide-badge-settle 900ms var(--ease) both;
+  animation-delay: var(--guide-flow-delay, 0ms);
+}
+
+.reading-guide-flow[data-guide-flow="timing"] .reading-guide-flow__item:first-child .reading-guide-flow__badge > span {
+  animation-name: reading-guide-badge-settle, reading-guide-badge-pulse;
+  animation-duration: 900ms, 4600ms;
+  animation-delay: var(--guide-flow-delay, 0ms), 1200ms;
+  animation-timing-function: var(--ease), ease-in-out;
+  animation-iteration-count: 1, infinite;
+}
+
+.reading-guide-flow__label,
+.reading-guide-flow__body {
+  animation: reading-guide-copy-in 820ms var(--ease) both;
+  animation-delay: calc(var(--guide-flow-delay, 0ms) + 140ms);
+}
+
+@keyframes reading-guide-flow-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes reading-guide-copy-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes reading-guide-badge-settle {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes reading-guide-badge-pulse {
+  0%, 100% {
+    box-shadow: 0 14px 30px color-mix(in oklab, var(--text-primary) 8%, transparent);
+  }
+  48% {
+    box-shadow:
+      0 14px 30px color-mix(in oklab, var(--text-primary) 8%, transparent),
+      0 0 0 9px color-mix(in oklab, var(--amber) 12%, transparent);
+  }
+}
+
+@media (max-width: 767px) {
+  .reading-guide-responsive__compact {
+    display: none;
+  }
+
+  .reading-guide-responsive__flow {
+    display: block;
+  }
+
+  .reading-guide-flow {
+    margin-top: clamp(42px, 12vw, 58px) !important;
+    margin-bottom: clamp(56px, 15vw, 76px) !important;
+  }
+
+  .reading-guide-flow__item {
+    grid-template-columns: 48px minmax(0, 1fr) !important;
+    column-gap: clamp(15px, 4.5vw, 20px) !important;
+    padding-bottom: clamp(34px, 11vw, 48px) !important;
+  }
+
+  .reading-guide-flow__item:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 63px;
+    right: 0;
+    bottom: clamp(16px, 5vw, 22px);
+    height: 1px;
+    background: color-mix(in oklab, var(--surface-border) 70%, transparent);
+  }
+
+  .reading-guide-flow::before {
+    left: 23px;
+    top: 24px;
+    bottom: 30px;
+  }
+
+  .reading-guide-flow__badge > span {
+    width: 42px !important;
+    height: 42px !important;
+    box-shadow: 0 10px 22px color-mix(in oklab, var(--text-primary) 7%, transparent);
+  }
+
+  .reading-guide-flow__label {
+    margin-bottom: 8px !important;
+    font-size: 10px !important;
+    letter-spacing: 0.22em !important;
+  }
+
+  .reading-guide-flow__body {
+    font-size: clamp(16px, 1.15vw, 18px) !important;
+    line-height: 1.65 !important;
+    color: var(--text-secondary) !important;
+    max-width: 34ch;
+  }
+
+  .timing-verdict-headline {
+    gap: 0.65rem !important;
+    margin-top: clamp(54px, 16vw, 78px);
+    padding-top: clamp(22px, 6vw, 30px);
+    padding-bottom: clamp(26px, 8vw, 38px);
+    border-top: 1px solid var(--surface-border);
+    border-bottom: 1px solid color-mix(in oklab, var(--surface-border) 70%, transparent);
+    position: relative;
+  }
+
+  .timing-verdict-headline::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: clamp(22px, 6vw, 30px);
+    bottom: clamp(26px, 8vw, 38px);
+    width: 3px;
+    border-radius: 999px;
+    background: var(--timing-verdict-accent);
+    opacity: 0.55;
+  }
+
+  .timing-verdict-headline > * {
+    padding-left: 16px;
+  }
+
+  .timing-verdict-headline p {
+    font-size: clamp(16px, 4.25vw, 18px) !important;
+    line-height: 1.62 !important;
+    max-width: 34ch !important;
+  }
+}
+
+@supports (animation-timeline: view()) {
+  .reading-guide-flow__item,
+  .reading-guide-flow__badge > span,
+  .reading-guide-flow__label,
+  .reading-guide-flow__body {
+    animation-delay: 0ms;
+    animation-timeline: view();
+    animation-range: entry 8% cover 34%;
+  }
+
+  .reading-guide-flow[data-guide-flow="timing"] .reading-guide-flow__item:first-child .reading-guide-flow__badge > span {
+    animation-name: reading-guide-badge-settle;
+    animation-duration: 900ms;
+    animation-delay: 0ms;
+    animation-timeline: view();
+    animation-range: entry 8% cover 34%;
+    animation-iteration-count: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reading-guide-flow__item,
+  .reading-guide-flow__badge > span,
+  .reading-guide-flow[data-guide-flow="timing"] .reading-guide-flow__item:first-child .reading-guide-flow__badge > span,
+  .reading-guide-flow__label,
+  .reading-guide-flow__body {
+    animation: none;
+  }
+}

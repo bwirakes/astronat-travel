@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactElement, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 import SectionHead from "../../shared/SectionHead";
 import TabSection from "../../shared/TabSection";
 import { RichText } from "../../shared/ReadingCopy";
@@ -226,7 +226,7 @@ function VerdictHeadline({ vm }: { vm: V4VM }) {
                              "var(--color-spiced-life)";
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        <div className="timing-verdict-headline" style={{ "--timing-verdict-accent": accent } as CSSProperties}>
             <div style={{ fontFamily: FM, fontSize: "0.65rem", letterSpacing: "0.22em", textTransform: "uppercase", color: accent, fontWeight: 700 }}>
                 {v.label} · {score}/100
             </div>
@@ -1829,6 +1829,8 @@ export default function TimingTab({ vm, copiedTab }: Props) {
             intro={tabIntro}
             guideRows={timingGuideRows}
             preserveGuideLabels
+            guideLayout="flow"
+            guideFlowVariant="timing"
         >
             {/* Verdict — one deterministic sentence carries the intro role */}
             <VerdictHeadline vm={vm} />

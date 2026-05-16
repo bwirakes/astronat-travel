@@ -124,6 +124,8 @@ export default function OverviewTab({ vm, copiedTab, selectTab, natalForMap, bir
             maxSentences={5}
             quietCopy
             preserveGuideLabels
+            guideLayout="flow"
+            guideFlowVariant="overview"
         >
             <div className="relative w-full max-w-none">
                 {/* Macro-Texture: Editorial Wireframe Globe */}
