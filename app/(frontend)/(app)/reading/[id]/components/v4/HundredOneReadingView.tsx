@@ -223,9 +223,9 @@ export default function HundredOneReadingView({ reading, narrative, showUpsell, 
                             style={READING_SHELL_STYLE}
                         >
                             <section
-                                className="flex flex-wrap items-end justify-between gap-x-[clamp(16px,2.4vw,28px)] gap-y-[14px] pt-2 pb-[clamp(20px,3vw,34px)]"
+                                className="reading-hero-banner flex items-end justify-between gap-x-[clamp(16px,2.4vw,28px)] gap-y-[14px] pt-2 pb-[clamp(20px,3vw,34px)]"
                             >
-                                <div className="flex flex-col gap-[6px] min-w-0">
+                                <div className="reading-hero-place flex flex-col gap-[6px] min-w-0">
                                     <span
                                         className="inline-flex items-baseline leading-[0.95] tracking-[-0.02em]"
                                         style={{
@@ -260,7 +260,7 @@ export default function HundredOneReadingView({ reading, narrative, showUpsell, 
                                             : dates}
                                     </span>
                                 </div>
-                                <div className="flex flex-col items-end gap-[10px]">
+                                <div className="reading-hero-score flex flex-col items-end gap-[10px]">
                                     <span className="flex items-baseline gap-1.5" style={{ fontFamily: FONT_PRIMARY }}>
                                         <span
                                             className="leading-none"

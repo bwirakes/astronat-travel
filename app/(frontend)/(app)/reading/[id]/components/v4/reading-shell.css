@@ -76,6 +76,52 @@
   height: 2px;
 }
 
+.reading-hero-banner {
+  flex-wrap: nowrap;
+}
+
+.reading-hero-place {
+  flex: 1 1 auto;
+}
+
+.reading-hero-score {
+  flex: 0 0 auto;
+  min-width: max-content;
+}
+
+@media (max-width: 430px) {
+  .reading-hero-banner {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .reading-hero-place > span:first-child {
+    font-size: clamp(38px, 15vw, 58px) !important;
+    gap: 10px !important;
+  }
+
+  .reading-hero-place > span:last-child {
+    font-size: 11px;
+    letter-spacing: 0.13em;
+    white-space: nowrap;
+  }
+
+  .reading-hero-score {
+    padding-top: 2px;
+  }
+
+  .reading-hero-score > span:first-child > span:first-child {
+    font-size: clamp(42px, 15vw, 58px) !important;
+  }
+
+  .reading-hero-score > span:last-child {
+    max-width: 142px;
+    justify-content: center;
+    text-align: center;
+    white-space: nowrap;
+  }
+}
+
 @media (min-width: 640px) {
   .reading-tab-trigger {
     padding: 14px clamp(14px, 2vw, 22px);
