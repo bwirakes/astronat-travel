@@ -415,7 +415,7 @@ export function ReadingGuideFlow({
             {rows.map((row, index) => (
                 <li
                     key={`${row.label}-${index}`}
-                    className="reading-guide-flow__item relative grid grid-cols-[56px_minmax(0,1fr)] gap-x-[clamp(18px,3.2vw,28px)] pb-[clamp(30px,5vw,54px)] last:pb-0"
+                    className="reading-guide-flow__item relative grid grid-cols-[68px_minmax(0,1fr)] gap-x-[clamp(18px,3.2vw,28px)] pb-[clamp(30px,5vw,54px)] last:pb-0"
                     style={{ "--guide-flow-delay": `${index * 90}ms` } as CSSProperties}
                 >
                     <div className="reading-guide-flow__badge relative z-[1] flex justify-center">
@@ -438,6 +438,50 @@ export function ReadingGuideFlow({
                 </li>
             ))}
         </ol>
+    );
+}
+
+function PlanetBadgeSvg({ planet }: { planet: "jupiter" | "saturn" | "mercury" }) {
+    const glyph = planet === "jupiter" ? "♃" : planet === "saturn" ? "♄" : "☿";
+    const ringTilt = planet === "saturn" ? -12 : planet === "jupiter" ? 14 : -24;
+    return (
+        <svg
+            viewBox="0 0 56 56"
+            className="relative h-12 w-12"
+            fill="none"
+            aria-hidden
+        >
+            <circle cx="28" cy="28" r="18" fill="currentColor" opacity="0.12" />
+            <ellipse
+                cx="28"
+                cy="28"
+                rx={planet === "saturn" ? 23 : 20}
+                ry={planet === "saturn" ? 7 : 10}
+                transform={`rotate(${ringTilt} 28 28)`}
+                stroke="currentColor"
+                strokeWidth="1.55"
+                opacity={planet === "mercury" ? 0.38 : 0.62}
+            />
+            {planet === "mercury" && (
+                <path
+                    d="M18 15c3.2-4 16.8-4 20 0M28 35v9M23 40h10"
+                    stroke="currentColor"
+                    strokeWidth="1.55"
+                    strokeLinecap="round"
+                    opacity="0.58"
+                />
+            )}
+            <text
+                x="28"
+                y="35"
+                textAnchor="middle"
+                fontFamily="Georgia, 'Times New Roman', serif"
+                fontSize={planet === "mercury" ? 29 : 31}
+                fill="currentColor"
+            >
+                {glyph}
+            </text>
+        </svg>
     );
 }
 
@@ -476,37 +520,15 @@ export function GuideRowBadge({
     return (
         <span
             aria-hidden
-            className="relative mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[var(--shape-organic-1)]"
+            className="relative mt-0.5 flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[var(--shape-organic-1)]"
             style={{ background: bg, color: tone }}
         >
             {resolvedVariant === "overview-use" ? (
-                <>
-                    <AsteriskStarburst size={15} className="absolute right-[6px] top-[5px] opacity-75" />
-                    <svg viewBox="0 0 44 44" className="relative h-9 w-9" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="22" cy="22" r="12.8" fill="currentColor" opacity="0.11" strokeWidth="1.4" />
-                        <path d="M22 8v5M22 31v5M8 22h5M31 22h5M12.1 12.1l3.4 3.4M28.5 28.5l3.4 3.4M31.9 12.1l-3.4 3.4M15.5 28.5l-3.4 3.4" strokeWidth="1.3" opacity="0.85" />
-                        <path d="M22 15.5l2.2 4.3 4.8.7-3.5 3.3.8 4.7-4.3-2.2-4.3 2.2.8-4.7-3.5-3.3 4.8-.7Z" fill="currentColor" stroke="none" opacity="0.82" />
-                    </svg>
-                </>
+                <PlanetBadgeSvg planet="jupiter" />
             ) : resolvedVariant === "overview-avoid" ? (
-                <>
-                    <PhaseMoon size={28} className="absolute left-[8px] top-[8px] opacity-70" />
-                    <MonolineStar size={12} className="absolute right-[7px] top-[8px] opacity-75" />
-                    <svg viewBox="0 0 44 44" className="relative h-9 w-9" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="22" cy="22" r="11.4" fill="currentColor" opacity="0.1" strokeWidth="1.4" />
-                        <path d="M15 29c5.7-1.2 10.2-5.4 12-11.1" strokeWidth="1.55" opacity="0.85" />
-                        <path d="M29 14.5l2 2 2-2M10 31l1.8 1.8 1.8-1.8" strokeWidth="1.25" opacity="0.68" />
-                    </svg>
-                </>
+                <PlanetBadgeSvg planet="saturn" />
             ) : resolvedVariant === "overview-next" ? (
-                <>
-                    <OrbitalPaths size={35} className="absolute inset-[4px] opacity-28" />
-                    <svg viewBox="0 0 44 44" className="relative h-9 w-9" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M22 9l3.6 9.4L35 22l-9.4 3.6L22 35l-3.6-9.4L9 22l9.4-3.6Z" fill="currentColor" opacity="0.15" strokeWidth="1.5" />
-                        <path d="M22 12v20M12 22h20" strokeWidth="1.45" opacity="0.75" />
-                        <path d="M29.5 14.5l2.8-2.8M31.6 11.4h-4M31.6 11.4v4" strokeWidth="1.35" />
-                    </svg>
-                </>
+                <PlanetBadgeSvg planet="mercury" />
             ) : resolvedVariant === "theme-use" ? (
                 <svg viewBox="0 0 44 44" className="relative h-9 w-9" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M11 27l7-10 7 6 8-12" strokeWidth="1.45" opacity="0.72" />
