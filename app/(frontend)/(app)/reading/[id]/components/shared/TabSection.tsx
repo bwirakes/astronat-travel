@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { ReadingCopyBlock, type ReadingGuideRow, RichTextNode } from "./ReadingCopy";
+import { ReadingCopyBlock, ReadingGuideFlow, ReadingGuideRows, RichText, type ReadingGuideRow, RichTextNode, structureReadingCopy } from "./ReadingCopy";
 import {
     AsteriskStarburst,
     GeodeticGrid,
@@ -28,6 +28,8 @@ interface Props {
     titleNoWrap?: boolean;
     quietCopy?: boolean;
     preserveGuideLabels?: boolean;
+    guideLayout?: "compact" | "flow";
+    guideFlowVariant?: "overview" | "timing";
     children: ReactNode;
 }
 
@@ -50,12 +52,23 @@ export default function TabSection({
     titleNoWrap,
     quietCopy,
     preserveGuideLabels,
+    guideLayout = "compact",
+    guideFlowVariant,
     children,
 }: Props) {
     const leadText = lead?.trim() ?? "";
     const introText = typeof intro === "string" ? intro.trim() : "";
     const showIntroNode =
         !!intro && typeof intro !== "string" && !leadText;
+    const structuredCopy = guideLayout === "flow"
+        ? structureReadingCopy({
+            lead: leadText,
+            intro: introText && introText !== leadText ? introText : undefined,
+            guideRows,
+            maxSentences,
+            preserveGuideLabels,
+        })
+        : null;
 
     return (
         <section className="px-0 py-5 sm:py-7">
@@ -81,16 +94,63 @@ export default function TabSection({
                         {title}
                     </h2>
                 </div>
-                <ReadingCopyBlock
-                    lead={leadText}
-                    intro={introText && introText !== leadText ? introText : undefined}
-                    guideRows={guideRows}
-                    maxSentences={maxSentences}
-                    wide={wideIntro}
-                    autoEmphasis={!quietCopy}
-                    allowBold={!quietCopy}
-                    preserveGuideLabels={preserveGuideLabels}
-                />
+                {structuredCopy ? (
+                    <>
+                        {structuredCopy.paragraphs.length > 0 && (
+                            <div className={wideIntro ? "mb-[clamp(30px,3.5vw,44px)] border-l-4 pl-[clamp(18px,2.4vw,28px)]" : "mb-[clamp(24px,3vw,36px)]"} style={wideIntro ? { borderColor: "var(--color-y2k-blue)" } : undefined}>
+                                <div className="flex flex-col gap-3">
+                                    {structuredCopy.paragraphs.map((paragraph, index) => (
+                                        <p
+                                            key={index}
+                                            className="m-0 [text-wrap:pretty]"
+                                            style={{
+                                                fontFamily: FONT_BODY,
+                                                fontSize: "clamp(16px, 1.15vw, 18px)",
+                                                lineHeight: 1.65,
+                                                color: "var(--text-primary)",
+                                                fontWeight: 400,
+                                                maxWidth: wideIntro ? "100%" : "86ch",
+                                                width: "100%",
+                                            }}
+                                        >
+                                            <RichText autoEmphasis={!quietCopy} allowBold={!quietCopy}>{paragraph}</RichText>
+                                        </p>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        <div className="reading-guide-responsive">
+                            <div className="reading-guide-responsive__compact">
+                                <ReadingGuideRows
+                                    rows={structuredCopy.guideRows}
+                                    autoEmphasis={!quietCopy}
+                                    allowBold={!quietCopy}
+                                    preserveLabels={preserveGuideLabels}
+                                />
+                            </div>
+                            <div className="reading-guide-responsive__flow">
+                                <ReadingGuideFlow
+                                    rows={structuredCopy.guideRows}
+                                    variant={guideFlowVariant}
+                                    autoEmphasis={!quietCopy}
+                                    allowBold={!quietCopy}
+                                    preserveLabels={preserveGuideLabels}
+                                />
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    <ReadingCopyBlock
+                        lead={leadText}
+                        intro={introText && introText !== leadText ? introText : undefined}
+                        guideRows={guideRows}
+                        maxSentences={maxSentences}
+                        wide={wideIntro}
+                        autoEmphasis={!quietCopy}
+                        allowBold={!quietCopy}
+                        preserveGuideLabels={preserveGuideLabels}
+                    />
+                )}
                 {showIntroNode && (
                     wideIntro ? (
                         <p

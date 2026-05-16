@@ -386,6 +386,61 @@ export function ReadingGuideRows({
     );
 }
 
+export function ReadingGuideFlow({
+    rows,
+    variant = "overview",
+    accent = "var(--color-y2k-blue)",
+    autoEmphasis = true,
+    allowBold = true,
+    preserveLabels = false,
+}: {
+    rows: ReadingGuideRow[];
+    variant?: "overview" | "timing";
+    accent?: string;
+    autoEmphasis?: boolean;
+    allowBold?: boolean;
+    preserveLabels?: boolean;
+}) {
+    if (!rows.length) return null;
+    const flowLine = variant === "timing"
+        ? "linear-gradient(180deg, color-mix(in oklab, var(--amber) 48%, transparent), color-mix(in oklab, var(--color-spiced-life) 36%, transparent), color-mix(in oklab, var(--color-y2k-blue) 30%, transparent))"
+        : "linear-gradient(180deg, color-mix(in oklab, var(--sage) 42%, transparent), color-mix(in oklab, var(--color-y2k-blue) 26%, transparent), transparent)";
+
+    return (
+        <ol
+            className="reading-guide-flow relative m-0 mt-[clamp(30px,4.8vw,54px)] mb-[clamp(38px,5.2vw,68px)] p-0 list-none"
+            data-guide-flow={variant}
+            style={{ "--guide-flow-line": flowLine } as CSSProperties}
+        >
+            {rows.map((row, index) => (
+                <li
+                    key={`${row.label}-${index}`}
+                    className="reading-guide-flow__item relative grid grid-cols-[56px_minmax(0,1fr)] gap-x-[clamp(18px,3.2vw,28px)] pb-[clamp(30px,5vw,54px)] last:pb-0"
+                    style={{ "--guide-flow-delay": `${index * 90}ms` } as CSSProperties}
+                >
+                    <div className="reading-guide-flow__badge relative z-[1] flex justify-center">
+                        <GuideRowBadge label={row.label} index={index} variant={row.badgeVariant} />
+                    </div>
+                    <div className="min-w-0 max-w-[58ch] pt-0.5">
+                        <span
+                            className="reading-guide-flow__label block mb-[clamp(10px,1.8vw,14px)] text-[12px] tracking-[0.28em] uppercase"
+                            style={{ fontFamily: FONT_MONO, color: accent, fontWeight: 800 }}
+                        >
+                            {preserveLabels ? row.label : displayGuideLabel(row.label)}
+                        </span>
+                        <p
+                            className="reading-guide-flow__body m-0 text-[clamp(20px,3.4vw,31px)] leading-[1.38] tracking-normal [text-wrap:pretty]"
+                            style={{ fontFamily: FONT_BODY, color: "var(--text-primary)", fontWeight: 400 }}
+                        >
+                            <RichText autoEmphasis={autoEmphasis} allowBold={allowBold}>{row.body}</RichText>
+                        </p>
+                    </div>
+                </li>
+            ))}
+        </ol>
+    );
+}
+
 export function GuideRowBadge({
     label,
     index,
