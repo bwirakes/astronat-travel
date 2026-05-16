@@ -62,6 +62,18 @@ export function AppMobileBar() {
   const showBack = Boolean(header.backTo);
   const backLabel = header.backLabel ?? "Back";
   const visibleBackLabel = backLabel.toLowerCase() === "all readings" ? "All" : backLabel;
+  const readingDetailHeader = /^\/reading\/[^/]+/.test(pathname) && !pathname.startsWith("/reading/new");
+  const headerTone = readingDetailHeader
+    ? {
+        background: "#0456fb",
+        borderBottom: "1px solid #0456fb",
+        color: "#F8F5EC",
+      }
+    : {
+        background: "var(--bg)",
+        borderBottom: "1px solid var(--surface-border)",
+        color: "var(--text-primary)",
+      };
 
   return (
     <header
@@ -70,8 +82,8 @@ export function AppMobileBar() {
         top: 0,
         zIndex: 1100,
         isolation: "isolate",
-        background: "var(--bg)",
-        borderBottom: "1px solid var(--surface-border)",
+        background: headerTone.background,
+        borderBottom: headerTone.borderBottom,
         height: NAVBAR_HEIGHT,
         display: "flex",
         alignItems: "center",
@@ -89,7 +101,7 @@ export function AppMobileBar() {
             gap: "0.35rem",
             background: "none",
             border: "none",
-            color: "var(--text-primary)",
+            color: headerTone.color,
             padding: "0.4rem 0.5rem",
             fontFamily: "var(--font-mono)",
             fontSize: "0.7rem",
@@ -143,7 +155,7 @@ export function AppMobileBar() {
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
-            color: "var(--text-primary)",
+            color: headerTone.color,
             pointerEvents: "none",
             zIndex: 1,
           }}
@@ -156,8 +168,8 @@ export function AppMobileBar() {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger
           aria-label={open ? "Close menu" : "Open menu"}
-          className="h-10 w-10 inline-flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5 rounded-md transition-colors focus:outline-none text-[var(--text-primary)] relative z-[1200]"
-          style={{ marginLeft: "auto" }}
+          className="h-10 w-10 inline-flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5 rounded-md transition-colors focus:outline-none relative z-[1200]"
+          style={{ marginLeft: "auto", color: headerTone.color }}
         >
           {open ? <X size={22} /> : <Menu size={22} />}
         </SheetTrigger>
