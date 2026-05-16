@@ -16,7 +16,6 @@ import WhatShiftsTab from "./tabs/WhatShiftsTab";
 import TimingTab from "./tabs/TimingTab";
 import NextTabNav from "./NextTabNav";
 import LearnFooter from "../shared/LearnFooter";
-import { VERDICT_COLORS } from "@/app/lib/verdict";
 import { destinationFlag } from "@/app/lib/country-flag";
 import "./reading-shell.css";
 
@@ -148,6 +147,138 @@ function buildBirthIso(reading: any): string | undefined {
     return d.toISOString();
 }
 
+function ReadingHeroBanner({
+    city,
+    flagEmoji,
+    dates,
+    score,
+    verdictLabel,
+}: {
+    city: string;
+    flagEmoji?: string | null;
+    dates: string;
+    score: number;
+    verdictLabel: string;
+}) {
+    const roundedScore = Math.round(score);
+
+    return (
+        <div
+            className="reading-hero-banner relative overflow-hidden rounded-[8px] px-[clamp(18px,4vw,44px)] py-[clamp(22px,3.8vw,42px)]"
+            style={{
+                minHeight: "clamp(210px, 24vw, 286px)",
+                background: "linear-gradient(180deg, #0456fb 0%, #0a63ff 100%)",
+            }}
+        >
+            <svg
+                aria-hidden
+                viewBox="0 0 64 64"
+                className="absolute right-[clamp(156px,14vw,218px)] top-[clamp(34px,4.4vw,58px)] h-[clamp(20px,2.4vw,34px)] w-[clamp(20px,2.4vw,34px)] max-sm:left-[48px] max-sm:right-auto max-sm:top-[170px] max-sm:h-[22px] max-sm:w-[22px]"
+                style={{ color: "#CAF1F0" }}
+            >
+                <path d="M32 0 L38 25 L64 32 L38 39 L32 64 L26 39 L0 32 L26 25 Z" fill="currentColor" />
+            </svg>
+            <div
+                aria-hidden
+                className="absolute inset-x-[-18%] bottom-[-47%] h-[64%] rounded-[50%]"
+                style={{ background: "#F8F5EC" }}
+            />
+            <div
+                aria-hidden
+                className="absolute right-[3.4%] bottom-[17%] h-[clamp(26px,3.4vw,44px)] w-[clamp(26px,3.4vw,44px)] rounded-full"
+                style={{ background: "color-mix(in oklab, #1B1B1B 82%, #C9A96E)" }}
+            >
+                <span
+                    className="absolute -right-[18%] -top-[10%] h-[70%] w-[70%] rounded-full"
+                    style={{ background: "#F8F5EC" }}
+                />
+            </div>
+            <div
+                aria-hidden
+                className="absolute right-[clamp(18px,4vw,44px)] bottom-[clamp(24px,4.8vw,52px)] z-10 h-[clamp(78px,7vw,104px)] w-[clamp(94px,8.6vw,128px)] max-sm:-right-[2px] max-sm:bottom-[56px] max-sm:scale-[0.72]"
+            >
+                <svg viewBox="0 0 160 132" className="h-full w-full overflow-visible" fill="none">
+                    <path d="M15 22l4.3 9.3 10.2 1.2-7.5 6.8 2 10-8.8-5.1-8.9 5 2.2-10-7.5-6.9 10.2-1.1L15 22z" fill="#C9A96E" stroke="color-mix(in oklab, #1B1B1B 70%, transparent)" strokeWidth="2" />
+                    <circle cx="113" cy="25" r="13.5" fill="color-mix(in oklab, #CAF1F0 72%, #c7a6ff)" stroke="color-mix(in oklab, #1B1B1B 70%, transparent)" strokeWidth="2" />
+                    <path d="M98 32c13-17 30-25 45-22" stroke="#C9A96E" strokeWidth="4" strokeLinecap="round" />
+                    <path d="M87 35c22 3 42-2 61-14" stroke="color-mix(in oklab, #1B1B1B 70%, transparent)" strokeWidth="2" strokeLinecap="round" />
+                    <g transform="translate(70 41) rotate(-12)">
+                        <circle cx="0" cy="0" r="30" fill="color-mix(in oklab, #E67A7A 78%, #C9A96E)" stroke="color-mix(in oklab, #1B1B1B 76%, transparent)" strokeWidth="2.5" />
+                        <path d="M-21-7c13 6 26 5 43-3" stroke="color-mix(in oklab, #C9A96E 62%, #E67A7A)" strokeWidth="6" strokeLinecap="round" />
+                        <path d="M-20 11c15-9 30-10 44-4" stroke="color-mix(in oklab, #1B1B1B 16%, #E67A7A)" strokeWidth="5" strokeLinecap="round" />
+                        <path d="M-15 22c10-6 20-7 31-1" stroke="color-mix(in oklab, #C9A96E 62%, #E67A7A)" strokeWidth="5" strokeLinecap="round" />
+                        <path d="M-49 13c27 16 75 9 106-13" stroke="#C9A96E" strokeWidth="7" strokeLinecap="round" />
+                        <path d="M-51 14c29 19 78 11 110-14" stroke="color-mix(in oklab, #1B1B1B 72%, transparent)" strokeWidth="2.5" strokeLinecap="round" />
+                    </g>
+                    <circle cx="88" cy="103" r="12" fill="color-mix(in oklab, #CAF1F0 78%, #C9A96E)" stroke="color-mix(in oklab, #1B1B1B 70%, transparent)" strokeWidth="2" />
+                    <path d="M82 101c4-5 8-5 12 0M83 109c4-5 8-5 12 0" stroke="color-mix(in oklab, #1B1B1B 70%, transparent)" strokeWidth="2.5" strokeLinecap="round" />
+                    <path d="M13 79h12M19 73v12M143 54h11M148.5 48.5v11" stroke="#C9A96E" strokeWidth="2.4" strokeLinecap="round" />
+                </svg>
+            </div>
+            <div className="absolute right-[clamp(18px,4vw,44px)] top-[clamp(18px,3vw,36px)] z-20 flex flex-col items-end gap-[10px]">
+                <span
+                    className="inline-flex items-baseline rounded-full px-[clamp(16px,2vw,26px)] py-[clamp(8px,1vw,12px)] shadow-sm"
+                    style={{
+                        background: "#F8F5EC",
+                        color: "#1B1B1B",
+                        fontFamily: FONT_PRIMARY,
+                    }}
+                >
+                    <span className="text-[clamp(38px,5.4vw,72px)] leading-none tabular-nums">{roundedScore}</span>
+                    <span
+                        className="ml-1.5 text-[clamp(12px,1.1vw,15px)]"
+                        style={{ fontFamily: FONT_MONO, color: "#8a8983" }}
+                    >
+                        /100
+                    </span>
+                </span>
+                <span
+                    className="inline-flex rounded-full px-[14px] py-[6px] text-[10px] uppercase"
+                    style={{
+                        background: "#F8F5EC",
+                        color: "#0456fb",
+                        fontFamily: FONT_MONO,
+                        letterSpacing: "0.18em",
+                        fontWeight: 800,
+                    }}
+                >
+                    {verdictLabel}
+                </span>
+            </div>
+            <div className="relative z-10 grid min-h-[inherit] grid-cols-1 items-center gap-[18px]">
+                <div className="flex min-w-0 flex-col justify-start gap-[10px] self-start pt-[clamp(38px,4.8vw,62px)] max-sm:pt-[28px]">
+                    <span
+                        className="inline-flex items-baseline gap-[clamp(10px,1.5vw,18px)] leading-[0.9]"
+                        style={{
+                            color: "#F8F5EC",
+                            fontFamily: FONT_PRIMARY,
+                            fontSize: "clamp(54px, 8vw, 100px)",
+                            textShadow: "0 2px 0 rgba(0, 0, 0, 0.08)",
+                        }}
+                    >
+                        <span className="min-w-0 truncate">{city}</span>
+                        {flagEmoji ? (
+                            <span role="img" aria-label={`${city} destination flag`} style={{ fontSize: "0.45em", lineHeight: 1 }}>
+                                {flagEmoji}
+                            </span>
+                        ) : null}
+                    </span>
+                    <span
+                        className="text-[11px] uppercase"
+                        style={{
+                            color: "color-mix(in oklab, #F8F5EC 82%, transparent)",
+                            fontFamily: FONT_MONO,
+                            letterSpacing: "0.18em",
+                        }}
+                    >
+                        {dates}
+                    </span>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 /**
  * V4 "101" — first-time-friendly reading view.
  * Tabbed shell that routes to per-tab components in ./tabs.
@@ -214,93 +345,40 @@ export default function HundredOneReadingView({ reading, narrative, showUpsell, 
                 }}
             >
                 {(() => {
-                    const verdictColor = VERDICT_COLORS[vm.hero.verdict.band] ?? "var(--text-secondary)";
                     const score = vm.hero.bestWindow?.score ?? vm.hero.baselineScore;
                     const dates = vm.hero.bestWindow?.dates ?? "—";
+                    const flag = destinationFlag(
+                        [vm.location.city, vm.location.region].filter(Boolean).join(", "),
+                    );
+                    const displayDates = vm.travelType === "relocation" && vm.travelDateISO
+                        ? `Moving · ${dates}`
+                        : dates;
                     return (
                         <div
-                            className="mx-auto"
+                            className="reading-hero-wrap mx-auto"
                             style={READING_SHELL_STYLE}
                         >
                             <section
-                                className="reading-hero-banner flex items-end justify-between gap-x-[clamp(16px,2.4vw,28px)] gap-y-[14px] pt-2 pb-[clamp(20px,3vw,34px)]"
+                                className="pt-0 pb-0"
                             >
-                                <div className="reading-hero-place flex flex-col gap-[6px] min-w-0">
-                                    <span
-                                        className="inline-flex items-baseline leading-[0.95] tracking-[-0.02em]"
-                                        style={{
-                                            fontFamily: FONT_PRIMARY,
-                                            fontSize: "clamp(40px, 5.5vw, 72px)",
-                                            color: "var(--text-primary)",
-                                            gap: "clamp(12px, 1.4vw, 20px)",
-                                        }}
-                                    >
-                                        {vm.location.city}
-                                        {(() => {
-                                            const flag = destinationFlag(
-                                                [vm.location.city, vm.location.region].filter(Boolean).join(", "),
-                                            );
-                                            return flag ? (
-                                                <span
-                                                    role="img"
-                                                    aria-label={`Flag of ${flag.iso}`}
-                                                    style={{ fontSize: "0.7em", lineHeight: 1, letterSpacing: 0 }}
-                                                >
-                                                    {flag.emoji}
-                                                </span>
-                                            ) : null;
-                                        })()}
-                                    </span>
-                                    <span
-                                        className="text-[12px] tracking-[0.18em] uppercase"
-                                        style={{ fontFamily: FONT_MONO, color: "var(--text-secondary)" }}
-                                    >
-                                        {vm.travelType === "relocation" && vm.travelDateISO
-                                            ? `Moving · ${dates}`
-                                            : dates}
-                                    </span>
-                                </div>
-                                <div className="reading-hero-score flex flex-col items-end gap-[10px]">
-                                    <span className="flex items-baseline gap-1.5" style={{ fontFamily: FONT_PRIMARY }}>
-                                        <span
-                                            className="leading-none"
-                                            style={{
-                                                fontSize: "clamp(44px, 5.5vw, 72px)",
-                                                color: "var(--color-spiced-life)",
-                                            }}
-                                        >
-                                            {score}
-                                        </span>
-                                        <span
-                                            className="text-[13px]"
-                                            style={{ fontFamily: FONT_MONO, color: "var(--text-tertiary)" }}
-                                        >
-                                            /100
-                                        </span>
-                                    </span>
-                                    <span
-                                        className="inline-flex items-center px-[12px] py-[5px] rounded-full border text-[10px] tracking-[0.2em] uppercase font-medium"
-                                        style={{
-                                            color: verdictColor,
-                                            borderColor: verdictColor,
-                                            background: `color-mix(in oklab, ${verdictColor} 6%, transparent)`,
-                                            fontFamily: FONT_MONO,
-                                        }}
-                                    >
-                                        {vm.hero.verdict.label}
-                                    </span>
-                                </div>
+                                <ReadingHeroBanner
+                                    city={vm.location.city}
+                                    flagEmoji={flag?.emoji}
+                                    dates={displayDates}
+                                    score={score}
+                                    verdictLabel={vm.hero.verdict.label}
+                                />
                             </section>
                         </div>
                     );
                 })()}
 
                 <section
-                    className="pt-[10px] pb-12"
+                    className="pt-0 pb-12"
                     aria-label="Reading content"
                 >
                     <div
-                        className="mx-auto w-full min-w-0"
+                        className="reading-tabs-wrap mx-auto w-full min-w-0"
                         style={READING_SHELL_STYLE}
                     >
                         <Tabs
@@ -340,7 +418,7 @@ export default function HundredOneReadingView({ reading, narrative, showUpsell, 
                                     ))}
                                 </TabsList>
 
-                                <div ref={panelsRef} className="flex-1" style={{ minWidth: 0, width: "100%" }}>
+                                <div ref={panelsRef} className="reading-panels flex-1" style={{ minWidth: 0, width: "100%" }}>
                                     <main className="min-w-0">
                                         <TabsContent value="overview" className="mt-0 outline-none data-[state=inactive]:hidden">
                                             <OverviewTab
