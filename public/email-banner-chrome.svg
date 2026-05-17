@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="280" viewBox="0 0 600 280">
+  <!-- Eggshell base (fills the area under the curved bottom) -->
+  <rect width="600" height="280" fill="#F8F5EC"/>
+
+  <!-- Y2K blue chrome with concave bottom (curve dips from y=210 to ~y=250 at center) -->
+  <path d="M 0,0 L 600,0 L 600,210 Q 300,290 0,210 Z" fill="#0456fb"/>
+
+  <!-- Acqua 8-point sparkle, top-right area (clear of hero text + tag pill) -->
+  <g transform="translate(360,42) scale(0.55)">
+    <path d="M32 0 L38 25 L64 32 L38 39 L32 64 L26 39 L0 32 L26 25 Z" fill="#CAF1F0"/>
+  </g>
+
+  <!-- Saturn cluster, lower-right (above curve, below tag pill) -->
+  <g transform="translate(430,95)">
+    <!-- Saturn rings (gold, behind body) -->
+    <ellipse cx="72" cy="56" rx="52" ry="7.5" fill="none" stroke="#C9A96E" stroke-width="6" transform="rotate(-14 72 56)" stroke-linecap="round"/>
+    <!-- Saturn body (spiced pink) -->
+    <circle cx="72" cy="56" r="22" fill="#E67A7A" stroke="#1B1B1B" stroke-width="2"/>
+    <!-- Ring detail (front pass, charcoal) -->
+    <path d="M28 50 C 50 66, 100 70, 118 50" fill="none" stroke="#1B1B1B" stroke-width="1.8" stroke-linecap="round"/>
+    <!-- Surface lines on saturn -->
+    <path d="M55 51 C 62 54, 78 54, 88 51" stroke="#C9A96E" stroke-width="3" stroke-linecap="round" opacity="0.85"/>
+    <path d="M58 62 C 64 65, 80 65, 90 62" stroke="#1B1B1B" stroke-width="2.4" stroke-linecap="round" opacity="0.6"/>
+    <!-- Accent star, top-left of cluster -->
+    <path d="M14 16 L17.5 23 L25 24 L19.5 30 L21 38 L14 34 L7 38 L8.5 30 L3 24 L10.5 23 Z" fill="#C9A96E" stroke="#1B1B1B" stroke-width="1.6" stroke-linejoin="round"/>
+    <!-- Small moon, top-right -->
+    <circle cx="124" cy="18" r="7" fill="#CAF1F0" stroke="#1B1B1B" stroke-width="1.6"/>
+  </g>
+</svg>
