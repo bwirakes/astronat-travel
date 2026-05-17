@@ -14,8 +14,6 @@ import {
   HeroSection,
   PressStrip,
   StatsStrip,
-  SplitContent,
-  ProcessTimeline,
   InstagramReels,
   StatementBand,
   CardGrid,
@@ -31,18 +29,18 @@ if (typeof window !== "undefined") {
 export default function AppLanding() {
   const container = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
-  const [user, setUser] = useState<any>(null);
+  const [isAuthed, setIsAuthed] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
+      setIsAuthed(Boolean(user));
     };
     getUser();
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      setIsAuthed(Boolean(session?.user));
     });
     return () => subscription.unsubscribe();
   }, [supabase.auth]);
@@ -79,8 +77,8 @@ export default function AppLanding() {
     titleHtml: "WHERE IN THE WORLD<br/><em style=\"font-family: var(--font-display-alt-2); font-style:italic; text-transform:none; color: var(--color-y2k-blue); font-size:0.82em\">are you</em><br/>MEANT TO BE?",
     subtitle: "Stop guessing your next move. Turn your birth chart into a precision travel map in seconds.",
     primaryCta: {
-      label: user ? "Open the App →" : "Get My Free Reading →",
-      href: user ? "/dashboard" : "/flow",
+      label: isAuthed ? "Open the App →" : "Get My Free Reading →",
+      href: isAuthed ? "/dashboard" : "/flow",
     },
     secondaryCta: { label: "See How It Works", href: "#how-it-works" },
     heroImage: { url: "/mobile-chart.png", alt: "AstroNat Chart Mobile" },
@@ -249,7 +247,7 @@ export default function AppLanding() {
         tier: "MOST POPULAR",
         title: "Explorer Pass",
         tagline: "Unlimited cities. Always on. Built for travelers who never stop moving.",
-        price: "$19.97/mo",
+        price: "$19.99/mo",
         includes: [
           "Unlimited City Reports",
           "12-Month Transit Forecasts",
@@ -301,7 +299,7 @@ export default function AppLanding() {
     primaryCard: {
       kicker: "Start for free",
       titleHtml: "Get My Free<br/>City Reading",
-      href: user ? "/dashboard" : "/flow",
+      href: isAuthed ? "/dashboard" : "/flow",
     },
     secondaryCards: [
       { kicker: "Learn the science", titleHtml: "Astro 101", href: "/learn" },
@@ -364,18 +362,14 @@ export default function AppLanding() {
             <p className="text-sm opacity-70 mb-6 font-body leading-relaxed">
               Enter any city. Get your full planetary breakdown — no credit card, no commitment.
             </p>
-            <div className="flex flex-col gap-3">
-              <input
-                type="email"
-                placeholder="Your email address"
-                className="w-full bg-white/5 border border-white/10 px-4 py-3 text-sm focus:outline-none focus:border-[var(--color-acqua)] transition-colors"
-              />
-              <button className="w-full bg-[var(--color-y2k-blue)] text-white px-4 py-3 font-mono text-[10px] uppercase tracking-widest hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
-                Claim My Free Reading <ArrowRight size={12} />
-              </button>
-            </div>
+            <Link
+              href={isAuthed ? "/dashboard" : "/flow"}
+              className="w-full bg-[var(--color-y2k-blue)] text-white px-4 py-3 font-mono text-[10px] uppercase tracking-widest hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+            >
+              Get Your Free Reading <ArrowRight size={12} />
+            </Link>
             <p className="font-mono text-[9px] uppercase tracking-widest opacity-30 mt-4 text-center">
-              Unsubscribe anytime. No spam, ever.
+              No credit card needed.
             </p>
           </div>
         </div>

@@ -107,11 +107,24 @@
     display: none;
 }
 
+.activationExploreItem {
+    min-width: 0;
+    grid-column: 1 / -1;
+}
+
+.featuredExploreItem :global(.editorial-btn) {
+    width: 100%;
+}
+
 /* ── Readings List ──────────────────────────────────────── */
 .readingsSection {
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
+}
+
+.emptyReadingsSection {
+    display: none;
 }
 
 .readingsList {
@@ -211,6 +224,169 @@
     color: var(--text-secondary);
 }
 
+.activationCard {
+    position: relative;
+    min-height: 180px;
+    height: 180px;
+    overflow: hidden;
+    background: var(--color-y2k-blue);
+    border: 1px solid color-mix(in srgb, var(--color-y2k-blue) 72%, white 28%);
+    border-radius: var(--radius-md);
+    padding: clamp(0.9rem, 1.8vw, 1.15rem);
+    color: var(--color-eggshell);
+    isolation: isolate;
+}
+
+.activationContent {
+    position: static;
+    max-width: min(62%, 28rem);
+}
+
+.activationHeader {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.7rem;
+    padding-right: 0;
+}
+
+.activationStars {
+    width: 34px;
+    height: 10px;
+    color: var(--color-eggshell);
+    flex-shrink: 0;
+}
+
+.activationMeta {
+    font-family: var(--font-mono);
+    font-size: 0.48rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-eggshell) 76%, transparent);
+    text-align: left;
+}
+
+.activationTitle {
+    position: relative;
+    z-index: 3;
+    font-family: var(--font-primary);
+    font-size: clamp(2rem, 3.8vw, 2.8rem);
+    line-height: 0.86;
+    color: var(--color-eggshell);
+    margin: clamp(1rem, 2vw, 1.3rem) 0 0.3rem;
+    text-transform: uppercase;
+    text-wrap: balance;
+}
+
+.activationCopy {
+    display: none;
+}
+
+.activationActions {
+    position: absolute;
+    z-index: 4;
+    left: 1.15rem;
+    right: auto;
+    bottom: 1rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    width: min(290px, calc(100% - 2.3rem));
+}
+
+.activationPrimary {
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    border-radius: var(--radius-full);
+    font-family: var(--font-body);
+    font-size: 0.76rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.15s var(--ease);
+    line-height: 1.15;
+    padding: 0.5rem 0.8rem;
+    border: 1px solid var(--color-eggshell);
+    background: var(--color-eggshell);
+    color: var(--color-y2k-blue);
+    box-shadow: 0 12px 28px color-mix(in srgb, var(--color-charcoal) 18%, transparent);
+}
+
+.activationPrimary:hover {
+    transform: translateY(-1px);
+    background: white;
+}
+
+.activationWave {
+    position: absolute;
+    z-index: 1;
+    left: -8%;
+    right: -8%;
+    bottom: -1px;
+    width: 116%;
+    height: 48px;
+    color: var(--color-eggshell);
+    fill: currentColor;
+    pointer-events: none;
+}
+
+.activationBigStar {
+    position: absolute;
+    z-index: 1;
+    top: 3.75rem;
+    right: 6.35rem;
+    width: 28px;
+    height: 28px;
+    color: color-mix(in srgb, var(--color-acqua) 72%, white 28%);
+    fill: currentColor;
+    pointer-events: none;
+}
+
+.activationScore {
+    position: absolute;
+    z-index: 2;
+    top: 0.9rem;
+    right: 0.9rem;
+    min-width: 78px;
+    height: 44px;
+    border-radius: var(--radius-full);
+    background: var(--color-eggshell);
+    color: var(--color-charcoal);
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0 0.6rem;
+    box-shadow: 0 8px 0 color-mix(in srgb, var(--color-charcoal) 10%, transparent);
+}
+
+.activationScore span {
+    font-family: var(--font-secondary);
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.activationScore small {
+    font-family: var(--font-mono);
+    font-size: 0.46rem;
+    letter-spacing: 0.08em;
+    color: color-mix(in srgb, var(--color-charcoal) 58%, transparent);
+    text-transform: uppercase;
+}
+
+.activationPlanet {
+    position: absolute;
+    z-index: 2;
+    right: 0.8rem;
+    bottom: 2rem;
+    width: 74px;
+    color: var(--gold);
+    pointer-events: none;
+}
+
 /* ── Floating Action Button styles moved to NewReadingFAB.module.css ── */
 
 /* ═══ RESPONSIVE — Tablet (≥768px): 2-column grid ════════ */
@@ -240,9 +416,23 @@
         flex-direction: column;
     }
 
+    .emptyReadingsSection {
+        display: flex;
+    }
+
     .readingsList {
         display: flex;
         flex-direction: column;
+    }
+
+    .activationActions {
+        grid-template-columns: minmax(0, 1fr);
+        align-items: center;
+    }
+
+    .activationCard {
+        height: 200px;
+        min-height: 200px;
     }
 
     .exploreGrid {
@@ -253,8 +443,67 @@
         padding-right: 0;
     }
 
-    .exploreGrid > :first-child {
+    .activationExploreItem {
         grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 767px) {
+    .activationCard {
+        min-height: 180px;
+        height: 180px;
+        padding: 1rem;
+    }
+
+    .activationContent {
+        max-width: 100%;
+    }
+
+    .activationHeader {
+        padding-right: 5.8rem;
+    }
+
+    .activationTitle {
+        max-width: 72%;
+        margin-top: 1.75rem;
+        font-size: clamp(1.85rem, 8vw, 2.25rem);
+    }
+
+    .activationCopy {
+        display: none;
+    }
+
+    .activationScore {
+        top: 0.95rem;
+        right: 0.95rem;
+        min-width: 94px;
+        height: 54px;
+        padding: 0 0.75rem;
+    }
+
+    .activationScore span {
+        font-size: 2.25rem;
+    }
+
+    .activationScore small {
+        font-size: 0.5rem;
+    }
+
+    .activationBigStar {
+        top: 4.2rem;
+        right: 6.3rem;
+        width: 30px;
+        height: 30px;
+    }
+
+    .activationPlanet {
+        width: 74px;
+        right: 0.8rem;
+        bottom: 2.15rem;
+    }
+
+    .activationWave {
+        height: 62px;
     }
 }
 

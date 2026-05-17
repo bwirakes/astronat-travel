@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MapPin, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, MapPin, Search } from "lucide-react";
 
 interface Suggestion {
     label: string;
@@ -14,6 +14,7 @@ interface CityAutocompleteProps {
     value: string;
     onChange: (value: string) => void;
     onSelect?: (suggestion: Suggestion) => void;
+    onUseTypedCity?: (value: string) => void;
     placeholder?: string;
     label?: string;
     className?: string;
@@ -24,6 +25,7 @@ export default function CityAutocomplete({
     value,
     onChange,
     onSelect,
+    onUseTypedCity,
     placeholder = "e.g. Jakarta, Indonesia",
     label,
     className,
@@ -32,6 +34,9 @@ export default function CityAutocomplete({
     const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [lookupError, setLookupError] = useState("");
+    const [lastQuery, setLastQuery] = useState("");
+    const [selectedLabel, setSelectedLabel] = useState("");
     const [selectedIndex, setSelectedIndex] = useState(-1);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -41,21 +46,29 @@ export default function CityAutocomplete({
 
     // Debounced fetch from the Photon autocomplete endpoint
     const fetchSuggestions = useCallback(async (query: string) => {
-        if (query.trim().length < 2) {
+        const trimmed = query.trim();
+        setLastQuery(trimmed);
+        if (trimmed.length < 2) {
             setSuggestions([]);
+            setLookupError("");
             setOpen(false);
             return;
         }
         setLoading(true);
+        setLookupError("");
         try {
-            const res = await fetch(`/api/geocode?city=${encodeURIComponent(query)}&autocomplete=true`);
-            if (res.ok) {
-                const data = await res.json();
-                setSuggestions(data.suggestions || []);
-                setOpen((data.suggestions || []).length > 0);
+            const res = await fetch(`/api/geocode?city=${encodeURIComponent(trimmed)}&autocomplete=true`);
+            if (!res.ok) {
+                throw new Error("lookup_failed");
             }
+            const data = await res.json();
+            const nextSuggestions = data.suggestions || [];
+            setSuggestions(nextSuggestions);
+            setOpen(true);
         } catch {
             setSuggestions([]);
+            setLookupError("We could not search cities right now.");
+            setOpen(true);
         } finally {
             setLoading(false);
         }
@@ -84,11 +97,28 @@ export default function CityAutocomplete({
 
     const handleSelect = (s: Suggestion) => {
         skipNextFetchRef.current = true;
+        setSelectedLabel(s.label);
+        setLookupError("");
         onChange(s.label);
         setSuggestions([]);
         setOpen(false);
         setSelectedIndex(-1);
         onSelect?.(s);
+    };
+
+    const handleUseTypedCity = () => {
+        const typed = value.trim();
+        if (!typed) return;
+        setSelectedLabel("");
+        setSuggestions([]);
+        setLookupError("");
+        setOpen(false);
+        setSelectedIndex(-1);
+        onUseTypedCity?.(typed);
+    };
+
+    const retryLookup = () => {
+        void fetchSuggestions(lastQuery || value);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -118,9 +148,11 @@ export default function CityAutocomplete({
                     autoComplete="off"
                     spellCheck={false}
                     value={value}
-                    onChange={e => { onChange(e.target.value); setSelectedIndex(-1); }}
+                    onChange={e => { setSelectedLabel(""); onChange(e.target.value); setSelectedIndex(-1); }}
                     onKeyDown={handleKeyDown}
-                    onFocus={() => suggestions.length > 0 && setOpen(true)}
+                    onFocus={() => {
+                        if (value.trim().length >= 2 && (suggestions.length > 0 || lookupError)) setOpen(true);
+                    }}
                     placeholder={placeholder}
                     style={{ paddingRight: "2.5rem" }}
                 />
@@ -132,7 +164,20 @@ export default function CityAutocomplete({
                 </div>
             </div>
 
-            {open && suggestions.length > 0 && (
+            {value.trim().length >= 2 && !open && !loading && (
+                <div style={{
+                    display: "flex", alignItems: "center", gap: "0.4rem",
+                    marginTop: "0.35rem",
+                    fontFamily: "var(--font-mono)", fontSize: "0.55rem",
+                    letterSpacing: "0.05em", textTransform: "uppercase",
+                    color: selectedLabel === value ? "var(--sage)" : "var(--text-tertiary)",
+                }}>
+                    {selectedLabel === value ? <CheckCircle2 size={12} /> : <Search size={12} />}
+                    {selectedLabel === value ? "Matched city coordinates" : "Typed city - coordinates will be confirmed"}
+                </div>
+            )}
+
+            {open && (
                 <div style={{
                     position: "absolute", zIndex: 9999, top: "calc(100% + 4px)", left: 0, right: 0,
                     background: "var(--surface)",
@@ -141,7 +186,51 @@ export default function CityAutocomplete({
                     overflow: "hidden",
                     boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
                 }}>
-                    {suggestions.map((s, i) => (
+                    {loading ? (
+                        <div style={{ padding: "0.85rem", display: "flex", gap: "0.55rem", alignItems: "center", color: "var(--text-secondary)", fontFamily: "var(--font-body)", fontSize: "0.78rem" }}>
+                            <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} />
+                            Searching cities...
+                        </div>
+                    ) : lookupError ? (
+                        <div style={{ padding: "0.85rem", display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+                            <div style={{ display: "flex", gap: "0.55rem", alignItems: "flex-start", color: "var(--color-spiced-life)" }}>
+                                <AlertCircle size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+                                <div>
+                                    <div style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", fontWeight: 600 }}>
+                                        City search failed
+                                    </div>
+                                    <div style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "var(--text-secondary)", lineHeight: 1.4 }}>
+                                        {lookupError} Retry, or keep your typed city and we&apos;ll resolve it when you continue.
+                                    </div>
+                                </div>
+                            </div>
+                            <div style={{ display: "flex", gap: "0.5rem" }}>
+                                <button type="button" onMouseDown={(e) => { e.preventDefault(); retryLookup(); }} style={dropdownActionStyle}>
+                                    Retry
+                                </button>
+                                <button type="button" onMouseDown={(e) => { e.preventDefault(); handleUseTypedCity(); }} style={dropdownActionStyle}>
+                                    Use typed city
+                                </button>
+                            </div>
+                        </div>
+                    ) : suggestions.length === 0 && !loading ? (
+                        <div style={{ padding: "0.85rem", display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+                            <div style={{ display: "flex", gap: "0.55rem", alignItems: "flex-start" }}>
+                                <Search size={14} style={{ flexShrink: 0, marginTop: 2, color: "var(--text-tertiary)" }} />
+                                <div>
+                                    <div style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", fontWeight: 600, color: "var(--text-primary)" }}>
+                                        No city matches found
+                                    </div>
+                                    <div style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "var(--text-secondary)", lineHeight: 1.4 }}>
+                                        Check spelling or use the typed city. Exact matches give the highest coordinate confidence.
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" onMouseDown={(e) => { e.preventDefault(); handleUseTypedCity(); }} style={dropdownActionStyle}>
+                                Use typed city
+                            </button>
+                        </div>
+                    ) : suggestions.map((s, i) => (
                         <button
                             key={i}
                             type="button"
@@ -191,3 +280,15 @@ export default function CityAutocomplete({
         </div>
     );
 }
+
+const dropdownActionStyle: React.CSSProperties = {
+    border: "1px solid var(--surface-border)",
+    borderRadius: "var(--radius-full)",
+    background: "transparent",
+    color: "var(--text-primary)",
+    cursor: "pointer",
+    fontFamily: "var(--font-body)",
+    fontSize: "0.75rem",
+    fontWeight: 600,
+    padding: "0.4rem 0.75rem",
+};

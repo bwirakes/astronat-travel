@@ -3,19 +3,90 @@
 import { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { ArrowRight } from "lucide-react";
 import styles from "./home.module.css";
 import { ScoreRing, getVerdict } from "@/app/components/ScoreRing";
 import { BUCKET_COPY, tierToBucket, type Tier } from "@/app/lib/geodetic-weather-types";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/app/page-header-context";
-import { LifeGoalsButton, CouplesButton, MyChartButton, WorldChartsButton, TransitsButton, LearnButton, SkyWeatherButton } from "@/app/components/ExploreButtons";
+import { CouplesButton, MyChartButton, WorldChartsButton, LearnButton, SkyWeatherButton } from "@/app/components/ExploreButtons";
 import ReadingCreditPill from "@/app/components/ReadingCreditPill";
 import type { ReadingAccess } from "@/lib/access";
 
+type HomeProfile = {
+    first_name: string | null;
+};
 
-export default function HomeClient({ profile, sunSignData, recentSearches, access }: { profile: any; sunSignData: any; recentSearches: any; access?: ReadingAccess }) {
+type SunSignData = {
+    emoji?: string;
+    name?: string;
+};
+
+type WeatherSummary = {
+    worstTier: Tier | string;
+    severeCount: number;
+    datesToWatch: string[];
+    windowDays: number;
+};
+
+type RecentSearch = {
+    id: string | number;
+    destination: string;
+    score: number;
+    travel_date: string;
+    category?: string | null;
+    weatherSummary?: WeatherSummary;
+};
+
+export default function HomeClient({ profile, sunSignData, recentSearches, access }: { profile: HomeProfile; sunSignData: SunSignData | null; recentSearches: RecentSearch[]; access?: ReadingAccess }) {
     const router = useRouter();
     const container = useRef<HTMLDivElement>(null);
+    const hasReadings = recentSearches.length > 0;
+    const activationCard = (
+        <div className={styles.activationCard}>
+            <svg className={styles.activationWave} viewBox="0 0 800 120" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M0 84C166 42 344 23 528 34C646 41 738 61 800 83V120H0V84Z" />
+            </svg>
+            <svg className={styles.activationBigStar} viewBox="0 0 64 64" aria-hidden="true">
+                <path d="M32 0L38 25L64 32L38 39L32 64L26 39L0 32L26 25L32 0Z" />
+            </svg>
+            <div className={styles.activationScore} aria-hidden="true">
+                <span>01</span>
+                <small>/ free</small>
+            </div>
+            <div className={styles.activationPlanet} aria-hidden="true">
+                <svg viewBox="0 0 140 92">
+                    <path d="M13 58C35 74 91 73 124 41" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" />
+                    <circle cx="73" cy="45" r="30" fill="var(--color-spiced-life)" stroke="var(--color-charcoal)" strokeWidth="3" />
+                    <path d="M49 45C65 47 83 41 101 29" fill="none" stroke="var(--gold)" strokeWidth="6" strokeLinecap="round" opacity="0.35" />
+                    <path d="M54 61C68 54 86 54 104 61" fill="none" stroke="var(--color-charcoal)" strokeWidth="4" strokeLinecap="round" opacity="0.28" />
+                    <path d="M11 59C39 48 88 45 129 39" fill="none" stroke="var(--gold)" strokeWidth="6" strokeLinecap="round" />
+                    <circle cx="112" cy="32" r="18" fill="var(--color-eggshell)" stroke="var(--color-charcoal)" strokeWidth="3" />
+                </svg>
+            </div>
+            <div className={styles.activationContent}>
+                <div className={styles.activationHeader}>
+                    <svg className={styles.activationStars} viewBox="0 0 80 20" fill="currentColor" aria-hidden="true">
+                        <path d="M10 0L12 8L20 10L12 12L10 20L8 12L0 10L8 8L10 0Z" />
+                        <path d="M40 0L42 8L50 10L42 12L40 20L38 12L30 10L38 8L40 0Z" />
+                        <path d="M70 0L72 8L80 10L72 12L70 20L68 12L60 10L68 8L70 0Z" />
+                    </svg>
+                    <div className={styles.activationMeta}>
+                        Start here
+                    </div>
+                </div>
+                <h3 className={styles.activationTitle}>Start with a place</h3>
+                <p className={styles.activationCopy}>
+                    Choose a city. See timing, fit, and what it activates.
+                </p>
+                <div className={styles.activationActions}>
+                    <button className={styles.activationPrimary} onClick={() => router.push("/reading/new")}>
+                        Start reading <ArrowRight size={14} />
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
 
     useGSAP(() => {
         // Letter-by-letter reveal on the name — signals "you've arrived"
@@ -59,7 +130,7 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
                         )}
                     </div>
                     <h1 className={styles.greeting}>
-                        Hello, <em className={styles.greetingName} aria-label={profile.first_name}>
+                        Hello, <em className={styles.greetingName} aria-label={profile.first_name ?? undefined}>
                             {Array.from(String(profile.first_name ?? "")).map((ch, i) => (
                                 <span
                                     key={i}
@@ -81,7 +152,14 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
                             <h4 className={styles.sectionKicker}>EXPLORE</h4>
                         </div>
                         <div className={styles.exploreGrid}>
-                            <MyChartButton onClick={() => router.push("/chart")} />
+                            {!hasReadings && (
+                                <div className={styles.activationExploreItem}>
+                                    {activationCard}
+                                </div>
+                            )}
+                            <div className={styles.featuredExploreItem}>
+                                <MyChartButton onClick={() => router.push("/chart")} />
+                            </div>
                             {/* <LifeGoalsButton onClick={() => router.push("/goals?demo=true")} /> */}
                             <CouplesButton onClick={() => router.push("/couples")} />
                             <WorldChartsButton onClick={() => router.push("/mundane")} />
@@ -90,15 +168,15 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
                             <LearnButton onClick={() => router.push("/learn")} />
                         </div>
                     </section>
-                    <section className={styles.readingsSection}>
+                    <section className={`${styles.readingsSection} ${!hasReadings ? styles.emptyReadingsSection : ""}`}>
                         <h4 className={styles.sectionKicker}>YOUR READINGS</h4>
                         <div className={`${styles.readingsList} dashboard-readings`}>
-                            {recentSearches.length > 0 ? (
+                            {hasReadings ? (
                                 <>
-                                {recentSearches.slice(0, 3).map((s: any) => {
+                                {recentSearches.slice(0, 3).map((s) => {
                                     const isWeather = s.category === 'geodetic-weather';
-                                    const w = s.weatherSummary as { worstTier: Tier; severeCount: number; datesToWatch: string[]; windowDays: number } | undefined;
-                                    const bucket = isWeather && w ? tierToBucket(w.worstTier) : null;
+                                    const w = s.weatherSummary;
+                                    const bucket = isWeather && w ? tierToBucket(w.worstTier as Tier) : null;
                                     const palette = bucket ? BUCKET_COPY[bucket] : null;
                                     return (
                                     <div
@@ -164,7 +242,7 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
                                 <div className={styles.emptyState}>
                                     <p>No readings yet</p>
                                 </div>
-                        )}
+                            )}
                         </div>
                     </section>
                 </div>
