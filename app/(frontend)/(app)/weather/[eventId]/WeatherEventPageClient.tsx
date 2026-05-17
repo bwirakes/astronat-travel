@@ -11,7 +11,7 @@ import PlanetIcon from "@/app/components/PlanetIcon";
 import { tierAccent, tierLabel } from "@/app/lib/geodetic/weather-predictions";
 import { triggersForWindow } from "@/app/lib/geodetic/weather-triggers";
 import type { GeodeticMatrixResponse, GeodeticRiskTier, GeodeticWeatherEvent } from "@/app/lib/geodetic/weather-types";
-import { eventHasMappableLocation, weatherEventToAtlasPin } from "../weather-map-pins";
+import { eventHasMappableLocation, weatherEventToAtlasPins } from "../weather-map-pins";
 import { ActionPrompt, WarningSign, alertLevelFor, alertWordFor } from "./components/WeatherIndicators";
 import {
     ActionBadge, TypeBadge, WhenBadge, WhereBadge,
@@ -683,8 +683,8 @@ function MapSection({
     event: GeodeticWeatherEvent;
     location: ReturnType<typeof parseEventLocation>;
 }) {
-    const [hoveredId, setHoveredId] = useState<string | null>(event.id);
-    const pin = weatherEventToAtlasPin(event);
+    const pins = weatherEventToAtlasPins(event);
+    const [hoveredId, setHoveredId] = useState<string | null>(pins[0]?.id ?? null);
     const verdictLabelForScore = () => tierLabel(event.tier).toUpperCase();
 
     return (
@@ -694,11 +694,11 @@ function MapSection({
             <div style={{ display: "grid", gap: "1rem" }}>
                 <div style={{ height: "min(58vh, 520px)" }}>
                     <ReadingsAtlasMap
-                        pins={[pin]}
+                        pins={pins}
                         hoveredId={hoveredId}
-                        onHover={(id) => setHoveredId(id ?? event.id)}
+                        onHover={(id) => setHoveredId(id ?? pins[0]?.id ?? null)}
                         onSelect={() => undefined}
-                        showCounter={{ shown: 1, total: 1 }}
+                        showCounter={{ shown: pins.length, total: pins.length }}
                         verdictLabelOverride={verdictLabelForScore}
                     />
                 </div>

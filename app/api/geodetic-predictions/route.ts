@@ -18,6 +18,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ALL_GEODETIC_WEATHER_EVENTS } from "@/app/lib/geodetic/weather-predictions";
 
 export const dynamic = "force-dynamic"; // route runs on every request — caching is handled by unstable_cache inside
 export const runtime = "nodejs";
@@ -72,19 +73,85 @@ export interface GeodeticPredictionRow {
 }
 
 /**
+ * Build a row set from the in-memory TS catalog. Used as a fallback when the
+ * Supabase table doesn't exist yet (migrations haven't been pushed) and as
+ * the source of truth in any dev environment that points at an empty DB.
+ *
+ * Same shape as the DB row so downstream filtering is uniform.
+ */
+function buildFallbackRows(): GeodeticPredictionRow[] {
+    const now = new Date().toISOString();
+    return ALL_GEODETIC_WEATHER_EVENTS
+        .filter((e) => e.pss >= 0 && e.pss <= 1)
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .map((e) => ({
+            id: e.id,
+            prediction_date: e.date,
+            date_label: e.date,
+            title: e.title,
+            event_type: e.type,
+            kind: e.kind,
+            pss: e.pss,
+            tier: e.tier,
+            model_version: null,
+            area_label: e.zones[0]?.split("(")[0]?.trim() ?? null,
+            zones: e.zones,
+            bbox_lat_min: null,
+            bbox_lat_max: null,
+            bbox_lon_min: null,
+            bbox_lon_max: null,
+            stars: e.stars,
+            pair: e.pair,
+            geostress: e.geostress,
+            criteria: e.criteria,
+            combo: e.combo ?? null,
+            notes: e.notes ?? null,
+            editorial_body: e.editorialBody,
+            severity: e.severity ?? null,
+            deaths: e.deaths ?? null,
+            damage_billions: e.damageBillions ?? null,
+            source: e.source ?? null,
+            source_note: e.sourceNote ?? null,
+            is_published: true,
+            created_at: now,
+            updated_at: now,
+        }));
+}
+
+/** Distinguish "table doesn't exist" from other DB errors so we know when
+ *  it's safe to fall back vs. when to surface an actual problem. */
+function isMissingTableError(message: string): boolean {
+    return /Could not find the table|relation .* does not exist|table .* does not exist/i.test(message);
+}
+
+/**
  * Cached catalog fetch. Cache is shared across all callers because there is no
- * per-user data in this table. Key is empty — every request gets the same row set.
+ * per-user data in this table. Falls back to the in-memory TS catalog when the
+ * Supabase table doesn't exist yet (so the UI works pre-migration).
  */
 const fetchCatalog = unstable_cache(
-    async (): Promise<GeodeticPredictionRow[]> => {
-        const admin = createAdminClient();
-        const { data, error } = await admin
-            .from("geodetic_predictions")
-            .select("*")
-            .eq("is_published", true)
-            .order("prediction_date", { ascending: false });
-        if (error) throw new Error(`geodetic_predictions read failed: ${error.message}`);
-        return (data ?? []) as GeodeticPredictionRow[];
+    async (): Promise<{ rows: GeodeticPredictionRow[]; source: "db" | "ts-fallback" }> => {
+        try {
+            const admin = createAdminClient();
+            const { data, error } = await admin
+                .from("geodetic_predictions")
+                .select("*")
+                .eq("is_published", true)
+                .order("prediction_date", { ascending: false });
+            if (error) {
+                if (isMissingTableError(error.message)) {
+                    return { rows: buildFallbackRows(), source: "ts-fallback" };
+                }
+                throw new Error(`geodetic_predictions read failed: ${error.message}`);
+            }
+            return { rows: (data ?? []) as GeodeticPredictionRow[], source: "db" };
+        } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            if (isMissingTableError(msg)) {
+                return { rows: buildFallbackRows(), source: "ts-fallback" };
+            }
+            throw e;
+        }
     },
     ["geodetic-predictions-all"],
     { tags: [CACHE_TAG], revalidate: CACHE_REVALIDATE_SECONDS },
@@ -112,7 +179,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        const all = await fetchCatalog();
+        const { rows: all, source } = await fetchCatalog();
         let rows = all;
         if (type) rows = rows.filter((r) => r.event_type === type);
         if (kind) rows = rows.filter((r) => r.kind === kind);
@@ -122,6 +189,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
             count: rows.length,
             totalCatalogSize: all.length,
+            source,
             rows,
         });
     } catch (error) {

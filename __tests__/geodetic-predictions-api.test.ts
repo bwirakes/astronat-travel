@@ -126,4 +126,49 @@ describe("GET /api/geodetic-predictions", () => {
         expect(res.status).toBe(400);
         expect(createAdminClientMock.mock.calls.length).toBe(0);
     });
+
+    it("reports source=db when DB returns successfully", async () => {
+        const res = await GET(makeRequest(""));
+        const json = await res.json();
+        expect(json.source).toBe("db");
+    });
+});
+
+// --- Fallback path: DB returns "table missing" → API serves TS catalog ----
+
+describe("GET /api/geodetic-predictions — TS catalog fallback", () => {
+    // Override the createAdminClient mock to simulate the missing-table error.
+    const missingTableMock = mock(() => ({
+        from: () => ({
+            select: () => ({
+                eq: () => ({
+                    order: () => Promise.resolve({
+                        data: null,
+                        error: { message: "Could not find the table 'public.geodetic_predictions' in the schema cache" },
+                    }),
+                }),
+            }),
+        }),
+    }));
+
+    beforeEach(() => {
+        // Re-mock the module with the missing-table behavior.
+        mock.module("@/lib/supabase/admin", () => ({
+            createAdminClient: missingTableMock,
+        }));
+        missingTableMock.mockClear();
+    });
+
+    it("falls back to the TS catalog and reports source=ts-fallback", async () => {
+        // Re-require the route so it picks up the new mock state.
+        delete require.cache[require.resolve("@/app/api/geodetic-predictions/route")];
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { GET: GET2 } = require("@/app/api/geodetic-predictions/route") as typeof import("@/app/api/geodetic-predictions/route");
+        const res = await GET2(makeRequest(""));
+        const json = await res.json();
+        expect(res.status).toBe(200);
+        expect(json.source).toBe("ts-fallback");
+        // Fallback uses the in-memory catalog so it must return >0 rows.
+        expect(json.totalCatalogSize).toBeGreaterThan(0);
+    });
 });
