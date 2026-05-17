@@ -10,6 +10,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import {
+    Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/app/components/ui/table";
 
 interface PredictionRow {
     id: string;
@@ -218,29 +221,30 @@ export default function PredictionsTableClient() {
                 ) : filtered.length === 0 ? (
                     <Empty label="No predictions match these filters" />
                 ) : (
-                    <table className="predictions-table">
-                        <thead>
-                            <tr>
-                                <Th>Date</Th>
-                                <Th>Title</Th>
-                                <Th>Type</Th>
-                                <Th>Kind</Th>
-                                <Th>Area</Th>
-                                <Th align="right">PSS</Th>
-                                <Th>Tier</Th>
-                                <Th>Source</Th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {pageRows.map((row) => (
+                    <Table>
+                        <TableHeader className="bg-[var(--bg)] sticky top-0 z-[2]">
+                            <TableRow className="border-[color:var(--surface-border)]">
+                                <TableHead className="font-mono text-[var(--text-tertiary)]">Date</TableHead>
+                                <TableHead className="font-mono text-[var(--text-tertiary)]">Title</TableHead>
+                                <TableHead className="font-mono text-[var(--text-tertiary)]">Type</TableHead>
+                                <TableHead className="font-mono text-[var(--text-tertiary)]">Kind</TableHead>
+                                <TableHead className="font-mono text-[var(--text-tertiary)]">Area</TableHead>
+                                <TableHead className="font-mono text-[var(--text-tertiary)] text-right pr-6">PSS</TableHead>
+                                <TableHead className="font-mono text-[var(--text-tertiary)]">Tier</TableHead>
+                                <TableHead className="font-mono text-[var(--text-tertiary)]">Source</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {pageRows.map((row, idx) => (
                                 <PredictionRowView
                                     key={row.id}
                                     row={row}
+                                    striped={idx % 2 === 1}
                                     onClick={() => router.push(`/weather/${row.id}`)}
                                 />
                             ))}
-                        </tbody>
-                    </table>
+                        </TableBody>
+                    </Table>
                 )}
             </div>
 
@@ -272,59 +276,6 @@ export default function PredictionsTableClient() {
                     overflow: auto;
                     border: 1px solid var(--surface-border);
                     background: var(--surface);
-                }
-                .predictions-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    font-family: var(--font-body);
-                    font-size: 0.85rem;
-                }
-                .predictions-table thead th {
-                    position: sticky;
-                    top: 0;
-                    background: var(--bg);
-                    z-index: 2;
-                    text-align: left;
-                    padding: 0.9rem 1.1rem;
-                    border-bottom: 1px solid var(--surface-border);
-                    font-family: var(--font-mono);
-                    font-size: 0.62rem;
-                    letter-spacing: 0.12em;
-                    text-transform: uppercase;
-                    color: var(--text-tertiary);
-                    font-weight: 700;
-                    white-space: nowrap;
-                }
-                /* Right-aligned numeric headers (PSS) — ensure visual gap
-                   between PSS column and the next header (Tier) so they don't
-                   read as a merged "PSSTier" label. */
-                .predictions-table thead th[data-align="right"] {
-                    text-align: right;
-                    padding-right: 1.6rem;
-                }
-                .predictions-table tbody tr {
-                    cursor: pointer;
-                    border-bottom: 1px solid var(--surface-border);
-                    transition: background 0.12s ease;
-                }
-                /* Zebra striping — subtle alternating row tint for scan rhythm. */
-                .predictions-table tbody tr:nth-child(even) {
-                    background: color-mix(in oklab, var(--text-primary) 1.5%, var(--surface));
-                }
-                .predictions-table tbody tr:hover {
-                    background: color-mix(in oklab, var(--color-y2k-blue, #0456fb) 6%, var(--surface));
-                }
-                .predictions-table tbody tr:last-child {
-                    border-bottom: none;
-                }
-                .predictions-table td {
-                    padding: 1rem 1.1rem;
-                    vertical-align: middle;
-                    line-height: 1.5;
-                }
-                .predictions-table td[data-align="right"] {
-                    padding-right: 1.6rem;
-                    text-align: right;
                 }
             `}</style>
         </div>
@@ -564,78 +515,74 @@ function Toolbar({
     );
 }
 
-function PredictionRowView({ row, onClick }: { row: PredictionRow; onClick: () => void }) {
+function PredictionRowView({
+    row, striped, onClick,
+}: { row: PredictionRow; striped: boolean; onClick: () => void }) {
+    // Zebra striping carried via inline style so we don't fight shadcn's
+    // hover:bg-muted/50 class. Hover wins over the zebra tint.
+    const baseBg = striped ? "color-mix(in oklab, var(--text-primary) 2%, transparent)" : "transparent";
     return (
-        <tr onClick={onClick}>
-            <td style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", whiteSpace: "nowrap", color: "var(--text-secondary)" }}>
+        <TableRow
+            onClick={onClick}
+            className="cursor-pointer border-[color:var(--surface-border)]"
+            style={{ background: baseBg }}
+        >
+            <TableCell className="font-mono text-[0.72rem] whitespace-nowrap text-[var(--text-secondary)] py-4">
                 {row.date_label ?? formatDate(row.prediction_date)}
-            </td>
-            <td style={{ fontFamily: "var(--font-secondary)", fontSize: "0.95rem", color: "var(--text-primary)", maxWidth: 320 }}>
-                {row.title}
+            </TableCell>
+
+            <TableCell className="py-4" style={{ maxWidth: 360 }}>
+                <div className="font-[family-name:var(--font-secondary)] text-[0.98rem] text-[var(--text-primary)] leading-tight">
+                    {row.title}
+                </div>
                 {row.pair ? (
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", color: "var(--text-tertiary)", marginTop: 2, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                    <div className="font-mono text-[0.58rem] text-[var(--text-tertiary)] mt-1 tracking-[0.06em] uppercase">
                         {row.pair}
                     </div>
                 ) : null}
-            </td>
-            <td>
-                <span
-                    style={{
-                        display: "inline-block",
-                        fontFamily: "var(--font-mono)",
-                        fontSize: "0.6rem",
-                        letterSpacing: "0.1em",
-                        textTransform: "uppercase",
-                        padding: "0.25rem 0.6rem",
-                        border: "1px solid var(--surface-border)",
-                        borderRadius: 20,
-                        color: "var(--text-secondary)",
-                    }}
-                >
+            </TableCell>
+
+            <TableCell className="py-4">
+                <span className="inline-block font-mono text-[0.6rem] tracking-[0.1em] uppercase px-2.5 py-1 border border-[color:var(--surface-border)] rounded-full text-[var(--text-secondary)] whitespace-nowrap">
                     {TYPE_LABELS[row.event_type as EventTypeFilter] ?? row.event_type}
                 </span>
-            </td>
-            <td>
+            </TableCell>
+
+            <TableCell className="py-4">
                 <span
-                    style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: "0.6rem",
-                        letterSpacing: "0.1em",
-                        textTransform: "uppercase",
-                        color: row.kind === "forecast" ? "var(--color-y2k-blue)" : "var(--text-tertiary)",
-                    }}
+                    className="font-mono text-[0.6rem] tracking-[0.1em] uppercase whitespace-nowrap"
+                    style={{ color: row.kind === "forecast" ? "var(--color-y2k-blue)" : "var(--text-tertiary)" }}
                 >
                     {row.kind}
                 </span>
-            </td>
-            <td style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "var(--text-secondary)", maxWidth: 240 }}>
+            </TableCell>
+
+            <TableCell className="font-[family-name:var(--font-body)] text-[0.82rem] text-[var(--text-secondary)] py-4" style={{ maxWidth: 240 }}>
                 {row.area_label ?? "—"}
-            </td>
-            <td data-align="right">
+            </TableCell>
+
+            <TableCell className="text-right pr-6 py-4">
                 <PssBar value={row.pss} />
-            </td>
-            <td>
+            </TableCell>
+
+            <TableCell className="py-4">
                 <span
+                    className="inline-block font-mono text-[0.6rem] tracking-[0.12em] uppercase font-bold whitespace-nowrap"
                     style={{
-                        display: "inline-block",
                         clipPath: "polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%)",
                         background: TIER_BG[row.tier],
                         color: TIER_ACCENT[row.tier],
-                        padding: "0.3rem 0.85rem",
-                        fontFamily: "var(--font-mono)",
-                        fontSize: "0.6rem",
-                        letterSpacing: "0.12em",
-                        textTransform: "uppercase",
-                        fontWeight: 700,
+                        padding: "0.32rem 0.9rem",
                     }}
                 >
                     {tierLabel(row.tier)}
                 </span>
-            </td>
-            <td style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-tertiary)", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            </TableCell>
+
+            <TableCell className="font-mono text-[0.6rem] text-[var(--text-tertiary)] py-4" style={{ maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {row.source ?? "—"}
-            </td>
-        </tr>
+            </TableCell>
+        </TableRow>
     );
 }
 
@@ -724,10 +671,6 @@ function PssBar({ value }: { value: number }) {
             </div>
         </div>
     );
-}
-
-function Th({ children, align = "left" }: { children: React.ReactNode; align?: "left" | "right" }) {
-    return <th data-align={align}>{children}</th>;
 }
 
 function Empty({ label }: { label: string }) {
