@@ -9,6 +9,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 
 interface PredictionRow {
     id: string;
@@ -101,6 +102,9 @@ function tierLabel(tier: PredictionRow["tier"]): string {
     return tier.charAt(0).toUpperCase() + tier.slice(1);
 }
 
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+type PageSize = typeof PAGE_SIZE_OPTIONS[number] | "all";
+
 export default function PredictionsTableClient() {
     const router = useRouter();
     const [data, setData] = useState<ApiResponse | null>(null);
@@ -112,6 +116,8 @@ export default function PredictionsTableClient() {
     const [fromDate, setFromDate] = useState<string>("");
     const [toDate, setToDate] = useState<string>("");
     const [sort, setSort] = useState<SortKey>("date_desc");
+    const [pageSize, setPageSize] = useState<PageSize>(10);
+    const [currentPage, setCurrentPage] = useState(1);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -166,6 +172,27 @@ export default function PredictionsTableClient() {
         return sorted;
     }, [data, typeFilter, kindFilter, fromDate, toDate, sort]);
 
+    // Reset to page 1 when the filter set or page size changes — otherwise
+    // a filter change could leave the user on page 4 of a 2-page result.
+    // Done via the React-recommended "derive state from props during render"
+    // pattern (https://react.dev/reference/react/useState#storing-information-from-previous-renders).
+    const filterKey = `${typeFilter}|${kindFilter}|${fromDate}|${toDate}|${sort}|${pageSize}`;
+    const [lastFilterKey, setLastFilterKey] = useState(filterKey);
+    if (filterKey !== lastFilterKey) {
+        setLastFilterKey(filterKey);
+        setCurrentPage(1);
+    }
+
+    const totalPages = pageSize === "all"
+        ? 1
+        : Math.max(1, Math.ceil(filtered.length / pageSize));
+    const safePage = Math.min(Math.max(1, currentPage), totalPages);
+    const pageStart = pageSize === "all" ? 0 : (safePage - 1) * pageSize;
+    const pageEnd = pageSize === "all" ? filtered.length : pageStart + pageSize;
+    const pageRows = filtered.slice(pageStart, pageEnd);
+    const rangeStart = filtered.length === 0 ? 0 : pageStart + 1;
+    const rangeEnd = Math.min(pageEnd, filtered.length);
+
     return (
         <div className="predictions-table-shell">
             <Toolbar
@@ -205,7 +232,7 @@ export default function PredictionsTableClient() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filtered.map((row) => (
+                            {pageRows.map((row) => (
                                 <PredictionRowView
                                     key={row.id}
                                     row={row}
@@ -216,6 +243,19 @@ export default function PredictionsTableClient() {
                     </table>
                 )}
             </div>
+
+            {!loading && !error && filtered.length > 0 ? (
+                <Pagination
+                    rangeStart={rangeStart}
+                    rangeEnd={rangeEnd}
+                    total={filtered.length}
+                    page={safePage}
+                    totalPages={totalPages}
+                    pageSize={pageSize}
+                    onPageSize={(n) => setPageSize(n)}
+                    onPage={(n) => setCurrentPage(n)}
+                />
+            ) : null}
 
             <style jsx>{`
                 .predictions-table-shell {
@@ -245,29 +285,182 @@ export default function PredictionsTableClient() {
                     background: var(--bg);
                     z-index: 2;
                     text-align: left;
-                    padding: 0.75rem 1rem;
+                    padding: 0.9rem 1.1rem;
                     border-bottom: 1px solid var(--surface-border);
                     font-family: var(--font-mono);
-                    font-size: 0.6rem;
-                    letter-spacing: 0.1em;
+                    font-size: 0.62rem;
+                    letter-spacing: 0.12em;
                     text-transform: uppercase;
                     color: var(--text-tertiary);
                     font-weight: 700;
+                    white-space: nowrap;
+                }
+                /* Right-aligned numeric headers (PSS) — ensure visual gap
+                   between PSS column and the next header (Tier) so they don't
+                   read as a merged "PSSTier" label. */
+                .predictions-table thead th[data-align="right"] {
+                    text-align: right;
+                    padding-right: 1.6rem;
                 }
                 .predictions-table tbody tr {
                     cursor: pointer;
                     border-bottom: 1px solid var(--surface-border);
                     transition: background 0.12s ease;
                 }
+                /* Zebra striping — subtle alternating row tint for scan rhythm. */
+                .predictions-table tbody tr:nth-child(even) {
+                    background: color-mix(in oklab, var(--text-primary) 1.5%, var(--surface));
+                }
                 .predictions-table tbody tr:hover {
-                    background: var(--bg-raised);
+                    background: color-mix(in oklab, var(--color-y2k-blue, #0456fb) 6%, var(--surface));
+                }
+                .predictions-table tbody tr:last-child {
+                    border-bottom: none;
                 }
                 .predictions-table td {
-                    padding: 0.75rem 1rem;
+                    padding: 1rem 1.1rem;
                     vertical-align: middle;
+                    line-height: 1.5;
+                }
+                .predictions-table td[data-align="right"] {
+                    padding-right: 1.6rem;
+                    text-align: right;
                 }
             `}</style>
         </div>
+    );
+}
+
+// ─── Pagination ──────────────────────────────────────────────────────────
+
+function Pagination({
+    rangeStart, rangeEnd, total, page, totalPages, pageSize,
+    onPage, onPageSize,
+}: {
+    rangeStart: number;
+    rangeEnd: number;
+    total: number;
+    page: number;
+    totalPages: number;
+    pageSize: PageSize;
+    onPage: (n: number) => void;
+    onPageSize: (n: PageSize) => void;
+}) {
+    const canPrev = page > 1;
+    const canNext = page < totalPages;
+
+    return (
+        <div
+            style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "1rem",
+                padding: "0.85rem 1rem 0",
+                borderTop: "1px solid var(--surface-border)",
+                marginTop: "0.5rem",
+                flexWrap: "wrap",
+            }}
+        >
+            <span style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "0.65rem",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "var(--text-tertiary)",
+            }}>
+                Showing <b style={{ color: "var(--text-secondary)" }}>{rangeStart}–{rangeEnd}</b> of <b style={{ color: "var(--text-secondary)" }}>{total}</b>
+            </span>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
+                {/* Page size selector */}
+                <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <span style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "0.6rem",
+                        letterSpacing: "0.12em",
+                        textTransform: "uppercase",
+                        color: "var(--text-tertiary)",
+                    }}>Rows</span>
+                    <select
+                        value={pageSize === "all" ? "all" : String(pageSize)}
+                        onChange={(e) => {
+                            const v = e.target.value;
+                            onPageSize(v === "all" ? "all" : (Number(v) as PageSize));
+                        }}
+                        style={{
+                            fontFamily: "var(--font-mono)",
+                            fontSize: "0.65rem",
+                            background: "var(--bg)",
+                            color: "var(--text-primary)",
+                            border: "1px solid var(--surface-border)",
+                            padding: "0.3rem 0.5rem",
+                            borderRadius: 0,
+                            cursor: "pointer",
+                        }}
+                    >
+                        {PAGE_SIZE_OPTIONS.map((n) => (
+                            <option key={n} value={n}>{n}</option>
+                        ))}
+                        <option value="all">All</option>
+                    </select>
+                </label>
+
+                {/* Page indicator */}
+                <span style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "0.65rem",
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    color: "var(--text-secondary)",
+                    minWidth: 80,
+                    textAlign: "center",
+                }}>
+                    Page <b style={{ color: "var(--text-primary)" }}>{page}</b> of <b style={{ color: "var(--text-primary)" }}>{totalPages}</b>
+                </span>
+
+                {/* Navigation buttons */}
+                <div style={{ display: "inline-flex", gap: 2 }}>
+                    <PageBtn onClick={() => onPage(1)} disabled={!canPrev} ariaLabel="First page"><ChevronsLeft size={14} /></PageBtn>
+                    <PageBtn onClick={() => onPage(page - 1)} disabled={!canPrev} ariaLabel="Previous page"><ChevronLeft size={14} /></PageBtn>
+                    <PageBtn onClick={() => onPage(page + 1)} disabled={!canNext} ariaLabel="Next page"><ChevronRight size={14} /></PageBtn>
+                    <PageBtn onClick={() => onPage(totalPages)} disabled={!canNext} ariaLabel="Last page"><ChevronsRight size={14} /></PageBtn>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function PageBtn({
+    onClick, disabled, ariaLabel, children,
+}: {
+    onClick: () => void;
+    disabled: boolean;
+    ariaLabel: string;
+    children: React.ReactNode;
+}) {
+    return (
+        <button
+            onClick={onClick}
+            disabled={disabled}
+            aria-label={ariaLabel}
+            style={{
+                width: 30,
+                height: 30,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: disabled ? "transparent" : "var(--surface)",
+                color: disabled ? "var(--text-tertiary)" : "var(--text-primary)",
+                border: "1px solid var(--surface-border)",
+                cursor: disabled ? "not-allowed" : "pointer",
+                opacity: disabled ? 0.4 : 1,
+                transition: "background 0.12s ease, opacity 0.12s ease",
+                padding: 0,
+            }}
+        >
+            {children}
+        </button>
     );
 }
 
@@ -418,7 +611,7 @@ function PredictionRowView({ row, onClick }: { row: PredictionRow; onClick: () =
             <td style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "var(--text-secondary)", maxWidth: 240 }}>
                 {row.area_label ?? "—"}
             </td>
-            <td style={{ textAlign: "right" }}>
+            <td data-align="right">
                 <PssBar value={row.pss} />
             </td>
             <td>
@@ -534,7 +727,7 @@ function PssBar({ value }: { value: number }) {
 }
 
 function Th({ children, align = "left" }: { children: React.ReactNode; align?: "left" | "right" }) {
-    return <th style={{ textAlign: align }}>{children}</th>;
+    return <th data-align={align}>{children}</th>;
 }
 
 function Empty({ label }: { label: string }) {
