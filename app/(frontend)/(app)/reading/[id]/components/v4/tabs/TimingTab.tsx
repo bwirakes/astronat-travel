@@ -221,7 +221,7 @@ function VerdictHeadline({ vm }: { vm: V4VM }) {
     const goalLabel = goal ? GOAL_LABEL_SHORT[goal] : null;
 
     const accent =
-        v.tone === "good"  ? "var(--sage)" :
+        v.tone === "good"  ? "var(--lift-accent)" :
         v.tone === "mixed" ? "var(--gold)" :
                              "var(--color-spiced-life)";
 
@@ -274,7 +274,7 @@ function WindowFraming({ vm }: { vm: V4VM }) {
  *  the new place. Mirrors the daily-grain renderer below in structure (lead +
  *  bar strip + footer) but reads monthlySeries / monthlyHighlights and labels
  *  things by month name. The user's anchor month is highlighted in y2k-blue
- *  with a "Move" tag; strongest/hardest months get sage/coral peak markers. */
+ *  with a "Move" tag; strongest/hardest months get acqua/coral peak markers. */
 function MonthlyFieldSummary({ vm }: { vm: V4VM }) {
     const { monthlySeries, monthlyHighlights, travelDateISO } = vm;
     const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
@@ -364,7 +364,7 @@ function MonthlyFieldSummary({ vm }: { vm: V4VM }) {
                         const m = monthlySeries[hoveredIdx];
                         const pct = (hoveredIdx / Math.max(1, monthlySeries.length - 1)) * 100;
                         const tipColor =
-                            m.score >= 75 ? "var(--sage)" :
+                            m.score >= 75 ? "var(--lift-accent)" :
                             m.score >= 55 ? "var(--gold)" :
                                             "var(--color-spiced-life)";
                         return (
@@ -395,7 +395,7 @@ function MonthlyFieldSummary({ vm }: { vm: V4VM }) {
                         );
                     })()}
 
-                    {/* Strongest month markers (sage triangles) */}
+                    {/* Strongest month markers (acqua triangles) */}
                     {monthlyHighlights.strongest.map((m, i) => {
                         const pct = markerPct(m.monthISO);
                         if (pct === null) return null;
@@ -412,7 +412,7 @@ function MonthlyFieldSummary({ vm }: { vm: V4VM }) {
                                     height: 0,
                                     borderLeft:  "5px solid transparent",
                                     borderRight: "5px solid transparent",
-                                    borderTop:   "6px solid var(--sage)",
+                                    borderTop:   "6px solid var(--lift-accent)",
                                     zIndex: 3,
                                     pointerEvents: "auto",
                                 }}
@@ -453,7 +453,7 @@ function MonthlyFieldSummary({ vm }: { vm: V4VM }) {
                         const color = isAnchor
                             ? "var(--color-y2k-blue)"
                             : m.score >= 75
-                            ? "var(--sage)"
+                            ? "var(--lift-accent)"
                             : m.score >= 55
                             ? "var(--gold)"
                             : "var(--color-spiced-life)";
@@ -571,7 +571,7 @@ function DailyFieldSummary({ vm }: { vm: V4VM }) {
                                 const d = dailySeries[hoveredIdx];
                                 const pct = (hoveredIdx / Math.max(1, dailySeries.length - 1)) * 100;
                                 const tipColor =
-                                    d.score >= 75 ? "var(--sage)" :
+                                    d.score >= 75 ? "var(--lift-accent)" :
                                     d.score >= 55 ? "var(--gold)" :
                                                     "var(--color-spiced-life)";
                                 return (
@@ -619,7 +619,7 @@ function DailyFieldSummary({ vm }: { vm: V4VM }) {
                                             height: 0,
                                             borderLeft:  "5px solid transparent",
                                             borderRight: "5px solid transparent",
-                                            borderTop:   "6px solid var(--sage)",
+                                            borderTop:   "6px solid var(--lift-accent)",
                                             zIndex: 3,
                                             pointerEvents: "auto",
                                         }}
@@ -656,7 +656,7 @@ function DailyFieldSummary({ vm }: { vm: V4VM }) {
                                 const color = isUser
                                     ? "var(--color-y2k-blue)"
                                     : d.score >= 75
-                                    ? "var(--sage)"
+                                    ? "var(--lift-accent)"
                                     : d.score >= 55
                                     ? "var(--gold)"
                                     : "var(--color-spiced-life)";
@@ -854,10 +854,10 @@ function GanttRow({
     const widthPct = toPct(clampedExit) - entryPct;
 
     const accent = span.benefic
-        ? "color-mix(in oklab, var(--sage) 84%, var(--text-primary))"
+        ? "var(--lift-accent)"
         : "color-mix(in oklab, var(--color-spiced-life) 88%, var(--text-primary))";
     const accentSoft = span.benefic
-        ? "var(--sage-soft)"
+        ? "var(--lift-accent-soft)"
         : "color-mix(in oklab, var(--color-spiced-life) 24%, transparent)";
     const meaning = transitOneLiner(span);
     const titleLay = plainTransitTitle(span);
@@ -1056,7 +1056,7 @@ function GanttRow({
 // Same date scale as GanttRow above, but visually distinguished so readers can
 // see at a glance what's happening overhead vs. their personal transits.
 //
-//   - Muted accent (slate/violet for sky vs sage/spiced for personal)
+//   - Muted accent (slate/violet for sky vs acqua/spiced for personal)
 //   - Dashed left border on the label cell
 //   - Zero-width spans (ingresses, stations) render as a thin pin instead of a pill
 //   - Tooltip shows the universal-sky-span shape (entry/exact/exit + dignity/sign)
@@ -1741,7 +1741,7 @@ function TransitGantt({ vm }: { vm: V4VM }) {
                     alignItems: "center",
                 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                        <div style={{ width: 16, height: 5, borderRadius: 3, background: "var(--sage)", opacity: 0.65 }} />
+                        <div style={{ width: 16, height: 5, borderRadius: 3, background: "var(--lift-accent)", opacity: 0.65 }} />
                         <span style={{ fontFamily: FM, fontSize: "0.62rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-tertiary)" }}>Lift</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
@@ -1875,8 +1875,8 @@ export default function TimingTab({ vm, copiedTab }: Props) {
                     ? "The next 12 months at this place"
                     : "The 90-day field around your trip"}
                 tooltip={isRelocation
-                    ? "What each month at this place actually feels like, taken on its own. Sage = lift, gold = mixed, coral = friction. Blue is your move month."
-                    : "Each bar is one day. Taller, sage and gold = more support. Red = friction. Blue is your trip; green ▼ marks open stretches, red ▼ marks rougher ones."}
+                    ? "What each month at this place actually feels like, taken on its own. Acqua = lift, gold = mixed, coral = friction. Blue is your move month."
+                    : "Each bar is one day. Taller, acqua and gold = more support. Red = friction. Blue is your trip; acqua ▼ marks open stretches, red ▼ marks rougher ones."}
             />
             <FieldSummary vm={vm} />
 

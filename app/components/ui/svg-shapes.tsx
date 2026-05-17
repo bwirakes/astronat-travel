@@ -43,6 +43,54 @@ export function AsteriskStarburst({ size = 100, className = "", ...props }: SvgS
   );
 }
 
+/** Single 4-point star lifted from the Astronat identity stars-around-planet.
+ *  Use as a flanking accent on promoted scalar values (score pills, etc.).
+ *  Inherits color via `currentColor`. */
+export function BrandSparkle({ size = 12, className = "", ...props }: SvgShapeProps) {
+  return (
+    <svg
+      aria-hidden
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      className={className}
+      style={{ display: "inline-block", ...(props.style ?? {}) }}
+      {...props}
+    >
+      <path d="M12 0 L13.6 10.4 L24 12 L13.6 13.6 L12 24 L10.4 13.6 L0 12 L10.4 10.4 Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** Thin elliptical arc that mirrors the orbital ring around the "O" in the
+ *  Astronat logo. Used as a brand-flourish divider between editorial sections.
+ *  Inherits stroke color via `currentColor` — wrap in a span that sets
+ *  `color: var(--color-spiced-life)` for the canonical coral ring. */
+export function OrbitalArc({ size, className = "", ...props }: SvgShapeProps) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 600 40"
+      preserveAspectRatio="none"
+      width={size ?? "100%"}
+      height={size ? undefined : 28}
+      className={className}
+      {...props}
+    >
+      <ellipse
+        cx="300"
+        cy="20"
+        rx="290"
+        ry="14"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        transform="rotate(-2 300 20)"
+      />
+    </svg>
+  );
+}
+
 export function WireframeGlobe({ size = 100, className = "", ...props }: SvgShapeProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1" className={className} {...props}>
