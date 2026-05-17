@@ -266,11 +266,8 @@ function WeatherHeroBanner({
 
     return (
         <div
-            // Top corners are rounded on DESKTOP only (≥ 768px) where the
-            // banner sits as a "card" inside the centered layout. Below 768px
-            // the mobile bar is active and the banner flows seamlessly out
-            // of it — no rounded top, no visible seam.
-            className="relative overflow-hidden rounded-t-[8px] rounded-b-0 max-md:rounded-t-0"
+            // Banner has square edges at all breakpoints — no rounded corners.
+            className="relative overflow-hidden"
             style={{
                 minHeight: "clamp(200px, 22vw, 280px)",
                 background: "linear-gradient(180deg, #E67A7A 0%, #D26565 100%)",
