@@ -23,6 +23,11 @@ interface Props {
   onHover: (id: string | null) => void;
   onSelect: (id: string) => void;
   showCounter?: { shown: number; total: number } | null;
+  /** Optional override for the hover-card's verdict label. When set, replaces
+   *  the BAND_CONFIG.label (which uses "Highly Productive"/"Productive" — fine
+   *  for travel readings but nonsense for weather events). Receives the
+   *  numeric score and should return a short uppercase label. */
+  verdictLabelOverride?: (score: number) => string;
 }
 
 const projectLon = (lon: number) => (((lon + 180) % 360 + 360) % 360) * (1000 / 360);
@@ -52,6 +57,7 @@ export function ReadingsAtlasMap({
   onHover,
   onSelect,
   showCounter,
+  verdictLabelOverride,
 }: Props) {
   const [isClient, setIsClient] = useState(false);
   useEffect(() => setIsClient(true), []);
@@ -297,7 +303,7 @@ export function ReadingsAtlasMap({
                     color: "var(--text-tertiary)",
                   }}
                 >
-                  {BAND_CONFIG[verdict].label} · {p.travelType}
+                  {verdictLabelOverride ? verdictLabelOverride(p.score) : BAND_CONFIG[verdict].label} · {p.travelType}
                 </span>
               </div>
             </motion.div>

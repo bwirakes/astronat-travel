@@ -87,9 +87,27 @@ export function weatherEventScore(event: GeodeticWeatherEvent): number {
   return Math.round(event.pss * 100);
 }
 
+/** Max chars for a pin's destination label so it never overflows the SVG. */
+const PIN_LABEL_MAX = 30;
+
+function truncate(s: string, max: number): string {
+  if (s.length <= max) return s;
+  return s.slice(0, max - 1).trimEnd() + "…";
+}
+
 export function weatherDestinationLabel(event: GeodeticWeatherEvent): string {
   const zone = event.zones[0]?.split("(")[0]?.trim();
-  return zone || event.title;
+  return truncate(zone || event.title, PIN_LABEL_MAX);
+}
+
+/** True if the event has a real (non-default) coordinate. Use this to decide
+ *  whether to render the map at all — otherwise the pin lands at (0, 0) in
+ *  the Atlantic and confuses readers. */
+export function eventHasMappableLocation(event: GeodeticWeatherEvent): boolean {
+  const explicit = FORECAST_COORDINATES_BY_DATE[event.date];
+  if (explicit) return true;
+  const zoneText = event.zones.join(" | ");
+  return ZONE_COORDINATES.some((entry) => entry.test.test(zoneText));
 }
 
 export function weatherEventToAtlasPin(event: GeodeticWeatherEvent): AtlasPin {
