@@ -216,7 +216,10 @@ export default function WeatherEventPageClient({ event, matrix }: {
                     margin-right: auto;
                     padding: 0 clamp(24px, 5vw, 72px);
                 }
-                @media (max-width: 640px) {
+                /* Full-bleed below the mobile-bar breakpoint (768px), so the
+                   banner flows edge-to-edge under the red header bar with no
+                   eggshell gutters showing through. */
+                @media (max-width: 767px) {
                     .banner-wrap { max-width: 100%; padding: 0; margin-top: 0; }
                 }
                 .event-main {
@@ -263,7 +266,11 @@ function WeatherHeroBanner({
 
     return (
         <div
-            className="relative overflow-hidden rounded-t-[8px] rounded-b-0 max-sm:rounded-t-0"
+            // Top corners are rounded on DESKTOP only (≥ 768px) where the
+            // banner sits as a "card" inside the centered layout. Below 768px
+            // the mobile bar is active and the banner flows seamlessly out
+            // of it — no rounded top, no visible seam.
+            className="relative overflow-hidden rounded-t-[8px] rounded-b-0 max-md:rounded-t-0"
             style={{
                 minHeight: "clamp(200px, 22vw, 280px)",
                 background: "linear-gradient(180deg, #E67A7A 0%, #D26565 100%)",

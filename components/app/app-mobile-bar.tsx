@@ -72,10 +72,11 @@ export function AppMobileBar() {
       }
     : weatherEventHeader
     ? {
-        // Spiced-life — matches the weather event banner so the page reads
-        // as a continuous red field from breadcrumb to bottom curve.
+        // Spiced-life — matches the weather event banner. No border-bottom
+        // so the bar and the banner flow as one continuous red field with
+        // no visible seam where they meet.
         background: "#E67A7A",
-        borderBottom: "1px solid #D26565",
+        borderBottom: "none",
         color: "#F8F5EC",
       }
     : {
