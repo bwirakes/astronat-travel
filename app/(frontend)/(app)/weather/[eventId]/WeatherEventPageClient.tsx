@@ -49,19 +49,7 @@ const TYPE_VERBOSE: Record<string, string> = {
 function typeWordFor(type: string): string { return TYPE_WORD[type] ?? type; }
 function typeVerboseFor(type: string): string { return TYPE_VERBOSE[type] ?? type; }
 
-// ─── Headline + date-range generators ──────────────────────────────────────
-
-/**
- * "Flood Warning in UK / Ghana / Nigeria" — composes type + tier + location
- * into the H1 headline used in the banner. Falls back gracefully for
- * unknown types or unconfident locations.
- */
-function headlineFor(event: GeodeticWeatherEvent, location: { label: string }): string {
-    const type = typeWordFor(event.type);
-    const alert = alertWordFor(event.tier); // WARNING / WATCH / ADVISORY / MONITORING / BACKGROUND
-    const titleCaseAlert = alert.charAt(0) + alert.slice(1).toLowerCase();
-    return `${type} ${titleCaseAlert} in ${location.label}`;
-}
+// ─── Date-range generator ─────────────────────────────────────────────────
 
 /**
  * "FEB 14 — FEB 24, 2026" — the activation window for this event. Width of
@@ -86,15 +74,22 @@ function dateRangeFor(event: GeodeticWeatherEvent): string {
 }
 
 function formatRange(start: Date, end: Date): string {
-    const sameYear = start.getUTCFullYear() === end.getUTCFullYear();
-    const sameMonth = sameYear && start.getUTCMonth() === end.getUTCMonth();
-    const startStr = start.toLocaleDateString("en-US", {
-        month: "short", day: "numeric", year: sameYear ? undefined : "numeric", timeZone: "UTC",
-    });
-    const endStr = end.toLocaleDateString("en-US", {
-        month: sameMonth ? undefined : "short", day: "numeric", year: "numeric", timeZone: "UTC",
-    });
-    return `${startStr} — ${endStr}`.toUpperCase();
+    // Hand-formatted to avoid Intl quirks where `month: undefined` produces
+    // "DAY: 24"-style output on some locales. Three branches:
+    //   sameMonth → "FEB 10 — 24, 2026"
+    //   sameYear  → "FEB 10 — MAR 5, 2026"
+    //   neither   → "DEC 30, 2025 — JAN 5, 2026"
+    const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+    const sm = monthNames[start.getUTCMonth()];
+    const em = monthNames[end.getUTCMonth()];
+    const sd = start.getUTCDate();
+    const ed = end.getUTCDate();
+    const sy = start.getUTCFullYear();
+    const ey = end.getUTCFullYear();
+
+    if (sy === ey && sm === em) return `${sm} ${sd} — ${ed}, ${ey}`;
+    if (sy === ey)              return `${sm} ${sd} — ${em} ${ed}, ${ey}`;
+    return `${sm} ${sd}, ${sy} — ${em} ${ed}, ${ey}`;
 }
 
 function friendlyDate(dateStr: string): string {
@@ -140,15 +135,26 @@ export default function WeatherEventPageClient({ event, matrix }: {
     const location = parseEventLocation(event);
     const canShowMap = eventHasMappableLocation(event);
     const isHistorical = event.kind === "historical";
-    const headline = headlineFor(event, location);
     const dateRange = dateRangeFor(event);
+    // Decompose the headline into kicker + location + caption. The location
+    // is the page's identity (where the event is); the kicker carries the
+    // type+severity; the caption preserves the curated event title.
+    const kickerHeadline = `${typeWordFor(event.type).toUpperCase()} ${alertWordFor(event.tier)}`;
+    const locationHeadline = location.label;
+    const captionHeadline = event.title;
 
     return (
         <>
             <PageHeader title={event.title} backTo="/weather" backLabel="Weather" />
             <div className="weather-event-shell min-h-screen w-full bg-[var(--bg)] text-[var(--text-primary)]">
                 <div className="banner-wrap">
-                    <WeatherHeroBanner event={event} headline={headline} dateRange={dateRange} />
+                    <WeatherHeroBanner
+                        event={event}
+                        kickerHeadline={kickerHeadline}
+                        locationHeadline={locationHeadline}
+                        captionHeadline={captionHeadline}
+                        dateRange={dateRange}
+                    />
                 </div>
 
                 <main className="event-main">
@@ -242,28 +248,50 @@ export default function WeatherEventPageClient({ event, matrix }: {
  * pages share a single visual identity.
  */
 function WeatherHeroBanner({
-    event, headline, dateRange,
+    event, kickerHeadline, locationHeadline, captionHeadline, dateRange,
 }: {
     event: GeodeticWeatherEvent;
-    headline: string;
+    kickerHeadline: string;
+    locationHeadline: string;
+    captionHeadline: string;
     dateRange: string;
 }) {
     const verdict = tierLabel(event.tier);
 
     return (
         <div
-            className="reading-hero-banner relative overflow-hidden rounded-t-[8px] rounded-b-0 px-[clamp(18px,4vw,44px)] py-[clamp(22px,3.8vw,42px)]"
+            className="relative overflow-hidden rounded-t-[8px] rounded-b-0 max-sm:rounded-t-0"
             style={{
-                minHeight: "clamp(186px, 20vw, 244px)",
+                minHeight: "clamp(200px, 22vw, 280px)",
                 background: "linear-gradient(180deg, #E67A7A 0%, #D26565 100%)",
             }}
         >
-            {/* Star — top right of title area */}
+            <div className="banner-grid">
+                {/* LEFT — kicker → location → caption → date */}
+                <div className="banner-title-col">
+                    <span className="banner-kicker">{kickerHeadline}</span>
+                    <h1 className="banner-headline">{locationHeadline}</h1>
+                    <span className="banner-caption">{captionHeadline}</span>
+                    <span className="banner-date">{dateRange}</span>
+                </div>
+
+                {/* RIGHT — score pill + verdict pill */}
+                <div className="banner-pill-col">
+                    <span className="pss-pill">
+                        <span className="pss-num">{event.pss.toFixed(2)}</span>
+                        <span className="pss-suffix">PSS</span>
+                    </span>
+                    <span className="verdict-pill">{verdict}</span>
+                </div>
+            </div>
+
+            {/* Decorative star — single element, far top-right corner where it
+                doesn't compete with the score pill */}
             <svg
                 aria-hidden
                 viewBox="0 0 64 64"
-                className="absolute right-[clamp(156px,14vw,218px)] top-[clamp(34px,4.4vw,58px)] h-[clamp(20px,2.4vw,34px)] w-[clamp(20px,2.4vw,34px)] max-sm:left-[48px] max-sm:right-auto max-sm:top-[170px] max-sm:h-[22px] max-sm:w-[22px]"
-                style={{ color: "#CAF1F0" }}
+                className="banner-star"
+                style={{ color: "rgba(248, 245, 236, 0.45)" }}
             >
                 <path d="M32 0 L38 25 L64 32 L38 39 L32 64 L26 39 L0 32 L26 25 Z" fill="currentColor" />
             </svg>
@@ -271,106 +299,142 @@ function WeatherHeroBanner({
             {/* Bottom rounded curve — emerges into --reading-tabs-surface */}
             <div
                 aria-hidden
-                className="absolute inset-x-[-18%] bottom-[-47%] h-[64%] rounded-[50%]"
-                style={{ background: "var(--reading-tabs-surface)" }}
+                className="absolute inset-x-[-18%] bottom-[-47%] h-[60%] rounded-[50%]"
+                style={{ background: "var(--reading-tabs-surface)", zIndex: 0 }}
             />
 
-            {/* Dark planet disc with cutout */}
-            <div
-                aria-hidden
-                className="absolute right-[3.4%] bottom-[17%] h-[clamp(26px,3.4vw,44px)] w-[clamp(26px,3.4vw,44px)] rounded-full"
-                style={{ background: "color-mix(in oklab, #1B1B1B 82%, #C9A96E)" }}
-            >
-                <span
-                    className="absolute -right-[18%] -top-[10%] h-[70%] w-[70%] rounded-full"
-                    style={{ background: "var(--reading-tabs-surface)" }}
-                />
-            </div>
-
-            {/* Saturn/sun/comet illustration — same SVG as /reading */}
-            <div
-                aria-hidden
-                className="absolute right-[clamp(18px,4vw,44px)] bottom-[clamp(24px,4.8vw,52px)] z-10 h-[clamp(78px,7vw,104px)] w-[clamp(94px,8.6vw,128px)] max-sm:-right-[2px] max-sm:bottom-[56px] max-sm:scale-[0.72]"
-            >
-                <svg viewBox="0 0 160 132" className="h-full w-full overflow-visible" fill="none">
-                    <path d="M15 22l4.3 9.3 10.2 1.2-7.5 6.8 2 10-8.8-5.1-8.9 5 2.2-10-7.5-6.9 10.2-1.1L15 22z" fill="#C9A96E" stroke="color-mix(in oklab, #1B1B1B 70%, transparent)" strokeWidth="2" />
-                    <circle cx="113" cy="25" r="13.5" fill="color-mix(in oklab, #CAF1F0 72%, #c7a6ff)" stroke="color-mix(in oklab, #1B1B1B 70%, transparent)" strokeWidth="2" />
-                    <path d="M98 32c13-17 30-25 45-22" stroke="#C9A96E" strokeWidth="4" strokeLinecap="round" />
-                    <path d="M87 35c22 3 42-2 61-14" stroke="color-mix(in oklab, #1B1B1B 70%, transparent)" strokeWidth="2" strokeLinecap="round" />
-                    <g transform="translate(70 41) rotate(-12)">
-                        <circle cx="0" cy="0" r="30" fill="color-mix(in oklab, #1B1B1B 65%, transparent)" stroke="color-mix(in oklab, #1B1B1B 76%, transparent)" strokeWidth="2.5" />
-                        <path d="M-21-7c13 6 26 5 43-3" stroke="color-mix(in oklab, #C9A96E 62%, #1B1B1B)" strokeWidth="6" strokeLinecap="round" />
-                        <path d="M-20 11c15-9 30-10 44-4" stroke="color-mix(in oklab, #1B1B1B 16%, #F8F5EC)" strokeWidth="5" strokeLinecap="round" />
-                        <path d="M-15 22c10-6 20-7 31-1" stroke="color-mix(in oklab, #C9A96E 62%, #1B1B1B)" strokeWidth="5" strokeLinecap="round" />
-                        <path d="M-49 13c27 16 75 9 106-13" stroke="#C9A96E" strokeWidth="7" strokeLinecap="round" />
-                        <path d="M-51 14c29 19 78 11 110-14" stroke="color-mix(in oklab, #1B1B1B 72%, transparent)" strokeWidth="2.5" strokeLinecap="round" />
-                    </g>
-                    <circle cx="88" cy="103" r="12" fill="color-mix(in oklab, #CAF1F0 78%, #C9A96E)" stroke="color-mix(in oklab, #1B1B1B 70%, transparent)" strokeWidth="2" />
-                    <path d="M82 101c4-5 8-5 12 0M83 109c4-5 8-5 12 0" stroke="color-mix(in oklab, #1B1B1B 70%, transparent)" strokeWidth="2.5" strokeLinecap="round" />
-                    <path d="M13 79h12M19 73v12M143 54h11M148.5 48.5v11" stroke="#C9A96E" strokeWidth="2.4" strokeLinecap="round" />
-                </svg>
-            </div>
-
-            {/* Score pill + verdict pill — top right */}
-            <div className="absolute right-[clamp(18px,4vw,44px)] top-[clamp(18px,3vw,36px)] z-20 flex flex-col items-end gap-[10px]">
-                <span
-                    className="inline-flex items-baseline rounded-full px-[clamp(16px,2vw,26px)] py-[clamp(8px,1vw,12px)] shadow-sm"
-                    style={{
-                        background: "#F8F5EC",
-                        color: "#1B1B1B",
-                        fontFamily: FONT_PRIMARY,
-                    }}
-                >
-                    <span className="text-[clamp(38px,5.4vw,72px)] leading-none tabular-nums">
-                        {event.pss.toFixed(2)}
-                    </span>
-                    <span
-                        className="ml-1.5 text-[clamp(11px,1vw,14px)]"
-                        style={{ fontFamily: FONT_MONO, color: "#8a8983", letterSpacing: "0.08em" }}
-                    >
-                        PSS
-                    </span>
-                </span>
-                <span
-                    className="inline-flex rounded-full px-[14px] py-[6px] text-[10px] uppercase"
-                    style={{
-                        background: "#F8F5EC",
-                        color: "#D26565",
-                        fontFamily: FONT_MONO,
-                        letterSpacing: "0.18em",
-                        fontWeight: 800,
-                    }}
-                >
-                    {verdict}
-                </span>
-            </div>
-
-            {/* Title + date range — left column */}
-            <div className="relative z-10 grid min-h-[inherit] grid-cols-1 items-center gap-[18px]">
-                <div className="flex min-w-0 flex-col justify-start gap-[10px] self-start pt-[clamp(38px,4.8vw,62px)] max-sm:pt-[28px]">
-                    <span
-                        className="inline-flex items-baseline leading-[0.9]"
-                        style={{
-                            color: "#F8F5EC",
-                            fontFamily: FONT_PRIMARY,
-                            fontSize: "clamp(36px, 5.4vw, 72px)",
-                            textShadow: "0 2px 0 rgba(0, 0, 0, 0.08)",
-                        }}
-                    >
-                        <span className="min-w-0">{headline}</span>
-                    </span>
-                    <span
-                        className="text-[11px] uppercase"
-                        style={{
-                            color: "color-mix(in oklab, #F8F5EC 82%, transparent)",
-                            fontFamily: FONT_MONO,
-                            letterSpacing: "0.18em",
-                        }}
-                    >
-                        {dateRange}
-                    </span>
-                </div>
-            </div>
+            <style jsx>{`
+                .banner-grid {
+                    position: relative;
+                    z-index: 2;
+                    display: grid;
+                    grid-template-columns: minmax(0, 1fr) auto;
+                    gap: clamp(20px, 4vw, 56px);
+                    align-items: start;
+                    padding: clamp(28px, 4vw, 48px) clamp(20px, 4vw, 44px) clamp(40px, 5vw, 60px);
+                    min-height: inherit;
+                }
+                .banner-title-col {
+                    min-width: 0;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 14px;
+                    align-self: stretch;
+                    justify-content: center;
+                }
+                .banner-kicker {
+                    display: inline-flex;
+                    align-self: flex-start;
+                    background: rgba(0,0,0,0.18);
+                    border: 1px solid rgba(248,245,236,0.32);
+                    color: #F8F5EC;
+                    border-radius: 4px;
+                    padding: 6px 12px 6px 10px;
+                    font-family: ${FONT_MONO};
+                    font-size: 11px;
+                    letter-spacing: 0.22em;
+                    text-transform: uppercase;
+                    font-weight: 800;
+                }
+                .banner-headline {
+                    color: #F8F5EC;
+                    font-family: ${FONT_PRIMARY};
+                    font-size: clamp(36px, 5vw, 64px);
+                    line-height: 1;
+                    letter-spacing: -0.015em;
+                    text-shadow: 0 2px 0 rgba(0,0,0,0.08);
+                    word-break: break-word;
+                    overflow-wrap: anywhere;
+                    margin: 0;
+                    font-weight: 400;
+                }
+                .banner-caption {
+                    color: rgba(248,245,236,0.78);
+                    font-family: ${FONT_MONO};
+                    font-size: 11px;
+                    letter-spacing: 0.14em;
+                    text-transform: uppercase;
+                    font-weight: 700;
+                    line-height: 1.4;
+                    /* Cap at 2 lines so very long captions don't push the
+                       banner height. */
+                    display: -webkit-box;
+                    -webkit-line-clamp: 2;
+                    -webkit-box-orient: vertical;
+                    overflow: hidden;
+                }
+                .banner-date {
+                    color: rgba(248,245,236,0.66);
+                    font-family: ${FONT_MONO};
+                    font-size: 11px;
+                    letter-spacing: 0.18em;
+                    text-transform: uppercase;
+                    font-weight: 700;
+                }
+                .banner-pill-col {
+                    position: relative;
+                    z-index: 3;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: flex-end;
+                    gap: 10px;
+                    align-self: start;
+                }
+                .pss-pill {
+                    display: inline-flex;
+                    align-items: baseline;
+                    background: #F8F5EC;
+                    color: #1B1B1B;
+                    border-radius: 999px;
+                    padding: clamp(10px, 1.2vw, 14px) clamp(20px, 2.2vw, 28px);
+                    box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+                    font-family: ${FONT_PRIMARY};
+                }
+                .pss-num {
+                    font-size: clamp(38px, 5vw, 64px);
+                    line-height: 1;
+                    font-variant-numeric: tabular-nums;
+                }
+                .pss-suffix {
+                    margin-left: 6px;
+                    font-family: ${FONT_MONO};
+                    color: #8a8983;
+                    font-size: clamp(11px, 0.95vw, 13px);
+                    letter-spacing: 0.12em;
+                }
+                .verdict-pill {
+                    background: #F8F5EC;
+                    color: #D26565;
+                    border-radius: 999px;
+                    padding: 7px 16px;
+                    font-family: ${FONT_MONO};
+                    font-size: clamp(11px, 0.9vw, 12px);
+                    letter-spacing: 0.2em;
+                    text-transform: uppercase;
+                    font-weight: 800;
+                }
+                .banner-star {
+                    position: absolute;
+                    top: clamp(14px, 1.6vw, 22px);
+                    right: clamp(14px, 1.6vw, 22px);
+                    height: clamp(14px, 1.8vw, 24px);
+                    width: clamp(14px, 1.8vw, 24px);
+                    z-index: 1;
+                }
+                @media (max-width: 640px) {
+                    .banner-grid {
+                        grid-template-columns: 1fr;
+                        gap: 18px;
+                        padding: 20px 18px 36px;
+                    }
+                    .banner-title-col { order: 2; gap: 12px; }
+                    .banner-pill-col { order: 1; flex-direction: row; align-items: center; align-self: flex-start; gap: 10px; }
+                    .pss-pill { padding: 10px 16px; }
+                    .pss-num { font-size: 32px; }
+                    .banner-headline { font-size: clamp(28px, 8vw, 38px); }
+                    .banner-star { display: none; }
+                }
+            `}</style>
         </div>
     );
 }
@@ -386,65 +450,60 @@ function AlertStrip({
 }) {
     const color = tierAccent(tier);
     const action = isHistorical ? "Historical event — see outcome below." :
-        tier === "critical" ? "Watch closely. Check local alerts and news." :
-        tier === "high"     ? "Pay attention. Worth following the news." :
-        tier === "moderate" ? "Stay aware. Background monitoring is enough." :
+        tier === "critical" ? "Watch closely. Check local alerts." :
+        tier === "high"     ? "Pay attention. Follow the news." :
+        tier === "moderate" ? "Stay aware. Background monitoring." :
                               "Low priority for now.";
 
+    // Single horizontal line on desktop; wraps cleanly on mobile.
+    // Background uses --surface (neutral) so the callout reads as a distinct
+    // section against the spiced-life banner above. Tier color is carried by
+    // the left border + alert-level word only.
     return (
         <section
             style={{
-                background: `color-mix(in oklab, ${color} 14%, var(--bg))`,
-                border: `1px solid color-mix(in oklab, ${color} 35%, var(--surface-border))`,
-                borderLeft: `4px solid ${color}`,
+                background: "var(--surface)",
+                border: "1px solid var(--surface-border)",
+                borderLeft: `3px solid ${color}`,
                 borderRadius: "var(--radius-md)",
-                padding: "0.9rem 1.2rem",
+                padding: "0.85rem 1.1rem",
                 marginTop: "clamp(20px, 2.4vw, 32px)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
                 flexWrap: "wrap",
-                gap: "0.8rem",
+                gap: "0.85rem",
             }}
         >
-            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-                <WarningSign tier={tier} size={22} />
-                <span style={{ display: "inline-flex", flexDirection: "column", lineHeight: 1.05 }}>
-                    <span style={{
-                        fontFamily: FONT_MONO,
-                        fontSize: 11,
-                        letterSpacing: "0.2em",
-                        fontWeight: 800,
-                        color,
-                        textTransform: "uppercase",
-                    }}>{alertWordFor(tier)}</span>
-                    <span style={{
-                        fontFamily: FONT_MONO,
-                        fontSize: 9,
-                        letterSpacing: "0.16em",
-                        color: "var(--text-tertiary)",
-                        textTransform: "uppercase",
-                        fontWeight: 700,
-                        marginTop: 2,
-                    }}>{alertLevelFor(tier)}</span>
-                </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: "1 1 auto" }}>
+                <WarningSign tier={tier} size={20} />
+                <span style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 11,
+                    letterSpacing: "0.2em",
+                    fontWeight: 800,
+                    color,
+                    textTransform: "uppercase",
+                    whiteSpace: "nowrap",
+                }}>{alertLevelFor(tier)}</span>
                 <span style={{
                     fontFamily: FONT_BODY,
                     fontSize: "0.92rem",
                     color: "var(--text-primary)",
-                    fontWeight: 600,
-                    marginLeft: 4,
+                    fontWeight: 500,
+                    lineHeight: 1.4,
                 }}>
                     {typeWord} event with {tier === "critical" ? "the strongest" : tier === "high" ? "a strong" : "a notable"} astro signature.
                 </span>
             </div>
             <span style={{
                 fontFamily: FONT_MONO,
-                fontSize: "0.7rem",
-                letterSpacing: "0.06em",
+                fontSize: "0.68rem",
+                letterSpacing: "0.08em",
                 color,
                 fontWeight: 700,
                 textTransform: "uppercase",
+                whiteSpace: "nowrap",
             }}>
                 → {action}
             </span>
