@@ -158,10 +158,10 @@ export default function OverviewTab({ vm, copiedTab, selectTab, natalForMap, bir
                         <SelectedGoalsPanel goals={selectedGoals} />
                         <div
                             aria-hidden
-                            className="my-[clamp(28px,4vw,44px)] w-full overflow-hidden"
+                            className="my-[clamp(28px,4vw,44px)] flex justify-center"
                             style={{ color: "var(--color-spiced-life)" }}
                         >
-                            <OrbitalArc />
+                            <OrbitalArc size={320} />
                         </div>
                     </>
                 )}
