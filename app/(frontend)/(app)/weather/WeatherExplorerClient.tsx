@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { List as ListIcon, Map as MapIcon } from "lucide-react";
+import { List as ListIcon, Map as MapIcon, Table as TableIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/app/page-header-context";
 import { ReadingsAtlasMap, type AtlasPin } from "@/app/components/ReadingsAtlasMap";
@@ -21,6 +21,7 @@ import {
   weatherEventToAtlasPin,
   weatherTypeLabel,
 } from "./weather-map-pins";
+import PredictionsTableClient from "./PredictionsTableClient";
 
 const PAGE_SIZE = 10;
 
@@ -51,12 +52,15 @@ function formatDate(date: string): string {
   });
 }
 
+type ViewMode = "split" | "table";
+
 export default function WeatherExplorerClient() {
   const router = useRouter();
   const [matrix, setMatrix] = useState<GeodeticMatrixResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<"list" | "map">("list");
+  const [view, setView] = useState<ViewMode>("split");
   const [sort, setSort] = useState<SortKey>("date");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
 
@@ -101,6 +105,14 @@ export default function WeatherExplorerClient() {
     <>
       <PageHeader title="Sky Weather" />
       <div className="weather-shell">
+        <ViewTabs view={view} onView={setView} />
+
+        {view === "table" ? (
+          <div className="weather-table-view">
+            <PredictionsTableClient />
+          </div>
+        ) : (
+          <>
         <ControlsBar
           sort={sort}
           typeFilter={typeFilter}
@@ -180,6 +192,8 @@ export default function WeatherExplorerClient() {
             )}
           </div>
         </div>
+          </>
+        )}
       </div>
 
       <style jsx>{`
@@ -192,6 +206,12 @@ export default function WeatherExplorerClient() {
           display: flex;
           flex-direction: column;
           min-height: 0;
+        }
+        .weather-table-view {
+          flex: 1;
+          min-height: 0;
+          display: flex;
+          flex-direction: column;
         }
         .weather-mobile-tabs {
           display: none;
@@ -260,6 +280,54 @@ export default function WeatherExplorerClient() {
         }
       `}</style>
     </>
+  );
+}
+
+function ViewTabs({ view, onView }: { view: ViewMode; onView: (v: ViewMode) => void }) {
+  const tabs: Array<{ id: ViewMode; label: string; icon: typeof ListIcon }> = [
+    { id: "split", label: "Map + List", icon: MapIcon },
+    { id: "table", label: "Predictions Table", icon: TableIcon },
+  ];
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        marginBottom: "var(--space-sm)",
+        flexShrink: 0,
+      }}
+    >
+      {tabs.map(({ id, label, icon: Icon }) => {
+        const active = view === id;
+        return (
+          <button
+            key={id}
+            onClick={() => onView(id)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "0.45rem 0.9rem",
+              background: active ? "var(--color-y2k-blue)" : "transparent",
+              color: active ? "white" : "var(--text-secondary)",
+              border: `1px solid ${active ? "var(--color-y2k-blue)" : "var(--surface-border)"}`,
+              borderRadius: 20,
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.65rem",
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              fontWeight: 700,
+              cursor: "pointer",
+              transition: "background 0.12s ease, color 0.12s ease, border 0.12s ease",
+            }}
+          >
+            <Icon size={12} />
+            {label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
