@@ -206,8 +206,11 @@ export default function WeatherEventPageClient({ event, matrix }: {
             </div>
 
             <style jsx>{`
+                /* Banner sits flush against the context bar above — both are
+                   spiced-life, so the visual is one continuous red field from
+                   the breadcrumb to the bottom curve. No eggshell gap. */
                 .banner-wrap {
-                    margin-top: clamp(16px, 2.4vw, 28px);
+                    margin-top: 0;
                     max-width: 1180px;
                     margin-left: auto;
                     margin-right: auto;
@@ -455,58 +458,83 @@ function AlertStrip({
         tier === "moderate" ? "Stay aware. Background monitoring." :
                               "Low priority for now.";
 
-    // Single horizontal line on desktop; wraps cleanly on mobile.
-    // Background uses --surface (neutral) so the callout reads as a distinct
-    // section against the spiced-life banner above. Tier color is carried by
-    // the left border + alert-level word only.
+    const strength =
+        tier === "critical" ? "the strongest" :
+        tier === "high"     ? "a strong" :
+        tier === "moderate" ? "a notable" : "a low-pressure";
+
+    // Two-column grid: large warning icon on the left, vertical text stack on
+    // the right. Reads cleanly on mobile (no awkward wrapping) and still
+    // compact on desktop. Tier color carried by left border + alert label.
     return (
         <section
             style={{
                 background: "var(--surface)",
                 border: "1px solid var(--surface-border)",
-                borderLeft: `3px solid ${color}`,
+                borderLeft: `4px solid ${color}`,
                 borderRadius: "var(--radius-md)",
-                padding: "0.85rem 1.1rem",
+                padding: "1rem 1.1rem 1.05rem",
                 marginTop: "clamp(20px, 2.4vw, 32px)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                flexWrap: "wrap",
-                gap: "0.85rem",
+                display: "grid",
+                gridTemplateColumns: "auto minmax(0, 1fr)",
+                columnGap: "0.95rem",
+                rowGap: "0.4rem",
+                alignItems: "start",
             }}
         >
-            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: "1 1 auto" }}>
-                <WarningSign tier={tier} size={20} />
+            {/* Warning icon — bigger, top-aligned to the kicker line */}
+            <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 36,
+                height: 36,
+                background: `color-mix(in oklab, ${color} 14%, transparent)`,
+                borderRadius: 8,
+                gridRow: "1 / 3",
+            }}>
+                <WarningSign tier={tier} size={22} />
+            </div>
+
+            {/* Header row: tier-colored kicker */}
+            <div style={{
+                fontFamily: FONT_MONO,
+                fontSize: 11,
+                letterSpacing: "0.2em",
+                fontWeight: 800,
+                color,
+                textTransform: "uppercase",
+                lineHeight: 1,
+                paddingTop: 2,
+            }}>
+                {alertLevelFor(tier)}
+            </div>
+
+            {/* Body — short, plain, primary text. Limited to ~58ch so it
+                doesn't run too wide on desktop. */}
+            <div style={{
+                fontFamily: FONT_BODY,
+                fontSize: "0.95rem",
+                color: "var(--text-primary)",
+                fontWeight: 500,
+                lineHeight: 1.45,
+                maxWidth: "58ch",
+            }}>
+                {typeWord} event with {strength} astro signature.
+                {" "}
                 <span style={{
                     fontFamily: FONT_MONO,
-                    fontSize: 11,
-                    letterSpacing: "0.2em",
-                    fontWeight: 800,
+                    fontSize: "0.7rem",
+                    letterSpacing: "0.06em",
                     color,
+                    fontWeight: 700,
                     textTransform: "uppercase",
                     whiteSpace: "nowrap",
-                }}>{alertLevelFor(tier)}</span>
-                <span style={{
-                    fontFamily: FONT_BODY,
-                    fontSize: "0.92rem",
-                    color: "var(--text-primary)",
-                    fontWeight: 500,
-                    lineHeight: 1.4,
+                    marginLeft: 4,
                 }}>
-                    {typeWord} event with {tier === "critical" ? "the strongest" : tier === "high" ? "a strong" : "a notable"} astro signature.
+                    → {action}
                 </span>
             </div>
-            <span style={{
-                fontFamily: FONT_MONO,
-                fontSize: "0.68rem",
-                letterSpacing: "0.08em",
-                color,
-                fontWeight: 700,
-                textTransform: "uppercase",
-                whiteSpace: "nowrap",
-            }}>
-                → {action}
-            </span>
         </section>
     );
 }

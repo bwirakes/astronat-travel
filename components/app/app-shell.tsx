@@ -7,6 +7,45 @@ import { AppSidebar, SIDEBAR_EXPANDED_WIDTH, SIDEBAR_PIN_KEY, SIDEBAR_RAIL_WIDTH
 import { AppMobileBar } from "./app-mobile-bar";
 import { PageHeaderProvider, usePageHeader } from "./page-header-context";
 
+/** Pathname-driven palette for the sticky context bar. Mirrors the mobile bar
+ *  logic — /reading/[id] is blue, /weather/[eventId] is spiced-life — so the
+ *  context bar visually connects with the page banner below it. */
+function contextBarTone(pathname: string): {
+  background: string;
+  borderBottom: string;
+  color: string;
+  buttonColorIdle: string;
+  buttonColorHover: string;
+} {
+  const isReadingDetail = /^\/reading\/[^/]+/.test(pathname) && !pathname.startsWith("/reading/new");
+  const isWeatherEvent = /^\/weather\/[^/]+/.test(pathname);
+  if (isReadingDetail) {
+    return {
+      background: "#0456fb",
+      borderBottom: "1px solid #0456fb",
+      color: "#F8F5EC",
+      buttonColorIdle: "color-mix(in oklab, #F8F5EC 78%, transparent)",
+      buttonColorHover: "#F8F5EC",
+    };
+  }
+  if (isWeatherEvent) {
+    return {
+      background: "#E67A7A",
+      borderBottom: "1px solid #D26565",
+      color: "#F8F5EC",
+      buttonColorIdle: "color-mix(in oklab, #F8F5EC 78%, transparent)",
+      buttonColorHover: "#F8F5EC",
+    };
+  }
+  return {
+    background: "var(--bg)",
+    borderBottom: "1px solid var(--surface-border)",
+    color: "var(--text-primary)",
+    buttonColorIdle: "var(--text-tertiary)",
+    buttonColorHover: "var(--text-primary)",
+  };
+}
+
 const MOBILE_QUERY = "(max-width: 767px)";
 const CONTENT_MAX_WIDTH = 1440;
 // Routes that intentionally bypass the (app) chrome (sidebar, top bar, context bar).
@@ -94,12 +133,13 @@ function Shell({ children }: { children: ReactNode }) {
  */
 function DesktopContextBar() {
   const router = useRouter();
+  const pathname = usePathname() || "";
   const { header } = usePageHeader();
   const showBack = Boolean(header.backTo);
   const showTitle = Boolean(header.title);
   const hasContent = showBack || showTitle || Boolean(header.actions);
-  // Always reserve 44px so every page starts at the same vertical offset.
-  // When empty, render a transparent spacer (no border, no background).
+  const tone = contextBarTone(pathname);
+  const isThemed = tone.background !== "var(--bg)";
 
   return (
     <div
@@ -112,8 +152,8 @@ function DesktopContextBar() {
         alignItems: "center",
         gap: "0.75rem",
         padding: "0 1.25rem",
-        background: hasContent ? "var(--bg)" : "transparent",
-        borderBottom: hasContent ? "1px solid var(--surface-border)" : "none",
+        background: hasContent ? tone.background : "transparent",
+        borderBottom: hasContent ? tone.borderBottom : "none",
       }}
     >
       {showBack && (
@@ -125,7 +165,7 @@ function DesktopContextBar() {
             gap: "0.4rem",
             background: "none",
             border: "none",
-            color: "var(--text-tertiary)",
+            color: tone.buttonColorIdle,
             fontFamily: "var(--font-mono)",
             fontSize: "0.65rem",
             letterSpacing: "0.12em",
@@ -134,8 +174,8 @@ function DesktopContextBar() {
             padding: "0.25rem 0.4rem",
             borderRadius: "var(--radius-sm)",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-tertiary)")}
+          onMouseEnter={(e) => (e.currentTarget.style.color = tone.buttonColorHover)}
+          onMouseLeave={(e) => (e.currentTarget.style.color = tone.buttonColorIdle)}
         >
           <ArrowLeft size={14} /> {header.backLabel ?? "Back"}
         </button>
@@ -148,10 +188,11 @@ function DesktopContextBar() {
             fontSize: "0.85rem",
             letterSpacing: "0.06em",
             textTransform: "uppercase",
-            color: "var(--text-primary)",
+            color: tone.color,
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
+            opacity: isThemed ? 0.9 : 1,
           }}
         >
           {header.title}
