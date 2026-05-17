@@ -14,6 +14,9 @@ import { triggersForWindow } from "@/app/lib/geodetic/weather-triggers";
 import type { GeodeticMatrixResponse, GeodeticWeatherEvent } from "@/app/lib/geodetic/weather-types";
 import { weatherEventToAtlasPin } from "../weather-map-pins";
 
+const FONT_PRIMARY = "var(--font-primary, serif)";
+const FONT_MONO = "var(--font-mono, monospace)";
+
 export default function WeatherEventPageClient({ event, matrix }: {
     event: GeodeticWeatherEvent;
     matrix: GeodeticMatrixResponse;
@@ -24,9 +27,14 @@ export default function WeatherEventPageClient({ event, matrix }: {
     return (
         <>
             <PageHeader title={event.title} backTo="/weather" backLabel="Weather" />
-            <div className="min-h-screen w-full bg-[var(--bg)] text-[var(--text-primary)]">
-                <main style={{ maxWidth: 1120, margin: "0 auto", padding: "clamp(16px, 3vw, 32px)" }}>
-                    <Hero event={event} />
+            <div className="weather-event-shell min-h-screen w-full bg-[var(--bg)] text-[var(--text-primary)]">
+                <main style={{ maxWidth: 1180, margin: "0 auto", padding: "0 clamp(24px, 5vw, 72px)" }}>
+                    <div className="reading-hero-wrap mx-auto" style={{ marginTop: "clamp(20px, 3vw, 36px)" }}>
+                        <WeatherHeroBanner event={event} />
+                    </div>
+                    <div style={{ marginTop: "clamp(24px, 3vw, 40px)" }}>
+                        <HeroMetaStrip event={event} />
+                    </div>
                     <MapSection event={event} />
                     <section style={section}>
                         <div style={kicker}>The read</div>
@@ -46,44 +54,150 @@ export default function WeatherEventPageClient({ event, matrix }: {
                     </details>
                 </main>
             </div>
+            <style jsx global>{`
+                /* Reading-hero parity: the rounded shape at the bottom of the
+                   banner emerges into this token. Match the reading shell so
+                   the banner reads identically across the two pages. */
+                .weather-event-shell {
+                    --reading-tabs-surface: var(--bg);
+                }
+                [data-theme="light"] .weather-event-shell {
+                    --reading-tabs-surface: var(--color-eggshell);
+                }
+            `}</style>
         </>
     );
 }
 
-function Hero({ event }: { event: GeodeticWeatherEvent }) {
+/**
+ * WeatherHeroBanner — mirrors the /reading hero banner pattern (blue gradient,
+ * decorative starburst, eggshell PSS pill, verdict pill below). Adapted for
+ * weather events: title = event title, pill subscript = "/1.00" since PSS is
+ * a 0–1 score (not 0–100 like reading goal scores).
+ */
+function WeatherHeroBanner({ event }: { event: GeodeticWeatherEvent }) {
+    const tier = event.tier;
+    const tierColor = tierAccent(tier);
+    const typeLabel = TYPE_TOKEN[event.type].label;
+
     return (
-        <section style={{ padding: "clamp(24px, 5vw, 60px) 0", borderBottom: "1px solid var(--surface-border)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: "1rem", flexWrap: "wrap" }}>
-                <div>
-                    <div style={pillRow}>
-                        <Tag>{event.date}</Tag>
-                        <Tag color={TYPE_TOKEN[event.type].accent}>{TYPE_TOKEN[event.type].label}</Tag>
-                        <Tag color={tierAccent(event.tier)}>{tierLabel(event.tier)}</Tag>
-                    </div>
-                    <h1 style={{
-                        fontFamily: "var(--font-primary)",
-                        fontSize: "clamp(2.8rem, 7vw, 6rem)",
-                        lineHeight: 0.86,
-                        letterSpacing: "-0.04em",
-                        textTransform: "uppercase",
-                        margin: "1rem 0 0",
-                        maxWidth: 920,
-                    }}>
-                        {event.title}
-                    </h1>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                    <div style={{ ...kicker, color: tierAccent(event.tier) }}>PSS</div>
-                    <div style={{ fontFamily: "var(--font-primary)", fontSize: "4rem", lineHeight: 0.9 }}>{event.pss.toFixed(2)}</div>
+        <div
+            className="reading-hero-banner relative overflow-hidden rounded-t-[8px] rounded-b-0 px-[clamp(18px,4vw,44px)] py-[clamp(22px,3.8vw,42px)]"
+            style={{
+                minHeight: "clamp(186px, 20vw, 244px)",
+                background: "linear-gradient(180deg, #0456fb 0%, #0a63ff 100%)",
+            }}
+        >
+            {/* Decorative starburst — mirrors reading banner */}
+            <svg
+                aria-hidden
+                viewBox="0 0 64 64"
+                className="absolute right-[clamp(156px,14vw,218px)] top-[clamp(34px,4.4vw,58px)] h-[clamp(20px,2.4vw,34px)] w-[clamp(20px,2.4vw,34px)] max-sm:left-[48px] max-sm:right-auto max-sm:top-[170px] max-sm:h-[22px] max-sm:w-[22px]"
+                style={{ color: "#CAF1F0" }}
+            >
+                <path d="M32 0 L38 25 L64 32 L38 39 L32 64 L26 39 L0 32 L26 25 Z" fill="currentColor" />
+            </svg>
+
+            {/* Bottom rounded shape — matches reading banner */}
+            <div
+                aria-hidden
+                className="absolute inset-x-[-18%] bottom-[-47%] h-[64%] rounded-[50%]"
+                style={{ background: "var(--reading-tabs-surface)" }}
+            />
+
+            {/* Tier accent disc + light cutout (mirrors planet/sun motif from reading) */}
+            <div
+                aria-hidden
+                className="absolute right-[3.4%] bottom-[17%] h-[clamp(26px,3.4vw,44px)] w-[clamp(26px,3.4vw,44px)] rounded-full"
+                style={{ background: `color-mix(in oklab, ${tierColor} 84%, #1B1B1B)` }}
+            >
+                <span
+                    className="absolute -right-[18%] -top-[10%] h-[70%] w-[70%] rounded-full"
+                    style={{ background: "var(--reading-tabs-surface)" }}
+                />
+            </div>
+
+            {/* PSS pill (top-right) */}
+            <div className="absolute right-[clamp(18px,4vw,44px)] top-[clamp(18px,3vw,36px)] z-20 flex flex-col items-end gap-[10px]">
+                <span
+                    className="inline-flex items-baseline rounded-full px-[clamp(16px,2vw,26px)] py-[clamp(8px,1vw,12px)] shadow-sm"
+                    style={{
+                        background: "#F8F5EC",
+                        color: "#1B1B1B",
+                        fontFamily: FONT_PRIMARY,
+                    }}
+                >
+                    <span className="text-[clamp(38px,5.4vw,72px)] leading-none tabular-nums">
+                        {event.pss.toFixed(2)}
+                    </span>
+                    <span
+                        className="ml-1.5 text-[clamp(11px,1vw,14px)]"
+                        style={{ fontFamily: FONT_MONO, color: "#8a8983", letterSpacing: "0.08em" }}
+                    >
+                        PSS
+                    </span>
+                </span>
+                <span
+                    className="inline-flex rounded-full px-[14px] py-[6px] text-[10px] uppercase"
+                    style={{
+                        background: "#F8F5EC",
+                        color: "#0456fb",
+                        fontFamily: FONT_MONO,
+                        letterSpacing: "0.18em",
+                        fontWeight: 800,
+                    }}
+                >
+                    {tierLabel(tier)}
+                </span>
+            </div>
+
+            {/* Title + meta on left */}
+            <div className="relative z-10 grid min-h-[inherit] grid-cols-1 items-center gap-[18px]">
+                <div className="flex min-w-0 flex-col justify-start gap-[10px] self-start pt-[clamp(38px,4.8vw,62px)] max-sm:pt-[28px]">
+                    <span
+                        className="inline-flex items-baseline leading-[0.86]"
+                        style={{
+                            color: "#F8F5EC",
+                            fontFamily: FONT_PRIMARY,
+                            fontSize: "clamp(34px, 5.4vw, 68px)",
+                            letterSpacing: "-0.02em",
+                            textShadow: "0 2px 0 rgba(0, 0, 0, 0.08)",
+                        }}
+                    >
+                        <span className="min-w-0">{event.title}</span>
+                    </span>
+                    <span
+                        className="inline-flex items-center gap-2"
+                        style={{
+                            color: "color-mix(in oklab, #F8F5EC 82%, transparent)",
+                            fontFamily: FONT_MONO,
+                            fontSize: "11px",
+                            letterSpacing: "0.18em",
+                            textTransform: "uppercase",
+                        }}
+                    >
+                        <span>{event.date}</span>
+                        <span aria-hidden>·</span>
+                        <span>{typeLabel}</span>
+                    </span>
                 </div>
             </div>
-            <PssBar event={event} />
-            <div style={{ ...pillRow, marginTop: "1rem" }}>
-                {event.source && <Tag>Source: {event.source}</Tag>}
-                <Tag>{event.criteria.met}/{event.criteria.total} criteria</Tag>
-                {event.sourceNote && <Tag>{event.sourceNote}</Tag>}
-            </div>
-        </section>
+        </div>
+    );
+}
+
+/**
+ * Strip directly under the banner — surfaces the "soft" tags that used to sit
+ * inside the old hero (criteria count, source, sourceNote) so they remain
+ * accessible without crowding the banner.
+ */
+function HeroMetaStrip({ event }: { event: GeodeticWeatherEvent }) {
+    return (
+        <div style={pillRow}>
+            <Tag>{event.criteria.met}/{event.criteria.total} criteria</Tag>
+            {event.source ? <Tag>Source: {event.source}</Tag> : null}
+            {event.sourceNote ? <Tag>{event.sourceNote}</Tag> : null}
+        </div>
     );
 }
 
@@ -165,14 +279,6 @@ function MethodBlock({ matrix }: { matrix: GeodeticMatrixResponse }) {
             <Link href="/weather" style={{ color: "var(--color-y2k-blue)", fontFamily: "var(--font-mono)", fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.12em" }}>
                 Back to map
             </Link>
-        </div>
-    );
-}
-
-function PssBar({ event }: { event: GeodeticWeatherEvent }) {
-    return (
-        <div style={{ marginTop: "1rem", height: 10, background: "var(--surface)", border: "1px solid var(--surface-border)" }}>
-            <div style={{ width: `${event.pss * 100}%`, height: "100%", background: tierAccent(event.tier) }} />
         </div>
     );
 }
