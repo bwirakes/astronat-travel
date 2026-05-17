@@ -108,10 +108,36 @@ export default function WeatherReadingFlow() {
     const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
     const addCity = (s: { label: string; lat: number; lon: number }) => {
-        if (cities.find((c) => c.label === s.label)) return;
-        if (cities.length >= 3) return;
+        setErrorMsg("");
+        if (cities.find((c) => c.label === s.label)) {
+            setErrorMsg("That city is already in your comparison.");
+            return;
+        }
+        if (cities.length >= 3) {
+            setErrorMsg("Remove one city before adding another place.");
+            return;
+        }
         setCities([...cities, { label: s.label, lat: s.lat, lon: s.lon }]);
         setCurrentCityInput("");
+    };
+
+    const resolveAndAddTypedCity = async (city: string) => {
+        const typed = city.trim();
+        if (!typed) return;
+        setErrorMsg("");
+        try {
+            const res = await fetch(`/api/geocode?city=${encodeURIComponent(typed)}`);
+            const geo = await res.json().catch(() => null);
+            const rawLat = geo?.lat ?? geo?.latitude;
+            const rawLon = geo?.lon ?? geo?.longitude;
+            if (!res.ok || rawLat == null || rawLon == null) {
+                setErrorMsg("Could not find coordinates for that city. Check spelling or select a suggestion.");
+                return;
+            }
+            addCity({ label: geo.label || geo.address || typed, lat: Number.parseFloat(String(rawLat)), lon: Number.parseFloat(String(rawLon)) });
+        } catch {
+            setErrorMsg("City lookup failed. Retry, or select a city suggestion.");
+        }
     };
 
     const removeCity = (label: string) => {
@@ -145,15 +171,16 @@ export default function WeatherReadingFlow() {
                     },
                 }),
             });
-            const data = await res.json();
+            const data = await res.json().catch(() => ({}));
             if (data.readingId) {
                 router.push(`/reading/${data.readingId}?type=weather`);
             } else {
-                setErrorMsg(data.message ? `${data.error}: ${data.message}` : data.error || "Unknown error.");
+                setErrorMsg(data.message ? `${data.error}: ${data.message}` : data.error || `Forecast generation failed with status ${res.status}. Please try again.`);
                 setLoading(false);
             }
-        } catch (err: any) {
-            setErrorMsg(err.message || "Failed to reach generation service.");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Failed to reach generation service.";
+            setErrorMsg(message);
             setLoading(false);
         }
     };
@@ -202,20 +229,20 @@ export default function WeatherReadingFlow() {
                                     What do you want <span style={{ color: "var(--color-y2k-blue)" }}>to know?</span>
                                 </h2>
                                 <p style={{ color: "var(--text-secondary)", marginBottom: "1.25rem", fontSize: "0.85rem" }}>
-                                    Two separate readings share one engine.
+                                    Choose whether you want personal travel guidance or a location forecast.
                                 </p>
 
                                 <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginBottom: "1.5rem" }}>
                                     {[
                                         {
                                             id: "personal" as const,
-                                            title: "What this place does to me",
-                                            sub: "Travel timing. Chart-ruler relocation, best dates, personal lines. Needs your birth chart.",
+                                            title: "Plan my best dates there",
+                                            sub: "See when a place supports rest, connection, launches, or repair for you personally.",
                                         },
                                         {
                                             id: "mundane" as const,
-                                            title: "What the sky is doing here",
-                                            sub: "Earth-weather forecast. Floods, fires, seismic, atmospheric pressure. No personal chart required.",
+                                            title: "Watch conditions in a place",
+                                            sub: "Surface pressure windows for floods, fires, seismic, atmospheric, and civic events.",
                                         },
                                     ].map((opt) => {
                                         const active = intent === opt.id;
@@ -292,6 +319,7 @@ export default function WeatherReadingFlow() {
                                         value={currentCityInput}
                                         onChange={setCurrentCityInput}
                                         onSelect={addCity}
+                                        onUseTypedCity={(val) => void resolveAndAddTypedCity(val)}
                                         placeholder="e.g. Valencia, Spain"
                                     />
                                 )}
@@ -340,6 +368,12 @@ export default function WeatherReadingFlow() {
                                     </p>
                                 )}
 
+                                {errorMsg && screen === 1 && (
+                                    <div style={{ padding: "0.75rem", marginTop: "0.9rem", borderRadius: "var(--radius-sm)", backgroundColor: "rgba(255, 60, 60, 0.1)", border: "1px solid rgba(255, 60, 60, 0.3)", color: "var(--color-spiced-life)", fontSize: "0.85rem", textAlign: "center" }}>
+                                        {errorMsg}
+                                    </div>
+                                )}
+
                                 <div style={{ display: "flex", gap: "0.6rem", marginTop: "1.5rem" }}>
                                     <button className="btn btn-secondary" onClick={back} style={{ padding: "0.75rem 1.25rem" }}>
                                         <ArrowLeft size={14} /> Back
@@ -376,7 +410,7 @@ export default function WeatherReadingFlow() {
                                     For how many <span style={{ color: "var(--color-y2k-blue)" }}>days ahead?</span>
                                 </h2>
                                 <p style={{ color: "var(--text-secondary)", marginBottom: "1.25rem", fontSize: "0.85rem" }}>
-                                    Pick the forecast window. The engine snapshots the sky once per day.
+                                    Choose how far ahead you want useful timing signals.
                                 </p>
 
                                 <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginBottom: "1rem" }}>
@@ -450,7 +484,7 @@ export default function WeatherReadingFlow() {
                                     Anything <span style={{ color: "var(--gold)" }}>specific</span> to watch for?
                                 </h2>
                                 <p style={{ color: "var(--text-secondary)", marginBottom: "1.25rem", fontSize: "0.85rem" }}>
-                                    Optional. Filters which layers get surfaced in the reading — the engine still computes everything.
+                                    Optional. Pick the outcome you care about most so the reading leads with it.
                                 </p>
 
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "1.5rem" }}>

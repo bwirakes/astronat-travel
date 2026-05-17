@@ -21,7 +21,7 @@ export default function ReadingCreditPill({
   if (hasSubscription) {
     return (
       <AstroPill variant="gold" size="sm" shape="pill">
-        ♄&nbsp;&nbsp;Unlimited readings
+        ♄&nbsp;&nbsp;Explorer unlimited
       </AstroPill>
     );
   }
@@ -29,7 +29,7 @@ export default function ReadingCreditPill({
   if (!freeUsed) {
     return (
       <AstroPill variant="accent" size="sm" shape="pill">
-        ✦&nbsp;&nbsp;1 free reading
+        ✦&nbsp;&nbsp;1 free reading left
       </AstroPill>
     );
   }
@@ -50,7 +50,7 @@ export default function ReadingCreditPill({
           textDecoration: "none",
         }}
       >
-        Unlock — $19.99/mo &rarr;
+        Compare tiers &rarr;
       </Link>
     </span>
   );

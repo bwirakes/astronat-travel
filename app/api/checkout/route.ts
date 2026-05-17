@@ -8,6 +8,47 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_fallback', {
   apiVersion: '2026-03-25.dahlia', 
 })
 
+type CheckoutOffer = 'single' | 'monthly' | 'lifetime'
+
+const MONTHLY_PRICE_FALLBACK = 'price_1TGqfnDCYzkth9F1V1O7ov0d'
+
+const CHECKOUT_OFFERS: Record<CheckoutOffer, { mode: 'payment' | 'subscription'; priceId?: string }> = {
+  single: {
+    mode: 'payment',
+    priceId: process.env.STRIPE_SINGLE_PRICE_ID,
+  },
+  monthly: {
+    mode: 'subscription',
+    priceId: process.env.STRIPE_MONTHLY_PRICE_ID || MONTHLY_PRICE_FALLBACK,
+  },
+  lifetime: {
+    mode: 'payment',
+    priceId: process.env.STRIPE_LIFETIME_PRICE_ID,
+  },
+}
+
+function parseCheckoutOffer(value: unknown): CheckoutOffer | null {
+  if (value === undefined) return 'monthly'
+  return value === 'single' || value === 'lifetime' || value === 'monthly' ? value : null
+}
+
+function validateReturnTo(value: unknown): string | null {
+  if (typeof value !== 'string' || value.length === 0) return null
+  if (!value.startsWith('/') || value.startsWith('//') || value.includes('\\')) return null
+
+  try {
+    const parsed = new URL(value, 'https://astronat.local')
+    if (parsed.origin !== 'https://astronat.local') return null
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`
+  } catch {
+    return null
+  }
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
 export async function POST(req: Request) {
   try {
     const supabase = await createClient()
@@ -33,8 +74,8 @@ export async function POST(req: Request) {
         stripeCustomerId = profile?.stripe_customer_id ?? null
         firstName = profile?.first_name ?? null
       }
-    } catch (e: any) {
-      console.warn('[checkout] Profile fetch threw (non-fatal):', e.message)
+    } catch (e: unknown) {
+      console.warn('[checkout] Profile fetch threw (non-fatal):', getErrorMessage(e))
     }
 
     // If they don't have one, create a Stripe customer
@@ -52,8 +93,8 @@ export async function POST(req: Request) {
         await adminClient
           .from('profiles')
           .upsert({ id: user.id, stripe_customer_id: stripeCustomerId })
-      } catch (e: any) {
-        console.warn('[checkout] Could not persist stripe_customer_id (non-fatal):', e.message)
+      } catch (e: unknown) {
+        console.warn('[checkout] Could not persist stripe_customer_id (non-fatal):', getErrorMessage(e))
       }
     }
 
@@ -75,34 +116,63 @@ export async function POST(req: Request) {
 
     console.log('[checkout] Derived baseUrl:', baseUrl, '| APP_URL:', process.env.NEXT_PUBLIC_APP_URL, '| VERCEL_URL:', process.env.VERCEL_URL, '| origin:', req.headers.get('origin'))
 
-    // Optional body: { returnTo?: string } — where to send the user after subscribing
+    // Optional body: { offer?: 'single' | 'monthly' | 'lifetime', returnTo?: string }
     let returnTo: string | null = null
+    let offer: CheckoutOffer = 'monthly'
     try {
       const body = await req.clone().json().catch(() => ({}))
-      if (typeof body?.returnTo === 'string' && body.returnTo.startsWith('/')) {
-        returnTo = body.returnTo
+      const parsedOffer = parseCheckoutOffer(body?.offer)
+      if (!parsedOffer) {
+        return NextResponse.json({ error: 'Invalid checkout offer' }, { status: 400 })
+      }
+      offer = parsedOffer
+      if (body?.returnTo !== undefined) {
+        returnTo = validateReturnTo(body.returnTo)
+        if (!returnTo) {
+          return NextResponse.json({ error: 'Invalid returnTo path' }, { status: 400 })
+        }
       }
     } catch {}
+
+    const checkoutOffer = CHECKOUT_OFFERS[offer]
+    if (!checkoutOffer.priceId) {
+      console.error(`[checkout] Missing Stripe price ID for ${offer} offer`)
+      return NextResponse.json({ error: 'Checkout is not configured for this offer.' }, { status: 500 })
+    }
 
     const successUrl = returnTo
       ? `${baseUrl}/api/checkout/success?session_id={CHECKOUT_SESSION_ID}&returnTo=${encodeURIComponent(returnTo)}`
       : `${baseUrl}/api/checkout/success?session_id={CHECKOUT_SESSION_ID}`
     const cancelUrl = returnTo ? `${baseUrl}${returnTo}` : `${baseUrl}/dashboard`
 
-    // Create a Checkout Session for Subscription
+    // Create a Checkout Session for the selected offer.
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       customer: stripeCustomerId,
       line_items: [
         {
-          price: 'price_1TGqfnDCYzkth9F1V1O7ov0d', // $19.99/mo Monthly Subscription
+          price: checkoutOffer.priceId,
           quantity: 1,
         },
       ],
-      mode: 'subscription',
+      mode: checkoutOffer.mode,
       success_url: successUrl,
       cancel_url: cancelUrl,
       client_reference_id: user.id,
+      metadata: {
+        offer,
+        price_id: checkoutOffer.priceId,
+        supabase_user_id: user.id,
+      },
+      subscription_data: checkoutOffer.mode === 'subscription'
+        ? {
+            metadata: {
+              offer,
+              price_id: checkoutOffer.priceId,
+              supabase_user_id: user.id,
+            },
+          }
+        : undefined,
     })
 
     await capturePostHogEvent({
@@ -111,14 +181,16 @@ export async function POST(req: Request) {
       properties: {
         stripe_session_id: session.id,
         stripe_customer_id: stripeCustomerId,
+        offer,
         return_to: returnTo,
       },
     })
 
     return NextResponse.json({ url: session.url })
 
-  } catch (error: any) {
-    console.error('[checkout] Fatal error:', error.message, error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error: unknown) {
+    const message = getErrorMessage(error)
+    console.error('[checkout] Fatal error:', message, error)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

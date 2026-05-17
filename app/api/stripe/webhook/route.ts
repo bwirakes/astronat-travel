@@ -10,6 +10,61 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_fallback', {
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
+type CheckoutOffer = 'single' | 'monthly' | 'lifetime'
+
+type SubscriptionPeriodSnapshot = Stripe.Subscription & {
+  current_period_end?: number | null
+  current_period_start?: number | null
+  items?: {
+    data?: Array<{
+      current_period_end?: number | null
+      current_period_start?: number | null
+      price?: { id?: string | null } | null
+    }>
+  }
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+function getCheckoutOffer(session: Stripe.Checkout.Session): CheckoutOffer {
+  const offer = session.metadata?.offer
+  if (offer === 'single' || offer === 'monthly' || offer === 'lifetime') return offer
+  return session.mode === 'subscription' ? 'monthly' : 'single'
+}
+
+function productForOffer(offer: CheckoutOffer): string {
+  if (offer === 'single') return 'single_reading'
+  if (offer === 'lifetime') return 'lifetime_access'
+  return 'subscription_pro'
+}
+
+function getStripeCustomerId(session: Stripe.Checkout.Session): string | null {
+  return typeof session.customer === 'string'
+    ? session.customer
+    : session.customer?.id ?? null
+}
+
+async function recordCheckoutPurchase(
+  supabase: ReturnType<typeof createAdminClient>,
+  userId: string,
+  session: Stripe.Checkout.Session,
+  offer: CheckoutOffer,
+) {
+  const { error } = await supabase
+    .from('purchases')
+    .upsert({
+      user_id: userId,
+      stripe_session_id: session.id,
+      product: productForOffer(offer),
+    }, { onConflict: 'stripe_session_id' })
+
+  if (error) {
+    console.error('[webhook] Error recording purchase:', error.message)
+  }
+}
+
 // ─── Helper: update profile subscription fields ───────────────────────────────
 async function syncSubscriptionToProfile(
   supabase: ReturnType<typeof createAdminClient>,
@@ -47,8 +102,8 @@ async function syncSubscriptionToProfile(
   const isActive = status === 'active' || status === 'trialing'
 
   // In Stripe API >= 2025, current_period_end is on each subscription item.
-  // We read it from the first item if available; cast to any to stay forward-compat.
-  const sub = subscription as any
+  // We read it from the first item if available to stay forward-compatible.
+  const sub = subscription as SubscriptionPeriodSnapshot
   const periodEnd: number | null =
     sub.current_period_end ??
     sub.items?.data?.[0]?.current_period_end ??
@@ -101,6 +156,48 @@ async function syncSubscriptionToProfile(
   return resolvedUserId
 }
 
+async function grantLifetimeAccess(
+  supabase: ReturnType<typeof createAdminClient>,
+  userId: string,
+  session: Stripe.Checkout.Session,
+) {
+  const now = new Date().toISOString()
+  const lifetimeId = `lifetime:${session.id}`
+
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({
+      is_subscribed: true,
+      subscription_status: 'active',
+      subscription_id: lifetimeId,
+      subscription_ends_at: null,
+    })
+    .eq('id', userId)
+
+  if (profileError) {
+    console.error('[webhook] Failed to grant lifetime profile access:', profileError.message)
+  }
+
+  const { error: subError } = await supabase
+    .from('subscriptions')
+    .upsert({
+      user_id: userId,
+      stripe_customer_id: getStripeCustomerId(session),
+      stripe_subscription_id: lifetimeId,
+      status: 'active',
+      current_period_start: now,
+      current_period_end: null,
+      plan_id: session.metadata?.price_id ?? null,
+    }, { onConflict: 'stripe_subscription_id' })
+
+  if (subError) {
+    console.error('[webhook] Failed to grant lifetime subscription access:', subError.message)
+  }
+
+  revalidateTag(`profile-${userId}`, 'max')
+  revalidateTag(`access-${userId}`, 'max')
+}
+
 // ─── Helper: fire welcome email via internal route ────────────────────────────
 async function sendWelcomeEmail(supabase: ReturnType<typeof createAdminClient>, userId: string) {
   try {
@@ -136,8 +233,8 @@ async function sendWelcomeEmail(supabase: ReturnType<typeof createAdminClient>, 
     } else {
       console.log('[webhook] Welcome email dispatched for', email)
     }
-  } catch (err: any) {
-    console.error('[webhook] sendWelcomeEmail threw:', err.message)
+  } catch (err: unknown) {
+    console.error('[webhook] sendWelcomeEmail threw:', getErrorMessage(err))
   }
 }
 
@@ -149,9 +246,10 @@ export async function POST(req: Request) {
 
   try {
     event = stripe.webhooks.constructEvent(body, sig, endpointSecret)
-  } catch (err: any) {
-    console.error(`Webhook signature verification failed: ${err.message}`)
-    return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 })
+  } catch (err: unknown) {
+    const message = getErrorMessage(err)
+    console.error(`Webhook signature verification failed: ${message}`)
+    return NextResponse.json({ error: `Webhook Error: ${message}` }, { status: 400 })
   }
 
   const supabase = createAdminClient()
@@ -162,21 +260,14 @@ export async function POST(req: Request) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session
       const userId = session.client_reference_id
+      const offer = getCheckoutOffer(session)
 
       if (!userId) {
         console.warn('[webhook] No client_reference_id found in session', session.id)
         break
       }
 
-      // Record the purchase
-      const { error: purchaseError } = await supabase.from('purchases').insert({
-        user_id: userId,
-        stripe_session_id: session.id,
-        product: 'subscription_pro',
-      })
-      if (purchaseError) {
-        console.error('[webhook] Error inserting purchase:', purchaseError.message)
-      }
+      await recordCheckoutPurchase(supabase, userId, session, offer)
 
       // If there's a subscription on the session, sync it immediately
       if (session.subscription) {
@@ -196,17 +287,24 @@ export async function POST(req: Request) {
           revalidateTag(`profile-${userId}`, 'max')
           revalidateTag(`access-${userId}`, 'max')
         }
+      } else if (offer === 'lifetime' && session.payment_status === 'paid') {
+        await grantLifetimeAccess(supabase, userId, session)
+      } else if (offer === 'single' && session.payment_status === 'paid') {
+        revalidateTag(`access-${userId}`, 'max')
       }
 
-      // Send welcome email — only after subscription is confirmed
-      await sendWelcomeEmail(supabase, userId)
+      // Send welcome email only for unlimited access offers.
+      if (offer !== 'single') {
+        await sendWelcomeEmail(supabase, userId)
+      }
 
       await capturePostHogEvent({
         distinctId: userId,
-        event: 'subscription_activated',
+        event: offer === 'single' ? 'single_reading_purchased' : 'subscription_activated',
         properties: {
           stripe_session_id: session.id,
-          product: 'subscription_pro',
+          offer,
+          product: productForOffer(offer),
         },
       })
 

@@ -11,9 +11,9 @@ import { useOnboardingStore } from "@/lib/store/onboardingStore";
 import { Suspense } from "react";
 import { createClient } from '@/lib/supabase/client';
 import posthog from "posthog-js";
-import coupleHero from "@/public/couples_flow_hero.png";
 
 const SCREENS = ["Sign Up", "Birth", "Aha"];
+const COUPLE_HERO_SRC = "/couples_flow_hero.png";
 
 const SIGN_GLYPHS: Record<string, string> = {
   Aries: "♈", Taurus: "♉", Gemini: "♊", Cancer: "♋", Leo: "♌", Virgo: "♍",
@@ -56,6 +56,8 @@ function FlowPageInner() {
   const [dir, setDir] = useState(1);
   const [loadingChart, setLoadingChart] = useState(false);
   const [finishLoading, setFinishLoading] = useState(false);
+  const [chartError, setChartError] = useState("");
+  const [finishError, setFinishError] = useState("");
 
   // Auth State
   const [email, setEmail] = useState("");
@@ -74,10 +76,12 @@ function FlowPageInner() {
   }, [searchParams]);
 
   const handleGoogleSignup = async () => {
+    setAuthLoading(true);
+    setAuthMessage("");
     posthog.capture("user_signed_up", { method: "google" });
     localStorage.setItem('onboardingData', JSON.stringify(store));
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { 
         redirectTo: `${origin}/auth/callback?next=${encodeURIComponent('/flow?step=1')}`,
@@ -87,6 +91,10 @@ function FlowPageInner() {
         }
       },
     });
+    if (error) {
+      setAuthMessage(`Google sign-in failed: ${error.message}`);
+      setAuthLoading(false);
+    }
   };
 
   const handleMagicLink = async (e: React.FormEvent) => {
@@ -120,62 +128,110 @@ function FlowPageInner() {
     return getSunSign(d.getMonth() + 1, d.getDate());
   })() : null;
 
+  const normalizedBirthTime = () => {
+    const time = store.birthTime || "12:00";
+    return time.length === 5 ? `${time}:00` : time;
+  };
+
+  const resolveBirthCoords = async () => {
+    if (store.birthLat != null && store.birthLon != null) {
+      return { lat: store.birthLat, lon: store.birthLon };
+    }
+
+    const geoRes = await fetch(`/api/geocode?city=${encodeURIComponent(store.birthCity)}`);
+    const geo = await geoRes.json().catch(() => null);
+    const rawLat = geo?.lat ?? geo?.latitude;
+    const rawLon = geo?.lon ?? geo?.longitude;
+    if (!geoRes.ok || rawLat == null || rawLon == null) {
+      throw new Error("Choose a city suggestion or check the spelling so we can place your chart accurately.");
+    }
+
+    const lat = Number.parseFloat(String(rawLat));
+    const lon = Number.parseFloat(String(rawLon));
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      throw new Error("We found that city, but its coordinates looked invalid. Try selecting a city suggestion.");
+    }
+
+    store.setBirthCoords(lat, lon);
+    return { lat, lon };
+  };
+
+  const saveProfileAndGenerateChart = async () => {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error("Please sign in again before calculating your chart.");
+    }
+
+    const coords = await resolveBirthCoords();
+    const profilePayload = {
+      id: user.id,
+      first_name: store.firstName || null,
+      birth_date: store.birthDate || null,
+      birth_time: normalizedBirthTime(),
+      birth_time_known: store.birthTimeKnown,
+      birth_city: store.birthCity || null,
+      birth_lat: coords.lat,
+      birth_lon: coords.lon,
+    };
+
+    const { error: profileError } = await supabase.from('profiles').upsert(profilePayload);
+    if (profileError) {
+      throw new Error(`We could not save your birth profile: ${profileError.message}`);
+    }
+
+    const natalRes = await fetch("/api/natal?refresh=1", { cache: "no-store" });
+    const natalData = await natalRes.json().catch(() => null);
+    if (!natalRes.ok) {
+      throw new Error(natalData?.error ? `Chart calculation failed: ${natalData.error}` : "Chart calculation failed. Please try again.");
+    }
+
+    posthog.identify(user.id, {
+      email: user.email,
+      first_name: store.firstName || undefined,
+      birth_city: store.birthCity || undefined,
+    });
+
+    return user;
+  };
+
   const go = (n: number) => { setDir(n > screen ? 1 : -1); setScreen(n); };
   const next = () => go(Math.min(screen + 1, SCREENS.length - 1));
   const back = () => go(Math.max(screen - 1, 0));
+  const clearBirthCoords = () => useOnboardingStore.setState({ birthLat: undefined, birthLon: undefined });
 
   const handleChartSubmit = async () => {
     setLoadingChart(true);
+    setChartError("");
     try {
-      await fetch("/api/natal", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dob: store.birthDate, time: store.birthTime, birthplace: store.birthCity }),
-      });
-      // Backstop geocode for users who typed a city without picking a suggestion.
-      if (store.birthLat == null || store.birthLon == null) {
-        fetch(`/api/geocode?city=${encodeURIComponent(store.birthCity)}`)
-          .then(r => r.json())
-          .then(geo => { if (geo?.lat) store.setBirthCoords(parseFloat(geo.lat), parseFloat(geo.lon)); })
-          .catch(() => {});
-      }
-    } catch {
-      // Allow proceeding even if mock fails
+      await saveProfileAndGenerateChart();
+      next();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Something went wrong while preparing your chart.";
+      setChartError(message);
+      posthog.capture("onboarding_chart_failed", { error: message });
+    } finally {
+      setLoadingChart(false);
     }
-    setLoadingChart(false);
-    next();
   };
 
   const handleFinishOnboarding = async () => {
     setFinishLoading(true);
+    setFinishError("");
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        posthog.identify(user.id, {
-          email: user.email,
-          first_name: store.firstName || undefined,
-          birth_city: store.birthCity || undefined,
-        });
-        await supabase.from('profiles').upsert({
-          id: user.id,
-          first_name: store.firstName || null,
-          birth_date: store.birthDate || null,
-          birth_time: store.birthTime || '12:00:00',
-          birth_time_known: store.birthTimeKnown,
-          birth_city: store.birthCity || null,
-          birth_lat: store.birthLat || null,
-          birth_lon: store.birthLon || null,
-        });
-        await fetch("/api/natal?refresh=1", { cache: "no-store" }).catch(() => {});
-        posthog.capture("onboarding_completed", {
-          birth_time_known: store.birthTimeKnown,
-          has_birth_city: !!store.birthCity,
-        });
-      }
+      await saveProfileAndGenerateChart();
+      posthog.capture("onboarding_completed", {
+        birth_time_known: store.birthTimeKnown,
+        has_birth_city: !!store.birthCity,
+      });
+      window.location.href = "/dashboard";
     } catch (err) {
+      const message = err instanceof Error ? err.message : "We could not finish onboarding. Please try again.";
       console.error("Failed to sync profile:", err);
+      setFinishError(message);
+      posthog.capture("onboarding_finish_failed", { error: message });
+    } finally {
+      setFinishLoading(false);
     }
-    window.location.href = "/dashboard";
   };
 
   return (
@@ -241,7 +297,7 @@ function FlowPageInner() {
                     border: "1px solid var(--surface-border)",
                   }}>
                     <Image
-                      src={coupleHero}
+                      src={COUPLE_HERO_SRC}
                       alt="Astronat couple"
                       fill
                       style={{ objectFit: "cover", objectPosition: "center top" }}
@@ -305,11 +361,11 @@ function FlowPageInner() {
                   </p>
 
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "1rem" }}>
-                    <button onClick={handleGoogleSignup} className="btn" style={{
+                    <button onClick={handleGoogleSignup} disabled={authLoading} className="btn" style={{
                       display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem",
                       padding: "0.85rem", border: "1px solid var(--surface-border)", borderRadius: "var(--shape-asymmetric-md)",
                       background: "var(--surface)", color: "var(--text-primary)",
-                      fontFamily: "var(--font-body)", fontSize: "0.85rem", cursor: "pointer", fontWeight: 600,
+                      fontFamily: "var(--font-body)", fontSize: "0.85rem", cursor: authLoading ? "wait" : "pointer", fontWeight: 600,
                     }}>
                       <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
                       Continue with Google
@@ -410,8 +466,9 @@ function FlowPageInner() {
                       id="birth-city"
                       label="City of birth"
                       value={store.birthCity}
-                      onChange={(val) => store.setBirthCity(val)}
+                      onChange={(val) => { store.setBirthCity(val); clearBirthCoords(); }}
                       onSelect={(s) => { store.setBirthCity(s.label); store.setBirthCoords(s.lat, s.lon); }}
+                      onUseTypedCity={(val) => { store.setBirthCity(val); clearBirthCoords(); }}
                       placeholder="e.g. Jakarta, Indonesia"
                     />
 
@@ -437,9 +494,14 @@ function FlowPageInner() {
                     <button className="btn btn-primary" style={{ flex: 1, justifyContent: "center", padding: "0.75rem", opacity: (store.firstName && store.birthDate && store.birthCity) ? 1 : 0.3 }}
                       disabled={!store.firstName || !store.birthDate || !store.birthCity || loadingChart}
                       onClick={handleChartSubmit}>
-                      {loadingChart ? <><Loader2 className="animate-spin" size={15}/> Calculating...</> : <>Calculate Chart <ArrowRight size={15} /></>}
+                      {loadingChart ? <><Loader2 className="animate-spin" size={15}/> Saving chart...</> : <>Calculate Chart <ArrowRight size={15} /></>}
                     </button>
                   </div>
+                  {chartError && (
+                    <div style={{ marginTop: "0.85rem", padding: "0.75rem", borderRadius: "var(--radius-sm)", backgroundColor: "rgba(255, 60, 60, 0.1)", border: "1px solid rgba(255, 60, 60, 0.3)", color: "var(--color-spiced-life)", fontSize: "0.82rem", lineHeight: 1.45 }}>
+                      {chartError}
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -509,6 +571,11 @@ function FlowPageInner() {
                         {finishLoading ? <><Loader2 className="animate-spin" size={15}/> Entering…</> : <>Enter Astronat <ArrowRight size={15} /></>}
                       </button>
                     </div>
+                    {finishError && (
+                      <div style={{ marginTop: "0.85rem", padding: "0.75rem", borderRadius: "var(--radius-sm)", backgroundColor: "rgba(255, 60, 60, 0.1)", border: "1px solid rgba(255, 60, 60, 0.3)", color: "var(--color-spiced-life)", fontSize: "0.82rem", lineHeight: 1.45 }}>
+                        {finishError}
+                      </div>
+                    )}
                   </motion.div>
                 </div>
               </div>

@@ -23,6 +23,7 @@ export default function ProfilePage() {
   const [toast, setToast] = useState("");
   const [subscription, setSubscription] = useState<{status: string, current_period_end: number | string} | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -144,6 +145,29 @@ export default function ProfilePage() {
     }
   };
 
+  const handleUpgrade = async () => {
+    setUpgradeLoading(true);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ returnTo: "/profile" }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+
+      alert(data.error || "Unable to start checkout.");
+      setUpgradeLoading(false);
+    } catch {
+      alert("Unable to start checkout.");
+      setUpgradeLoading(false);
+    }
+  };
+
   const handleSignOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -228,9 +252,9 @@ export default function ProfilePage() {
               <div className="profile-subscription-card">
                 <div className="profile-split-row">
                    <div>
-                     <span style={{ fontFamily: "var(--font-body)", fontWeight: 600, color: "var(--text-primary)", fontSize: "0.85rem" }}>Astronat Pro</span>
+                     <span style={{ fontFamily: "var(--font-body)", fontWeight: 600, color: "var(--text-primary)", fontSize: "0.85rem" }}>AstroNat Explorer</span>
                      <p style={{ margin: "0.2rem 0 0", fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--text-secondary)" }}>
-                        {subscription ? `Active — Renews ${new Date(subscription.current_period_end).toLocaleDateString()}` : "Free Tier"}
+                        {subscription ? `Active — Renews ${new Date(subscription.current_period_end).toLocaleDateString()}` : "Free tier · Single, Explorer, and Founder options available"}
                      </p>
                    </div>
                    {subscription ? (
@@ -243,8 +267,13 @@ export default function ProfilePage() {
                         {billingLoading ? <Loader2 className="animate-spin" size={14}/> : <><CreditCard size={14} style={{ marginRight: '0.3rem' }}/> Manage</>}
                      </button>
                    ) : (
-                     <button className="btn btn-primary" onClick={() => router.push('/flow?demo=true')} style={{ padding: "0.5rem 1rem", fontSize: "0.75rem", borderRadius: "var(--radius-sm)" }}>
-                        Upgrade
+                     <button
+                        className="btn btn-primary"
+                        onClick={handleUpgrade}
+                        disabled={upgradeLoading}
+                        style={{ padding: "0.5rem 1rem", fontSize: "0.75rem", borderRadius: "var(--radius-sm)", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+                     >
+                        {upgradeLoading ? <><Loader2 className="animate-spin" size={14}/> Redirecting</> : "Upgrade"}
                      </button>
                    )}
                 </div>

@@ -18,7 +18,7 @@ export default async function NewReadingPage({ searchParams }: { searchParams: P
         return (
             <>
                 <PageHeader title={title} />
-                <AppLoaderShell>
+                <AppLoaderShell minHeight="0" padding="0">
                     <LockedReadingView returnTo={isWeather ? "/reading/new?type=weather" : "/reading/new"} />
                 </AppLoaderShell>
             </>

@@ -1285,10 +1285,25 @@ export const CtaBand: React.FC<any> = ({ block }) => {
             </h2>
             <p className="font-body text-sm md:text-base leading-relaxed opacity-80 text-[var(--text-on-acqua)] max-w-md">{block.newsletterBody}</p>
           </div>
-          <div className="bg-[var(--color-y2k-blue)] p-8 md:p-12 rounded-[2rem] flex flex-col items-center justify-center text-center gap-4">
-            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-white/60 mb-2">Newsletter</div>
-            <div className="font-primary text-4xl md:text-5xl uppercase leading-none text-white">Coming<br/>Soon</div>
-            <p className="font-body text-xs leading-relaxed text-white/70 max-w-[220px] mt-2">Launching shortly — stay tuned for the first dispatch.</p>
+          <div className="bg-[var(--color-y2k-blue)] p-6 md:p-8 text-white border border-white/15">
+            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-white/60 mb-3">
+              Start free
+            </div>
+            <div className="font-primary text-4xl md:text-5xl uppercase leading-none text-white mb-4">
+              Get Your<br/>Free Reading
+            </div>
+            <p className="font-body text-sm leading-relaxed text-white/70 max-w-[300px] mb-6">
+              Enter your birth details and one city to see your first AstroNat reading.
+            </p>
+            <Link
+              href={block.primaryCta?.href || "/flow"}
+              className="w-full bg-[var(--color-charcoal)] text-[var(--color-eggshell)] px-4 py-3 font-mono text-[10px] uppercase tracking-widest hover:bg-black transition-colors flex items-center justify-center gap-2"
+            >
+              Get Your Free Reading <ArrowRight size={12} />
+            </Link>
+            <p className="font-mono text-[9px] uppercase tracking-widest opacity-45 mt-4 leading-relaxed">
+              No credit card needed.
+            </p>
           </div>
         </div>
       </section>

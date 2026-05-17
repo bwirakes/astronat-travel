@@ -58,6 +58,7 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
   const [showAddPartner, setShowAddPartner] = useState(false);
   const [newPartner, setNewPartner] = useState({ firstName: "", birthDate: "", birthTime: "12:00", birthCity: "", birthLat: null as number | null, birthLon: null as number | null });
   const [partnerSaving, setPartnerSaving] = useState(false);
+  const [partnerError, setPartnerError] = useState("");
 
   // Load saved partner profiles when couples type is active
   useEffect(() => {
@@ -77,19 +78,33 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
   const handleSavePartner = async () => {
     if (!newPartner.firstName || !newPartner.birthDate || !newPartner.birthCity) return;
     setPartnerSaving(true);
+    setPartnerError("");
 
     let lat = newPartner.birthLat;
     let lon = newPartner.birthLon;
     if (newPartner.birthCity && lat === null) {
       try {
-        const geo = await fetch(`/api/geocode?city=${encodeURIComponent(newPartner.birthCity)}`).then(r => r.json());
-        if (geo?.lat) { lat = parseFloat(geo.lat); lon = parseFloat(geo.lon); }
-      } catch { /* coordinates will be null */ }
+        const geoRes = await fetch(`/api/geocode?city=${encodeURIComponent(newPartner.birthCity)}`);
+        const geo = await geoRes.json();
+        const rawLat = geo?.lat ?? geo?.latitude;
+        const rawLon = geo?.lon ?? geo?.longitude;
+        if (geoRes.ok && rawLat != null && rawLon != null) { lat = parseFloat(String(rawLat)); lon = parseFloat(String(rawLon)); }
+      } catch { /* handled below */ }
+    }
+
+    if (lat === null || lon === null) {
+      setPartnerError("Choose a city suggestion or check the spelling so we can place your partner's chart.");
+      setPartnerSaving(false);
+      return;
     }
 
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setPartnerSaving(false); return; }
+    if (!user) {
+      setPartnerError("Please sign in again before saving a partner profile.");
+      setPartnerSaving(false);
+      return;
+    }
 
     const { data, error } = await supabase
       .from("partner_profiles")
@@ -113,6 +128,8 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
       setPartnerId(data.id);
       setShowAddPartner(false);
       setNewPartner({ firstName: "", birthDate: "", birthTime: "12:00", birthCity: "", birthLat: null, birthLon: null });
+    } else {
+      setPartnerError(error?.message ? `Could not save partner: ${error.message}` : "Could not save partner. Please try again.");
     }
     setPartnerSaving(false);
   };
@@ -159,17 +176,20 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
       
       if (targetLat === 0 && targetLon === 0 && destination) {
         try {
-          const destGeo = await fetch(`/api/geocode?city=${encodeURIComponent(destination)}`).then(r => r.json());
-          if (destGeo?.lat) {
-            targetLat = parseFloat(destGeo.lat);
-            targetLon = parseFloat(destGeo.lon);
+          const destGeoRes = await fetch(`/api/geocode?city=${encodeURIComponent(destination)}`);
+          const destGeo = await destGeoRes.json().catch(() => null);
+          const rawLat = destGeo?.lat ?? destGeo?.latitude;
+          const rawLon = destGeo?.lon ?? destGeo?.longitude;
+          if (destGeoRes.ok && rawLat != null && rawLon != null) {
+            targetLat = parseFloat(String(rawLat));
+            targetLon = parseFloat(String(rawLon));
           } else {
-            setErrorMsg("Could not geocode destination. Please select from the dropdown.");
+            setErrorMsg("Could not find coordinates for that destination. Select a city suggestion, check spelling, or try a nearby major city.");
             setLoading(false);
             return;
           }
         } catch {
-          setErrorMsg("Failed to find location coordinates.");
+          setErrorMsg("City lookup failed. Retry, or choose a suggestion from the city dropdown.");
           setLoading(false);
           return;
         }
@@ -190,7 +210,7 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
         })
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (data.readingId) {
         posthog.capture("reading_generated", {
           reading_id: data.readingId,
@@ -210,7 +230,7 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
           reading_type: type,
           destination,
         });
-        const errorMsg = data.message ? `${data.error}: ${data.message}` : (data.error || "An unknown error occurred during generation.");
+        const errorMsg = data.message ? `${data.error}: ${data.message}` : (data.error || `Reading generation failed with status ${res.status}. Please try again.`);
         setErrorMsg(errorMsg);
         setLoading(false);
       }
@@ -349,8 +369,14 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
                       value={newPartner.birthCity}
                       onChange={val => setNewPartner(p => ({ ...p, birthCity: val, birthLat: null, birthLon: null }))}
                       onSelect={s => setNewPartner(p => ({ ...p, birthCity: s.label, birthLat: s.lat, birthLon: s.lon }))}
+                      onUseTypedCity={val => setNewPartner(p => ({ ...p, birthCity: val, birthLat: null, birthLon: null }))}
                       placeholder="e.g. Paris, France"
                     />
+                    {partnerError && (
+                      <div style={{ padding: "0.65rem", borderRadius: "var(--radius-sm)", backgroundColor: "rgba(255, 60, 60, 0.1)", border: "1px solid rgba(255, 60, 60, 0.3)", color: "var(--color-spiced-life)", fontSize: "0.78rem", lineHeight: 1.4 }}>
+                        {partnerError}
+                      </div>
+                    )}
                     <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                       <button
                         className="btn btn-primary"
@@ -442,7 +468,7 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
                   Where are <span style={{ color: "var(--gold)" }}>you going?</span>
                 </h2>
                 <p style={{ color: "var(--text-secondary)", marginBottom: "1.25rem", fontSize: "0.85rem" }}>
-                  Calculate the final shifted {type === "couples" ? "synastry" : "chart"}.
+                  Choose the place you want a clear read on.
                 </p>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "1.5rem" }}>
@@ -452,6 +478,7 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
                     value={destination}
                     onChange={(val) => { setDestination(val); setDestLat(null); setDestLon(null); }}
                     onSelect={(s) => { setDestination(s.label); setDestLat(s.lat); setDestLon(s.lon); }}
+                    onUseTypedCity={(val) => { setDestination(val); setDestLat(null); setDestLon(null); }}
                     placeholder="e.g. Tokyo, Japan"
                   />
                   <div className="input-group">
