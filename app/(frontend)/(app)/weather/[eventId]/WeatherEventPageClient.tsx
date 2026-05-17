@@ -12,7 +12,7 @@ import { tierAccent, tierLabel } from "@/app/lib/geodetic/weather-predictions";
 import { triggersForWindow } from "@/app/lib/geodetic/weather-triggers";
 import type { GeodeticMatrixResponse, GeodeticRiskTier, GeodeticWeatherEvent } from "@/app/lib/geodetic/weather-types";
 import { eventHasMappableLocation, weatherEventToAtlasPins } from "../weather-map-pins";
-import { ActionPrompt, WarningSign, alertLevelFor, alertWordFor } from "./components/WeatherIndicators";
+import { ActionPrompt, alertWordFor } from "./components/WeatherIndicators";
 import {
     ActionBadge, TypeBadge, WhenBadge, WhereBadge,
 } from "./components/WeatherGuideRowBadge";
@@ -158,7 +158,11 @@ export default function WeatherEventPageClient({ event, matrix }: {
                 </div>
 
                 <main className="event-main">
-                    <AlertStrip tier={event.tier} typeWord={typeWordFor(event.type)} isHistorical={isHistorical} />
+                    {/* AlertStrip removed — its content (warning icon + "HIGH RISK"
+                        + action prompt) duplicated the banner chip/pill above and
+                        the ACTION glance card below. The warning iconography moved
+                        into the ACTION card itself; the kicker badge in the banner
+                        already conveys severity. */}
 
                     <AtAGlance event={event} location={location} isHistorical={isHistorical} />
 
@@ -446,103 +450,6 @@ function WeatherHeroBanner({
     );
 }
 
-// ─── Alert strip ────────────────────────────────────────────────────────────
-
-function AlertStrip({
-    tier, typeWord, isHistorical,
-}: {
-    tier: GeodeticRiskTier;
-    typeWord: string;
-    isHistorical: boolean;
-}) {
-    const color = tierAccent(tier);
-    const action = isHistorical ? "Historical event — see outcome below." :
-        tier === "critical" ? "Watch closely. Check local alerts." :
-        tier === "high"     ? "Pay attention. Follow the news." :
-        tier === "moderate" ? "Stay aware. Background monitoring." :
-                              "Low priority for now.";
-
-    const strength =
-        tier === "critical" ? "the strongest" :
-        tier === "high"     ? "a strong" :
-        tier === "moderate" ? "a notable" : "a low-pressure";
-
-    // Two-column grid: large warning icon on the left, vertical text stack on
-    // the right. Reads cleanly on mobile (no awkward wrapping) and still
-    // compact on desktop. Tier color carried by left border + alert label.
-    return (
-        <section
-            style={{
-                background: "var(--surface)",
-                border: "1px solid var(--surface-border)",
-                borderLeft: `4px solid ${color}`,
-                borderRadius: "var(--radius-md)",
-                padding: "1rem 1.1rem 1.05rem",
-                marginTop: "clamp(20px, 2.4vw, 32px)",
-                display: "grid",
-                gridTemplateColumns: "auto minmax(0, 1fr)",
-                columnGap: "0.95rem",
-                rowGap: "0.4rem",
-                alignItems: "start",
-            }}
-        >
-            {/* Warning icon — bigger, top-aligned to the kicker line */}
-            <div style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 36,
-                height: 36,
-                background: `color-mix(in oklab, ${color} 14%, transparent)`,
-                borderRadius: 8,
-                gridRow: "1 / 3",
-            }}>
-                <WarningSign tier={tier} size={22} />
-            </div>
-
-            {/* Header row: tier-colored kicker */}
-            <div style={{
-                fontFamily: FONT_MONO,
-                fontSize: 11,
-                letterSpacing: "0.2em",
-                fontWeight: 800,
-                color,
-                textTransform: "uppercase",
-                lineHeight: 1,
-                paddingTop: 2,
-            }}>
-                {alertLevelFor(tier)}
-            </div>
-
-            {/* Body — short, plain, primary text. Limited to ~58ch so it
-                doesn't run too wide on desktop. */}
-            <div style={{
-                fontFamily: FONT_BODY,
-                fontSize: "0.95rem",
-                color: "var(--text-primary)",
-                fontWeight: 500,
-                lineHeight: 1.45,
-                maxWidth: "58ch",
-            }}>
-                {typeWord} event with {strength} astro signature.
-                {" "}
-                <span style={{
-                    fontFamily: FONT_MONO,
-                    fontSize: "0.7rem",
-                    letterSpacing: "0.06em",
-                    color,
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    whiteSpace: "nowrap",
-                    marginLeft: 4,
-                }}>
-                    → {action}
-                </span>
-            </div>
-        </section>
-    );
-}
-
 // ─── At-a-glance — ReadingGuideRows pattern ────────────────────────────────
 
 /**
@@ -569,28 +476,10 @@ function AtAGlance({
         secondary: string;
     };
 
+    // Order: ACTION first because "what should I do?" is the question every
+    // reader (Maya, Jamie, Sarah, Tom) has when they land. WHEN/WHERE/TYPE
+    // are context that answers follow-up questions.
     const rows: Row[] = [
-        {
-            kicker: "When",
-            accent: "var(--amber, var(--gold, #C9A96E))",
-            badge: <WhenBadge tone="var(--amber, var(--gold, #C9A96E))" />,
-            primary: dayLabel,
-            secondary: friendlyDate(event.date),
-        },
-        {
-            kicker: "Type",
-            accent: tierColor,
-            badge: <TypeBadge eventType={event.type} tone={tierColor} />,
-            primary: typeWordFor(event.type),
-            secondary: typeVerboseFor(event.type),
-        },
-        {
-            kicker: "Where",
-            accent: "var(--color-y2k-blue, #0456fb)",
-            badge: <WhereBadge tone="var(--color-y2k-blue, #0456fb)" />,
-            primary: location.label,
-            secondary: location.detail ?? "see map below",
-        },
         {
             kicker: "Action",
             accent: isCritical ? tierColor : "var(--sage)",
@@ -604,6 +493,27 @@ function AtAGlance({
                 event.tier === "high" ? "Worth following the news" :
                 event.tier === "moderate" ? "Background monitoring is enough" :
                 "Low priority right now",
+        },
+        {
+            kicker: "When",
+            accent: "var(--amber, var(--gold, #C9A96E))",
+            badge: <WhenBadge tone="var(--amber, var(--gold, #C9A96E))" />,
+            primary: dayLabel,
+            secondary: friendlyDate(event.date),
+        },
+        {
+            kicker: "Where",
+            accent: "var(--color-y2k-blue, #0456fb)",
+            badge: <WhereBadge tone="var(--color-y2k-blue, #0456fb)" />,
+            primary: location.label,
+            secondary: location.detail ?? "see map below",
+        },
+        {
+            kicker: "Type",
+            accent: tierColor,
+            badge: <TypeBadge eventType={event.type} tone={tierColor} />,
+            primary: typeWordFor(event.type),
+            secondary: typeVerboseFor(event.type),
         },
     ];
 

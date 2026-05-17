@@ -9,7 +9,7 @@
  */
 
 import type { ReactNode } from "react";
-import { Calendar, MapPin, Eye } from "lucide-react";
+import { Calendar, MapPin } from "lucide-react";
 import { EventGlyph } from "./EventGlyphs";
 
 interface BadgeProps {
@@ -56,6 +56,7 @@ export function WhereBadge({ tone = "var(--color-y2k-blue, #0456fb)" }: { tone?:
 
 export function ActionBadge({ tone, isHistorical }: { tone: string; isHistorical: boolean }) {
     if (isHistorical) {
+        // Check-in-circle for historical (resolved) events.
         return (
             <BadgeShell tone={tone}>
                 <svg viewBox="0 0 32 32" width={26} height={26} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -65,9 +66,27 @@ export function ActionBadge({ tone, isHistorical }: { tone: string; isHistorical
             </BadgeShell>
         );
     }
+    // Warning triangle for active events. This absorbs the iconography that
+    // used to live in the standalone alert callout above the glance grid —
+    // now the warning lives inside the ACTION card where the user is already
+    // scanning for "what should I do?"
     return (
         <BadgeShell tone={tone}>
-            <Eye size={26} strokeWidth={1.6} />
+            <svg
+                viewBox="0 0 32 32"
+                width={28}
+                height={28}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+            >
+                <path d="M16 5 L 28 26 L 4 26 Z" fill="currentColor" fillOpacity="0.16" />
+                <line x1="16" y1="13" x2="16" y2="20" />
+                <circle cx="16" cy="23.5" r="1.2" fill="currentColor" stroke="none" />
+            </svg>
         </BadgeShell>
     );
 }
