@@ -19,7 +19,7 @@ import {
 import SectionHead from "../../shared/SectionHead";
 import TabSection from "../../shared/TabSection";
 import { appendChartRulerDignityNote, GuideRowBadge, mergeGuideRows, RichText } from "../../shared/ReadingCopy";
-import { BrandSparkle, OrbitalArc } from "@/app/components/ui/svg-shapes";
+import { BrandSparkle } from "@/app/components/ui/svg-shapes";
 import type { V4VM } from "./types";
 
 interface Props {
@@ -156,13 +156,6 @@ export default function OverviewTab({ vm, copiedTab, selectTab, natalForMap, bir
                             flush
                         />
                         <SelectedGoalsPanel goals={selectedGoals} />
-                        <div
-                            aria-hidden
-                            className="my-[clamp(28px,4vw,44px)] flex justify-center"
-                            style={{ color: "var(--color-spiced-life)" }}
-                        >
-                            <OrbitalArc size={320} />
-                        </div>
                     </>
                 )}
 

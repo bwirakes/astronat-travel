@@ -62,39 +62,6 @@ export function BrandSparkle({ size = 12, className = "", ...props }: SvgShapePr
   );
 }
 
-/** Thin elliptical arc that mirrors the orbital ring around the "O" in the
- *  Astronat logo. Used as a brand-flourish divider between editorial sections.
- *  Inherits stroke color via `currentColor` — wrap in a span that sets
- *  `color: var(--color-spiced-life)` for the canonical coral ring.
- *
- *  Renders at the SVG's natural ~4:1 aspect (240×60 viewBox). Callers should
- *  constrain the wrapper width — at full container width it stretches into
- *  a cigar shape that no longer reads as a ring. The OverviewTab usage caps
- *  at 360px and centers via mx-auto. */
-export function OrbitalArc({ size = 320, className = "", ...props }: SvgShapeProps) {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 240 60"
-      width={size}
-      height="auto"
-      className={className}
-      {...props}
-    >
-      <ellipse
-        cx="120"
-        cy="30"
-        rx="112"
-        ry="22"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        transform="rotate(-4 120 30)"
-      />
-    </svg>
-  );
-}
-
 export function WireframeGlobe({ size = 100, className = "", ...props }: SvgShapeProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1" className={className} {...props}>

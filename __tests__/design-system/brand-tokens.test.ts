@@ -36,18 +36,9 @@ describe("brand primitives — svg-shapes module", () => {
     expect(svgShapes).toMatch(/export function BrandSparkle\b/);
   });
 
-  it("exports OrbitalArc", () => {
-    expect(svgShapes).toMatch(/export function OrbitalArc\b/);
-  });
-
   it("BrandSparkle uses currentColor so callers can theme it via parent", () => {
     const match = /export function BrandSparkle[\s\S]*?return \(([\s\S]*?)\);/.exec(svgShapes);
     expect(match?.[1]).toContain('fill="currentColor"');
-  });
-
-  it("OrbitalArc uses currentColor stroke so callers can theme it via parent", () => {
-    const match = /export function OrbitalArc[\s\S]*?return \(([\s\S]*?)\);/.exec(svgShapes);
-    expect(match?.[1]).toContain('stroke="currentColor"');
   });
 });
 
