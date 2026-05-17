@@ -63,10 +63,20 @@ export function AppMobileBar() {
   const backLabel = header.backLabel ?? "Back";
   const visibleBackLabel = backLabel.toLowerCase() === "all readings" ? "All" : backLabel;
   const readingDetailHeader = /^\/reading\/[^/]+/.test(pathname) && !pathname.startsWith("/reading/new");
+  const weatherEventHeader = /^\/weather\/[^/]+/.test(pathname);
   const headerTone = readingDetailHeader
     ? {
         background: "#0456fb",
         borderBottom: "1px solid #0456fb",
+        color: "#F8F5EC",
+      }
+    : weatherEventHeader
+    ? {
+        // Spiced-life — matches the weather event banner. No border-bottom
+        // so the bar and the banner flow as one continuous red field with
+        // no visible seam where they meet.
+        background: "#E67A7A",
+        borderBottom: "none",
         color: "#F8F5EC",
       }
     : {

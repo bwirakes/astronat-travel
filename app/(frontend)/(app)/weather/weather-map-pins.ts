@@ -79,6 +79,32 @@ function coordinateForEvent(event: GeodeticWeatherEvent): Coordinate {
   return { lat: 0, lon: 0 };
 }
 
+/**
+ * One coordinate per zone — matches each zone string independently against
+ * ZONE_COORDINATES so a 3-zone event renders as 3 pins on the map. Filters
+ * out zones that don't resolve to a known coordinate (no (0,0) fallbacks).
+ *
+ * Returns an array of { coordinate, primaryLabel, raw } entries so the caller
+ * can also use the parsed primary text for the pin label.
+ */
+function coordinatesPerZone(zones: string[]): Array<{
+  coordinate: Coordinate;
+  primaryLabel: string;
+  raw: string;
+}> {
+  return zones
+    .map((raw) => {
+      const primary = raw.split("(")[0].trim();
+      // Match the FULL zone string (so "(0°E — Sa☌Ne)" doesn't get lost),
+      // but if no match, try matching just the primary label.
+      const match = ZONE_COORDINATES.find((e) => e.test.test(raw))
+        ?? ZONE_COORDINATES.find((e) => e.test.test(primary));
+      if (!match) return null;
+      return { coordinate: match.coordinate, primaryLabel: primary, raw };
+    })
+    .filter((entry): entry is { coordinate: Coordinate; primaryLabel: string; raw: string } => entry !== null);
+}
+
 export function weatherTypeLabel(type: WeatherEventType): string {
   return TYPE_TOKEN[type].label;
 }
@@ -87,9 +113,27 @@ export function weatherEventScore(event: GeodeticWeatherEvent): number {
   return Math.round(event.pss * 100);
 }
 
+/** Max chars for a pin's destination label so it never overflows the SVG. */
+const PIN_LABEL_MAX = 30;
+
+function truncate(s: string, max: number): string {
+  if (s.length <= max) return s;
+  return s.slice(0, max - 1).trimEnd() + "…";
+}
+
 export function weatherDestinationLabel(event: GeodeticWeatherEvent): string {
   const zone = event.zones[0]?.split("(")[0]?.trim();
-  return zone || event.title;
+  return truncate(zone || event.title, PIN_LABEL_MAX);
+}
+
+/** True if the event has a real (non-default) coordinate. Use this to decide
+ *  whether to render the map at all — otherwise the pin lands at (0, 0) in
+ *  the Atlantic and confuses readers. */
+export function eventHasMappableLocation(event: GeodeticWeatherEvent): boolean {
+  const explicit = FORECAST_COORDINATES_BY_DATE[event.date];
+  if (explicit) return true;
+  const zoneText = event.zones.join(" | ");
+  return ZONE_COORDINATES.some((entry) => entry.test.test(zoneText));
 }
 
 export function weatherEventToAtlasPin(event: GeodeticWeatherEvent): AtlasPin {
@@ -103,4 +147,31 @@ export function weatherEventToAtlasPin(event: GeodeticWeatherEvent): AtlasPin {
     travelDate: event.date,
     travelType: weatherTypeLabel(event.type),
   };
+}
+
+/**
+ * One AtlasPin per zone. For an event with N parseable zones, returns N
+ * pins. If no zones resolve to coordinates, falls back to the single-pin
+ * `weatherEventToAtlasPin` so the map isn't empty.
+ *
+ * Pin IDs are namespaced as `${event.id}#${zoneIndex}` so each pin in the
+ * map has a stable, unique key even though they share the same event.
+ */
+export function weatherEventToAtlasPins(event: GeodeticWeatherEvent): AtlasPin[] {
+  const zoneCoords = coordinatesPerZone(event.zones);
+  if (zoneCoords.length === 0) {
+    // No zone-level matches — fall back to single-pin event coordinate.
+    return [weatherEventToAtlasPin(event)];
+  }
+  const score = weatherEventScore(event);
+  const type = weatherTypeLabel(event.type);
+  return zoneCoords.map(({ coordinate, primaryLabel }, idx) => ({
+    id: `${event.id}#${idx}`,
+    destination: truncate(primaryLabel, PIN_LABEL_MAX),
+    lat: coordinate.lat,
+    lon: coordinate.lon,
+    score,
+    travelDate: event.date,
+    travelType: type,
+  }));
 }
