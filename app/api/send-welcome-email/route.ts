@@ -1,12 +1,14 @@
 /**
  * POST /api/send-welcome-email
  * INTERNAL route — called only by the Stripe webhook after subscription.confirmed.
- * Protected by CRON_SECRET so it's not publicly accessible.
+ * Protected by the shared internal secret helper so it's not publicly accessible.
  *
  * Body: { email: string; firstName?: string }
  */
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
+import { hasInternalSecret } from '@/lib/security/internal-auth'
+import { captureServerError } from '@/lib/monitoring/sentry'
 
 // NOTE: do NOT instantiate Resend at module top-level.
 // Next.js evaluates module code during build-time page collection,
@@ -63,9 +65,7 @@ const buildHtml = (firstName: string) => `<!DOCTYPE html>
 </html>`
 
 export async function POST(req: Request) {
-  // Basic internal auth: webhook passes a shared secret
-  const authHeader = req.headers.get('x-internal-secret')
-  if (authHeader !== process.env.INTERNAL_API_SECRET) {
+  if (!hasInternalSecret(req)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -93,8 +93,10 @@ export async function POST(req: Request) {
 
     console.log('[welcome-email] Sent to', email, '| ID:', data?.id)
     return NextResponse.json({ success: true, id: data?.id })
-  } catch (err: any) {
+  } catch (err: unknown) {
+    captureServerError(err, { route: '/api/send-welcome-email', method: 'POST' })
     console.error('[welcome-email] Unexpected error:', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    const message = err instanceof Error ? err.message : String(err)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
