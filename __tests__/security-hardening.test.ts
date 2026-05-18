@@ -62,6 +62,7 @@ describe("security hardening guards", () => {
     expect(nextConfig).toContain("withSentryConfig");
     expect(nextConfig).not.toContain("ignoreBuildErrors");
     expect(nextConfig).toContain("unsafe-eval");
+    expect(nextConfig).toContain("https://va.vercel-scripts.com");
     expect(nextConfig).toContain("future CSP pass");
 
     const healthRoute = read("app/api/health/route.ts");
