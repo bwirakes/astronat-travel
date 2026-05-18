@@ -339,6 +339,7 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
             preserveGuideLabels
             guideLayout="flow"
             guideFlowVariant="overview"
+            guideSurface="cards"
         >
             {/* ── Personalised opener — only shown when no AI dek/intro exists ── */}
             {!hasAiCopy && (
@@ -350,7 +351,7 @@ export default function PlaceFieldTab({ vm, isDark, birthIso, reading, relocated
 
             {/* ── §01 City/paran map ─────────────────────────────────── */}
             <SectionHead index="01" title={`Where ${city} sits on the geodetic map`}  flush />
-            <div style={{ ...MAP_PANEL, maxWidth: "760px", marginBottom: "var(--space-md)" }}>
+            <div className="reading-card reading-card--strong" style={{ ...MAP_PANEL, maxWidth: "760px", marginBottom: "var(--space-md)", padding: "clamp(1rem, 2vw, 1.35rem)" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", marginBottom: "0.75rem" }}>
                     <div style={KICKER}>City + paran field</div>
                     <span style={{
@@ -979,10 +980,10 @@ function CornerFlow({
     rows: Array<{ anchor: Anchor; sign: string; deg: number; hit: PersonalGeodeticHit | undefined }>;
 }) {
     return (
-        <div role="list" style={{
+        <div className="reading-card reading-card--accent" role="list" style={{
             listStyle: "none",
             margin: "0.15rem 0 0 0",
-            padding: 0,
+            padding: "clamp(1rem, 2vw, 1.3rem)",
             position: "relative",
         }}>
             <span
@@ -1343,11 +1344,10 @@ function liveWhy(_kind: "transit", planet: string, angle: V4GeoTransit["angle"],
 
 function ActiveGeoTransits({ city, transits }: { city: string; transits: V4GeoTransit[] }) {
     return (
-        <div style={{
+        <div className="reading-card reading-card--accent" style={{
             maxWidth: "760px",
             margin: "0 0 var(--space-md) 0",
-            paddingBottom: "var(--space-md)",
-            borderBottom: "1px solid var(--surface-border)",
+            padding: "clamp(1rem, 2vw, 1.3rem)",
             display: "grid",
             gap: "0.75rem",
         }}>
@@ -1457,12 +1457,13 @@ function transitToneLabel(transit: V4GeoTransit): string {
 
 function LiveNowTable({ items, title = "City transit tracker", note }: { items: LiveItem[]; title?: string; note?: string }) {
     return (
-        <div style={{
+        <div className="reading-card reading-card--accent" style={{
             display: "grid",
             gridTemplateColumns: "1fr",
             gap: 0,
             maxWidth: "780px",
             margin: "0 0 var(--space-md) 0",
+            padding: "clamp(1rem, 2vw, 1.3rem)",
         }}>
             <div style={{
                 ...MONO_SM,
@@ -1829,11 +1830,7 @@ function CornerKey() {
 
 function DetailsBlock({ title, children }: { title: string; children: React.ReactNode }) {
     return (
-        <details style={{
-            background:   "var(--surface)",
-            border:       "1px solid var(--surface-border)",
-            borderRadius: "var(--radius-md)",
-        }}>
+        <details className="reading-card reading-card--accent">
             <summary style={{
                 padding:       "1.1rem 1.25rem",
                 fontFamily:    "var(--font-mono)",
@@ -1927,7 +1924,7 @@ function LiveLinesList({ lines }: { lines: V4VM["geodetic"] extends infer G
 }) {
     if (!lines || lines.length === 0) return null;
     return (
-        <ul style={{ listStyle: "none", padding: 0, margin: "var(--space-md) 0 0 0" }}>
+        <ul className="reading-card reading-card--accent" style={{ listStyle: "none", padding: "0 clamp(1rem, 2vw, 1.3rem)", margin: "var(--space-md) 0 0 0" }}>
             {lines.map((l) => (
                 <li
                     key={l.liveLineKey}
@@ -1969,10 +1966,7 @@ function CityFieldReceipts({
         .slice(0, 3);
 
     return (
-        <section
-            className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-0 border-t border-l"
-            style={{ borderColor: "var(--surface-border)" }}
-        >
+        <section className="reading-card reading-card--accent grid grid-cols-1 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-0 overflow-hidden">
             <article
                 className="border-r border-b p-[clamp(20px,3vw,30px)]"
                 style={{ borderColor: "var(--surface-border)" }}

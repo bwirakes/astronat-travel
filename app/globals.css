@@ -30,6 +30,8 @@
   --bg-raised: #212121;
   --surface: #121212; /* Softer than pure black */
   --surface-border: rgba(255, 255, 255, 0.12);
+  --reading-card-surface: color-mix(in oklab, var(--surface) 88%, var(--bg));
+  --reading-card-surface-strong: color-mix(in oklab, var(--surface) 94%, var(--color-y2k-blue) 6%);
 
   /* Esoteric / Atmospheric Palette */
   --accent: var(--color-spiced-life);
@@ -180,6 +182,8 @@
   --bg-raised: var(--color-cream);
   --surface: var(--color-cream);
   --surface-border: rgba(0, 0, 0, 0.08);
+  --reading-card-surface: #fff;
+  --reading-card-surface-strong: #fff;
 
   --accent: var(--color-spiced-life);
   --cyan: #007676; /* Dark teal replacing Acqua */

@@ -60,6 +60,14 @@ describe("AI reading schema contracts", () => {
     expect(prompt).not.toContain('"life-themes"');
   });
 
+  it("keeps What Shifts chart-ruler depth canonical to chartRulerReframe", () => {
+    const prompt = readFileSync("lib/ai/prompts/teacher-reading.ts", "utf8");
+
+    expect(prompt).toContain("Put ruler dignity/nature depth in chartRulerReframe, not both places.");
+    expect(prompt).toContain("do not repeat the full chart-ruler/dignity explanation");
+    expect(prompt).not.toContain('out.tabs["what-shifts"].plainEnglishSummary = appendChartRulerSentenceOnce');
+  });
+
   it("accepts the current teacher reading contract required by the V4 tabs", () => {
     const parsed = TeacherReadingSchema.safeParse({
       tabs: teacherTabs,
