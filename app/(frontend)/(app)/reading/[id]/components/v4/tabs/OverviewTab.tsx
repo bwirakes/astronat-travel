@@ -19,6 +19,7 @@ import {
 import SectionHead from "../../shared/SectionHead";
 import TabSection from "../../shared/TabSection";
 import { appendChartRulerDignityNote, GuideRowBadge, mergeGuideRows, RichText } from "../../shared/ReadingCopy";
+import { BrandSparkle } from "@/app/components/ui/svg-shapes";
 import type { V4VM } from "./types";
 
 interface Props {
@@ -171,7 +172,7 @@ export default function OverviewTab({ vm, copiedTab, selectTab, natalForMap, bir
                             label="Use this for"
                             subhead={topTheme ? `${topTheme.label} has the most support here` : "The clearest yes in this location"}
                             items={leanInto.length ? leanInto.slice(0, 2) : [topTheme?.label || "This is the clearest thing to build the reading around."]}
-                            accent="var(--sage)"
+                            tone="supportive"
                             badgeIndex={0}
                             badgeVariant="theme-use"
                         />
@@ -179,7 +180,7 @@ export default function OverviewTab({ vm, copiedTab, selectTab, natalForMap, bir
                             label="Don't use this for"
                             subhead={weakestTheme ? `${weakestTheme.label} needs a lighter touch` : "The place cannot carry everything at once"}
                             items={watchOut.length ? watchOut.slice(0, 2) : ["Do not make this place carry every goal at once."]}
-                            accent="var(--color-spiced-life)"
+                            tone="caution"
                             badgeIndex={1}
                             badgeVariant="theme-avoid"
                         />
@@ -408,7 +409,11 @@ function AstrocartographyPanel({
 
 function NearbyLineCard({ line }: { line: LineRow }) {
     const contribution = Math.round(line.contribution);
-    const tone = contribution > 0 ? "var(--sage)" : contribution < 0 ? "var(--color-spiced-life)" : "var(--text-tertiary)";
+    const tone = contribution > 0
+        ? "var(--lift-accent)"
+        : contribution < 0
+            ? "var(--color-spiced-life)"
+            : "var(--text-tertiary)";
     const status = lineStatus(line.contribution);
     return (
         <article className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-3 py-[11px] border-b" style={{ borderColor: "var(--surface-border)" }}>
@@ -512,7 +517,7 @@ function MapStatusSummary({ counts }: { counts: Record<LineStatus, number> }) {
 }
 
 function lineStatusColor(status: LineStatus): string {
-    if (status === "good") return "var(--sage)";
+    if (status === "good") return "var(--lift-accent)";
     if (status === "neutral") return "var(--gold)";
     return "var(--color-spiced-life)";
 }
@@ -614,7 +619,9 @@ function ThemeColumn({
     themes: Array<V4VM["scoreNarrative"]["themes"][number]>;
     tone: "lift" | "press";
 }) {
-    const accent = tone === "lift" ? "var(--sage)" : "var(--color-spiced-life)";
+    const accent = tone === "lift"
+        ? "var(--lift-accent)"
+        : "var(--color-spiced-life)";
     return (
         <div className="min-w-0 border-b p-[clamp(18px,2.6vw,28px)] md:border-b-0 md:border-r last:border-r-0" style={{ borderColor: "var(--surface-border)" }}>
             <h4 className="m-0 mb-[16px] text-[22px] leading-[1.1]" style={{ fontFamily: FONT_PRIMARY, color: "var(--text-primary)", fontWeight: 400 }}>
@@ -658,21 +665,31 @@ function ThemeChip({ label, score }: { label: string; score: number; tone: "lift
     );
 }
 
+type AnswerCardTone = "supportive" | "caution";
+
+function toneAccent(tone: AnswerCardTone): string {
+    switch (tone) {
+        case "supportive": return "var(--lift-accent)";
+        case "caution":    return "var(--color-spiced-life)";
+    }
+}
+
 function AnswerCard({
     label,
     subhead,
     items,
-    accent,
+    tone,
     badgeIndex,
     badgeVariant,
 }: {
     label: string;
     subhead: string;
     items: string[];
-    accent: string;
+    tone: AnswerCardTone;
     badgeIndex: number;
     badgeVariant: "theme-use" | "theme-avoid";
 }) {
+    const accent = toneAccent(tone);
     return (
         <article
             className="min-w-0 w-full text-left p-[clamp(22px,3vw,32px)] border-r border-b"
@@ -711,7 +728,7 @@ function AnswerCard({
 }
 
 function subsectionScoreColor(score: number): string {
-    if (score >= 70) return "var(--sage)";
+    if (score >= 70) return "var(--lift-accent)";
     if (score >= 45) return "var(--gold)";
     return "var(--color-spiced-life)";
 }
@@ -840,10 +857,12 @@ function TimingSummary({
                         Timing score
                     </span>
                     <span
-                        className="text-[13px] tracking-[0.08em] uppercase tabular-nums"
+                        className="inline-flex items-center gap-[6px] text-[13px] tracking-[0.08em] uppercase tabular-nums"
                         style={{ fontFamily: FONT_MONO, color: scoreColor }}
                     >
+                        <BrandSparkle size={9} />
                         {Math.round(score)}/100
+                        <BrandSparkle size={11} />
                     </span>
                 </div>
                 <p

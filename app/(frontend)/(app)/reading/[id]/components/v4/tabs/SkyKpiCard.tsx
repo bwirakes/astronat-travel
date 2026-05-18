@@ -47,9 +47,9 @@ function badgeStyle(badge: ImpactBadge): React.CSSProperties {
     if (badge === "supportive") {
         return {
             ...base,
-            color: "var(--sage)",
-            background: "color-mix(in oklab, var(--sage) 8%, transparent)",
-            borderColor: "color-mix(in oklab, var(--sage) 35%, var(--surface-border))",
+            color: "var(--lift-accent)",
+            background: "var(--lift-accent-soft)",
+            borderColor: "color-mix(in oklab, var(--lift-accent) 60%, var(--surface-border))",
         };
     }
     if (badge === "tense") {

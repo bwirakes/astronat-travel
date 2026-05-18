@@ -1708,7 +1708,7 @@ function ParanList({ parans, notes }: {
             <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
                 {parans.map((p, i) => {
                     const tone = p.contribution > 0
-                        ? "var(--sage, #4a8a6a)"
+                        ? "var(--lift-accent)"
                         : p.contribution < 0
                             ? "var(--color-spiced-life)"
                             : "var(--text-tertiary)";
@@ -1861,7 +1861,7 @@ function DetailsBlock({ title, children }: { title: string; children: React.Reac
 
 function familyAccent(family: PersonalGeodeticHit["family"]): string {
     switch (family) {
-        case "gentle": return "var(--sage)";
+        case "gentle": return "var(--lift-accent)";
         case "rough":  return "var(--color-spiced-life)";
         case "bright": return "var(--gold)";
         default:       return "var(--text-tertiary)";
@@ -1873,7 +1873,7 @@ function cornerAccent(anchor: Anchor, hit: PersonalGeodeticHit | undefined): str
         const planet = hit.planet.toLowerCase();
         if (planet === "neptune" || planet === "uranus" || planet === "mercury") return "var(--color-y2k-blue)";
         if (planet === "mars" || planet === "saturn" || planet === "pluto") return "var(--color-spiced-life)";
-        if (planet === "jupiter" || planet === "moon") return "var(--sage)";
+        if (planet === "jupiter" || planet === "moon") return "var(--lift-accent)";
         if (planet === "sun" || planet === "venus") return "var(--gold)";
         return familyAccent(hit.family);
     }
@@ -1881,7 +1881,7 @@ function cornerAccent(anchor: Anchor, hit: PersonalGeodeticHit | undefined): str
         case "ASC": return "var(--gold)";
         case "MC":  return "var(--color-y2k-blue)";
         case "DSC": return "var(--color-spiced-life)";
-        case "IC":  return "var(--sage)";
+        case "IC":  return "var(--lift-accent)";
     }
 }
 

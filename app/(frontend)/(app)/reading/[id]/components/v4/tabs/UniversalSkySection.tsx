@@ -106,7 +106,7 @@ export default function UniversalSkySection({
             />
 
             <p style={FRAMING}>
-                The sky belongs to everyone — these moments aren't shaped by where you go,
+                The sky belongs to everyone — these moments aren&apos;t shaped by where you go,
                 but they color whatever you do. Here are the few that matter most for your window.
             </p>
 

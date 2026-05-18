@@ -29,6 +29,11 @@ import {
 } from "@/app/lib/geodetic/events-2026-2027.generated";
 import styles from "./page.module.css";
 
+// This page is a live ephemeris/geodetic dashboard that queries Supabase at
+// render time. Prerendering it at build requires Supabase credentials in the
+// build environment, which CI doesn't have. Mark as fully dynamic so the
+// build never tries to fetch live data — it'll SSR on each request instead.
+export const dynamic = "force-dynamic";
 export const revalidate = 3600;
 
 const DAY_MS = 86_400_000;

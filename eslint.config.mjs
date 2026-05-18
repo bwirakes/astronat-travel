@@ -14,6 +14,18 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "archive/**",
     "node_modules/**",
+    // Project-specific ignores:
+    // Sub-worktrees each contain a full copy of the app — linting them
+    // multiplies issue counts by ~10×. Lint the canonical checkout only.
+    ".claude/worktrees/**",
+    ".worktrees/**",
+    // Generated geodetic ephemeris data.
+    "app/lib/geodetic/generated/**",
+    // Coverage / test artifact outputs.
+    "**/coverage/**",
+    "**/__tests__/**/*-report.md",
+    "playwright-report/**",
+    "test-results/**",
   ]),
 ]);
 

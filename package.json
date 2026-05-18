@@ -9,8 +9,13 @@
     "analyze": "next experimental-analyze",
     "analyze:webpack": "ANALYZE=true next build --webpack",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "test": "bunx playwright test",
-    "test:ui": "bunx playwright test --reporter=html"
+    "test:ui": "bunx playwright test --reporter=html",
+    "test:unit": "bun test __tests__",
+    "test:design-system": "bun test __tests__/design-system",
+    "precommit": "bun run test:design-system && bun run lint:changed",
+    "lint:changed": "git diff --name-only --diff-filter=ACMRT HEAD -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.mjs' | xargs --no-run-if-empty bunx eslint"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.60",

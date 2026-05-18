@@ -10,7 +10,9 @@
 
 # testing
 /coverage
-/tests
+# /tests was previously ignored, but playwright.config.ts uses ./tests as its
+# testDir — meaning no Playwright spec could ever be tracked. Removed so the
+# directory works. Test artifacts (results, reports) are still ignored below.
 app/lib/__tests__/
 
 # local archives and non-app working material

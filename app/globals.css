@@ -39,10 +39,21 @@
   --y2k-blue: var(--color-y2k-blue);
 
   /* Quality states */
+  /* DEPRECATED: --sage / --sage-soft are not in the Astro brand book. New    */
+  /* code should use --lift-accent / --lift-accent-soft below. Existing call  */
+  /* sites (~69 across the app) are scheduled for migration; see brand-tokens */
+  /* test for the regression guard on the 4 reading tabs that already moved.  */
   --sage: #00FD00; /* Neon green seen in identity assets */
   --sage-soft: rgba(0, 253, 0, 0.12);
   --amber: #C17B3F;
   --amber-soft: rgba(193, 123, 63, 0.12);
+
+  /* Brand-aligned semantic accents (preferred over --sage; tracks brand book) */
+  /* lift-accent inherits --color-acqua, which is theme-aware:                */
+  /*   :root (dark)       → #CAF1F0  pale, pops on charcoal bg                */
+  /*   [data-theme=light] → #007676  deep teal, pops on eggshell bg           */
+  --lift-accent: var(--color-acqua);
+  --lift-accent-soft: color-mix(in oklab, var(--color-acqua) 22%, transparent);
 
   /* Celestial Editorial Gold Palette */
   --gold: #C9A96E;
