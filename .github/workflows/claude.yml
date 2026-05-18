@@ -1,0 +1,85 @@
+name: Claude Code
+
+# Claude Code GitHub Action — interactive PR/issue assistant.
+#
+# Triggers when "@claude" appears in:
+#   - an issue body or title (on open)
+#   - an issue comment
+#   - a PR review comment (inline)
+#   - a PR review submission
+#
+# Auth: uses CLAUDE_CODE_OAUTH_TOKEN backed by a Max subscription.
+# Mint via `claude setup-token` locally (one-time, expires periodically).
+# Falls back to ANTHROPIC_API_KEY if OAuth secret is unset.
+#
+# This is on-demand only. We did NOT enable auto-review on every PR — we
+# want to see signal quality from a few @claude invocations first. If the
+# reviews are consistently useful, we can add a `pull_request` trigger
+# later that runs on opened/synchronize.
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  claude:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read # Required for Claude to read CI results on PRs
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          # Codebase-specific guidance. This is the "onboarding doc" Claude
+          # reads before reviewing — tune over time as patterns emerge.
+          claude_args: |
+            --system-prompt "You are reviewing code in the Astronat travel app (Next.js 16, App Router, Bun, Supabase, Turbopack).
+
+            Brand book rules:
+            - Five locked colors: --color-charcoal, --color-y2k-blue, --color-acqua, --color-spiced-life, --color-eggshell. No others.
+            - For 'lift / supportive / strongest / benefic' semantics, use --lift-accent (theme-aware alias of --color-acqua). NEVER add new var(--sage) call sites — that token is deprecated.
+            - --lift-accent-soft for translucent fills.
+            - Use existing brand primitives in app/components/ui/svg-shapes.tsx before authoring new SVGs.
+
+            Theme awareness:
+            - :root is the DARK theme (--text-primary=eggshell, --color-acqua=#CAF1F0 pale).
+            - [data-theme=\"light\"] overrides for light (--color-acqua=#007676 deep teal).
+            - Any new CSS variable that needs to look different in light vs dark must be defined in both blocks. Catch hardcoded hex values that bypass theme-awareness.
+
+            Next.js patterns:
+            - Pages that fetch live data at render must either be 'export const dynamic = \"force-dynamic\"' OR handle the fetch failing gracefully — they will be prerendered at build time otherwise, and the build env has no Supabase creds.
+            - Server-side instrumentation must never hard-assert env vars (no process.env.X! patterns).
+
+            Test patterns:
+            - __tests__/design-system/ is the contract gate. Adding brand-token logic without a matching regression guard in brand-tokens.test.ts is a blocker.
+            - tests/ holds Playwright specs. Smoke specs must stay smoke — assertion volume in spec.ts should not balloon.
+
+            Review style:
+            - Be concrete: name the token, file, line.
+            - Distinguish ship-blockers (correctness, security, brand-book violations) from suggestions (style, refactors).
+            - Don't pad reviews with positive observations. If the diff is clean, say so in one line."
