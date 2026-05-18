@@ -137,11 +137,10 @@ const BLOCK_TABS_RULES = `# The Main Feature (Tabs)
     - \`Move Carefully With\`: "Rushing and people-pleasing because Venus is strained here; discipline works better than charm."
     - \`Your Next Move\`: "Choose one visible goal before you arrive, then let the 10th-house pressure focus your schedule."
   - You may use \`**bold**\` only inside guide-row bodies to emphasize a skim label or key astrology receipt. Do not use markdown bullets.
-  - For \`what-shifts\`: The core question is "How am I perceived here?". Write 4-5 short sentences total across \`lead\` + \`plainEnglishSummary\`; orient quickly, then let \`chartRulerReframe\` carry the deeper interpretation. Include:
+  - For \`what-shifts\`: The core question is "How am I perceived here?". Write compact skim copy across \`lead\` + \`plainEnglishSummary\`; orient quickly, then let \`chartRulerReframe\` carry the deeper interpretation. Include:
     1. Receipt — name the relocated Rising sign and its ruling planet, then the natal Rising it replaces. ("Capricorn rises here, with Saturn now running the chart instead of natal Taurus's Venus.")
     2. What changes about how the user is perceived — lived terms, how a stranger reads you in the first 30 seconds. Concrete sensory or behavioral detail.
-    3. REQUIRED when \`brief.evidence.shift.chartRuler.dignity\` exists: name the dignity exactly once (exalted, detriment, fall, domicile, etc.) and translate it in plain English.
-    4. REQUIRED when \`brief.evidence.shift.chartRuler.planetNature\` is benefic or malefic: name benefic/malefic once and translate it ("benefic = support/ease", "malefic = pressure/discipline"). Do not assume the reader knows the term.
+    3. Put any dignity or benefic/malefic translation in \`chartRulerReframe\`, not repeated in the tab summary.
   - For \`timing\`:
     - **Trip**: lead with the strongest candidate window from \`sidebarsData.travelWindows\` ("the week of X is the cleanest door"). Frame as "when to go."
     - **Relocation**: lead with the strongest arrival month from \`relocation.monthlyHighlights.strongest[0]\` ("October opens cleanest"). If \`relocation.monthlyHighlights.hardest.length > 0\`, also name the hardest month and what makes it hard. Frame as "when to arrive" — never "when to visit."
@@ -424,9 +423,9 @@ Rules:
 - Sentence 1 of each tab lead must be plain travel advice, not astrology. Forbidden in sentence 1: chart, planet, sign, house, geodetic, line, transit, aspect, degree, Grand Trine, T-Square, stellium.
 - Sentences 2-4 of each tab lead MUST include at least one astrology receipt from that tab's evidence. A score or theme label alone is NOT a receipt. A valid receipt names the actual chart signal: house, planet line, geodetic band, relocated rising/chart ruler, angle shift, or dated transit/window. Gloss the receipt in plain English immediately.
 - For relocation-style interpretation, use this hierarchy: four corners/angles first; planets/rulers/aspects/dignity tied to those corners second; relocated houses for the selected goal third; ACG/geodetic/timing as supporting modifiers. Angles describe immediacy: ASC = body/identity/arrival, IC = home/sleep/privacy, DSC = partners/clients/conflict, MC = career/visibility/direction. Houses route the topic, but a decent house placement should not outweigh a strong angular pressure signal.
-- Overview and What Shifts must not lose dignity. If \`brief.evidence.shift.chartRuler\` has \`dignity\`, \`rulerSign\`, or \`planetNature\`, mention the chart ruler's dignity and benefic/malefic nature in both \`tabs["overview"]\` and \`tabs["what-shifts"]\`. Keep it beginner-friendly: "exalted means stronger and more reliable", "detriment means less comfortable and more effortful", "benefic means supportive/easing", "malefic means pressurizing/disciplining."
+- Overview must not lose dignity. If \`brief.evidence.shift.chartRuler\` has \`dignity\`, \`rulerSign\`, or \`planetNature\`, mention the chart ruler's dignity and benefic/malefic nature in \`tabs["overview"]\` and \`chartRulerReframe\`. In \`tabs["what-shifts"]\`, keep the top copy as a skim opener and do not repeat the full chart-ruler/dignity explanation.
 - Every plainEnglishSummary must include one receipt sentence and one plain decision sentence. Put practical advice in \`guideRows\`, not in markdown bullets.
-- Each guideRows body must be specific, not generic: name the actual goal, event score, planet/line/house, dignity, window, or risk it is based on.
+- Each guideRows body must be specific, not generic: name the actual goal, event score, planet/line/house, dignity, window, or risk it is based on. For \`tabs["what-shifts"]\`, write guide rows that support compact cards: relocated rising/first impression, chart-ruler house emphasis, and the first-day felt behavior shift. Avoid restating the same full chart-ruler sentence in more than one row.
 - Overview \`leanInto\` and \`watchOut\` are not category labels. Each paragraph must interpret the category: why this place/date helps or hurts, what astrology shows it, and what the reader should do with that information.
 - Timing windows must interpret \`brief.evidence.timing.windows[].drivers\` or \`topHits\`. Do not echo raw aspect strings. Example: if a window has Mars with natal Jupiter and Mercury with natal Sun, write that drive and confidence are louder while speech and decisions are sharper; use it for pitches or action, not overpromising.
 - If \`brief.evidence.prioritySignals\` contains \`mars-asc-body-risk\`, it is a high-priority safety/pacing signal. Mention it in overview or what-shifts and one guide row. Explain Mars on the Ascendant as body heat, speed, cuts, inflammation, accidents, scars, rushed movement, workouts, driving, and impatience. Keep it practical, not fatalistic.
@@ -605,9 +604,6 @@ function backfillSoWhat(object: TeacherReading, input: TeacherReadingInput): Tea
     if (out.tabs?.overview) {
       out.tabs.overview.plainEnglishSummary = appendChartRulerSentenceOnce(out.tabs.overview.plainEnglishSummary, dignitySentence, input);
     }
-    if (out.tabs?.["what-shifts"]) {
-      out.tabs["what-shifts"].plainEnglishSummary = appendChartRulerSentenceOnce(out.tabs["what-shifts"].plainEnglishSummary, dignitySentence, input);
-    }
     if (out.chartRulerReframe) {
       out.chartRulerReframe.body = appendChartRulerSentenceOnce(out.chartRulerReframe.body, dignitySentence, input);
     }
@@ -774,7 +770,7 @@ function buildTabWritingPlan(input: TeacherReadingInput) {
       notFor: ["pretending the place has no effect on your mood"],
       nextMove: "name how you feel and behave differently in the first day",
       evidenceToUse: ["relocated rising", "chart ruler", "relocated houses", "angle shifts"],
-      targetShape: "lead 2 sentences + summary 2-3 short sentences + guideRows with astrology basis: felt shift, relocated-chart receipt, first-day example, trap, action.",
+      targetShape: "lead 2 sentences + summary up to 2 short sentences as a skim opener; guideRows feed compact cards for relocated rising, chart-ruler house emphasis, and first-day felt behavior. Put ruler dignity/nature depth in chartRulerReframe, not both places.",
     },
     timing: {
       readerQuestion: "When should I use this place?",

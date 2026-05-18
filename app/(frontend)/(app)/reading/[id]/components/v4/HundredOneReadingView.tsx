@@ -15,7 +15,6 @@ import PlaceFieldTab from "./tabs/PlaceFieldTab";
 import WhatShiftsTab from "./tabs/WhatShiftsTab";
 import TimingTab from "./tabs/TimingTab";
 import NextTabNav from "./NextTabNav";
-import LearnFooter from "../shared/LearnFooter";
 import { destinationFlag } from "@/app/lib/country-flag";
 import { Compass, Globe2, Sparkles, Clock } from "lucide-react";
 import "./reading-shell.css";
@@ -195,11 +194,17 @@ function ReadingHeroBanner({
             >
                 <path d="M32 0 L38 25 L64 32 L38 39 L32 64 L26 39 L0 32 L26 25 Z" fill="currentColor" />
             </svg>
-            <div
+            <svg
                 aria-hidden
-                className="absolute inset-x-[-18%] bottom-[-47%] h-[64%] rounded-[50%]"
-                style={{ background: "var(--reading-tabs-surface)" }}
-            />
+                className="absolute inset-x-0 bottom-[-1px] h-[clamp(64px,8vw,112px)] w-full"
+                viewBox="0 0 1440 160"
+                preserveAspectRatio="none"
+            >
+                <path
+                    d="M0 96C304 38 650 30 944 48C1142 60 1300 76 1440 96V160H0V96Z"
+                    fill="var(--reading-tabs-surface)"
+                />
+            </svg>
             <div
                 aria-hidden
                 className="absolute right-[3.4%] bottom-[17%] h-[clamp(26px,3.4vw,44px)] w-[clamp(26px,3.4vw,44px)] rounded-full"
@@ -405,7 +410,7 @@ export default function HundredOneReadingView({ reading, narrative, showUpsell, 
                             className="w-full min-w-0"
                         >
                             <div
-                                className="flex flex-col gap-[14px]"
+                                className="flex flex-col gap-6"
                                 style={{ width: "100%", minWidth: 0 }}
                             >
                                 <TabsList
@@ -494,9 +499,6 @@ export default function HundredOneReadingView({ reading, narrative, showUpsell, 
                             </div>
                         </Tabs>
                         
-                        <div className="w-full mt-12">
-                            <LearnFooter />
-                        </div>
                     </div>
                 </section>
 

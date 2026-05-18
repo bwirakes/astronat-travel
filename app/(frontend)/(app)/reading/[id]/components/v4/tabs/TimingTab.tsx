@@ -330,7 +330,7 @@ function MonthlyFieldSummary({ vm }: { vm: V4VM }) {
                     : <>The next 12 months at this place.</>}
             </p>
 
-            <div style={{ background: "var(--surface)", border: "1px solid var(--surface-border)", borderRadius: "var(--radius-md)", padding: "var(--space-md) var(--space-md) var(--space-sm)" }}>
+            <div className="reading-card reading-card--accent" style={{ padding: "var(--space-md) var(--space-md) var(--space-sm)" }}>
                 {/* Top label — sits over the anchor month bar */}
                 {anchorMonth && anchorPct !== null && (
                     <div style={{ position: "relative", height: 28, marginBottom: 4 }}>
@@ -537,7 +537,7 @@ function DailyFieldSummary({ vm }: { vm: V4VM }) {
                 const anchorNearRight = anchorPct !== null && anchorPct > 85;
 
                 return (
-                    <div style={{ background: "var(--surface)", border: "1px solid var(--surface-border)", borderRadius: "var(--radius-md)", padding: "var(--space-md) var(--space-md) var(--space-sm)" }}>
+                    <div className="reading-card reading-card--accent" style={{ padding: "var(--space-md) var(--space-md) var(--space-sm)" }}>
                         {/* Top label — sits directly over the anchor bar */}
                         {anchorPct !== null && (
                             <div style={{ position: "relative", height: 28, marginBottom: 4 }}>
@@ -1415,7 +1415,7 @@ function EventLayerToggle({
                             borderStyle: "solid",
                             borderRadius: "calc(var(--radius-sm) - 2px)",
                             borderColor: active
-                                ? "color-mix(in oklab, var(--color-y2k-blue) 34%, var(--surface-border))"
+                                ? "var(--reading-card-border-accent)"
                                 : "transparent",
                             background: active
                                 ? "color-mix(in oklab, var(--color-y2k-blue) 7%, var(--surface))"
@@ -1523,11 +1523,7 @@ function TransitGantt({ vm }: { vm: V4VM }) {
         : null;
 
     return (
-        <div style={{
-            background: "color-mix(in oklab, var(--surface) 56%, transparent)",
-            borderTop: `1px solid ${LEDGER_RULE}`,
-            borderBottom: `1px solid ${LEDGER_RULE}`,
-            borderRadius: "var(--radius-sm)",
+        <div className="reading-card reading-card--accent" style={{
             padding: isCompact ? "0.85rem 0 0" : "clamp(1rem, 2vw, 1.35rem) 0 0",
             overflow: "visible",
         }}>
@@ -1831,6 +1827,7 @@ export default function TimingTab({ vm, copiedTab }: Props) {
             preserveGuideLabels
             guideLayout="flow"
             guideFlowVariant="timing"
+            guideSurface="cards"
         >
             {/* Verdict — one deterministic sentence carries the intro role */}
             <VerdictHeadline vm={vm} />
@@ -1882,10 +1879,7 @@ export default function TimingTab({ vm, copiedTab }: Props) {
 
             {/* AI Closing Verdict */}
             {vm.tabs.timing?.closingVerdict && (
-                <div 
-                    className="mt-[clamp(64px,8vw,96px)] pt-[clamp(48px,6vw,64px)] border-t"
-                    style={{ borderColor: "var(--surface-border)" }}
-                >
+                <div className="reading-card reading-card--accent mt-[clamp(64px,8vw,96px)] p-[clamp(28px,4vw,42px)]">
                     <h4 
                         className="m-0 mb-4 text-[11px] tracking-[0.2em] uppercase"
                         style={{ fontFamily: FM, color: "var(--text-tertiary)" }}

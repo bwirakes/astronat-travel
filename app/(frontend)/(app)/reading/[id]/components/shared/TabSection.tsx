@@ -30,6 +30,7 @@ interface Props {
     preserveGuideLabels?: boolean;
     guideLayout?: "compact" | "flow";
     guideFlowVariant?: "overview" | "timing";
+    guideSurface?: "ledger" | "cards";
     children: ReactNode;
 }
 
@@ -54,6 +55,7 @@ export default function TabSection({
     preserveGuideLabels,
     guideLayout = "compact",
     guideFlowVariant,
+    guideSurface = "ledger",
     children,
 }: Props) {
     const leadText = lead?.trim() ?? "";
@@ -126,6 +128,7 @@ export default function TabSection({
                                     autoEmphasis={!quietCopy}
                                     allowBold={!quietCopy}
                                     preserveLabels={preserveGuideLabels}
+                                    surface={guideSurface}
                                 />
                             </div>
                             <div className="reading-guide-responsive__flow">
@@ -149,6 +152,7 @@ export default function TabSection({
                         autoEmphasis={!quietCopy}
                         allowBold={!quietCopy}
                         preserveGuideLabels={preserveGuideLabels}
+                        guideSurface={guideSurface}
                     />
                 )}
                 {showIntroNode && (

@@ -9,10 +9,46 @@
    reading page doesn't dump a cream slab onto a dark background. */
 :root {
   --reading-tabs-surface: var(--bg);
+  --reading-card-bg: var(--reading-card-surface);
+  --reading-card-bg-strong: var(--reading-card-surface-strong);
+  --reading-card-border: var(--surface-border);
+  --reading-card-border-accent: color-mix(in oklab, var(--color-y2k-blue) 8%, var(--surface-border));
+  --reading-card-shadow: 0 18px 44px color-mix(in oklab, var(--text-primary) 12%, transparent);
+  --reading-chip-acqua: var(--color-acqua-soft);
+  --reading-chip-spiced: var(--color-spiced-life);
 }
 
 [data-theme="light"] {
   --reading-tabs-surface: var(--color-eggshell);
+  --reading-card-border-accent: color-mix(in oklab, var(--color-y2k-blue) 6%, var(--surface-border));
+  --reading-card-shadow: 0 16px 40px color-mix(in oklab, var(--color-charcoal) 6%, transparent);
+}
+
+.reading-card {
+  position: relative;
+  min-width: 0;
+  border: 1px solid var(--reading-card-border);
+  border-radius: 8px;
+  background: var(--reading-card-bg);
+  box-shadow: var(--reading-card-shadow);
+}
+
+.reading-card--strong {
+  border-color: var(--reading-card-border-accent);
+  background: var(--reading-card-bg-strong);
+}
+
+.reading-card--accent {
+  border-color: var(--reading-card-border-accent);
+}
+
+.reading-card__top-rule {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 4px;
+  background: var(--color-y2k-blue);
+  pointer-events: none;
 }
 
 /* Higher-specificity selector (.class + [attribute]) — needed to beat

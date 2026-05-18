@@ -49,7 +49,7 @@ export function WindowsList({ vm, limit }: { vm: V4VM, limit?: number }) {
     }
 
     return (
-        <div style={{ display: "flex", flexDirection: "column" }}>
+        <div className="reading-card reading-card--accent" style={{ display: "flex", flexDirection: "column", padding: "0 clamp(1rem, 2vw, 1.35rem)" }}>
             {rows.map((r, i) => {
                 const tone = scoreTone(r.score);
                 const scoreLabel =

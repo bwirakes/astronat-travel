@@ -204,6 +204,42 @@ describe("V4 teacherReading completeness", () => {
     expect(mars?.shift).not.toContain("moves from private recovery into money & resources here");
   });
 
+  it("exposes structured relocated angle fields for stable UI matching", () => {
+    const vm = toV4ViewModel({
+      ...baseReading(),
+      natalAngles: { ASC: 30, IC: 120, DSC: 210, MC: 300 },
+      relocatedCusps: [60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 0, 30],
+    });
+
+    expect(vm.relocated.angles.map((angle) => angle.k)).toEqual(["ASC", "IC", "DSC", "MC"]);
+    expect(vm.relocated.angles.find((angle) => angle.k === "ASC")?.natal).toBe("0° Taurus");
+    expect(vm.relocated.angles.find((angle) => angle.k === "ASC")?.relocated).toBe("0° Gemini");
+    expect(vm.relocated.angles.find((angle) => angle.k === "ASC")?.signChanged).toBe(true);
+  });
+
+  it("exposes numeric planet-house fields so compact grouping does not parse labels", () => {
+    const vm = toV4ViewModel({
+      ...baseReading(),
+      natalPlanets: [
+        { name: "Sun", longitude: 10, house: 1 },
+        { name: "Venus", longitude: 190, house: 7 },
+      ],
+      relocatedCusps: [180, 210, 240, 270, 300, 330, 0, 30, 60, 90, 120, 150],
+      natalCusps: Array.from({ length: 12 }, (_, i) => i * 30),
+      natalAngles: { ASC: 0, IC: 90, DSC: 180, MC: 270 },
+    });
+
+    const sun = vm.relocated.planetsInHouses.find((row) => row.planet === "Sun");
+    const venus = vm.relocated.planetsInHouses.find((row) => row.planet === "Venus");
+
+    expect(sun?.natalHouseNum).toBe(1);
+    expect(sun?.reloHouseNum).toBe(7);
+    expect(sun?.changed).toBe(true);
+    expect(venus?.natalHouseNum).toBe(7);
+    expect(venus?.reloHouseNum).toBe(1);
+    expect(venus?.changed).toBe(true);
+  });
+
   it("normalizes stale teacher headline-score mentions to the hero score", () => {
     const teacherReading = completeTeacherReading();
     teacherReading.overview.scoreExplanation = "This trip carries a score of 73 because it has potential.";

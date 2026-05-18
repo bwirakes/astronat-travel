@@ -83,7 +83,7 @@ const BUTTON_BASE: React.CSSProperties = {
 const BUTTON_ACTIVE: React.CSSProperties = {
     ...BUTTON_BASE,
     background: "color-mix(in oklab, var(--color-y2k-blue) 7%, var(--surface))",
-    borderColor: "color-mix(in oklab, var(--color-y2k-blue) 34%, var(--surface-border))",
+    borderColor: "var(--reading-card-border-accent)",
     color: "var(--color-y2k-blue)",
     fontWeight: 800,
     opacity: 1,

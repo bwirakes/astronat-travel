@@ -127,6 +127,7 @@ export default function OverviewTab({ vm, copiedTab, selectTab, natalForMap, bir
             preserveGuideLabels
             guideLayout="flow"
             guideFlowVariant="overview"
+            guideSurface="cards"
         >
             <div className="relative w-full max-w-none">
                 {/* Macro-Texture: Editorial Wireframe Globe */}
@@ -164,10 +165,7 @@ export default function OverviewTab({ vm, copiedTab, selectTab, natalForMap, bir
                     title="How to use this place"
                     flush={selectedGoals.length === 0}
                 />
-                <section
-                    className="grid grid-cols-1 md:grid-cols-2 gap-0 border-t border-l"
-                    style={{ borderColor: "var(--surface-border)" }}
-                >
+                <section className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         <AnswerCard
                             label="Use this for"
                             subhead={topTheme ? `${topTheme.label} has the most support here` : "The clearest yes in this location"}
@@ -322,10 +320,7 @@ function AstrocartographyPanel({
     const canRenderMap = !!natalForMap;
 
     return (
-        <section
-            className="grid grid-cols-1 items-start lg:grid-cols-[minmax(0,1.18fr)_minmax(300px,0.82fr)] gap-0 border-t border-l border-r border-b mb-[clamp(34px,5vw,58px)]"
-            style={{ borderColor: "var(--surface-border)" }}
-        >
+        <section className="reading-card reading-card--strong grid grid-cols-1 items-start lg:grid-cols-[minmax(0,1.18fr)_minmax(300px,0.82fr)] gap-0 overflow-hidden mb-[clamp(34px,5vw,58px)]">
             <div className="min-w-0 border-b lg:border-b-0 lg:border-r p-[clamp(16px,2.4vw,24px)]" style={{ borderColor: "var(--surface-border)" }}>
                 {canRenderMap ? (
                     <AcgMap
@@ -559,11 +554,8 @@ function LifeThemesDrawer({ vm }: { vm: V4VM }) {
     const lowestTheme = rankedThemes[rankedThemes.length - 1];
 
     return (
-        <details
-            className="border-b group"
-            style={{ borderColor: "var(--surface-border)" }}
-        >
-            <summary className="grid cursor-pointer list-none grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-4 py-[clamp(20px,3vw,30px)] md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
+        <details className="reading-card reading-card--accent group overflow-hidden">
+            <summary className="grid cursor-pointer list-none grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-4 p-[clamp(22px,3vw,34px)] md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
                 <div className="min-w-0">
                     <div
                         className="mb-[8px] text-[10px] tracking-[0.16em] uppercase"
@@ -691,10 +683,8 @@ function AnswerCard({
 }) {
     const accent = toneAccent(tone);
     return (
-        <article
-            className="min-w-0 w-full text-left p-[clamp(22px,3vw,32px)] border-r border-b"
-            style={{ borderColor: "var(--surface-border)" }}
-        >
+        <article className="reading-card reading-card--accent min-w-0 w-full overflow-hidden text-left p-[clamp(22px,3vw,32px)] pt-[clamp(26px,3.4vw,36px)]">
+            <span className="reading-card__top-rule" aria-hidden />
             <div className="mb-[18px] flex items-start gap-3">
                 <GuideRowBadge label={label} index={badgeIndex} variant={badgeVariant} />
                 <div className="min-w-0">
@@ -827,9 +817,10 @@ function TimingSummary({
                     onClick();
                 }
             }}
-            className="grid grid-cols-1 md:grid-cols-[minmax(220px,0.52fr)_minmax(0,1fr)] gap-[clamp(20px,4vw,56px)] border-t border-l border-r border-b p-[clamp(22px,3.5vw,34px)]"
-            style={{ borderColor: "var(--surface-border)", cursor: onClick ? "pointer" : undefined }}
+            className="reading-card reading-card--accent grid grid-cols-1 overflow-hidden md:grid-cols-[minmax(220px,0.52fr)_minmax(0,1fr)] gap-[clamp(20px,4vw,56px)] p-[clamp(22px,3.5vw,34px)] pt-[clamp(28px,3.8vw,40px)]"
+            style={{ cursor: onClick ? "pointer" : undefined }}
         >
+            <span className="reading-card__top-rule" aria-hidden style={{ background: scoreColor }} />
             <div className="min-w-0">
                 <div
                     className="mb-[16px] h-[3px] w-[42px]"
