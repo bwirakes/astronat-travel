@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
+import { useEffect, useState, type ReactElement, type ReactNode } from "react";
 import SectionHead from "../../shared/SectionHead";
 import TabSection from "../../shared/TabSection";
 import { RichText } from "../../shared/ReadingCopy";
@@ -15,12 +15,12 @@ import TimingDateTabs, {
     rowInTab,
     type TimingTab as TimingDateTab,
 } from "./TimingDateTabs";
-import { WINDOW_LABELS, WINDOW_RATIONALES, verdictBand, verdictTone } from "@/app/lib/verdict";
 import {
     HoverCard,
     HoverCardContent,
     HoverCardTrigger,
 } from "@/app/components/ui/hover-card";
+import { parseTimingHits, TimingLedgerRow, type TimingLedgerTone, type TimingReceiptTone } from "../parts/TimingLedgerRow";
 
 // ─── Importance ranking (signal vs noise) ────────────────────────────────────
 // Personal transits are sorted chronologically in the VM, so we re-rank by a
@@ -85,6 +85,100 @@ function plainTransitTitle(span: TransitSpan): string {
 
 function compactTransitLabel(span: TransitSpan): string {
     return `${capWord(span.transit_planet)} to ${capWord(span.natal_planet)}`;
+}
+
+const TIMING_PLANET_MEANING_LOCAL: Record<string, string> = {
+    sun: "confidence",
+    moon: "mood",
+    mercury: "plans",
+    venus: "connection",
+    mars: "urgency",
+    jupiter: "growth",
+    saturn: "structure",
+    uranus: "surprises",
+    neptune: "clarity",
+    pluto: "control, fear, and intensity",
+};
+
+const TIMING_TRANSIT_HELP_LOCAL: Record<string, string> = {
+    sun: "visibility",
+    moon: "mood",
+    mercury: "messages",
+    venus: "ease",
+    mars: "drive",
+    jupiter: "growth",
+    saturn: "structure",
+    uranus: "fresh change",
+    neptune: "imagination",
+    pluto: "focus",
+};
+
+const TIMING_TRANSIT_PRESSURE_LOCAL: Record<string, string> = {
+    sun: "visibility",
+    moon: "mood",
+    mercury: "messages",
+    venus: "comfort",
+    mars: "speed",
+    jupiter: "too much growth",
+    saturn: "limits",
+    uranus: "surprises",
+    neptune: "fog",
+    pluto: "control",
+};
+
+function timingMeaning(planet: string): string {
+    return TIMING_PLANET_MEANING_LOCAL[planet.toLowerCase()] ?? planet.toLowerCase();
+}
+
+function timingTopicVerb(topic: string): "get" | "gets" {
+    return /\band\b/i.test(topic) || /\b(plans|limits|resources|messages|surprises)\b/i.test(topic)
+        ? "get"
+        : "gets";
+}
+
+function exactAspectVerb(aspect: string): string {
+    const key = aspect.toLowerCase();
+    if (key.includes("square")) return "squares";
+    if (key.includes("opposition")) return "opposes";
+    if (key.includes("trine")) return "trines";
+    if (key.includes("sextile")) return "sextiles";
+    if (key.includes("conjunction") || key.includes("conjunct")) return "conjoins";
+    return "activates";
+}
+
+function aspectPlainMeaning(span: TransitSpan): string {
+    const aspect = span.aspect.toLowerCase();
+    const natal = timingMeaning(span.natal_planet).split(",")[0];
+    const transitKey = span.transit_planet.toLowerCase();
+    const transitHelp = TIMING_TRANSIT_HELP_LOCAL[transitKey] ?? transitKey;
+    const transitPressure = TIMING_TRANSIT_PRESSURE_LOCAL[transitKey] ?? transitKey;
+    if (aspect.includes("square") || aspect.includes("opposition")) {
+        return `watch ${natal}; ${transitPressure} can add pressure`;
+    }
+    if (aspect.includes("trine") || aspect.includes("sextile")) {
+        return `${natal} ${timingTopicVerb(natal)} help from ${transitHelp}`;
+    }
+    if (aspect.includes("conjunction") || aspect.includes("conjunct")) {
+        return `${natal} ${timingTopicVerb(natal)} louder through ${transitPressure}`;
+    }
+    return `${natal} is active through ${transitPressure}`;
+}
+
+function lowerFirst(value: string): string {
+    return value ? value.charAt(0).toLowerCase() + value.slice(1) : value;
+}
+
+function upperFirst(value: string): string {
+    return value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+}
+
+function transitSpanReason(span: TransitSpan): string {
+    const review = span.retrograde ? ", with review or delay energy" : "";
+    return `${capWord(span.transit_planet)} ${exactAspectVerb(span.aspect)} natal ${capWord(span.natal_planet)}, so ${lowerFirst(aspectPlainMeaning(span))}${review}.`;
+}
+
+function exactAspectTitle(span: TransitSpan): string {
+    return `${capWord(span.transit_planet)} ${exactAspectVerb(span.aspect)} natal ${capWord(span.natal_planet)}`;
 }
 
 interface Props {
@@ -185,7 +279,7 @@ function visibleSpanLabel({
     );
 }
 
-// ─── Verdict headline ───────────────────────────────────────────────────────
+// ─── Timing answer helpers ──────────────────────────────────────────────────
 
 const GOAL_LABEL_SHORT: Record<string, string> = {
     identity: "identity and confidence",
@@ -204,68 +298,187 @@ const GOAL_LABEL_SHORT: Record<string, string> = {
     timing: "this trip",
 };
 
-function verdictForScore(score: number): { label: string; tone: "good" | "mixed" | "hard"; rationale: string } {
-    const band = verdictBand(score);
-    const tone = verdictTone(band);
-    const toneTag: "good" | "mixed" | "hard" =
-        tone === "lift" ? "good" : tone === "neutral" ? "mixed" : "hard";
-    return { label: WINDOW_LABELS[band], tone: toneTag, rationale: WINDOW_RATIONALES[band] };
+function plainText(value: string | undefined): string {
+    return String(value ?? "")
+        .replace(/<[^>]*>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
 }
 
-function VerdictHeadline({ vm }: { vm: V4VM }) {
-    const score = vm.travelWindows[0]?.score;
-    if (typeof score !== "number") return null;
+function wordCount(value: string | undefined): number {
+    const text = plainText(value);
+    return text ? text.split(/\s+/).length : 0;
+}
 
-    const v = verdictForScore(score);
+function hasTimingRationale(value: string | undefined): boolean {
+    return /\b(because|so|since|as|score|scores|cleaner|stronger|easier|pressure|support|delay|risk|square|squares|opposes|opposition|trine|trines|sextile|sextiles|conjoins|conjunct|retrograde|review)\b|\/100/i.test(plainText(value));
+}
+
+function timingAnswerOrFallback(value: string | undefined, fallback: string, minWords: number): string {
+    if (!value) return fallback;
+    if (wordCount(value) < minWords || !hasTimingRationale(value)) return fallback;
+    return value;
+}
+
+function firstSentence(value: string | undefined): string {
+    const text = plainText(value);
+    if (!text) return "";
+    return text.split(/(?<=[.!?])\s+/)[0]?.trim() ?? "";
+}
+
+function clauseFromSentence(sentence: string): string {
+    const trimmed = sentence.replace(/[.!?]+$/, "").trim();
+    if (/^(this|it|the|a|an)\b/i.test(trimmed)) {
+        return trimmed.charAt(0).toLowerCase() + trimmed.slice(1);
+    }
+    return trimmed;
+}
+
+function overlapsWindow(span: TransitSpan, window: V4VM["travelWindows"][number]): boolean {
+    const start = new Date(window.startISO).getTime();
+    const end = new Date(window.endISO).getTime();
+    const entry = new Date(span.entryISO).getTime();
+    const exit = new Date(span.exitISO).getTime();
+    if (![start, end, entry, exit].every(Number.isFinite)) return false;
+    return entry <= end && exit >= start;
+}
+
+function strongestWindowSpan(vm: V4VM, window: V4VM["travelWindows"][number] | undefined): TransitSpan | null {
+    if (!window || !vm.transitSpans.length) return null;
+    const spans = vm.transitSpans
+        .filter((span) => overlapsWindow(span, window))
+        .sort((a, b) => transitImportance(b, vm.goalIds) - transitImportance(a, vm.goalIds));
+    return spans[0] ?? null;
+}
+
+function receiptToSentence(receipt: string): string {
+    const match = receipt.match(/^([A-Za-z]+)\s+(conjunction|square|opposition|trine|sextile)\s+([A-Za-z]+)$/i);
+    if (!match) return receipt;
+    const verb = exactAspectVerb(match[2]);
+    return `${capWord(match[1])} ${verb} natal ${capWord(match[3])}`;
+}
+
+function timingWindowReason(vm: V4VM, window: V4VM["travelWindows"][number] | undefined): string {
+    const receipt = parseTimingHits(window?.note ?? "")[0];
+    if (receipt) return `${receiptToSentence(receipt.receipt)}, so ${lowerFirst(receipt.meaning.replace(/[.!?]+$/, ""))}.`;
+
+    const sentence = firstSentence(window?.note);
+    if (!sentence || /^your travel window\.?$/i.test(sentence)) {
+        const span = strongestWindowSpan(vm, window);
+        if (span) return transitSpanReason(span);
+        if (!window) return "the timing needs a practical check before you lean on it.";
+        return `it scores ${window.score}/100, so use it with realistic expectations.`;
+    }
+    return /[.!?]$/.test(sentence) ? sentence : `${sentence}.`;
+}
+
+function timingWindowReasonClause(vm: V4VM, window: V4VM["travelWindows"][number] | undefined): string {
+    return clauseFromSentence(timingWindowReason(vm, window));
+}
+
+function timingDecisionFallback(vm: V4VM): string {
+    const window = vm.travelWindows[0];
+    if (!window) return "Use this timing only after checking the practical plan first.";
+    const isRelocation = vm.timeline.grain === "month";
+    const selected = window.dates;
     const goal = vm.goalIds[0];
     const goalLabel = goal ? GOAL_LABEL_SHORT[goal] : null;
+    const reason = timingWindowReasonClause(vm, window);
 
-    const accent =
-        v.tone === "good"  ? "var(--lift-accent)" :
-        v.tone === "mixed" ? "var(--gold)" :
-                             "var(--color-spiced-life)";
+    if (isRelocation) {
+        if (window.score >= 75) return `Move in ${selected}; ${reason}.`;
+        if (window.score >= 55) return `Use ${selected} only for a focused ${goalLabel ?? "priority"} move; ${reason}.`;
+        return `Reconsider ${selected}; ${reason}.`;
+    }
 
-    return (
-        <div className="timing-verdict-headline" style={{ "--timing-verdict-accent": accent } as CSSProperties}>
-            <div style={{ fontFamily: FM, fontSize: "0.65rem", letterSpacing: "0.22em", textTransform: "uppercase", color: accent, fontWeight: 700 }}>
-                {v.label} · {score}/100
-            </div>
-            <p style={{
-                fontFamily: FB,
-                fontSize: "17px",
-                lineHeight: 1.6,
-                fontWeight: 300,
-                color: "var(--text-secondary)",
-                margin: 0,
-                maxWidth: "62ch",
-            }}>
-                {goalLabel && goal !== "timing"
-                    ? <>For your <span style={{ color: accent, fontWeight: 600 }}>{goalLabel}</span> goals, {v.rationale}.</>
-                    : <>{v.rationale.charAt(0).toUpperCase()}{v.rationale.slice(1)}.</>
-                }
-            </p>
-        </div>
-    );
+    if (window.score >= 75) return `Go during ${selected}; ${reason}.`;
+    if (window.score >= 55) return `Go with caution during ${selected}; ${reason}.`;
+    if (window.score >= 40) return `Shorten or simplify ${selected}; ${reason}.`;
+    return `Avoid making ${selected} carry the main plan; ${reason}.`;
 }
 
-// ─── Window framing — Nat's voice, two short paragraphs ─────────────────────
-// Sits above the Gantt header. Para 1 explains what the bars are. Para 2
-// names the loudest 1–2 things shaping this period. Direct, no jargon.
+function bestWindowFallback(vm: V4VM): string {
+    const primary = vm.travelWindows[0];
+    if (!primary) return "No stronger timing window is available in this reading.";
 
-function WindowFraming({ vm }: { vm: V4VM }) {
-    const isRelocation = vm.timeline.grain === "month";
+    const ranked = [...vm.travelWindows].sort((a, b) => b.score - a.score);
+    const best = ranked[0];
+    const backup = vm.travelWindows.find((w) => w !== primary);
 
-    const para1 = isRelocation
-        ? "Here's the year ahead at this place. Outer planets — Saturn, Jupiter, the slow ones — move through your chart for months at a time. Most pass quietly. A few set the tone. Each bar shows when one transit enters, peaks, and clears."
-        : "Here's the next 90 days, slowed down. Outer planets sweep across your natal chart for weeks at a time, and a few set the tone for the whole stretch. Each bar is one transit — when it enters orb (close enough to count), when it's exact, when it clears.";
+    if (best && best !== primary && best.score > primary.score) {
+        return `${best.dates} is better at ${best.score}/100 than your dates at ${primary.score}/100 because ${timingWindowReasonClause(vm, best)}.`;
+    }
+    if (backup && backup.score === primary.score) {
+        return `${primary.dates} and ${backup.dates} tie at ${primary.score}/100; choose the one with easier logistics.`;
+    }
+    if (backup) {
+        return `${primary.dates} is best at ${primary.score}/100 because ${timingWindowReasonClause(vm, primary)}; ${backup.dates} is the backup.`;
+    }
+    return `${primary.dates} is best at ${primary.score}/100 because ${timingWindowReasonClause(vm, primary)}.`;
+}
 
-    return (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem", maxWidth: "62ch", marginTop: "var(--space-xl)" }}>
-            <p style={{ fontFamily: FB, fontSize: "16px", lineHeight: 1.65, color: "var(--text-secondary)", margin: 0, fontWeight: 300 }}>
-                {para1}
-            </p>
-        </div>
-    );
+function watchOutFallback(vm: V4VM): string {
+    const advice = vm.tabs.timing?.activationAdvice ?? [];
+    const watch = advice.find((item) => /\b(avoid|watch|careful|protect|buffer|contract|legal|admin|overbook|promise|risk)\b/i.test(item));
+    if (watch) return watch;
+    const score = vm.travelWindows[0]?.score ?? 50;
+    if (score >= 55) return "Protect the plan from overpromising, rushed decisions, and too many commitments.";
+    return "Protect sleep, money, logistics, and any decision that would be hard to unwind.";
+}
+
+const TIMING_TOP_COPY_REJECT = /\b(cleanest door|necessary intensity|necessary support|pressure-cooker|cut ties|proves to be an illusion|aspects to your natal planets|turns up|pressures|activating)\b/i;
+
+function timingTopLeadFallback(vm: V4VM): string {
+    const primary = vm.travelWindows[0];
+    if (!primary) return "Use this timing only after checking the practical plan first.";
+    const ranked = [...vm.travelWindows].sort((a, b) => b.score - a.score);
+    const best = ranked[0];
+    const goal = vm.goalIds[0];
+    const goalLabel = goal ? GOAL_LABEL_SHORT[goal] : "your main plan";
+
+    if (best && best !== primary && best.score >= primary.score + 3) {
+        return `${best.dates} is the better window if your dates can move.`;
+    }
+    if (primary.score >= 70) return `${primary.dates} is usable for ${goalLabel}.`;
+    if (primary.score >= 55) return `${primary.dates} can work if you keep the plan simple.`;
+    return `${primary.dates} is not ideal, so keep the trip light.`;
+}
+
+function timingTopIntroFallback(vm: V4VM): string {
+    const primary = vm.travelWindows[0];
+    if (!primary) return "Keep the schedule flexible until the practical details are clear.";
+    if (primary.score >= 70) return "The support is useful, but it works best with one clear goal and extra space in the schedule.";
+    if (primary.score >= 55) return "This is workable timing, but only if you keep the schedule simple and avoid forcing too much.";
+    return "This timing asks for a lighter plan, fewer promises, and more room to adjust.";
+}
+
+function timingTopCopyOrFallback(value: string | undefined, fallback: string, maxWords: number): string {
+    const first = firstSentence(value);
+    if (!first) return fallback;
+    if (TIMING_TOP_COPY_REJECT.test(first)) return fallback;
+    if (wordCount(first) > maxWords) return fallback;
+    return first;
+}
+
+function timingGuideRows(vm: V4VM) {
+    const timing = vm.tabs.timing;
+    return [
+        {
+            label: "Should I use it?",
+            badgeVariant: "timing-window" as const,
+            body: timingAnswerOrFallback(timing?.decision, timingDecisionFallback(vm), 12),
+        },
+        {
+            label: "Best window",
+            badgeVariant: "timing-pace" as const,
+            body: timingAnswerOrFallback(timing?.bestWindow, bestWindowFallback(vm), 10),
+        },
+        {
+            label: "Protect this",
+            badgeVariant: "timing-watch" as const,
+            body: timing?.watchOut || watchOutFallback(vm),
+        },
+    ];
 }
 
 // ─── §1 Field Summary ────────────────────────────────────────────────────────
@@ -535,20 +748,32 @@ function DailyFieldSummary({ vm }: { vm: V4VM }) {
                 const anchorPct = anchorIdx >= 0 ? (anchorIdx / Math.max(1, dailySeries.length - 1)) * 100 : null;
                 const anchorNearLeft  = anchorPct !== null && anchorPct < 15;
                 const anchorNearRight = anchorPct !== null && anchorPct > 85;
+                const anchorLabelLeft = anchorPct === null
+                    ? "0%"
+                    : anchorNearLeft
+                        ? "0%"
+                        : anchorNearRight
+                            ? "100%"
+                            : `${anchorPct}%`;
+                const anchorLabelTransform = anchorNearLeft
+                    ? "translateX(0)"
+                    : anchorNearRight
+                        ? "translateX(-100%)"
+                        : "translateX(-50%)";
 
                 return (
-                    <div className="reading-card reading-card--accent" style={{ padding: "var(--space-md) var(--space-md) var(--space-sm)" }}>
+                    <div className="reading-card reading-card--accent" style={{ padding: "clamp(0.85rem, 3vw, var(--space-md)) clamp(0.75rem, 3vw, var(--space-md)) var(--space-sm)", overflow: "hidden" }}>
                         {/* Top label — sits directly over the anchor bar */}
                         {anchorPct !== null && (
                             <div style={{ position: "relative", height: 28, marginBottom: 4 }}>
                                 <div style={{
                                     position: "absolute",
-                                    left: `${anchorPct}%`,
+                                    left: anchorLabelLeft,
                                     top: 0,
-                                    transform: "translateX(-50%)",
+                                    transform: anchorLabelTransform,
                                     display: "flex",
                                     flexDirection: "column",
-                                    alignItems: "center",
+                                    alignItems: anchorNearLeft ? "flex-start" : anchorNearRight ? "flex-end" : "center",
                                     gap: "2px",
                                     whiteSpace: "nowrap",
                                 }}>
@@ -561,7 +786,16 @@ function DailyFieldSummary({ vm }: { vm: V4VM }) {
                         )}
 
                         <div
-                            style={{ position: "relative", display: "flex", gap: "2px", alignItems: "flex-end", height: 48, width: "100%" }}
+                            style={{
+                                position: "relative",
+                                display: "grid",
+                                gridTemplateColumns: `repeat(${dailySeries.length}, minmax(1px, 1fr))`,
+                                gap: "clamp(1px, 0.32vw, 2px)",
+                                alignItems: "end",
+                                height: 48,
+                                width: "100%",
+                                minWidth: 0,
+                            }}
                             role="img"
                             aria-label="90-day score strip"
                             onMouseLeave={() => setHoveredIdx(null)}
@@ -665,8 +899,8 @@ function DailyFieldSummary({ vm }: { vm: V4VM }) {
                                         key={d.iso}
                                         onMouseEnter={() => setHoveredIdx(idx)}
                                         style={{
-                                            flex: 1,
-                                            minWidth: 2,
+                                            minWidth: 0,
+                                            width: "100%",
                                             height: `${h}%`,
                                             background: color,
                                             opacity: isUser ? 1 : isHovered ? 0.95 : 0.65,
@@ -1776,6 +2010,281 @@ function TransitGantt({ vm }: { vm: V4VM }) {
     );
 }
 
+function TransitEvidenceDetails({ vm, index }: { vm: V4VM; index: string }) {
+    const hasEvidence = vm.transitSpans.length > 0 || (vm.universalSkySpans?.length ?? 0) > 0;
+    if (!hasEvidence) return null;
+
+    const isRelocation = vm.timeline.grain === "month";
+    const selected = vm.travelWindows[0];
+    const callouts = buildTravelPeriodCallouts(vm);
+    const strongest = callouts[0];
+    const summary = selected
+        ? `${selected.dates} has no major exact retrograde, station, or eclipse callout in the selected evidence. Use the full map for the wider timing picture.`
+        : "Use the full map for the wider timing picture.";
+    const ledgerTone = (tone: TravelCalloutTone): TimingLedgerTone =>
+        tone === "exact" ? "good" : tone === "watch" ? "hard" : "moderate";
+    const receiptTone = (tone: TravelCalloutTone): TimingReceiptTone =>
+        tone === "exact" ? "good" : tone === "watch" ? "watch" : "neutral";
+
+    return (
+        <section style={{ marginTop: "var(--space-xl)" }}>
+            <SectionHead
+                index={index}
+                title="Transit evidence"
+                tooltip="A short selected-date summary first, with the full timing map tucked below for astrology readers."
+            />
+            {strongest ? (
+                <div style={{ marginBottom: "var(--space-md)" }}>
+                    <TimingLedgerRow
+                        label={strongest.label}
+                        title={selected?.dates ?? "Selected dates"}
+                        tone={ledgerTone(strongest.tone)}
+                        receipts={[{
+                            receipt: strongest.title,
+                            meaning: upperFirst(firstSentence(strongest.shortBody)),
+                            tone: receiptTone(strongest.tone),
+                        }]}
+                        action={strongest.badge === "Caution"
+                            ? "Review; do not force it."
+                            : strongest.badge === "Support"
+                                ? "Use it, but keep the plan simple."
+                                : "Treat this as background weather."}
+                    />
+                    {callouts.length > 1 && (
+                        <p
+                            style={{
+                                fontFamily: FB,
+                                fontSize: "0.88rem",
+                                lineHeight: 1.45,
+                                color: "var(--text-tertiary)",
+                                margin: "0.65rem 0 0",
+                            }}
+                        >
+                            Also active: {callouts.slice(1, 3).map((item) => item.title).join("; ")}.
+                        </p>
+                    )}
+                </div>
+            ) : (
+                <p
+                    style={{
+                        fontFamily: FB,
+                        fontSize: "clamp(1rem, 1.35vw, 1.12rem)",
+                        lineHeight: 1.65,
+                        color: "var(--text-secondary)",
+                        margin: "0 0 var(--space-md)",
+                        maxWidth: "68ch",
+                    }}
+                >
+                    <RichText autoEmphasis={false} allowBold={false}>{summary}</RichText>
+                </p>
+            )}
+
+            <details
+                style={{
+                    borderTop: `1px solid ${LEDGER_RULE}`,
+                    borderBottom: `1px solid ${LEDGER_RULE}`,
+                    padding: "0.9rem 0",
+                }}
+            >
+                <summary
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns: "minmax(0, 1fr) auto",
+                        alignItems: "baseline",
+                        gap: "0.85rem",
+                        cursor: "pointer",
+                        listStyle: "none",
+                    }}
+                >
+                    <span
+                        style={{
+                            fontFamily: FP,
+                            fontSize: "clamp(1.05rem, 1.7vw, 1.28rem)",
+                            color: "var(--text-primary)",
+                            lineHeight: 1.2,
+                        }}
+                    >
+                        {isRelocation ? "Open the year-ahead transit map" : "Open the full timing map"}
+                    </span>
+                    <span
+                        style={{
+                            fontFamily: FM,
+                            fontSize: "0.62rem",
+                            letterSpacing: "0.16em",
+                            textTransform: "uppercase",
+                            color: "var(--text-tertiary)",
+                            fontWeight: 700,
+                        }}
+                    >
+                        Open
+                    </span>
+                </summary>
+                <div style={{ paddingTop: "var(--space-md)" }}>
+                    <p
+                        style={{
+                            fontFamily: FB,
+                            fontSize: "0.95rem",
+                            lineHeight: 1.6,
+                            color: "var(--text-secondary)",
+                            margin: "0 0 var(--space-md)",
+                            maxWidth: "62ch",
+                        }}
+                    >
+                        Optional detail for astrology readers: this shows which longer transits create the timing lift or friction.
+                    </p>
+                    <SectionHead
+                        title={isRelocation
+                            ? "Slow transits across the year ahead"
+                            : "The full timing map"}
+                        tooltip={isRelocation
+                            ? "Outer-planet transits resolve over months, not days. Each bar is one transit's full active range."
+                            : "Slow-moving transits that actually shape this stretch. Open this evidence when you want the receipts."}
+                        flush
+                    />
+                    <TransitGantt vm={vm} />
+                </div>
+            </details>
+        </section>
+    );
+}
+
+type TravelCalloutTone = "watch" | "exact" | "sky";
+
+interface TravelPeriodCallout {
+    key: string;
+    label: string;
+    badge: string;
+    title: string;
+    body: string;
+    shortBody: string;
+    tone: TravelCalloutTone;
+    sort: number;
+}
+
+function isoTime(iso: string | null | undefined): number {
+    const time = new Date(String(iso ?? "")).getTime();
+    return Number.isFinite(time) ? time : NaN;
+}
+
+function overlapsISO(entryISO: string, exitISO: string, startISO: string, endISO: string): boolean {
+    const entry = isoTime(entryISO);
+    const exit = isoTime(exitISO);
+    const start = isoTime(startISO);
+    const end = isoTime(endISO);
+    if (![entry, exit, start, end].every(Number.isFinite)) return false;
+    return entry <= end && exit >= start;
+}
+
+function exactInsideISO(exactISO: string, startISO: string, endISO: string): boolean {
+    const exact = isoTime(exactISO);
+    const start = isoTime(startISO);
+    const end = isoTime(endISO);
+    if (![exact, start, end].every(Number.isFinite)) return false;
+    return exact >= start && exact <= end;
+}
+
+function skyCalloutTitle(span: UniversalSkySpan): string {
+    if (span.kind === "retrograde") return `${capWord(span.planet)} retrograde${span.sign ? ` in ${capWord(span.sign)}` : ""}`;
+    if (span.kind === "station") return span.label;
+    if (span.kind === "eclipse") return span.label;
+    if (span.aspectType && span.secondaryPlanet) {
+        return `${capWord(span.planet)} ${span.aspectType.toLowerCase()} ${capWord(span.secondaryPlanet)}`;
+    }
+    return span.label;
+}
+
+function skyCalloutBody(span: UniversalSkySpan): string {
+    const date = fmtMonthDay(span.exactISO);
+    if (span.kind === "retrograde") {
+        return `${date ? `${date}: ` : ""}This is background weather for everyone; review plans, delays, and old topics before treating them as new.`;
+    }
+    if (span.kind === "station") {
+        return `${date ? `${date}: ` : ""}The planet is changing direction, so the week can feel louder and slower than usual.`;
+    }
+    if (span.kind === "eclipse") {
+        return `${date ? `${date}: ` : ""}Keep the schedule light around this reset point; eclipses are better for observing than forcing.`;
+    }
+    return `${date ? `${date}: ` : ""}${templateForSpanShape({
+        kind: span.kind,
+        planet: span.planet,
+        sign: span.sign,
+        dignity: span.dignity,
+        aspectType: span.aspectType,
+        secondaryPlanet: span.secondaryPlanet,
+    })}`;
+}
+
+function skyCalloutShortBody(span: UniversalSkySpan): string {
+    if (span.kind === "retrograde") return "Review plans and old topics. Not bad, but slower and less clean.";
+    if (span.kind === "station") return "Use extra buffer. Direction changes can make the week feel sticky.";
+    if (span.kind === "eclipse") return "Keep plans light. Better for observing than forcing.";
+    return "Background sky weather; use the full map for detail.";
+}
+
+function buildTravelPeriodCallouts(vm: V4VM): TravelPeriodCallout[] {
+    const selected = vm.travelWindows[0];
+    if (!selected?.startISO || !selected?.endISO) return [];
+
+    const personal = vm.transitSpans
+        .filter((span) => overlapsISO(span.entryISO, span.exitISO, selected.startISO, selected.endISO))
+        .flatMap((span): TravelPeriodCallout[] => {
+            const exactInWindow = exactInsideISO(span.exactISO, selected.startISO, selected.endISO);
+            const items: TravelPeriodCallout[] = [];
+            if (span.retrograde) {
+                const dateLead = exactInWindow
+                    ? `${fmtMonthDay(span.exactISO)}: `
+                    : `Active during ${selected.dates}: `;
+                items.push({
+                    key: `personal-rx-${span.transit_planet}-${span.aspect}-${span.natal_planet}`,
+                    label: "Retrograde hit",
+                    badge: "Caution",
+                    title: `${capWord(span.transit_planet)} Rx ${exactAspectVerb(span.aspect)} natal ${capWord(span.natal_planet)}`,
+                    body: `${dateLead}${aspectPlainMeaning(span)}. Treat this as review, delay, or an old topic returning.`,
+                    shortBody: `${aspectPlainMeaning(span)}. Review; do not force it.`,
+                    tone: "watch",
+                    sort: 0 + transitImportance(span, vm.goalIds) * -1,
+                });
+            } else if (exactInWindow) {
+                items.push({
+                    key: `personal-exact-${span.transit_planet}-${span.aspect}-${span.natal_planet}`,
+                    label: "Exact during dates",
+                    badge: span.benefic ? "Support" : "Caution",
+                    title: exactAspectTitle(span),
+                    body: `${fmtMonthDay(span.exactISO)}: ${aspectPlainMeaning(span)}.`,
+                    shortBody: `${aspectPlainMeaning(span)}.`,
+                    tone: span.benefic ? "exact" : "watch",
+                    sort: 20 + transitImportance(span, vm.goalIds) * -1,
+                });
+            }
+            return items;
+        });
+
+    const sky = (vm.universalSkySpans ?? [])
+        .filter((span) => overlapsISO(span.entryISO, span.exitISO, selected.startISO, selected.endISO))
+        .filter((span) => span.kind === "retrograde" || span.kind === "station" || span.kind === "eclipse")
+        .map((span): TravelPeriodCallout => ({
+            key: `sky-${span.key}`,
+            label: span.kind === "retrograde" ? "Sky retrograde" : fmtSkyKindLabel(span.kind),
+            badge: span.kind === "eclipse" || span.kind === "station" ? "Caution" : "Background",
+            title: skyCalloutTitle(span),
+            body: skyCalloutBody(span),
+            shortBody: skyCalloutShortBody(span),
+            tone: span.kind === "eclipse" || span.kind === "station" ? "watch" : "sky",
+            sort: span.kind === "station" ? 5 : span.kind === "eclipse" ? 6 : 10,
+        }));
+
+    const seen = new Set<string>();
+    return [...personal, ...sky]
+        .sort((a, b) => a.sort - b.sort)
+        .filter((item) => {
+            const key = `${item.label}|${item.title}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        })
+        .slice(0, 4);
+}
+
 // ─── Compact alternates list ─────────────────────────────────────────────────
 
 // ─── Top travel windows ──────────────────────────────────────────────────────
@@ -1794,28 +2303,11 @@ export default function TimingTab({ vm, copiedTab }: Props) {
         ? vm.travelWindows.length > 1
         : vm.travelType === "trip" && hasGoodOrBad;
 
-    const tabLead = copiedTab?.lead?.trim() || "";
-    const tabIntro = copiedTab?.plainEnglishSummary || undefined;
-    const advice = vm.tabs.timing?.activationAdvice ?? [];
-    const mainWindow = vm.travelWindows[0];
-    const timingGuideRows = [
-        {
-            label: "Green-light window",
-            badgeVariant: "timing-window" as const,
-            body: advice[0]
-                || (mainWindow ? `${mainWindow.dates} has the most lift. Put the plans you care about most inside this stretch.` : "Use the clearest window for the focused part of the trip."),
-        },
-        {
-            label: "Keep an eye here",
-            badgeVariant: "timing-watch" as const,
-            body: advice[2] || "Treat these like weather-check days: keep promises smaller, add buffer, and avoid overbooking.",
-        },
-        {
-            label: "How to pace it",
-            badgeVariant: "timing-pace" as const,
-            body: advice[1] || "Book the important thing first, then leave open space around it for rest, changes, and recovery.",
-        },
-    ];
+    const tabLead = timingTopCopyOrFallback(copiedTab?.lead, timingTopLeadFallback(vm), 24);
+    const tabIntro = timingTopCopyOrFallback(copiedTab?.plainEnglishSummary, timingTopIntroFallback(vm), 24);
+    const answerRows = timingGuideRows(vm);
+    const fieldIndex = showAlternates ? "02" : "01";
+    const evidenceIndex = showAlternates ? "03" : "02";
 
     return (
         <TabSection
@@ -1823,15 +2315,14 @@ export default function TimingTab({ vm, copiedTab }: Props) {
             title="When to use what this place offers."
             lead={tabLead}
             intro={tabIntro}
-            guideRows={timingGuideRows}
+            guideRows={answerRows}
+            maxSentences={3}
+            quietCopy
             preserveGuideLabels
             guideLayout="flow"
             guideFlowVariant="timing"
             guideSurface="cards"
         >
-            {/* Verdict — one deterministic sentence carries the intro role */}
-            <VerdictHeadline vm={vm} />
-
             {/* §1 — Top travel windows (trip) / Best months to arrive (relocation) */}
             {showAlternates && (
                 <>
@@ -1846,28 +2337,9 @@ export default function TimingTab({ vm, copiedTab }: Props) {
                 </>
             )}
 
-            {/* §2 — Transit Gantt. Framing prose sits above the SectionHead
-                so readers know how to read the chart before they meet the
-                section title. SectionHead is flush so we don't stack two
-                vertical breaks on top of each other. */}
-            <WindowFraming vm={vm} />
-            <div style={{ marginTop: "var(--space-md)" }}>
-                <SectionHead
-                    index={showAlternates ? "02" : "01"}
-                    title={isRelocation
-                        ? "Slow transits across the year ahead"
-                        : "What's pressing on you during the window"}
-                    tooltip={isRelocation
-                        ? "Outer-planet transits resolve over months, not days. Each bar is one transit's full active range; hover for the lived-experience reading."
-                        : "Slow-moving transits that actually shape this stretch. Hover any bar for the lived-experience reading and what to do with it."}
-                    flush
-                />
-            </div>
-            <TransitGantt vm={vm} />
-
-            {/* §3 — 90-day field (trip) / 12-month forecast (relocation) */}
+            {/* §2 — 90-day field (trip) / 12-month forecast (relocation) */}
             <SectionHead
-                index={showAlternates ? "03" : "02"}
+                index={fieldIndex}
                 title={isRelocation
                     ? "The next 12 months at this place"
                     : "The 90-day field around your trip"}
@@ -1876,6 +2348,8 @@ export default function TimingTab({ vm, copiedTab }: Props) {
                     : "Each bar is one day. Taller, acqua and gold = more support. Red = friction. Blue is your trip; acqua ▼ marks open stretches, red ▼ marks rougher ones."}
             />
             <FieldSummary vm={vm} />
+
+            <TransitEvidenceDetails vm={vm} index={evidenceIndex} />
 
             {/* AI Closing Verdict */}
             {vm.tabs.timing?.closingVerdict && (
@@ -1894,7 +2368,7 @@ export default function TimingTab({ vm, copiedTab }: Props) {
                             color: "var(--text-primary)" 
                         }}
                     >
-                        <RichText>{vm.tabs.timing.closingVerdict}</RichText>
+                        <RichText autoEmphasis={false} allowBold={false}>{vm.tabs.timing.closingVerdict}</RichText>
                     </p>
                 </div>
             )}

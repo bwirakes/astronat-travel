@@ -787,6 +787,49 @@ a {
   }
 }
 
+.travel-window-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--gold);
+  flex: 0 0 auto;
+}
+
+.travel-window-row--good .travel-window-dot {
+  background: var(--lift-accent);
+}
+
+.travel-window-row--hard .travel-window-dot {
+  background: var(--color-spiced-life);
+}
+
+.travel-window-label {
+  font-size: 0.64rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+@media (max-width: 680px) {
+  .travel-window-row {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 0.7rem 1rem !important;
+    padding: 1.45rem 0 1.55rem !important;
+  }
+
+  .travel-window-copy {
+    grid-column: 1 / -1;
+    padding-left: 1.45rem;
+  }
+
+  .travel-window-score {
+    justify-self: end;
+  }
+}
+
 /* ── Home Layout V2 (100vh lock on Desktop only) - Removed to allow scrolling ── */
 
 /* ── Base UI Navigation Menu — force transparent containers ── */

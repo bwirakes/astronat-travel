@@ -428,6 +428,14 @@ export interface V4ReadingVM {
             watchOut?: string[];
         };
         timing?: {
+            decision?: string;
+            bestWindow?: string;
+            watchOut?: string;
+            windowComparison?: {
+                myTime?: { rationale?: string };
+                bestTime?: { rationale?: string };
+                avoid?: { rationale?: string };
+            };
             activationAdvice?: string[];
             closingVerdict?: string;
             aiWindows?: Array<{ dates: string; note: string; score: number; flavorTitle?: string; nights?: string }>;
@@ -909,11 +917,11 @@ const TIMING_PLANET_MEANING: Record<string, string> = {
     mercury: "speech and decisions",
     venus: "connection, money, and ease",
     mars: "drive and urgency",
-    jupiter: "growth and appetite",
-    saturn: "pressure and discipline",
+    jupiter: "growth and opportunity",
+    saturn: "responsibility, timing, and limits",
     uranus: "surprise and change",
     neptune: "dreams and blurred signals",
-    pluto: "power and intensity",
+    pluto: "control, fear, and intensity",
 };
 
 function timingPlanetMeaning(planet: string | undefined): string {
@@ -921,12 +929,37 @@ function timingPlanetMeaning(planet: string | undefined): string {
     return TIMING_PLANET_MEANING[key] ?? String(planet ?? "the transit").toLowerCase();
 }
 
+function capTimingWord(value: string): string {
+    if (!value) return "";
+    return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+}
+
 function timingAspectVerb(aspect: string | undefined): string {
     const key = String(aspect ?? "").toLowerCase();
-    if (key.includes("trine") || key.includes("sextile")) return "supports";
-    if (key.includes("square") || key.includes("opposition")) return "pressures";
-    if (key.includes("conjunction") || key.includes("conjunct")) return "turns up";
+    if (key.includes("square")) return "squares";
+    if (key.includes("opposition")) return "opposes";
+    if (key.includes("trine")) return "trines";
+    if (key.includes("sextile")) return "sextiles";
+    if (key.includes("conjunction") || key.includes("conjunct")) return "conjoins";
     return "activates";
+}
+
+function timingAspectMeaning(aspect: string | undefined, transitPlanet: string | undefined, natalPlanet: string | undefined): string {
+    const key = String(aspect ?? "").toLowerCase();
+    const transitMeaning = timingPlanetMeaning(transitPlanet);
+    const natalMeaning = timingPlanetMeaning(natalPlanet);
+    const transit = capTimingWord(String(transitPlanet ?? "the transit"));
+    const natal = capTimingWord(String(natalPlanet ?? "chart"));
+    if (key.includes("square") || key.includes("opposition")) {
+        return `${natal} themes (${natalMeaning}) get tested by ${transit} (${transitMeaning})`;
+    }
+    if (key.includes("trine") || key.includes("sextile")) {
+        return `${natal} themes (${natalMeaning}) get help from ${transit} (${transitMeaning})`;
+    }
+    if (key.includes("conjunction") || key.includes("conjunct")) {
+        return `${natal} themes (${natalMeaning}) get louder through ${transit} (${transitMeaning})`;
+    }
+    return `${natal} themes (${natalMeaning}) are active through ${transit} (${transitMeaning})`;
 }
 
 function timingDecision(score: number | undefined): string {
@@ -941,16 +974,22 @@ function interpretTimingHit(hit: any): string {
     const transitPlanet = hit?.transit_planet ?? hit?.transitPlanet;
     const natalPlanet = hit?.natal_planet ?? hit?.natalPlanet;
     const transit = String(transitPlanet ?? "The transit");
-    const natal = String(natalPlanet ?? "your chart");
+    const natal = String(natalPlanet ?? "chart");
     const verb = timingAspectVerb(hit?.aspect);
-    return `${transit} ${verb} ${natal}, so ${timingPlanetMeaning(transitPlanet)} meets ${timingPlanetMeaning(natalPlanet)}`;
+    const retrograde = hit?.retrograde === true || /\b(R|retrograde)\b/i.test(String(hit?.motion ?? hit?.symbol ?? ""));
+    const review = retrograde ? ", with review or delay energy" : "";
+    return `${transit} ${verb} natal ${natal}, so ${timingAspectMeaning(hit?.aspect, transitPlanet, natalPlanet)}${review}`;
 }
 
 function interpretTimingDriver(driver: string): string {
-    const raw = driver.replace(/\s+/g, " ").trim();
+    const raw = driver.replace(/[★✦✧]/g, "").replace(/\s+/g, " ").trim();
     const match = raw.match(/\b([A-Za-z]+)\s+(conjunction|conjunct|square|opposition|trine|sextile)\s+(?:natal\s+)?([A-Za-z]+)/i);
     if (match) {
         return interpretTimingHit({ transitPlanet: match[1], aspect: match[2], natalPlanet: match[3] });
+    }
+    const vagueMatch = raw.match(/\b([A-Za-z]+)\s*(R|Rx|℞|retrograde)?\s+(pressures|supports|activating|activates|turns up)\s+(?:natal\s+)?([A-Za-z]+)/i);
+    if (vagueMatch) {
+        return `${vagueMatch[1]} to natal ${vagueMatch[4]} needs review; the exact aspect was not supplied.`;
     }
     return raw.replace(/\b(conjunction|conjunct|square|opposition|trine|sextile)\s+natal\b/ig, "activating");
 }
@@ -972,6 +1011,12 @@ function interpretedTimingNote(window: any): string {
 
 function isRawTimingNote(note: string | undefined): boolean {
     return /\b(conjunction|conjunct|square|opposition|trine|sextile)\s+natal\b/i.test(String(note ?? ""));
+}
+
+function isClearTimingNote(note: string | undefined): boolean {
+    const text = String(note ?? "");
+    if (/\b(pressures|supports|turns up|activating)\b/i.test(text)) return false;
+    return /\b(natal|retrograde|square|squares|opposes|opposition|trine|trines|sextile|sextiles|conjoins|conjunct)\b/i.test(text);
 }
 
 function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateISO: string | null, goalIdsArg: string[] = []): V4TravelWindow[] {
@@ -1131,7 +1176,7 @@ function deriveTravelWindows(reading: any, travelType: V4TravelType, travelDateI
                     dates: fmtRange(w.startISO, w.endISO),
                     nights: nightsBetween(w.startISO, w.endISO),
                     score: w.score,
-                    note: prose?.note && !isRawTimingNote(prose.note) ? prose.note : detNote,
+                    note: prose?.note && !isRawTimingNote(prose.note) && isClearTimingNote(prose.note) ? prose.note : detNote,
                     startISO: w.startISO,
                     endISO: w.endISO,
                 };
@@ -2160,7 +2205,16 @@ export function hasV4TeacherReading(teacherReading: unknown): boolean {
         && hasTextArray(overview.leanInto)
         && hasTextArray(overview.watchOut);
     const hasTiming = isRecord(timing)
-        && (hasTextArray(timing.activationAdvice) || hasText(timing.closingVerdict));
+        && (
+            hasText(timing.decision)
+            || hasText(timing.bestWindow)
+            || hasText(timing.watchOut)
+            || hasText(timing.windowComparison?.myTime?.rationale)
+            || hasText(timing.windowComparison?.bestTime?.rationale)
+            || hasText(timing.windowComparison?.avoid?.rationale)
+            || hasTextArray(timing.activationAdvice)
+            || hasText(timing.closingVerdict)
+        );
 
     return hasTabs && hasOverview && hasTiming;
 }
@@ -2335,16 +2389,53 @@ function normalizeHeadlineScoresInCopy<T>(copy: T, headlineScore: number | null)
 
 function deterministicTimingCopy(heroWindow: V4TravelWindow, travelWindows: V4TravelWindow[]): NonNullable<V4ReadingVM["tabs"]["timing"]> {
     const alternate = travelWindows.find((window) => window.rank !== heroWindow.rank && window.score > heroWindow.score);
+    const bestTime = [...travelWindows].sort((a, b) => b.score - a.score)[0] ?? heroWindow;
+    const avoid = [...travelWindows].sort((a, b) => a.score - b.score)[0] ?? heroWindow;
+    const selected = heroWindow.dates;
+    const decision = heroWindow.score >= 75
+        ? `Use ${selected}; the timing is clear enough for the main purpose.`
+        : heroWindow.score >= 55
+            ? `Use ${selected} for one focused purpose, but keep the plan simple.`
+            : heroWindow.score >= 40
+                ? `Shorten or simplify ${selected}; the timing is not clean enough for high stakes.`
+                : `Avoid making ${selected} carry the main plan.`;
+    const bestWindow = alternate
+        ? `${alternate.dates} is the stronger window at ${alternate.score}/100; ${selected} scores ${heroWindow.score}/100.`
+        : `${selected} is the selected window at ${heroWindow.score}/100; no stronger alternate is shown.`;
+    const watchOut = heroWindow.score >= 55
+        ? "Protect the plan from overpromising, rushed decisions, and too many commitments."
+        : "Protect sleep, money, logistics, and any decision that would be hard to unwind.";
     return {
+        decision,
+        bestWindow,
+        watchOut,
         closingVerdict: alternate
             ? `Your selected window scores ${heroWindow.score}/100; ${alternate.dates} is the stronger alternate at ${alternate.score}/100.`
             : `Your selected window scores ${heroWindow.score}/100. Use the timing chart to see which days inside the window carry more lift or friction.`,
         activationAdvice: [
-            `Treat ${heroWindow.dates} as the selected window score, not the whole-place baseline.`,
+            decision,
+            watchOut,
             alternate
-                ? `Compare the alternate window at ${alternate.score}/100 before locking fixed plans.`
-                : "If the dates are fixed, put the highest-stakes plans on the strongest days in the strip.",
+                ? `Compare ${alternate.dates} before locking fixed plans.`
+                : "If the dates are fixed, put the highest-stakes plans on the strongest days.",
         ],
+        windowComparison: {
+            myTime: {
+                rationale: heroWindow.score >= 70
+                    ? "Your dates are usable, but they still need focus. Use this time for the main purpose, not every possible goal."
+                    : "Your dates can work only with a simpler plan. Keep the schedule flexible and avoid stacking too many promises.",
+            },
+            bestTime: {
+                rationale: bestTime === heroWindow
+                    ? "Your selected dates are already the strongest scored option. Keep the plan focused so the support does not get scattered."
+                    : "Higher score, but not automatically easier. Use this only if the window's transit pattern fits your real schedule.",
+            },
+            avoid: {
+                rationale: avoid.score < 55
+                    ? "This is the roughest nearby option. Keep high-stakes plans, contracts, and rushed decisions away from it."
+                    : "This is the least clean option in the set. Use it only for lighter plans, buffers, and flexible commitments.",
+            },
+        },
     };
 }
 

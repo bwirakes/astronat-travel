@@ -256,8 +256,8 @@ const TabEditorialSchema = z.object({
   lead: z.string(),
   plainEnglishSummary: z.string(),
   // Optional for cached V4 readings generated before the tab copy split.
-  // The prompt requires it for new generations; the UI can also recover
-  // guide rows from older "Good for / Watch / Next move" prose.
+  // New generations require it for Overview / Place Field / What Shifts.
+  // Timing now uses top-level timing.decision / bestWindow / watchOut instead.
   guideRows: z.array(z.object({
     label: z.enum(["Best Used For", "Move Carefully With", "Your Next Move"]),
     body: z.string(),
@@ -287,8 +287,26 @@ const OverviewEditorialSchema = z.object({
 });
 
 const TimingEditorialSchema = z.object({
-  activationAdvice: z.array(z.string()).min(1).max(10),
-  closingVerdict: z.string(),
+  decision: z.string().optional(),
+  bestWindow: z.string().optional(),
+  watchOut: z.string().optional(),
+  windowComparison: z.object({
+    myTime: z.object({ rationale: z.string() }).optional(),
+    bestTime: z.object({ rationale: z.string() }).optional(),
+    avoid: z.object({ rationale: z.string() }).optional(),
+  }).optional(),
+  activationAdvice: z.array(z.string()).min(1).max(10).optional(),
+  closingVerdict: z.string().optional(),
+});
+const TimingEditorialGenerationSchema = TimingEditorialSchema.extend({
+  decision: z.string(),
+  bestWindow: z.string(),
+  watchOut: z.string(),
+  windowComparison: z.object({
+    myTime: z.object({ rationale: z.string() }),
+    bestTime: z.object({ rationale: z.string() }),
+    avoid: z.object({ rationale: z.string() }),
+  }),
 });
 
 export const TeacherReadingSchema = z.object({
@@ -384,16 +402,31 @@ export const TeacherReadingSchema = z.object({
 });
 export type TeacherReading = z.infer<typeof TeacherReadingSchema>;
 
-// Lean schema used for the main teacher generation call. The current V4 page
-// only requires tabs, overview, and timing; optional sidebars have deterministic
-// UI fallbacks and can be generated in smaller follow-up calls later.
-export const TeacherReadingGenerationSchema = TeacherReadingSchema.extend({
+// Lean schema used for the main teacher generation call. Keep this separate
+// from TeacherReadingSchema so new readings don't ask the model to emit legacy
+// and sidebar fields that the V4 page no longer needs.
+export const TeacherReadingGenerationSchema = z.object({
+  chrome: ChromeSchema.optional(),
+  editorialSpine: EditorialSpineSchema.optional(),
   tabs: z.object({
     "overview": TabEditorialGenerationSchema,
     "place-field": TabEditorialGenerationSchema,
     "what-shifts": TabEditorialGenerationSchema,
-    "timing": TabEditorialGenerationSchema,
+    "timing": TabEditorialSchema,
   }),
+  overview: OverviewEditorialSchema,
+  timing: TimingEditorialGenerationSchema,
+  chartRulerReframe: ChartRulerReframeSchema,
+  clusterCommentary: z.array(z.object({
+    clusterKey: z.string(),
+    headline: z.string(),
+    body: z.string(),
+  })).max(8).optional(),
+  patternCommentary: z.array(z.object({
+    patternKey: z.string(),
+    headline: z.string(),
+    body: z.string(),
+  })).max(8).optional(),
 });
 
 /**

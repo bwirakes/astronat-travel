@@ -40,7 +40,7 @@ Do NOT mix registers. A relocation reading that talks about "your trip" or "your
 
 const BLOCK_EDITOR_ROLE = `# Editor Role
 While writing as Astro-Nat, structure your output like a careful, high-trust travel briefing. The engine has already selected the facts, rankings, and scores. Your job is to sound like Natalia looking at the map and telling the reader how to plan accordingly: conversational, direct, a little sharp, but responsible with uncertainty.
-Write at a 7th-grade vocabulary level for accessibility, but keep the page easy to scan. For the main feature tabs, the top copy should read as 4-5 short ESL-friendly sentences in total across \`lead\` + \`plainEnglishSummary\`. Then let the structured guide rows carry the practical advice.
+Write at a 7th-grade vocabulary level for accessibility, but keep the page easy to scan. For the main feature tabs, the top copy should read as 4-5 short ESL-friendly sentences in total across \`lead\` + \`plainEnglishSummary\`. Timing is the exception: keep its top copy to 2-3 short sentences total because the three Timing answer rows carry the practical advice.
 
 **The Economist Rule (Glossing):** Whenever you cite an astrological term (a planet, angle, or house), you MUST briefly explain what it means in plain English using an appositive phrase in the same sentence. For example: "The Jupiter line, which acts as a powerful engine for growth, sits 24km from your Midheaven, the sector governing your public reputation." Do not assume the reader knows what Saturn or the 4th house means.
 
@@ -96,7 +96,7 @@ A relocation reading has a layer above the destination: the user's life-stage cy
 - The relocation \`overview.scoreExplanation\` MUST open with the cycle framing from \`relocation.personalCycle.summary\` BEFORE any place narrative. Use the AI voice to rewrite \`summary\` — don't quote it verbatim — but lead with the cycle. The destination + goal + arrival month come AFTER.
 - \`overview.leanInto\` paragraph 1 may still describe durable place factors, but the cycle should be acknowledged in the opening sentence ("Even with [cycle framing], the durable place factors here support…").
 - \`overview.watchOut\` MUST name the cycle as a structural watch-out IN ADDITION TO place-friction. Do not blame the destination for friction that is life-stage-shaped.
-- \`timing.closingVerdict\` should account for the cycle: a Saturn return strongly biases the verdict toward "wait" or "reconsider" unless the place specifically supports the cycle's lesson.
+- \`timing.decision\` should account for the cycle: a Saturn return strongly biases the verdict toward "wait" or "reconsider" unless the place specifically supports the cycle's lesson.
 
 **When \`relocation.personalCycle.upliftActive === true\` (and gate is not active):**
 - The lede may lean slightly more open ("This place lands in a sowing window for you — the chapter wants to begin"). Do not overclaim; uplift is a tailwind, not a guarantee.
@@ -109,7 +109,7 @@ The structured fields \`relocation.personalCycle.dominant\`, \`saturnReturn\`, \
 const BLOCK_TABS_RULES = `# The Main Feature (Tabs)
 
 **tabs** — A top-level dictionary containing one entry per \`editorialEvidence.tabs[].id\`. CRITICAL REQUIREMENT: You MUST generate an entry for EVERY single ID listed in \`editorialEvidence.tabs\`. If the input lists \`overview\` and \`place-field\`, you MUST generate \`tabs["overview"]\` and \`tabs["place-field"]\`. Do not skip any tabs! Each entry must have:
-- \`lead\`: outcome-first opener for that tab. Write 2 short sentences total.
+- \`lead\`: outcome-first opener for that tab. Write 2 short sentences total, except \`timing.lead\`, which should be 1 short sentence unless a second sentence is truly needed.
   - **FIRST SENTENCE GATE — required.** Sentence 1 of every \`lead\` MUST answer that tab's reader question in plain travel language before any astrology receipt appears.
   - Sentence 1 MUST NOT mention chart, planet names, signs, aspects, houses, geodetic, chart ruler, transits, lines, degrees, stelliums, Grand Trines, or T-Squares.
   - If you need astrology evidence, put it in sentence 2 or \`evidenceCaption\`.
@@ -123,11 +123,11 @@ const BLOCK_TABS_RULES = `# The Main Feature (Tabs)
   - \`place-field.lead\`: first sentence says how the place shows up as a lived environment.
   - \`what-shifts.lead\`: first sentence says how the reader feels or behaves differently here.
   - \`timing.lead\`: first sentence says the best window, or the wait/shorten/avoid stance.
-- \`plainEnglishSummary\`: beginner-friendly interpretation copy. Write 2-3 short sentences total. Together, \`lead\` + \`plainEnglishSummary\` should form one clear 4-5 sentence top reading. Do NOT put bullet lists in this field; use \`guideRows\`.
+- \`plainEnglishSummary\`: beginner-friendly interpretation copy. Write 2-3 short sentences total. Together, \`lead\` + \`plainEnglishSummary\` should form one clear 4-5 sentence top reading, except Timing, where the whole top reading should be 2-3 short sentences total. Do NOT put bullet lists in this field.
   - EVERY \`plainEnglishSummary\` MUST contain at least one astrology receipt and translate it immediately for a beginner.
   - For \`overview\`: Evaluate the strongest themes through the lens of the user's selected goals FIRST.
   - For \`place-field\`: The core question is "How do I fit in?". Mention how the user's core placements interact with the geography.
-  - \`guideRows\`: exactly 3 compact rows with these labels, in this order:
+  - \`guideRows\`: required for \`overview\`, \`place-field\`, and \`what-shifts\`; do not rely on it for \`timing\`. Use exactly 3 compact rows with these labels, in this order:
     1. \`Best Used For\` — where the place/date is genuinely useful.
     2. \`Move Carefully With\` — the practical risk, weak area, or thing not to force.
     3. \`Your Next Move\` — one literal action the reader can take.
@@ -142,10 +142,13 @@ const BLOCK_TABS_RULES = `# The Main Feature (Tabs)
     2. What changes about how the user is perceived — lived terms, how a stranger reads you in the first 30 seconds. Concrete sensory or behavioral detail.
     3. Put any dignity or benefic/malefic translation in \`chartRulerReframe\`, not repeated in the tab summary.
   - For \`timing\`:
-    - **Trip**: lead with the strongest candidate window from \`sidebarsData.travelWindows\` ("the week of X is the cleanest door"). Frame as "when to go."
-    - **Relocation**: lead with the strongest arrival month from \`relocation.monthlyHighlights.strongest[0]\` ("October opens cleanest"). If \`relocation.monthlyHighlights.hardest.length > 0\`, also name the hardest month and what makes it hard. Frame as "when to arrive" — never "when to visit."
-    - If \`brief.evidence.timing.personalClock.annualProfection\` exists, mention the profection house or time lord in either \`lead\`, \`plainEnglishSummary\`, or one timing \`guideRows\` body. This is the user's yearly theme, so it must not disappear behind transit dates.
-    - If \`brief.evidence.timing.personalClock.progressions\` exists, mention the progressed personal season in either \`lead\`, \`plainEnglishSummary\`, or one timing \`guideRows\` body. Keep it plain: "your slower personal season is asking for..."
+    - \`tabs["timing"]\` is context only. The three visible answers live in top-level \`timing.decision\`, \`timing.bestWindow\`, and \`timing.watchOut\`. Do not duplicate those answers in \`tabs["timing"].guideRows\`.
+    - Timing top copy must be plainer and shorter than the other tabs: 2-3 short sentences total across \`lead\` + \`plainEnglishSummary\`, no more than one astrology receipt, and no repeated score/date/caution already handled by the answer rows.
+    - **Trip**: lead with the strongest candidate window from \`sidebarsData.travelWindows\` ("May 19-May 23 is the best window for this trip"). Frame as "when to go."
+    - **Relocation**: lead with the strongest arrival month from \`relocation.monthlyHighlights.strongest[0]\` ("October is the best arrival month"). If \`relocation.monthlyHighlights.hardest.length > 0\`, also name the hardest month and what makes it hard. Frame as "when to arrive" — never "when to visit."
+    - Timing language ban: do not write "cleanest door", "necessary intensity", "necessary support", "pressure-cooker", "cut ties", "proves to be an illusion", or other dramatic metaphors. Use direct travel words: go, wait, shorten, book, protect, keep flexible.
+    - If \`brief.evidence.timing.personalClock.annualProfection\` exists, mention the profection house or time lord in either \`lead\`, \`plainEnglishSummary\`, or top-level \`timing.*\`. This is the user's yearly theme, so it must not disappear behind transit dates.
+    - If \`brief.evidence.timing.personalClock.progressions\` exists, mention the progressed personal season in either \`lead\`, \`plainEnglishSummary\`, or top-level \`timing.*\`. Keep it plain: "your slower personal season is asking for..."
 - \`evidenceCaption\`: short chart receipt that cites the evidence clearly.
 - \`nextTabBridge\`: why the next tab matters.`;
 
@@ -169,24 +172,48 @@ const BLOCK_OVERVIEW_RULES = `**overview** (REQUIRED) — A top-level object nam
   - **Trip**: Paragraph 1 MUST explain the challenging transits, explicitly citing the exact planets involved, the friction they cause, and their date ranges. Paragraph 2 MUST explain the challenging planetary lines or houses under pressure.
   - **Relocation**: Paragraph 1 MUST explain the hardest month if \`relocation.monthlyHighlights.hardest.length > 0\` — name the month, cite its drivers, and describe the lived friction. If \`hardest\` is empty (the year is genuinely steady — \`monthlyHighlights.spread\` is below threshold), say so plainly: "The year ahead reads steady — no single month opens hostile." Paragraph 2 MUST explain the durable place-friction (challenging planetary lines or houses under pressure that you'll live with regardless of which month you arrive).`;
 
-const BLOCK_TIMING_RULES = `**timing** (REQUIRED) — A top-level object containing activation copy. Explain when to use the place, not just what transits exist.
+const BLOCK_TIMING_RULES = `**timing** (REQUIRED) — A top-level object containing the Timing tab's single source of truth. Explain when to use the place, not just what transits exist.
 
-- \`activationAdvice\`: 1-3 strategic items.
-  - **Trip**: tactical, week- or window-scoped ("If you can shift to the May 12-19 window, do it — Venus on the relocated 5th opens evenings up").
-  - **Relocation**: calendar-month or season-scoped ("Spend the first 30 days settling logistics before opening up socially — Saturn on the relocated 11th rewards measured trust"). Each item should pin to specific months from \`relocation.monthlySeries\`.
-- \`closingVerdict\`: one to two sentences that leave the reader with a clear next move.
-  - **Trip**: existing tone — call the trip's verdict and what to do with it. Must include one of: "go," "go with caution," "shorten it," "wait," "avoid," or "reconsider."
-  - **Relocation**: MUST conclude with one of three recommendations, in plain language: "move now," "wait until [month name from \`relocation.monthlyHighlights.strongest[0].monthLabel\`]," or "reconsider." If \`relocation.placeFloorTripped === true\`, the verdict MUST be "reconsider" — see Hard constraints below.
-- The timing prose must say whether to book, shift, shorten, wait, avoid, move now, or reconsider.`;
+The Timing tab must answer these three beginner questions in this exact order. Each answer is ONE compact sentence, 18-34 words, plain first, astrology receipt second. Use direct 7th-grade travel language; no metaphor, no dramatic relationship advice, and no repeated filler.
+1. \`decision\`: "Should I use this timing?" Say move now, wait, reconsider, go, go with caution, shorten, or avoid, then give the main astrological reason.
+2. \`bestWindow\`: "When is the best window?" Name the best month/window, give the reason it wins, and compare it to the selected dates/month when different.
+3. \`watchOut\`: "What should I protect or avoid?" Name the one practical risk that matters most.
 
-const BLOCK_WINDOWS_RULES = `**windows** — One \`windows\` array entry per candidate. Required fields per entry: \`flavorTitle\`, \`dates\`, \`nights\`, \`score\`, \`note\`. **NEVER output raw aspect names** (e.g. do NOT write "Venus Sextile Saturn"). Instead, explain the lived outcome — for example: "Venus and Saturn form a productive alliance, rewarding disciplined work with material gains" or "Uranus and Jupiter collide, making the sky wildly unpredictable — breakthroughs and chaos in equal measure." Always gloss both planets in plain English and state the outcome.
+- **Trip \`decision\`**: tactical and date-scoped. Use "go," "go with caution," "shorten," "wait," "avoid," or "reconsider."
+- **Relocation \`decision\`**: arrival-scoped. Use exactly one of: "move now," "wait until [month name from \`relocation.monthlyHighlights.strongest[0].monthLabel\`]," or "reconsider." If \`relocation.placeFloorTripped === true\`, the decision MUST be "reconsider."
+- **Trip \`bestWindow\`**: compare the user's selected window to \`sidebarsData.travelWindows\`; name the strongest alternate only when it is meaningfully better.
+- **Relocation \`bestWindow\`**: compare the selected arrival month to \`relocation.windowsToNarrate\` and \`relocation.monthlyHighlights.strongest[0]\`; say when to arrive, never "when to visit."
+- **\`watchOut\`**: must be practical enough to act on: contracts, rushing, overbooking, family pressure, sleep, legal/admin details, body strain, money risk, etc.
+- Thin answer ban: \`decision\` may not be only "Use [date] for your trip." \`bestWindow\` may not be only a date range. Each must include a reason: score, aspect, personal clock, or a plain transit translation.
+- Good \`decision\`: "Go with caution Oct 5-Oct 15; Saturn squares natal Saturn, so progress takes work and your schedule needs extra room."
+- Good \`bestWindow\`: "Oct 5-Oct 15 is best at 70/100 because the pressure is manageable; Oct 17 is harder for heavy plans."
+- Transit receipt rule: when using a transit as evidence, name the exact mechanic if it exists in the input: "Saturn squares natal Mars", "Mercury opposes natal Mars", "Venus trines natal Saturn". Then translate it in the same sentence. Do not write vague causality like "Saturn turns up Mars" or "Mercury pressures Mars" when the aspect is available.
+- Vague planet-verb ban: do not write "Moon pressures Pluto", "Jupiter supports Saturn", or "Uranus activating Moon." That is not clear enough for beginners. Write the aspect when available, then give a short plain effect: "Jupiter sextiles natal Saturn, so structure helps the plan."
+- Aspect meaning rule: hard aspects (square/opposition) create pressure, conflict, delay, or split attention; easy aspects (trine/sextile) create support, flow, or an opening that still needs action; conjunctions amplify and make the planet harder to ignore. Keep the wording 7th-grade simple.
+- Retrograde rule: if the cited transit/topHit is retrograde or marked \`℞\`, say it is a revisit, review, delay, redo, or old issue returning. Do not describe a retrograde transit like a fresh clean start.
+- Language ban: do not write "cleanest door", "necessary intensity", "necessary support", "pressure-cooker", "cut ties", or "proves to be an illusion." The reader needs a practical timing call, not poetic danger language.
+- \`windowComparison\`: The system chooses My Time, Best Time, and Avoid from scored windows. Do not choose, reorder, or invent windows. Write only the human rationale for each key.
+  - Each rationale is exactly 2 short sentences.
+  - Sentence 1: plain planning meaning or comparison.
+  - Sentence 2: one exact astrology receipt plus the action.
+  - Good \`bestTime.rationale\`: "Higher score, but not automatically easier. Moon square Saturn adds pressure, so use this only if structure helps your plan."
+  - Bad rationale: "Plans get help from growth." / "Use it for the main plan." / "Jupiter supports Mercury."
+- \`activationAdvice\` and \`closingVerdict\` are legacy/back-compat only. Do not emit them for new readings unless required by schema.
+- No duplication rule: do not repeat the same score, month, or caution across \`decision\`, \`bestWindow\`, \`watchOut\`, and \`windowComparison\` unless the second use adds a new planning decision.
+- The transit chart is an evidence layer, not the main explanation. Do not write as if the user must understand every transit to make the timing decision.`;
+
+const BLOCK_WINDOWS_RULES = `**windows** — One \`windows\` array entry per candidate. Required fields per entry: \`flavorTitle\`, \`dates\`, \`nights\`, \`score\`, \`note\`. Window notes are the clean astrology receipts behind the timing rows.
+
+When a window note cites a transit, use this pattern: exact aspect receipt → short plain meaning → decision. Example: "Saturn squares natal Mars, so urgency meets limits; use this for focused effort, not rushed fights." Do not dump raw aspect strings with no translation, but also do not hide the aspect when the input gives it. Keep the note compact because the UI will turn exact receipts into badges.
+
+If a cited transit is retrograde or marked \`℞\`, say it is a revisit, review, delay, redo, or old issue returning. Example: "Mercury ℞ squares natal Mars, so old conversations can turn sharp again; wait before signing."
 
 - **Trip**: For EACH window in \`sidebarsData.travelWindows\`, output a matching entry:
   - \`dates\`: the window date range (copy from input).
   - \`score\`: the numeric score (copy from input).
   - \`flavorTitle\`: a punchy 3-5 word editorial title for this window.
   - \`nights\`: the number of nights as a string (copy from input).
-  - \`note\`: ONE sentence on why this window scores this way AND the decision: "use it for X," "avoid Y," "keep it short," or "book this if your goal is Z." Use \`drivers\` or \`topHits\` as the evidence. Do not copy an aspect label raw; translate it into what the reader will feel and how to plan.
+  - \`note\`: ONE sentence on why this window scores this way AND the decision: "use it for X," "avoid Y," "keep it short," or "book this if your goal is Z." Use \`drivers\` or \`topHits\` as the evidence. If \`topHits\` gives exact transit planet + aspect + natal target, use that exact receipt before translating it. Do not include more than two transit receipts.
 - **Relocation**: \`sidebarsData.travelWindows\` will be empty. Instead, output one \`windows\` entry for **EACH** entry in \`relocation.windowsToNarrate\`, **IN ORDER** (the array is already curated to the exact 4 the UI will render — anchor month first, then 3 strongest alternates by arcScore). Do NOT skip entries. Do NOT pick from \`relocation.arrivalCandidates\` directly — \`windowsToNarrate\` is the authoritative shortlist.
   - \`dates\`: the candidate's \`monthLabel\` (e.g. "October 2026"). MUST match \`windowsToNarrate[i].monthLabel\` exactly so the UI lookup keys match.
   - \`score\`: the candidate's \`arcScore\` (copy as-is).
@@ -391,8 +418,8 @@ const BLOCK_HARD_CONSTRAINTS = `# Hard constraints
   - \`overview.scoreExplanation\` must name candidly that the year ahead is structurally tight.
   - \`overview.leanInto\` paragraph 2 must frame the strongest month as "the least rough door," not "peak."
   - \`overview.watchOut\` must lead with the structural friction, not soften it.
-  - \`timing.closingVerdict\` MUST recommend "reconsider" — do not soften this to "wait" or "move now."
-- **Personal-cycle gate honesty (relocation only):** If \`relocation.personalCycle.gateActive === true\`, do NOT write a clean fresh-start narrative regardless of how the destination scores. Life-stage is the dominant variable. The lede MUST open with the cycle framing (see Personal Cycle Banner block above). \`timing.closingVerdict\` should bias toward "wait" or "reconsider" unless the destination specifically supports the cycle's lesson.
+  - \`timing.decision\` MUST recommend "reconsider" — do not soften this to "wait" or "move now."
+- **Personal-cycle gate honesty (relocation only):** If \`relocation.personalCycle.gateActive === true\`, do NOT write a clean fresh-start narrative regardless of how the destination scores. Life-stage is the dominant variable. The lede MUST open with the cycle framing (see Personal Cycle Banner block above). \`timing.decision\` should bias toward "wait" or "reconsider" unless the destination specifically supports the cycle's lesson.
 - **Both gates active (relocation only):** If \`placeFloorTripped\` AND \`personalCycle.gateActive\` are both true, the verdict MUST be "reconsider" and the prose MUST name BOTH the rough place AND the heavy cycle without doubling the doom-language. State each clearly, then make the recommendation cleanly.`;
 
 const BLOCKS: readonly string[] = [
@@ -412,7 +439,7 @@ const TASK_INSTRUCTIONS = "\n" + BLOCKS.join("\n\n");
 
 const COMPACT_TASK_INSTRUCTIONS = `Write Astro-Nat's V4 teacher reading from the compressed brief.
 
-Output the full teacher reading schema. The current V4 page depends most on tabs, overview, timing, and chartRulerReframe, but do not make the reading feel abbreviated.
+Output the teacher reading generation schema. The current V4 page depends on tabs, overview, timing, and chartRulerReframe; do not spend tokens on legacy sidebar fields.
 
 Rules:
 - Use brief.tabWritingPlan as an editor's plan, not a script. It describes the reader job, opening move, emotional job, evidence, and target shape.
@@ -421,16 +448,16 @@ Rules:
 - If you mention the overall/headline/trip score, use brief.headlineScore / brief.score only. brief.placeBaselineScore is background evidence, not the user-facing score. Category scores are allowed only when clearly labeled, such as "Identity scores 67" or "Health sits at 42."
 - Do not save the answer for sentence 2. If sentence 1 only says "manage expectations" or "balance goals," it has failed.
 - Sentence 1 of each tab lead must be plain travel advice, not astrology. Forbidden in sentence 1: chart, planet, sign, house, geodetic, line, transit, aspect, degree, Grand Trine, T-Square, stellium.
-- Sentences 2-4 of each tab lead MUST include at least one astrology receipt from that tab's evidence. A score or theme label alone is NOT a receipt. A valid receipt names the actual chart signal: house, planet line, geodetic band, relocated rising/chart ruler, angle shift, or dated transit/window. Gloss the receipt in plain English immediately.
+- For non-Timing tabs, sentences 2-4 of each tab lead MUST include at least one astrology receipt from that tab's evidence. Timing keeps receipts mostly in \`timing.*\` and \`windowComparison\`. A score or theme label alone is NOT a receipt. A valid receipt names the actual chart signal: house, planet line, geodetic band, relocated rising/chart ruler, angle shift, or dated transit/window. Gloss the receipt in plain English immediately.
 - For relocation-style interpretation, use this hierarchy: four corners/angles first; planets/rulers/aspects/dignity tied to those corners second; relocated houses for the selected goal third; ACG/geodetic/timing as supporting modifiers. Angles describe immediacy: ASC = body/identity/arrival, IC = home/sleep/privacy, DSC = partners/clients/conflict, MC = career/visibility/direction. Houses route the topic, but a decent house placement should not outweigh a strong angular pressure signal.
 - Overview must not lose dignity. If \`brief.evidence.shift.chartRuler\` has \`dignity\`, \`rulerSign\`, or \`planetNature\`, mention the chart ruler's dignity and benefic/malefic nature in \`tabs["overview"]\` and \`chartRulerReframe\`. In \`tabs["what-shifts"]\`, keep the top copy as a skim opener and do not repeat the full chart-ruler/dignity explanation.
-- Every plainEnglishSummary must include one receipt sentence and one plain decision sentence. Put practical advice in \`guideRows\`, not in markdown bullets.
-- Each guideRows body must be specific, not generic: name the actual goal, event score, planet/line/house, dignity, window, or risk it is based on. For \`tabs["what-shifts"]\`, write guide rows that support compact cards: relocated rising/first impression, chart-ruler house emphasis, and the first-day felt behavior shift. Avoid restating the same full chart-ruler sentence in more than one row.
+- Every plainEnglishSummary must include one receipt sentence and one plain decision sentence. Put practical advice in \`guideRows\`, not in markdown bullets, except Timing where the practical answers belong in top-level \`timing.decision\`, \`timing.bestWindow\`, and \`timing.watchOut\`.
+- Each guideRows body must be specific, not generic: name the actual goal, event score, planet/line/house, dignity, window, or risk it is based on. For \`tabs["what-shifts"]\`, write guide rows that support compact cards: relocated rising/first impression, chart-ruler house emphasis, and the first-day felt behavior shift. Avoid restating the same full chart-ruler sentence in more than one row. Timing guideRows are optional and ignored by the current UI.
 - Overview \`leanInto\` and \`watchOut\` are not category labels. Each paragraph must interpret the category: why this place/date helps or hurts, what astrology shows it, and what the reader should do with that information.
-- Timing windows must interpret \`brief.evidence.timing.windows[].drivers\` or \`topHits\`. Do not echo raw aspect strings. Example: if a window has Mars with natal Jupiter and Mercury with natal Sun, write that drive and confidence are louder while speech and decisions are sharper; use it for pitches or action, not overpromising.
+- Timing window comparison: the system chooses \`myTime\`, \`bestTime\`, and \`avoid\` from scored windows. Do not choose or reorder windows. For each \`timing.windowComparison.*.rationale\`, write exactly 2 short sentences: plain planning meaning first, then one exact astrology receipt plus action. Good: "Higher score, but not automatically easier. Moon square Saturn adds pressure, so use this only if structure helps your plan."
 - If \`brief.evidence.prioritySignals\` contains \`mars-asc-body-risk\`, it is a high-priority safety/pacing signal. Mention it in overview or what-shifts and one guide row. Explain Mars on the Ascendant as body heat, speed, cuts, inflammation, accidents, scars, rushed movement, workouts, driving, and impatience. Keep it practical, not fatalistic.
 - If \`brief.evidence.prioritySignals\` contains \`pluto-dsc-relief\`, it is a high-priority nuance signal. Say Pluto does not disappear, but it moves pressure away from the Descendant/partners into the relocated house named in the signal. Frame this as "better, not easy."
-- Timing must synthesize three clocks when present: annual profection = personal yearly theme, progressions = slow personal season, transits/windows = date trigger. If \`brief.evidence.timing.personalClock\` exists, at least one visible timing sentence MUST name either the profection/time lord or the progressed season, and one visible timing sentence MUST name the transit/date trigger. Do not let transits be the whole timing story when profection or progression evidence exists.
+- Timing must synthesize three clocks when present: annual profection = personal yearly theme, progressions = slow personal season, transits/windows = date trigger. If \`brief.evidence.timing.personalClock\` exists, name either the profection/time lord or progressed season in \`timing.decision\`, \`timing.bestWindow\`, \`timing.watchOut\`, or one \`windowComparison\` rationale, and name the transit/date trigger in one of those same visible fields. Do not let transits be the whole timing story when profection or progression evidence exists.
 - ACG line evidence includes \`distanceKm\`, \`contribution\`, and \`strength\`. Treat \`exact/very strong\` and \`strong\` lines as possible headline causes. Treat \`moderate/supporting\` lines as supporting clues only. Treat \`background\` lines as context. Do not make a moderate/background line "the reason" unless stronger place, timing, or four-corner evidence agrees.
 - Separate evidence families carefully: ACG lines are time-of-birth line proximity; relocated four corners are \`shift.chartRuler\`, \`shift.angles\`, \`shift.houses\`, and \`shift.aspectsToAngles\`; geodetic evidence is the place's earth-fixed band and personal geodetic hits. Do not blend these as if they are the same signal.
 - If \`brief.evidence.bestUseFallback\` exists, say the selected goal is narrower and name the stronger best use. Do not inflate the selected goal; redirect the trip purpose.
@@ -448,12 +475,12 @@ Rules:
   overview also carries the selected-goal fit formerly handled by Life Themes.
   place-field = how the place feels as an environment.
   what-shifts = how the reader feels/behaves differently there.
-  timing = best window or wait/shorten/avoid stance.
-- Hard length floor: keep each tab opener concise but complete. Each tab lead must be exactly 2 short sentences. Each plainEnglishSummary must be 2-3 short sentences. The rendered top copy should land at 4-5 short sentences total. Every tab must include exactly 3 guideRows with the labels \`Best Used For\`, \`Move Carefully With\`, and \`Your Next Move\`.
+  timing = answer three questions: should I use this timing, when is better, and what should I protect.
+- Hard length floor: keep each tab opener concise but complete. Overview, place-field, and what-shifts each need exactly 2 short lead sentences and 2-3 short summary sentences. Timing is shorter: 1 short lead sentence and 1-2 short summary sentences, no more than 3 sentences rendered. Overview, place-field, and what-shifts must each include exactly 3 guideRows with the labels \`Best Used For\`, \`Move Carefully With\`, and \`Your Next Move\`. Timing should not depend on guideRows.
 - Guide rows must be a little longer than labels: 14-28 words each, with an astrological basis and a plain action/caution. Do not write fragments.
 - overview.scoreExplanation is 4-5 short sentences: sentence 1 gives the travel call, sentence 2 cites a concrete astrology receipt, sentence 3 names the timing or durable place factor, sentence 4 says what to do next, and sentence 5 names the main caution when needed. overview.goalExplanation is 3 sentences and must cite the selected goal score plus one astrology receipt. overview.leanInto and overview.watchOut must each contain exactly 2 paragraphs, 4-5 sentences per paragraph; every paragraph needs one concrete receipt and one planning implication.
 - If \`brief.evidence.shift.chartRuler\` exists, overview.scoreExplanation sentence 2 or 3 must mention the relocated chart ruler's planet, sign, house, dignity, and benefic/malefic nature when supplied. Example: "Jupiter, a benefic planet, is exalted in Cancer in the relocated 7th house, so partnership support is real and easier to use."
-- timing.activationAdvice: exactly 3 practical items. timing.closingVerdict must be 2 sentences and say go, go with caution, shorten, wait, avoid, move now, or reconsider.
+- timing.decision, timing.bestWindow, and timing.watchOut are the canonical visible answers. decision and bestWindow must be compact but not bare: include the stance/date plus one reason from score, aspect, personal clock, or transit translation. \`timing.windowComparison\` carries the 3-row comparison rationale only. Do not ask \`tabs["timing"].guideRows\` to carry the Timing page.
 - Fill chartRulerReframe from brief.evidence.shift.chartRuler. If optional legacy/sidebar fields are generated, keep them concise, but never steal depth from tabs/overview/timing.
 - Voice: candid, protective, practical. Use "okay", "just know", "please", and "plan accordingly" lightly. No doom, no fluffy mystery, no profanity.`;
 
@@ -629,9 +656,16 @@ function ensureTimingPersonalClock(out: any, input: TeacherReadingInput) {
   if (!timingTab || !clock) return;
 
   const existing = [
+    out.timing?.decision,
+    out.timing?.bestWindow,
+    out.timing?.watchOut,
     timingTab.lead,
     timingTab.plainEnglishSummary,
     ...(timingTab.guideRows || []).map((row: any) => row?.body),
+    out.timing?.windowComparison?.myTime?.rationale,
+    out.timing?.windowComparison?.bestTime?.rationale,
+    out.timing?.windowComparison?.avoid?.rationale,
+    ...(out.timing?.activationAdvice || []),
     out.timing?.closingVerdict,
   ].filter(Boolean).join(" ");
 
@@ -647,9 +681,11 @@ function ensureTimingPersonalClock(out: any, input: TeacherReadingInput) {
   }
 
   if (!additions.length) return;
-  timingTab.plainEnglishSummary = [timingTab.plainEnglishSummary, ...additions]
-    .filter(Boolean)
-    .join(" ");
+  out.timing ||= {};
+  out.timing.watchOut = [
+    out.timing.watchOut,
+    ...additions,
+  ].filter(Boolean).join(" ");
 }
 
 function ensureLineNotes(out: any, input: TeacherReadingInput) {
@@ -697,6 +733,43 @@ function compactItems(items: any[] | undefined, count: number, fields: string[])
         .map((field) => [field, item[field]]),
     );
   });
+}
+
+function scoreFromTimingWindow(window: any): number {
+  return Number(window?.score ?? window?.arcScore ?? 0);
+}
+
+function compactTimingWindow(window: any, fields: string[]) {
+  if (!window || typeof window !== "object") return null;
+  return Object.fromEntries(
+    fields
+      .filter((field) => window[field] != null)
+      .map((field) => [field, window[field]]),
+  );
+}
+
+function timingWindowComparisonBrief(input: TeacherReadingInput) {
+  const sidebars: any = input.sidebarsData || {};
+  const relocation: any = input.relocation;
+  const windows = input.macro.travelType === "relocation"
+    ? (relocation?.windowsToNarrate || [])
+    : (sidebars.travelWindows || []);
+  if (!Array.isArray(windows) || windows.length === 0) return undefined;
+
+  const myTime = windows[0];
+  const byScoreDesc = [...windows].sort((a, b) => scoreFromTimingWindow(b) - scoreFromTimingWindow(a));
+  const byScoreAsc = [...windows].sort((a, b) => scoreFromTimingWindow(a) - scoreFromTimingWindow(b));
+  const bestTime = byScoreDesc[0] || myTime;
+  const avoid = byScoreAsc[0] || myTime;
+  const fields = input.macro.travelType === "relocation"
+    ? ["monthLabel", "arcScore", "settlingArcDescriptor", "hardestSubmonth", "drivers"]
+    : ["rank", "dates", "score", "nights", "drivers", "topHits"];
+
+  return {
+    myTime: compactTimingWindow(myTime, fields),
+    bestTime: compactTimingWindow(bestTime, fields),
+    avoid: compactTimingWindow(avoid, fields),
+  };
 }
 
 function scoreBand(score: number) {
@@ -782,7 +855,7 @@ function buildTabWritingPlan(input: TeacherReadingInput) {
       notFor: ["forcing weaker goals"],
       nextMove: "front-load the important plans and keep flexibility",
       evidenceToUse: ["best window", "supportive transits", "friction transits"],
-      targetShape: "lead 2 sentences + summary 2-3 short sentences + guideRows with astrology basis: best window, transit/window receipt, what to schedule, what not to force, fallback.",
+      targetShape: "lead 1 sentence + summary 1-2 short sentences for context only; top-level timing answers carry the visible decision; timing.windowComparison gives 2-sentence rationales for My Time, Best Time, Avoid.",
     },
   };
 }
@@ -835,7 +908,8 @@ function compactTeacherSignal(input: TeacherReadingInput) {
       },
       timing: {
         windows: compactItems(sidebars.travelWindows, 4, ["rank", "dates", "score", "nights", "drivers", "topHits"]),
-        transits: compactItems(sidebars.topTransits, 5, ["aspect", "dateRange", "tone", "houseTopics"]),
+        windowComparison: timingWindowComparisonBrief(input),
+        transits: compactItems(sidebars.topTransits, 5, ["aspect", "dateRange", "tone", "houseTopics", "retrograde", "transit_planet", "natal_planet"]),
         personalClock: sidebars.timingContext,
       },
       prioritySignals: compactItems(sidebars.prioritySignals, 4, ["key", "planet", "angle", "orb", "natalHouse", "relocatedHouse", "summary", "instruction"]),
