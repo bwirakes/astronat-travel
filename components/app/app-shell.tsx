@@ -7,27 +7,17 @@ import { AppSidebar, SIDEBAR_EXPANDED_WIDTH, SIDEBAR_PIN_KEY, SIDEBAR_RAIL_WIDTH
 import { AppMobileBar } from "./app-mobile-bar";
 import { PageHeaderProvider, usePageHeader } from "./page-header-context";
 
-/** Pathname-driven palette for the sticky context bar. Only /reading/[id]
- *  gets themed (blue). All other routes keep the neutral eggshell bar —
- *  including /weather/[eventId] on desktop. The mobile bar applies its own
- *  weather-event theming separately for the spiced-life mobile experience. */
-function contextBarTone(pathname: string): {
+/** Pathname-driven palette for the sticky context bar. Desktop keeps the
+ *  neutral eggshell bar on every route — including /reading/[id] and
+ *  /weather/[eventId]. The mobile bar applies its own per-route theming
+ *  separately (e.g. spiced-life on /weather/[eventId]). */
+function contextBarTone(_pathname: string): {
   background: string;
   borderBottom: string;
   color: string;
   buttonColorIdle: string;
   buttonColorHover: string;
 } {
-  const isReadingDetail = /^\/reading\/[^/]+/.test(pathname) && !pathname.startsWith("/reading/new");
-  if (isReadingDetail) {
-    return {
-      background: "#0456fb",
-      borderBottom: "1px solid #0456fb",
-      color: "#F8F5EC",
-      buttonColorIdle: "color-mix(in oklab, #F8F5EC 78%, transparent)",
-      buttonColorHover: "#F8F5EC",
-    };
-  }
   return {
     background: "var(--bg)",
     borderBottom: "1px solid var(--surface-border)",
