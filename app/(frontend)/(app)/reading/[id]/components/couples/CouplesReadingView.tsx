@@ -23,7 +23,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import NatalMockupWheel from "@/app/components/NatalMockupWheel";
 import { PageHeader } from "@/components/app/page-header-context";
 import SectionHead from "../shared/SectionHead";
-import LearnFooter from "../shared/LearnFooter";
 import { EVENT_LABELS, VERDICT_COLORS, verdictBand, type VerdictBand } from "@/app/lib/verdict";
 import { destinationFlag } from "@/app/lib/country-flag";
 import SignIcon from "@/app/components/SignIcon";
@@ -123,9 +122,6 @@ export default function CouplesReadingView({ vm, paramId }: Props) {
             </ChapterSection>
           )}
 
-          <div style={{ marginTop: "clamp(80px, 10vw, 140px)" }}>
-            <LearnFooter />
-          </div>
         </div>
 
         <ClosingFooter
@@ -933,7 +929,7 @@ function ChartTab({ tab, lead, isDark }: { tab: ChartTabVM; destination: string;
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "clamp(32px, 4vw, 56px)" }} className="dd-grid">
       <div style={{ maxWidth: 480, width: "100%", margin: "0 auto" }}>
-        <NatalMockupWheel isDark={isDark} planets={tab.planets as any} cusps={tab.cusps} />
+        <NatalMockupWheel isDark={isDark} planets={tab.planets} cusps={tab.cusps} />
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "clamp(24px, 3vw, 36px)" }}>

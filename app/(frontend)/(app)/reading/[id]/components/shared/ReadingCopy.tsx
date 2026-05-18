@@ -347,21 +347,35 @@ export function ReadingGuideRows({
     autoEmphasis = true,
     allowBold = true,
     preserveLabels = false,
+    surface = "ledger",
 }: {
     rows: ReadingGuideRow[];
     accent?: string;
     autoEmphasis?: boolean;
     allowBold?: boolean;
     preserveLabels?: boolean;
+    surface?: "ledger" | "cards";
 }) {
     if (!rows.length) return null;
+    const isCards = surface === "cards";
     return (
-        <ul className="m-0 mt-6 p-0 list-none grid grid-cols-1 md:grid-cols-3 border-t border-b w-full" style={{ borderColor: "var(--surface-border)" }}>
+        <ul
+            className={isCards
+                ? "m-0 mt-6 p-0 list-none grid grid-cols-1 md:grid-cols-3 gap-3 w-full"
+                : "m-0 mt-6 p-0 list-none grid grid-cols-1 md:grid-cols-3 border-t border-b w-full"}
+            style={{ borderColor: "var(--surface-border)" }}
+        >
             {rows.map((row, index) => (
                 <li
                     key={`${row.label}-${index}`}
-                    className="min-w-0 py-4 md:px-5 md:first:pl-0 md:border-l md:first:border-l-0"
-                    style={{ borderColor: "var(--surface-border)" }}
+                    className={isCards
+                        ? "min-w-0 rounded-[8px] border px-5 py-5 sm:px-6"
+                        : "min-w-0 py-4 md:px-5 md:first:pl-0 md:border-l md:first:border-l-0"}
+                    style={{
+                        borderColor: isCards ? "var(--reading-card-border-accent, color-mix(in oklab, var(--color-y2k-blue) 18%, var(--surface-border)))" : "var(--surface-border)",
+                        background: isCards ? "var(--reading-card-bg, var(--guide-card-bg, var(--surface)))" : undefined,
+                        boxShadow: isCards ? "var(--reading-card-shadow, var(--guide-card-shadow, none))" : undefined,
+                    }}
                 >
                     <div className="flex items-start gap-3">
                         <GuideRowBadge label={row.label} index={index} variant={row.badgeVariant} />
@@ -404,7 +418,7 @@ export function ReadingGuideFlow({
     if (!rows.length) return null;
     const flowLine = variant === "timing"
         ? "linear-gradient(180deg, color-mix(in oklab, var(--amber) 48%, transparent), color-mix(in oklab, var(--color-spiced-life) 36%, transparent), color-mix(in oklab, var(--color-y2k-blue) 30%, transparent))"
-        : "linear-gradient(180deg, color-mix(in oklab, var(--sage) 42%, transparent), color-mix(in oklab, var(--color-y2k-blue) 26%, transparent), transparent)";
+        : "linear-gradient(180deg, color-mix(in oklab, var(--lift-accent) 42%, transparent), color-mix(in oklab, var(--color-y2k-blue) 26%, transparent), transparent)";
 
     return (
         <ol
@@ -511,7 +525,7 @@ export function GuideRowBadge({
     const tone = resolvedVariant.includes("avoid") || resolvedVariant.includes("watch")
         ? "var(--color-spiced-life)"
         : resolvedVariant.includes("use") || resolvedVariant.includes("theme")
-            ? "var(--sage)"
+            ? "var(--lift-accent)"
             : resolvedVariant.includes("window")
                 ? "var(--amber)"
                 : "var(--color-y2k-blue)";
@@ -592,6 +606,7 @@ export function ReadingCopyBlock({
     autoEmphasis = true,
     allowBold = true,
     preserveGuideLabels = false,
+    guideSurface = "ledger",
 }: {
     lead?: string;
     intro?: string;
@@ -602,6 +617,7 @@ export function ReadingCopyBlock({
     autoEmphasis?: boolean;
     allowBold?: boolean;
     preserveGuideLabels?: boolean;
+    guideSurface?: "ledger" | "cards";
 }) {
     const structured = structureReadingCopy({ lead, intro, guideRows, maxSentences, preserveGuideLabels });
     if (!structured.paragraphs.length && !structured.guideRows.length) return null;
@@ -628,7 +644,7 @@ export function ReadingCopyBlock({
                     </p>
                 ))}
             </div>
-            <ReadingGuideRows rows={structured.guideRows} accent={accent} autoEmphasis={autoEmphasis} allowBold={allowBold} preserveLabels={preserveGuideLabels} />
+            <ReadingGuideRows rows={structured.guideRows} accent={accent} autoEmphasis={autoEmphasis} allowBold={allowBold} preserveLabels={preserveGuideLabels} surface={guideSurface} />
         </div>
     );
 }

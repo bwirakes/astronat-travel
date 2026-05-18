@@ -40,6 +40,7 @@ Before designing or editing UI:
 - Use lucide icons for normal controls when the app already uses lucide. Use custom Astro SVGs for brand/art moments.
 - Keep new styles local to the route/component unless the same pattern is intentionally becoming system-wide.
 - Prefer theme-aware CSS variables. Hardcoded brand colors are allowed only for fixed brand artwork panels, like the current reading hero.
+- On `/reading/[id]`, use the route-scoped reading card vocabulary before inventing one-off panels: `reading-shell.css` owns `.reading-card`, `.reading-card--strong`, `.reading-card--accent`, `.reading-card__top-rule`, and the `--reading-card-*` tokens. Use `ReadingTonePill` for compact metadata pills.
 
 ## Visual Grammar
 
@@ -64,6 +65,8 @@ Composition:
 
 - Build editorial sections, not marketing panels. Use full-width bands, hairlines, ledgers, glyphs, and restrained surfaces.
 - Cards are for repeated items, modals, compact tools, or genuinely framed content. Do not nest cards inside cards.
+- Reading deliverables should not include the Academy/Learn footer unless the user explicitly asks for learning content at the bottom of the reading.
+- Promoted reading content should not be pale border-only. Use the high-contrast reading card treatment, then keep dense rows as ledgers inside that surface.
 - Use asymmetric, cut, or organic shapes for memorable brand moments. Use `--radius-xs` or `--radius-sm` for dense editorial UI.
 - Use one clear active-state signal for tabs/selectors. Avoid simultaneous fill + border + weight + shadow changes.
 - Dense data should become ledger rows: label, primary value, note, score/status. Avoid bulky card grids for tabular information.

@@ -110,10 +110,12 @@ export interface V4Vibe {
 }
 
 export interface V4Angle {
+    k: "ASC" | "IC" | "DSC" | "MC";
     name: string;        // "Rising (ASC)"
     plain: string;       // "How you come across"
     natal: string;       // "24° Aries" (best-effort)
     relocated: string;   // "11° Cancer"
+    signChanged: boolean;
     delta: string;       // sentence-long plain-English shift
 }
 
@@ -122,6 +124,9 @@ export interface V4PlanetHouseRow {
     glyph: string;
     natalHouse: string;     // "12 · behind the scenes"
     reloHouse: string;      // "10 · public life"
+    natalHouseNum?: number;
+    reloHouseNum?: number;
+    changed: boolean;
     shift: string;          // plain English
 }
 
@@ -1617,13 +1622,24 @@ function deriveRelocatedAngles(reading: any): V4Angle[] {
         if (d?.angle) promptDeltas[d.angle] = d.delta;
     }
 
-    return (["ASC", "IC", "DSC", "MC"] as const).map(k => ({
-        name: ANGLE_PLAIN[k].name,
-        plain: ANGLE_PLAIN[k].plain,
-        natal: getNatal(k),
-        relocated: lons ? fmtSignDeg(lons[k]) : "—",
-        delta: promptDeltas[k] || deltaCopy(k),
-    }));
+    return (["ASC", "IC", "DSC", "MC"] as const).map(k => {
+        const natal = getNatal(k);
+        const relocated = lons ? fmtSignDeg(lons[k]) : "—";
+        return {
+            k,
+            name: ANGLE_PLAIN[k].name,
+            plain: ANGLE_PLAIN[k].plain,
+            natal,
+            relocated,
+            signChanged: signLabel(natal) !== signLabel(relocated),
+            delta: promptDeltas[k] || deltaCopy(k),
+        };
+    });
+}
+
+function signLabel(formatted: string): string {
+    const m = formatted.match(/[A-Z][a-z]+$/);
+    return m ? m[0] : formatted;
 }
 
 function deltaCopy(k: "ASC"|"IC"|"DSC"|"MC"): string {
@@ -1653,6 +1669,8 @@ function derivePlanetsInHouses(reading: any): V4PlanetHouseRow[] {
                 glyph: glyph(name),
                 natalHouse: HOUSE_LABEL[p.house] ?? "—",
                 reloHouse: "—",
+                natalHouseNum: typeof p.house === "number" ? p.house : undefined,
+                changed: false,
                 shift: promptShifts[name.toLowerCase()] || "Re-housing data will appear here once the relocated chart finishes computing.",
             };
         });
@@ -1678,6 +1696,9 @@ function derivePlanetsInHouses(reading: any): V4PlanetHouseRow[] {
             glyph: glyph(name),
             natalHouse: natalHouseNum ? HOUSE_LABEL[natalHouseNum] : "—",
             reloHouse: HOUSE_LABEL[reloHouseNum] ?? `${reloHouseNum}`,
+            ...(natalHouseNum ? { natalHouseNum } : {}),
+            reloHouseNum,
+            changed: Boolean(natalHouseNum && natalHouseNum !== reloHouseNum),
             shift: promptShifts[name.toLowerCase()] || shiftCopy(name, natalHouseNum, reloHouseNum),
         };
     });
