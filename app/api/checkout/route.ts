@@ -17,15 +17,15 @@ const MONTHLY_PRICE_FALLBACK = 'price_1TGqfnDCYzkth9F1V1O7ov0d'
 const CHECKOUT_OFFERS: Record<CheckoutOffer, { mode: 'payment' | 'subscription'; priceId?: string }> = {
   single: {
     mode: 'payment',
-    priceId: process.env.STRIPE_SINGLE_PRICE_ID,
+    priceId: process.env.STRIPE_SINGLE_PRICE_ID || process.env.STRIPE_PRICE_SINGLE_READING,
   },
   monthly: {
     mode: 'subscription',
-    priceId: process.env.STRIPE_MONTHLY_PRICE_ID || MONTHLY_PRICE_FALLBACK,
+    priceId: process.env.STRIPE_MONTHLY_PRICE_ID || process.env.STRIPE_PRICE_EXPLORER_MONTHLY || MONTHLY_PRICE_FALLBACK,
   },
   lifetime: {
     mode: 'payment',
-    priceId: process.env.STRIPE_LIFETIME_PRICE_ID,
+    priceId: process.env.STRIPE_LIFETIME_PRICE_ID || process.env.STRIPE_PRICE_FOUNDER_LIFETIME,
   },
 }
 
