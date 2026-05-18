@@ -119,6 +119,14 @@ jobs:
         run: bun run test
         env:
           NEXT_TELEMETRY_DISABLED: "1"
+          # Placeholder Supabase config so proxy.ts middleware initializes
+          # without throwing. These values are fake — any auth flow that
+          # actually contacts Supabase will fail, which is fine: the smoke
+          # spec only asserts that auth-gated routes redirect to /login,
+          # which middleware does locally without a real connection.
+          # Real credentials come from Vercel in production.
+          NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: "placeholder-anon-key"
 
       - name: Upload Playwright report
         if: failure()
