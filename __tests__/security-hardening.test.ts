@@ -50,8 +50,16 @@ describe("security hardening guards", () => {
 
     const clientInstrumentation = read("instrumentation-client.ts");
     const serverInstrumentation = read("instrumentation.ts");
+    const sentryServerConfig = read("sentry.server.config.ts");
+    const sentryEdgeConfig = read("sentry.edge.config.ts");
     expect(clientInstrumentation).toContain("Sentry.init");
-    expect(serverInstrumentation).toContain("Sentry.init");
+    expect(serverInstrumentation).toContain("./sentry.server.config");
+    expect(serverInstrumentation).toContain("./sentry.edge.config");
+    expect(serverInstrumentation).toContain("captureRequestError");
+    expect(sentryServerConfig).toContain("Sentry.init");
+    expect(sentryEdgeConfig).toContain("Sentry.init");
+    expect(sentryServerConfig).toContain("sendDefaultPii: false");
+    expect(sentryEdgeConfig).toContain("sendDefaultPii: false");
   });
 
   test("baseline documentation records the known reliability risks", () => {

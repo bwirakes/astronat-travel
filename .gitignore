@@ -142,3 +142,6 @@ public/window.svg
 public/dashboard-dark.png
 public/indonesia_map_bg.png
 .env.local
+
+# Sentry Config File
+.env.sentry-build-plugin

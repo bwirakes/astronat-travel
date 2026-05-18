@@ -1,16 +1,15 @@
-export async function register() {
-  // Only run on Node.js server runtime — not Edge
-  if (process.env.NEXT_RUNTIME !== "nodejs") return;
+import * as Sentry from "@sentry/nextjs";
 
-  const sentryDsn = process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN;
-  if (sentryDsn) {
-    const Sentry = await import("@sentry/nextjs");
-    Sentry.init({
-      dsn: sentryDsn,
-      environment: process.env.VERCEL_ENV || process.env.NODE_ENV,
-      tracesSampleRate: process.env.NODE_ENV === "production" ? 0.05 : 1,
-      sendDefaultPii: false,
-    });
+export async function register() {
+  if (process.env.NEXT_RUNTIME === "edge") {
+    await import("./sentry.edge.config");
+    return;
+  }
+
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    await import("./sentry.server.config");
+  } else {
+    return;
   }
 
   // Skip OTel/PostHog instrumentation when no token is configured. Without
@@ -38,3 +37,5 @@ export async function register() {
 
   sdk.start();
 }
+
+export const onRequestError = Sentry.captureRequestError;
