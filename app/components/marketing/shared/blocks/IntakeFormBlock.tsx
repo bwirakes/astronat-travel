@@ -393,10 +393,10 @@ export function IntakeFormBlock() {
       });
       setStatus("success");
       window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch (err: any) {
+    } catch (err: unknown) {
       posthog.captureException(err);
       setStatus("error");
-      setErrorMsg(err.message ?? "Something went wrong. Please try again.");
+      setErrorMsg(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     }
   };
 
@@ -461,7 +461,7 @@ export function IntakeFormBlock() {
           ))}
         </div>
         <p style={{ color: "var(--form-text-muted)" }} className="font-body text-sm max-w-xs leading-relaxed">
-          Sending your brief to Nat. This may take a moment — please don't close this page.
+          Sending your brief to Nat. This may take a moment — please don&apos;t close this page.
         </p>
       </div>
     );
@@ -526,14 +526,13 @@ export function IntakeFormBlock() {
             )}
             <button
               type="submit"
-              disabled={status === "loading"}
               style={{
                 background: "var(--form-submit-bg)",
                 color: "var(--form-submit-text)",
               }}
               className="px-16 py-5 font-mono text-[10px] uppercase tracking-widest hover:opacity-80 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {status === "loading" ? "Submitting..." : "Submit Intake Brief →"}
+              Submit Intake Brief →
             </button>
           </div>
         </div>

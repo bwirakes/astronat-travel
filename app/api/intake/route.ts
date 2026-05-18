@@ -20,6 +20,11 @@ import { captureServerError } from "@/lib/monitoring/sentry";
 
 const NOTION_INTAKE_DB_ID = process.env.NOTION_INTAKE_DB_ID!;
 const NOTIFICATION_EMAIL = process.env.INTAKE_NOTIFICATION_EMAIL!;
+type NotionDatabaseProperties = Record<string, unknown>;
+type NotionDatabaseUpdate = (args: {
+  database_id: string;
+  properties: NotionDatabaseProperties;
+}) => Promise<unknown>;
 
 // ─── Property schema for idempotent DB update ─────────────────────────────────
 // Name/title is excluded — Notion rejects redeclaring the title property via update.
@@ -87,9 +92,9 @@ const DB_UPDATE_PROPERTIES = DB_CREATE_PROPERTIES;
 async function ensureDbSchema(notion: Client): Promise<void> {
   // Ensure all required properties exist on the target database.
   // Name/title cannot be redeclared via update so it's excluded (DB_UPDATE_PROPERTIES).
-  await notion.databases.update({
+  await (notion.databases.update as unknown as NotionDatabaseUpdate)({
     database_id: NOTION_INTAKE_DB_ID,
-    properties: DB_UPDATE_PROPERTIES as any,
+    properties: DB_UPDATE_PROPERTIES,
   });
 }
 

@@ -10,7 +10,23 @@ import { Client } from "@notionhq/client";
 
 const NOTION_INTAKE_DB_ID = process.env.NOTION_INTAKE_DB_ID!;
 
-const REQUIRED_PROPERTIES: Record<string, any> = {
+type NotionDatabaseProperties = Record<string, unknown>;
+type NotionDatabaseUpdate = (args: {
+  database_id: string;
+  properties: NotionDatabaseProperties;
+}) => Promise<unknown>;
+
+function getDatabaseProperties(value: unknown): NotionDatabaseProperties {
+  if (!value || typeof value !== "object" || !("properties" in value)) return {};
+  const properties = (value as { properties?: unknown }).properties;
+  return properties && typeof properties === "object" ? properties as NotionDatabaseProperties : {};
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+const REQUIRED_PROPERTIES: NotionDatabaseProperties = {
   Status: {
     select: {
       options: [
@@ -73,21 +89,21 @@ export async function GET() {
   // Push all required properties directly (idempotent — Notion ignores existing ones)
   let updateError: string | null = null;
   try {
-    await notion.databases.update({
+    await (notion.databases.update as unknown as NotionDatabaseUpdate)({
       database_id: NOTION_INTAKE_DB_ID,
       properties: REQUIRED_PROPERTIES,
     });
-  } catch (err: any) {
-    updateError = err.message;
+  } catch (err: unknown) {
+    updateError = getErrorMessage(err);
     return NextResponse.json({
       status: "update_failed",
-      error: err.message,
+      error: updateError,
     }, { status: 500 });
   }
 
   // Verify by re-retrieving
   const after = await notion.databases.retrieve({ database_id: NOTION_INTAKE_DB_ID });
-  const allProps = after.properties ? Object.keys(after.properties) : [];
+  const allProps = Object.keys(getDatabaseProperties(after));
   const stillMissing = Object.keys(REQUIRED_PROPERTIES).filter((k) => !allProps.includes(k));
 
   return NextResponse.json({

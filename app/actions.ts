@@ -14,13 +14,21 @@ export async function createProfileAction(birthData: { name: string, date: strin
     const defaultProfile: Omit<Profile, "created_at" | "updated_at"> = {
       id: user.id,
       first_name: birthData.name,
+      last_name: null,
       birth_date: birthData.date,
       birth_time: birthData.time || "12:00:00",
       birth_time_known: birthData.timeKnown,
       birth_city: birthData.city,
       birth_lat: null, // can be geocoded later
       birth_lon: null,
+      birth_utc: null,
       life_goals: [],
+      is_subscribed: false,
+      subscription_status: null,
+      subscription_id: null,
+      subscription_ends_at: null,
+      stripe_customer_id: null,
+      last_login_date: null,
     };
     const res = await createProfile(defaultProfile);
     // Mirror onboarded state onto the auth user so the edge proxy can gate
