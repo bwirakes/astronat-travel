@@ -71,7 +71,7 @@ function LoginForm() {
     }
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      posthog.identify(user.id, { email: user.email });
+      posthog.identify(user.id);
       posthog.capture("user_logged_in", { method: "password" });
       const { data: profile } = await supabase
         .from('profiles')
@@ -104,7 +104,7 @@ function LoginForm() {
     if (error) {
       setMessage(`Error: ${error.message}`)
     } else {
-      posthog.capture("magic_link_requested", { email });
+      posthog.capture("magic_link_requested");
       setMessage('Check your email ✨')
     }
     setLoading(false)
@@ -317,7 +317,7 @@ function LoginForm() {
 
           <div className="mt-8 text-center pt-6 border-t border-[var(--surface-border)]">
             <p className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <Link href="/flow" className="underline hover:text-[var(--text-primary)] transition-colors" style={{ color: 'var(--color-y2k-blue)', textUnderlineOffset: '4px' }}>
                 Sign up
               </Link>

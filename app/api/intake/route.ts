@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * POST /api/intake
  * Handles corporate intake form submissions.
@@ -12,6 +13,8 @@ import { NextResponse } from "next/server";
 import { Client } from "@notionhq/client";
 import { Resend } from "resend";
 import { INTAKE_FORM_SECTIONS } from "@/lib/marketing/data/intake-form";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { captureServerError } from "@/lib/monitoring/sentry";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -262,6 +265,9 @@ async function verifyCaptcha(token: string): Promise<boolean> {
 
 export async function POST(req: Request) {
   try {
+    const limited = await enforceRateLimit(req, "intake");
+    if (limited) return limited;
+
     const data: Record<string, unknown> = await req.json();
 
     // ── CAPTCHA verification ──────────────────────────────────────────────────
@@ -397,6 +403,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
+    captureServerError(err, { route: "/api/intake", method: "POST" });
     console.error("[intake] Error:", err);
     return NextResponse.json(
       { error: err.message ?? "Internal server error" },

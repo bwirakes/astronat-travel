@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildGeodeticMatrixResponse } from "@/app/lib/geodetic/weather-matrix";
 import { assertWeatherSourceParity, WEATHER_SOURCE_PARITY } from "@/app/lib/geodetic/weather-source-parity";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { captureServerError } from "@/lib/monitoring/sentry";
 
 function parseLongitudeResolution(value: string | null): number {
     const resolution = Number(value ?? "1");
@@ -15,6 +17,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const longitudeResolution = parseLongitudeResolution(params.get("longitudeResolution"));
 
     try {
+        const limited = await enforceRateLimit(req, "astroCompute");
+        if (limited) return limited;
+
         assertWeatherSourceParity();
         return NextResponse.json(buildGeodeticMatrixResponse({
             startDate,
@@ -23,6 +28,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
             includeHistorical,
         }));
     } catch (error) {
+        captureServerError(error, { route: "/api/geodetic-weather/matrix", method: "GET" });
         console.error("[/api/geodetic-weather/matrix]", error);
         return NextResponse.json({
             error: "Geodetic weather matrix failed",

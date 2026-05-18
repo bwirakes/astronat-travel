@@ -123,7 +123,7 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
       .single();
 
     if (!error && data) {
-      posthog.capture("partner_profile_added", { partner_birth_city: newPartner.birthCity });
+      posthog.capture("partner_profile_added", { has_partner_birth_city: Boolean(newPartner.birthCity) });
       setPartners(prev => [data, ...prev]);
       setPartnerId(data.id);
       setShowAddPartner(false);

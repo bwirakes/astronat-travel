@@ -30,6 +30,8 @@ import { buildChartStructure, type ChartStructure } from "@/lib/readings/chart-s
 import { generateObject } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { z } from "zod";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { captureServerError } from "@/lib/monitoring/sentry";
 
 const google = createGoogleGenerativeAI({
   apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? process.env.GEMINI_API_KEY,
@@ -258,21 +260,18 @@ export async function POST(request: Request) {
   const emit = (c: ReadableStreamDefaultController, msg: unknown) =>
     c.enqueue(encoder.encode(JSON.stringify(msg) + "\n"));
 
-  const { searchParams } = new URL(request.url);
-  const testUserId = searchParams.get("userId");
-
   // Auth
   const {
     data: { user },
   } = await supabase.auth.getUser();
   
-  console.log("DEBUG AUTH", { testUserId, user: user?.id });
-  
-  if (!user && !testUserId) {
+  if (!user) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 
-  const userId = testUserId || user!.id;
+  const userId = user.id;
+  const limited = await enforceRateLimit(request, "chartInterpret", userId);
+  if (limited) return limited;
 
   // Load profile + natal chart
   const profile = await getProfileFresh(userId);
@@ -310,6 +309,7 @@ export async function POST(request: Request) {
   try {
     payload = await buildPayload(userId, profile, ephemerisData);
   } catch (err) {
+    captureServerError(err, { route: "/api/chart/interpret", method: "POST", userId });
     console.error("[chart/interpret] payload build failed:", err);
     return new Response(JSON.stringify({ error: "Payload build failed", message: getErrorMessage(err) }), {
       status: 500,
@@ -499,6 +499,12 @@ No fluff. No "energy," no "leverage," no "manifest." Apply the Voice Test before
           }
         } catch (err) {
           const message = getErrorMessage(err);
+          captureServerError(err, {
+            route: "/api/chart/interpret",
+            method: "POST",
+            userId,
+            tags: { stage: "ai_call" },
+          });
           console.error("[chart/interpret] Gemini call failed:", message);
           emit(controller, { error: message || "Gemini call failed" });
         }
@@ -516,6 +522,12 @@ No fluff. No "energy," no "leverage," no "manifest." Apply the Voice Test before
           .eq("user_id", userId)
           .eq("chart_type", "natal");
       } catch (err) {
+        captureServerError(err, {
+          route: "/api/chart/interpret",
+          method: "POST",
+          userId,
+          tags: { stage: "persist_interpretation" },
+        });
         console.warn("[chart/interpret] persist failed:", getErrorMessage(err));
       }
 

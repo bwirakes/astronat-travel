@@ -3,6 +3,7 @@ import { revalidateTag } from 'next/cache'
 import Stripe from 'stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { capturePostHogEvent } from '@/lib/posthog-server'
+import { captureServerError } from '@/lib/monitoring/sentry'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_fallback', {
   apiVersion: '2026-03-25.dahlia',
@@ -26,6 +27,12 @@ type SubscriptionPeriodSnapshot = Stripe.Subscription & {
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
+}
+
+function throwIfSupabaseError(error: { message?: string } | null | undefined, message: string): void {
+  if (error) {
+    throw new Error(`${message}: ${error.message ?? 'unknown Supabase error'}`)
+  }
 }
 
 function getCheckoutOffer(session: Stripe.Checkout.Session): CheckoutOffer {
@@ -60,8 +67,21 @@ async function recordCheckoutPurchase(
       product: productForOffer(offer),
     }, { onConflict: 'stripe_session_id' })
 
-  if (error) {
-    console.error('[webhook] Error recording purchase:', error.message)
+  if (!error) return
+
+  const wrapped = new Error(`[webhook] Error recording purchase: ${error.message}`)
+  captureServerError(wrapped, {
+    route: '/api/stripe/webhook',
+    method: 'POST',
+    userId,
+    tags: { stage: 'record_purchase', offer },
+  })
+
+  // A single-reading checkout stores the actual reading credit in `purchases`.
+  // Subscription/lifetime access is granted through profile/subscription rows,
+  // so do not block paid access on a secondary purchase-ledger write.
+  if (offer === 'single') {
+    throw wrapped
   }
 }
 
@@ -124,7 +144,7 @@ async function syncSubscriptionToProfile(
     .eq('id', resolvedUserId)
 
   if (profileError) {
-    console.error('[webhook] Failed to update profile:', profileError.message)
+    throwIfSupabaseError(profileError, '[webhook] Failed to update profile')
   }
 
   // 2. Sync Full Record to Subscriptions Table (Source of Truth)
@@ -143,7 +163,7 @@ async function syncSubscriptionToProfile(
     }, { onConflict: 'stripe_subscription_id' })
 
   if (subError) {
-    console.error('[webhook] Failed to update subscriptions table:', subError.message)
+    throwIfSupabaseError(subError, '[webhook] Failed to update subscriptions table')
   } else {
     console.log(`[webhook] Fully synced ${subscription.id} for user ${resolvedUserId}`)
   }
@@ -175,7 +195,7 @@ async function grantLifetimeAccess(
     .eq('id', userId)
 
   if (profileError) {
-    console.error('[webhook] Failed to grant lifetime profile access:', profileError.message)
+    throwIfSupabaseError(profileError, '[webhook] Failed to grant lifetime profile access')
   }
 
   const { error: subError } = await supabase
@@ -191,7 +211,7 @@ async function grantLifetimeAccess(
     }, { onConflict: 'stripe_subscription_id' })
 
   if (subError) {
-    console.error('[webhook] Failed to grant lifetime subscription access:', subError.message)
+    throwIfSupabaseError(subError, '[webhook] Failed to grant lifetime subscription access')
   }
 
   revalidateTag(`profile-${userId}`, 'max')
@@ -222,18 +242,20 @@ async function sendWelcomeEmail(supabase: ReturnType<typeof createAdminClient>, 
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-internal-secret': process.env.INTERNAL_API_SECRET || '',
+        'x-internal-secret': process.env.INTERNAL_API_SECRET || process.env.CRON_SECRET || '',
       },
       body: JSON.stringify({ email, firstName }),
     })
 
     if (!res.ok) {
-      const text = await res.text()
-      console.error('[webhook] Welcome email route responded with error:', text)
+      const error = new Error(`[webhook] Welcome email route responded with status ${res.status}`)
+      captureServerError(error, { route: '/api/stripe/webhook', method: 'POST', userId })
+      console.error(error.message)
     } else {
       console.log('[webhook] Welcome email dispatched for', email)
     }
   } catch (err: unknown) {
+    captureServerError(err, { route: '/api/stripe/webhook', method: 'POST', userId })
     console.error('[webhook] sendWelcomeEmail threw:', getErrorMessage(err))
   }
 }
@@ -254,7 +276,17 @@ export async function POST(req: Request) {
 
   const supabase = createAdminClient()
 
-  switch (event.type) {
+  try {
+    await capturePostHogEvent({
+      distinctId: event.id,
+      event: 'stripe_webhook_received',
+      properties: {
+        stripe_event_id: event.id,
+        stripe_event_type: event.type,
+      },
+    })
+
+    switch (event.type) {
 
     // ── Payment success: subscription becomes active ──────────────────────────
     case 'checkout.session.completed': {
@@ -280,10 +312,11 @@ export async function POST(req: Request) {
           await syncSubscriptionToProfile(supabase, sub, userId)
         } else {
           // Mark subscribed even without full sub object yet (payment completed)
-          await supabase
+          const { error: profileError } = await supabase
             .from('profiles')
             .update({ is_subscribed: true, subscription_status: 'active' })
             .eq('id', userId)
+          throwIfSupabaseError(profileError, '[webhook] Failed to mark checkout profile active')
           revalidateTag(`profile-${userId}`, 'max')
           revalidateTag(`access-${userId}`, 'max')
         }
@@ -339,6 +372,34 @@ export async function POST(req: Request) {
 
     default:
       console.log(`[webhook] Unhandled event type ${event.type}`)
+    }
+
+    await capturePostHogEvent({
+      distinctId: event.id,
+      event: 'stripe_webhook_sync_succeeded',
+      properties: {
+        stripe_event_id: event.id,
+        stripe_event_type: event.type,
+      },
+    })
+  } catch (error) {
+    captureServerError(error, {
+      route: '/api/stripe/webhook',
+      method: 'POST',
+      tags: { stripe_event_type: event.type },
+      extra: { stripe_event_id: event.id },
+    })
+    await capturePostHogEvent({
+      distinctId: event.id,
+      event: 'stripe_webhook_sync_failed',
+      properties: {
+        stripe_event_id: event.id,
+        stripe_event_type: event.type,
+        message: getErrorMessage(error),
+      },
+    })
+    console.error('[webhook] Critical sync failure:', error)
+    return NextResponse.json({ error: 'Webhook sync failed' }, { status: 500 })
   }
 
   return NextResponse.json({ received: true }, { status: 200 })

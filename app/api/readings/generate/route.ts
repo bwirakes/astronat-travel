@@ -7,6 +7,8 @@ import { runAstrocarto } from "@/lib/readings/astrocarto";
 import { runGeodeticWeather } from "@/lib/readings/geodetic-weather";
 import { logSearch, persistReading } from "@/lib/readings/persist";
 import type { Database } from "@/lib/supabase/types";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { captureServerError } from "@/lib/monitoring/sentry";
 
 export const maxDuration = 300;
 
@@ -45,6 +47,9 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const limited = await enforceRateLimit(req, "readingGenerate", user.id);
+    if (limited) return limited;
 
     const access = await getReadingAccess(user.id);
     if (!access.canRead) {
@@ -188,6 +193,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, readingId });
   } catch (error: unknown) {
+    captureServerError(error, { route: "/api/readings/generate", method: "POST" });
     console.error("Failed to generate reading:", error);
     return NextResponse.json(
       {

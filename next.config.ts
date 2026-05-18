@@ -1,4 +1,5 @@
 import bundleAnalyzer from "@next/bundle-analyzer";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
@@ -69,6 +70,38 @@ const nextConfig = {
     ];
   },
 
+  async headers() {
+    const csp = [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://js.stripe.com https://*.vercel-insights.com https://*.posthog.com https://*.i.posthog.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      "connect-src 'self' https://*.supabase.co https://*.posthog.com https://*.i.posthog.com https://*.vercel-insights.com https://vitals.vercel-insights.com https://*.sentry.io https://*.ingest.sentry.io https://api.mapbox.com https://nominatim.openstreetmap.org https://www.google.com https://api.stripe.com",
+      "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.google.com",
+      "worker-src 'self' blob:",
+      "media-src 'self' blob: data:",
+      "form-action 'self'",
+      "upgrade-insecure-requests",
+    ].join("; ");
+
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "Content-Security-Policy", value: csp },
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self), payment=(self)" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+        ],
+      },
+    ];
+  },
+
   skipTrailingSlashRedirect: true,
 
   async redirects() {
@@ -88,4 +121,16 @@ const nextConfig = {
   },
 };
 
-export default withBundleAnalyzer(nextConfig);
+export default withSentryConfig(withBundleAnalyzer(nextConfig), {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.SENTRY_AUTH_TOKEN,
+  widenClientFileUpload: true,
+  webpack: {
+    automaticVercelMonitors: true,
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
+});

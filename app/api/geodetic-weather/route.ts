@@ -14,9 +14,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { computeGeodeticWeather } from "@/app/lib/geodetic-weather";
 import { computeRealtimePositions } from "@/lib/astro/transits";
 import { computeMundaneData } from "@/app/lib/mundane-engine";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { captureServerError } from "@/lib/monitoring/sentry";
 
 export async function POST(req: NextRequest) {
     try {
+        const limited = await enforceRateLimit(req, "astroCompute");
+        if (limited) return limited;
+
         const body = await req.json();
         const { date, time = "12:00", destLat, destLon } = body;
 
@@ -51,6 +56,7 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json(result);
     } catch (err) {
+        captureServerError(err, { route: "/api/geodetic-weather", method: "POST" });
         console.error("[/api/geodetic-weather]", err);
         return NextResponse.json(
             { error: "Geodetic weather computation failed", detail: String(err) },
