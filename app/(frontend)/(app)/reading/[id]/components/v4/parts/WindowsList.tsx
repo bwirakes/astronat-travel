@@ -18,7 +18,8 @@ export function WindowsList({ vm, limit }: { vm: V4VM, limit?: number }) {
 
     const normalizeDates = (d: string) => d.replace(/[\s\-\–\—,]+/g, '').toLowerCase().replace(/\d{4}$/, '');
 
-    // AI-written plain-English window notes, keyed by date range string.
+    // Cached-reading bridge only. New teacher readings no longer emit legacy
+    // `windows`, but older readings may still carry AI-written notes here.
     // Trip readings get matches via the date-range key. Relocation readings
     // use month labels ("October 2026") which won't match the trip-shaped AI
     // notes — they fall through to the deterministic driver string instead.

@@ -1,4 +1,6 @@
 import React from "react";
+import { Clock3 } from "lucide-react";
+import { BrandSparkle, ConcentricDiamonds } from "@/app/components/ui/svg-shapes";
 import { RichText } from "../../shared/ReadingCopy";
 
 const FM = "var(--font-mono)";
@@ -125,31 +127,51 @@ function actionColor(tone: TimingLedgerTone): string {
 
 function ActionIcon({ tone }: { tone: TimingLedgerTone }) {
     const color = actionColor(tone);
+    const baseStyle: React.CSSProperties = {
+        color,
+        flex: "0 0 auto",
+        width: 18,
+        height: 18,
+    };
 
     if (tone === "good") {
         return (
-            <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" style={{ color, flex: "0 0 auto" }}>
-                <path d="M12 3.5l1.55 4.85L18.5 10l-4.95 1.65L12 16.5l-1.55-4.85L5.5 10l4.95-1.65L12 3.5Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-                <path d="M18.5 15.5l.7 2.05 2.05.7-2.05.7-.7 2.05-.7-2.05-2.05-.7 2.05-.7.7-2.05Z" fill="currentColor" opacity="0.85" />
-            </svg>
+            <BrandSparkle aria-hidden="true" size={18} style={baseStyle} />
         );
     }
 
     if (tone === "hard") {
         return (
-            <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" style={{ color, flex: "0 0 auto" }}>
-                <path d="M12 3.5 20.5 12 12 20.5 3.5 12 12 3.5Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-                <path d="M12 7.5v5.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                <path d="M12 16.6h.01" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-            </svg>
+            <span
+                aria-hidden="true"
+                style={{
+                    ...baseStyle,
+                    position: "relative",
+                    display: "inline-grid",
+                    placeItems: "center",
+                }}
+            >
+                <ConcentricDiamonds size={18} style={{ color, display: "block" }} />
+                <span
+                    style={{
+                        position: "absolute",
+                        inset: 0,
+                        display: "grid",
+                        placeItems: "center",
+                        fontFamily: FM,
+                        fontSize: "0.62rem",
+                        fontWeight: 800,
+                        lineHeight: 1,
+                    }}
+                >
+                    !
+                </span>
+            </span>
         );
     }
 
     return (
-        <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" style={{ color, flex: "0 0 auto" }}>
-            <circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" strokeWidth="1.7" />
-            <path d="M12 7v5l3.2 2" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <Clock3 aria-hidden="true" strokeWidth={1.8} style={baseStyle} />
     );
 }
 
@@ -320,7 +342,11 @@ export function TimingLedgerRow({
                         fontFamily: FM,
                         fontSize: "0.92rem",
                         letterSpacing: "0.02em",
-                        color: tone === "good" ? "var(--lift-accent)" : "var(--gold)",
+                        color: tone === "good"
+                            ? "var(--lift-accent)"
+                            : tone === "hard"
+                                ? "var(--color-spiced-life)"
+                                : "var(--gold)",
                         fontWeight: 700,
                         whiteSpace: "nowrap",
                     }}

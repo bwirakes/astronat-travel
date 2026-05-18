@@ -201,3 +201,27 @@ describe("AnswerCard — tone API contract", () => {
         expect(overviewSrc).toMatch(/case\s+"supportive":\s*return\s+"var\(--lift-accent\)"/);
     });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5 — Travel-window tone marker contract
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("travel-window tone dot", () => {
+    it("base tone uses --gold", () => {
+        expect(globalsCss).toMatch(
+            /\.travel-window-dot\s*\{[^}]*background:\s*var\(--gold\)/,
+        );
+    });
+
+    it("good tone uses --lift-accent", () => {
+        expect(globalsCss).toMatch(
+            /\.travel-window-row--good\s+\.travel-window-dot\s*\{[^}]*background:\s*var\(--lift-accent\)/,
+        );
+    });
+
+    it("hard tone uses --color-spiced-life", () => {
+        expect(globalsCss).toMatch(
+            /\.travel-window-row--hard\s+\.travel-window-dot\s*\{[^}]*background:\s*var\(--color-spiced-life\)/,
+        );
+    });
+});
