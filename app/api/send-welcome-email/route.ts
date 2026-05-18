@@ -23,7 +23,7 @@ const buildHtml = (firstName: string) => `<!DOCTYPE html>
     .container { max-width: 600px; margin: 40px auto; background-color: #ffffff; border: 2px solid #1B1B1B; border-radius: 36px 4px 36px 4px; overflow: hidden; }
     .header { background-color: #1B1B1B; padding: 40px; text-align: center; }
     .header h1 { color: #F8F5EC; margin: 0; font-size: 32px; text-transform: uppercase; letter-spacing: -1px; }
-    .header p { color: #00FD00; font-family: monospace; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; margin: 10px 0 0; }
+    .header p { color: #CAF1F0; font-family: monospace; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; margin: 10px 0 0; }
     .content { padding: 40px; }
     .intro { font-size: 20px; font-weight: bold; line-height: 1.4; margin-bottom: 20px; }
     .feature { margin-bottom: 24px; }

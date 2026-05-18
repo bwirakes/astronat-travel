@@ -9,7 +9,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_fallback', {
   apiVersion: '2026-03-25.dahlia',
 })
 
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET ?? ''
 
 type CheckoutOffer = 'single' | 'monthly' | 'lifetime'
 
@@ -261,6 +261,10 @@ async function sendWelcomeEmail(supabase: ReturnType<typeof createAdminClient>, 
 }
 
 export async function POST(req: Request) {
+  if (!endpointSecret) {
+    return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 })
+  }
+
   const body = await req.text()
   const sig = req.headers.get('stripe-signature') as string
 

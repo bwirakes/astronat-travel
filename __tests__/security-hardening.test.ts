@@ -36,10 +36,23 @@ describe("security hardening guards", () => {
     const internalAuth = read("lib/security/internal-auth.ts");
 
     expect(webhook).not.toContain("await res.text()");
+    expect(webhook).not.toContain("process.env.STRIPE_WEBHOOK_SECRET!");
+    expect(webhook).toContain("Webhook not configured");
     expect(webhook).toContain("if (offer === 'single')");
     expect(webhook).toContain("do not block paid access on a secondary purchase-ledger write");
     expect(internalAuth).toContain("INTERNAL_API_SECRET, process.env.CRON_SECRET");
     expect(internalAuth).toContain("expected.some");
+  });
+
+  test("intake captcha bypasses cannot be used in production", () => {
+    const intake = read("app/api/intake/route.ts");
+
+    expect(intake).toContain('process.env.NODE_ENV !== "production"');
+    expect(intake).toContain("if (hasSecret && !isBypass)");
+    expect(intake).toContain("if (!captchaToken)");
+    expect(intake).not.toContain('captchaToken && !isBypass');
+    expect(intake).not.toContain("process.env.NOTION_INTAKE_DB_ID!");
+    expect(intake).not.toContain("process.env.INTAKE_NOTIFICATION_EMAIL!");
   });
 
   test("security headers and monitoring integrations are configured", () => {
@@ -47,6 +60,12 @@ describe("security hardening guards", () => {
     expect(nextConfig).toContain("Content-Security-Policy");
     expect(nextConfig).toContain("Strict-Transport-Security");
     expect(nextConfig).toContain("withSentryConfig");
+    expect(nextConfig).not.toContain("ignoreBuildErrors");
+    expect(nextConfig).toContain("unsafe-eval");
+    expect(nextConfig).toContain("future CSP pass");
+
+    const healthRoute = read("app/api/health/route.ts");
+    expect(healthRoute).toContain('dynamic = "force-dynamic"');
 
     const clientInstrumentation = read("instrumentation-client.ts");
     const serverInstrumentation = read("instrumentation.ts");

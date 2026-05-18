@@ -8,7 +8,7 @@
 import { NextResponse } from "next/server";
 import { Client } from "@notionhq/client";
 
-const NOTION_INTAKE_DB_ID = process.env.NOTION_INTAKE_DB_ID!;
+const NOTION_INTAKE_DB_ID = process.env.NOTION_INTAKE_DB_ID ?? "";
 
 type NotionDatabaseProperties = Record<string, unknown>;
 type NotionDatabaseUpdate = (args: {

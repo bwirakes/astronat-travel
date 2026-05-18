@@ -28,11 +28,6 @@ if (supabaseHost) remotePatterns.push({ protocol: "https", hostname: supabaseHos
 if (s3Host) remotePatterns.push({ protocol: "https", hostname: s3Host });
 
 const nextConfig = {
-  // Build currently ignores TS errors because of pre-existing errors; tracked for follow-up.
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-
   // swisseph-wasm uses createRequire("module") which webpack can't bundle.
   // Keep it external so Node resolves it at runtime on the server.
   serverExternalPackages: ["swisseph-wasm", "geo-tz"],
@@ -71,6 +66,8 @@ const nextConfig = {
   },
 
   async headers() {
+    // Next dev tooling and current client dependencies still require unsafe-eval.
+    // Keep this explicit so a future CSP pass can replace it deliberately.
     const csp = [
       "default-src 'self'",
       "base-uri 'self'",
