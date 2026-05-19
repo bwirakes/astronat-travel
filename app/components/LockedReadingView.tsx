@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { AstronatCard } from "@/app/components/ui/astronat-card";
+import { captureAnalyticsEvent } from "@/lib/analytics/client";
 
 type CheckoutOffer = "single" | "monthly" | "lifetime";
 
@@ -33,8 +34,16 @@ export default function LockedReadingView({
   const [selectedOffer, setSelectedOffer] = useState<CheckoutOffer>("monthly");
   const selectedTier = TIERS.find((tier) => tier.offer === selectedOffer) ?? TIERS[1];
 
+  useEffect(() => {
+    captureAnalyticsEvent("reading_gate_viewed", { return_to: returnTo ?? null });
+  }, [returnTo]);
+
   const handleCheckout = async () => {
     setLoading(true);
+    captureAnalyticsEvent("reading_gate_checkout_clicked", {
+      offer: selectedOffer,
+      return_to: returnTo ?? null,
+    });
     try {
       const body = JSON.stringify({ offer: selectedOffer, ...(returnTo ? { returnTo } : {}) });
       const res = await fetch("/api/checkout", {

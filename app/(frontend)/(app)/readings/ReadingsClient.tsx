@@ -4,13 +4,13 @@ import type { CSSProperties, ReactNode } from "react";
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
-import posthog from "posthog-js";
 import { ArrowRight, ChevronLeft, ChevronRight, Map as MapIcon, List as ListIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ScoreRing, getVerdict, BAND_CONFIG } from "@/app/components/ScoreRing";
 import type { AtlasPin } from "@/app/components/ReadingsAtlasMap";
 import { PageHeader } from "@/components/app/page-header-context";
 import { PAGE_SIZE, type Reading, type SortKey, type TypeFilter } from "./readings-data";
+import { captureAnalyticsEvent } from "@/lib/analytics/client";
 
 const ReadingsAtlasMap = dynamic(
   () => import("@/app/components/ReadingsAtlasMap").then((m) => ({ default: m.ReadingsAtlasMap })),
@@ -84,7 +84,7 @@ export function ReadingsClient({ readings, total, page, sort, typeFilter }: Prop
           onSort={(s) => updateParam({ sort: s === "recent" ? null : s, page: null })}
           onType={(t) => updateParam({ type: t === "all" ? null : t, page: null })}
           onNew={() => {
-            posthog.capture("new_reading_started", { source: "readings_page" });
+            captureAnalyticsEvent("new_reading_started", { source: "readings_page" });
             router.push("/reading/new");
           }}
         />
@@ -178,7 +178,7 @@ export function ReadingsClient({ readings, total, page, sort, typeFilter }: Prop
       <button
         className="dashboard-fab readings-fab"
         onClick={() => {
-          posthog.capture("new_reading_started", { source: "fab" });
+          captureAnalyticsEvent("new_reading_started", { source: "fab" });
           router.push("/reading/new");
         }}
       >

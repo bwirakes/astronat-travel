@@ -14,6 +14,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { cn } from "@/lib/utils";
 import { WebVitals } from "@/app/components/web-vitals";
+import { AnalyticsIdentity } from "@/app/components/AnalyticsIdentity";
 
 // Active body face — preloaded for first paint.
 const garet = localFont({
@@ -136,6 +137,7 @@ export default function RootLayout({
       </head>
       <body>
         <WebVitals />
+        <AnalyticsIdentity />
         {children}
         <Analytics />
         <SpeedInsights />

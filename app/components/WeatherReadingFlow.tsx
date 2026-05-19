@@ -8,6 +8,7 @@ import CityAutocomplete from "./CityAutocomplete";
 import { WEATHER_GOALS, formatAngle } from "@/app/lib/geodetic-weather-types";
 import { mockFixedAngles } from "@/app/lib/geodetic-weather-mock";
 import { AstroLoader } from "@/app/components/ui/astro-loader";
+import { captureAnalyticsEvent } from "@/lib/analytics/client";
 
 interface PickedCity {
     label: string;
@@ -110,10 +111,12 @@ export default function WeatherReadingFlow() {
     const addCity = (s: { label: string; lat: number; lon: number }) => {
         setErrorMsg("");
         if (cities.find((c) => c.label === s.label)) {
+            captureAnalyticsEvent("weather_city_add_failed", { reason: "duplicate_city", city: s.label });
             setErrorMsg("That city is already in your comparison.");
             return;
         }
         if (cities.length >= 3) {
+            captureAnalyticsEvent("weather_city_add_failed", { reason: "city_limit", city: s.label });
             setErrorMsg("Remove one city before adding another place.");
             return;
         }
@@ -131,11 +134,13 @@ export default function WeatherReadingFlow() {
             const rawLat = geo?.lat ?? geo?.latitude;
             const rawLon = geo?.lon ?? geo?.longitude;
             if (!res.ok || rawLat == null || rawLon == null) {
+                captureAnalyticsEvent("weather_city_add_failed", { reason: "geocode_failed", city: typed });
                 setErrorMsg("Could not find coordinates for that city. Check spelling or select a suggestion.");
                 return;
             }
             addCity({ label: geo.label || geo.address || typed, lat: Number.parseFloat(String(rawLat)), lon: Number.parseFloat(String(rawLon)) });
         } catch {
+            captureAnalyticsEvent("weather_city_add_failed", { reason: "lookup_error", city: typed });
             setErrorMsg("City lookup failed. Retry, or select a city suggestion.");
         }
     };
@@ -149,6 +154,14 @@ export default function WeatherReadingFlow() {
     const handleGenerate = async () => {
         setLoading(true);
         setErrorMsg("");
+        captureAnalyticsEvent("reading_generation_started", {
+            reading_type: "weather",
+            reading_category: "geodetic-weather",
+            intent: intent ?? "personal",
+            cities_count: cities.length,
+            window_days: windowDays,
+            goal,
+        });
         try {
             const res = await fetch("/api/readings/generate", {
                 method: "POST",
@@ -173,13 +186,36 @@ export default function WeatherReadingFlow() {
             });
             const data = await res.json().catch(() => ({}));
             if (data.readingId) {
+                captureAnalyticsEvent("reading_generation_completed", {
+                    reading_id: data.readingId,
+                    reading_type: "weather",
+                    reading_category: "geodetic-weather",
+                    intent: intent ?? "personal",
+                    cities_count: cities.length,
+                    window_days: windowDays,
+                    goal,
+                });
                 router.push(`/reading/${data.readingId}?type=weather`);
             } else {
+                captureAnalyticsEvent("reading_generation_failed", {
+                    error_code: data.code ?? "unknown",
+                    error: data.error ?? "unknown",
+                    is_free_tier_limit: data.code === "FREE_TIER_LIMIT",
+                    reading_type: "weather",
+                    reading_category: "geodetic-weather",
+                    intent: intent ?? "personal",
+                });
                 setErrorMsg(data.message ? `${data.error}: ${data.message}` : data.error || `Forecast generation failed with status ${res.status}. Please try again.`);
                 setLoading(false);
             }
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : "Failed to reach generation service.";
+            captureAnalyticsEvent("reading_generation_failed", {
+                error: message,
+                reading_type: "weather",
+                reading_category: "geodetic-weather",
+                intent: intent ?? "personal",
+            });
             setErrorMsg(message);
             setLoading(false);
         }

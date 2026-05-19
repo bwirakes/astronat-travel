@@ -10,7 +10,7 @@ import CityAutocomplete from "@/app/components/CityAutocomplete";
 import { useOnboardingStore } from "@/lib/store/onboardingStore";
 import { Suspense } from "react";
 import { createClient } from '@/lib/supabase/client';
-import posthog from "posthog-js";
+import { captureAnalyticsEvent, identifyAnalyticsUser } from "@/lib/analytics/client";
 
 const SCREENS = ["Sign Up", "Birth", "Aha"];
 const COUPLE_HERO_SRC = "/couples_flow_hero.png";
@@ -75,10 +75,17 @@ function FlowPageInner() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    captureAnalyticsEvent("onboarding_step_viewed", {
+      step: screen,
+      step_name: SCREENS[screen],
+    });
+  }, [screen]);
+
   const handleGoogleSignup = async () => {
     setAuthLoading(true);
     setAuthMessage("");
-    posthog.capture("user_signed_up", { method: "google" });
+    captureAnalyticsEvent("auth_oauth_started", { provider: "google", surface: "onboarding" });
     localStorage.setItem('onboardingData', JSON.stringify(store));
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     const { error } = await supabase.auth.signInWithOAuth({
@@ -110,7 +117,7 @@ function FlowPageInner() {
     if (error) {
       setAuthMessage(`Error: ${error.message}`);
     } else {
-      posthog.capture("user_signed_up", { method: "magic_link", email });
+      captureAnalyticsEvent("magic_link_requested", { email, surface: "onboarding" });
       setAuthMessage("Check your email ✨");
     }
     setAuthLoading(false);
@@ -185,7 +192,7 @@ function FlowPageInner() {
       throw new Error(natalData?.error ? `Chart calculation failed: ${natalData.error}` : "Chart calculation failed. Please try again.");
     }
 
-    posthog.identify(user.id, {
+    identifyAnalyticsUser(user.id, {
       email: user.email,
       first_name: store.firstName || undefined,
       birth_city: store.birthCity || undefined,
@@ -204,11 +211,15 @@ function FlowPageInner() {
     setChartError("");
     try {
       await saveProfileAndGenerateChart();
+      captureAnalyticsEvent("onboarding_chart_generated", {
+        birth_time_known: store.birthTimeKnown,
+        has_birth_city: !!store.birthCity,
+      });
       next();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Something went wrong while preparing your chart.";
       setChartError(message);
-      posthog.capture("onboarding_chart_failed", { error: message });
+      captureAnalyticsEvent("onboarding_chart_failed", { error: message });
     } finally {
       setLoadingChart(false);
     }
@@ -219,7 +230,7 @@ function FlowPageInner() {
     setFinishError("");
     try {
       await saveProfileAndGenerateChart();
-      posthog.capture("onboarding_completed", {
+      captureAnalyticsEvent("onboarding_completed", {
         birth_time_known: store.birthTimeKnown,
         has_birth_city: !!store.birthCity,
       });
@@ -228,7 +239,7 @@ function FlowPageInner() {
       const message = err instanceof Error ? err.message : "We could not finish onboarding. Please try again.";
       console.error("Failed to sync profile:", err);
       setFinishError(message);
-      posthog.capture("onboarding_finish_failed", { error: message });
+      captureAnalyticsEvent("onboarding_finish_failed", { error: message });
     } finally {
       setFinishLoading(false);
     }

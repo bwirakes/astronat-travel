@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import posthog from "posthog-js";
+import { captureAnalyticsEvent, captureAnalyticsException } from "@/lib/analytics/client";
 
 declare global {
   interface Window {
@@ -388,15 +388,16 @@ export function IntakeFormBlock() {
         throw new Error(data.error ?? "Submission failed");
       }
 
-      posthog.capture("corporate_intake_submitted", {
+      captureAnalyticsEvent("corporate_intake_submitted", {
         sections_completed: Object.keys(values).length,
       });
       setStatus("success");
       window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch (err: any) {
-      posthog.captureException(err);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      captureAnalyticsException(err);
       setStatus("error");
-      setErrorMsg(err.message ?? "Something went wrong. Please try again.");
+      setErrorMsg(message);
     }
   };
 
@@ -461,7 +462,7 @@ export function IntakeFormBlock() {
           ))}
         </div>
         <p style={{ color: "var(--form-text-muted)" }} className="font-body text-sm max-w-xs leading-relaxed">
-          Sending your brief to Nat. This may take a moment — please don't close this page.
+          Sending your brief to Nat. This may take a moment — please don&apos;t close this page.
         </p>
       </div>
     );

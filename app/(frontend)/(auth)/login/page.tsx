@@ -1,12 +1,12 @@
 "use client"
 
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import posthog from 'posthog-js'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
+import { captureAnalyticsEvent, identifyAnalyticsUser } from '@/lib/analytics/client'
 
 function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -44,8 +44,12 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const next = sanitizeNext(searchParams.get('next'))
 
+  useEffect(() => {
+    captureAnalyticsEvent('login_viewed', { next })
+  }, [next])
+
   const handleGoogleLogin = async () => {
-    posthog.capture("user_logged_in", { method: "google" });
+    captureAnalyticsEvent("auth_oauth_started", { provider: "google", surface: "login", next });
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -71,13 +75,17 @@ function LoginForm() {
     }
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      posthog.identify(user.id, { email: user.email });
-      posthog.capture("user_logged_in", { method: "password" });
+      identifyAnalyticsUser(user.id, { email: user.email });
       const { data: profile } = await supabase
         .from('profiles')
         .select('birth_date')
         .eq('id', user.id)
         .maybeSingle()
+      captureAnalyticsEvent("user_logged_in", {
+        method: "password",
+        next,
+        onboarded: Boolean(profile?.birth_date),
+      });
       if (!profile?.birth_date) {
         window.location.href = '/flow?step=1'
         return
@@ -104,7 +112,7 @@ function LoginForm() {
     if (error) {
       setMessage(`Error: ${error.message}`)
     } else {
-      posthog.capture("magic_link_requested", { email });
+      captureAnalyticsEvent("magic_link_requested", { email, surface: "login", next });
       setMessage('Check your email ✨')
     }
     setLoading(false)
@@ -113,6 +121,7 @@ function LoginForm() {
   const handleDemoLogin = async () => {
     setLoading(true)
     setMessage('')
+    captureAnalyticsEvent("demo_login_started", { next });
     const { error } = await supabase.auth.signInWithPassword({
       email: 'test@astronat.local',
       password: 'astronat-test-2026'
@@ -317,7 +326,7 @@ function LoginForm() {
 
           <div className="mt-8 text-center pt-6 border-t border-[var(--surface-border)]">
             <p className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <Link href="/flow" className="underline hover:text-[var(--text-primary)] transition-colors" style={{ color: 'var(--color-y2k-blue)', textUnderlineOffset: '4px' }}>
                 Sign up
               </Link>

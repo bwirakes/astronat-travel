@@ -7,7 +7,7 @@ import { ArrowRight, ArrowLeft, User, Coins, Home, Heart, Activity, Handshake, B
 import CityAutocomplete from "./CityAutocomplete";
 import { createClient } from "@/lib/supabase/client";
 import { AstroLoader } from "@/app/components/ui/astro-loader";
-import posthog from "posthog-js";
+import { captureAnalyticsEvent } from "@/lib/analytics/client";
 
 const LIFE_GOALS = [
   { id: "identity", label: "Identity & Self-Discovery", icon: User, color: "var(--color-y2k-blue)", sub: "1st + 9th house emphasis" },
@@ -123,7 +123,7 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
       .single();
 
     if (!error && data) {
-      posthog.capture("partner_profile_added", { partner_birth_city: newPartner.birthCity });
+      captureAnalyticsEvent("partner_profile_added", { partner_birth_city: newPartner.birthCity });
       setPartners(prev => [data, ...prev]);
       setPartnerId(data.id);
       setShowAddPartner(false);
@@ -157,6 +157,14 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
   const handleGenerate = async () => {
     setLoading(true);
     setErrorMsg("");
+    captureAnalyticsEvent("reading_generation_started", {
+      reading_type: type,
+      reading_category: type === "couples" ? "synastry" : "astrocartography",
+      destination,
+      goals_count: goals.length,
+      has_partner: type === "couples" && !!partnerId,
+      is_demo: isDemo,
+    });
 
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -184,11 +192,21 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
             targetLat = parseFloat(String(rawLat));
             targetLon = parseFloat(String(rawLon));
           } else {
+            captureAnalyticsEvent("reading_generation_validation_failed", {
+              reason: "destination_geocode_failed",
+              reading_type: type,
+              destination,
+            });
             setErrorMsg("Could not find coordinates for that destination. Select a city suggestion, check spelling, or try a nearby major city.");
             setLoading(false);
             return;
           }
         } catch {
+          captureAnalyticsEvent("reading_generation_validation_failed", {
+            reason: "destination_lookup_error",
+            reading_type: type,
+            destination,
+          });
           setErrorMsg("City lookup failed. Retry, or choose a suggestion from the city dropdown.");
           setLoading(false);
           return;
@@ -212,7 +230,7 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
 
       const data = await res.json().catch(() => ({}));
       if (data.readingId) {
-        posthog.capture("reading_generated", {
+        captureAnalyticsEvent("reading_generation_completed", {
           reading_id: data.readingId,
           reading_type: type,
           reading_category: type === "couples" ? "synastry" : "astrocartography",
@@ -223,7 +241,7 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
         router.push(`/reading/${data.readingId}`);
       } else {
         const isFreeLimit = data.code === "FREE_TIER_LIMIT";
-        posthog.capture("reading_generation_failed", {
+        captureAnalyticsEvent("reading_generation_failed", {
           error_code: data.code ?? "unknown",
           error: data.error ?? "unknown",
           is_free_tier_limit: isFreeLimit,
@@ -236,7 +254,7 @@ export default function ReadingFlow({ defaultType }: { defaultType?: "travel" | 
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "network_error";
-      posthog.capture("reading_generation_failed", {
+      captureAnalyticsEvent("reading_generation_failed", {
         error: message,
         reading_type: type,
         destination,

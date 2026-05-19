@@ -46,12 +46,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const access = await getReadingAccess(user.id);
-    if (!access.canRead) {
-      return NextResponse.json(FREE_TIER_LIMIT, { status: 402 });
-    }
-
-    const body = (await req.json()) as GenerationBody;
+    const body = (await req.json().catch(() => ({}))) as GenerationBody;
     const {
       destination,
       travelType,
@@ -65,6 +60,30 @@ export async function POST(req: Request) {
     } = body;
 
     const requestedCategory = readingCategory ?? "astrocartography";
+    const analyticsBase = {
+      reading_category: requestedCategory,
+      destination,
+      travel_type: travelType ?? "trip",
+      has_partner: Boolean(partner_id),
+      goals_count: Array.isArray(goals) ? goals.length : 0,
+    };
+
+    const access = await getReadingAccess(user.id);
+    if (!access.canRead) {
+      await capturePostHogEvent({
+        distinctId: user.id,
+        event: "reading_generation_gated",
+        properties: {
+          ...analyticsBase,
+          gate_reason: FREE_TIER_LIMIT.code,
+          has_subscription: access.hasSubscription,
+          free_used: access.freeUsed,
+          readings_total: access.readingsTotal,
+        },
+      });
+      return NextResponse.json(FREE_TIER_LIMIT, { status: 402 });
+    }
+
     const category: ReadingCategory =
       requestedCategory === "geodetic-weather"
         ? "mundane"
@@ -108,12 +127,16 @@ export async function POST(req: Request) {
           reading_category: "geodetic-weather",
           destination,
           macro_score: hero.score,
+          gate_state: "allowed",
+          has_subscription: access.hasSubscription,
+          free_used: access.freeUsed,
+          readings_total: access.readingsTotal,
         },
       });
       return NextResponse.json({ success: true, readingId });
     }
 
-    if (!destination || !targetLat || !targetLon) {
+    if (!destination || targetLat == null || targetLon == null) {
       return NextResponse.json(
         { error: "Missing required geospatial payload." },
         { status: 400 },
@@ -183,6 +206,10 @@ export async function POST(req: Request) {
         macro_score: result.macroScore,
         has_partner: !!partnerId,
         goals: goals ?? [],
+        gate_state: "allowed",
+        has_subscription: access.hasSubscription,
+        free_used: access.freeUsed,
+        readings_total: access.readingsTotal,
       },
     });
 

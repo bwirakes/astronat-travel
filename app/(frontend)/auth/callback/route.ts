@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { capturePostHogEvent, identifyPostHogUser } from '@/lib/posthog-server'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
@@ -20,10 +21,28 @@ export async function GET(request: Request) {
           .eq('id', user.id)
           .maybeSingle()
 
+        await identifyPostHogUser({
+          distinctId: user.id,
+          properties: {
+            email: user.email,
+            auth_provider: user.app_metadata?.provider,
+            onboarded: Boolean(profile?.birth_date),
+            created_at: user.created_at,
+          },
+        })
+
         // Onboarding gate: anyone without birth data goes through /flow,
         // regardless of any `next` param. Always clamp to step=1 so users
         // can't skip data entry via a crafted URL.
         if (!profile?.birth_date) {
+          await capturePostHogEvent({
+            distinctId: user.id,
+            event: 'onboarding_gate_entered',
+            properties: {
+              source: 'auth_callback',
+              next,
+            },
+          })
           return NextResponse.redirect(`${origin}/flow?step=1`)
         }
 
@@ -41,6 +60,15 @@ export async function GET(request: Request) {
           next && next.startsWith('/') && !next.startsWith('//') && next !== '/'
             ? next
             : '/dashboard'
+        await capturePostHogEvent({
+          distinctId: user.id,
+          event: 'user_authenticated',
+          properties: {
+            source: 'auth_callback',
+            destination: dest,
+            onboarded: true,
+          },
+        })
         return NextResponse.redirect(`${origin}${dest}`)
       }
     }

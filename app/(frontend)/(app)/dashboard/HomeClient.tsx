@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ArrowRight } from "lucide-react";
@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/app/page-header-context";
 import { CouplesButton, MyChartButton, WorldChartsButton, LearnButton, SkyWeatherButton } from "@/app/components/ExploreButtons";
 import ReadingCreditPill from "@/app/components/ReadingCreditPill";
 import type { ReadingAccess } from "@/lib/access";
+import { captureAnalyticsEvent } from "@/lib/analytics/client";
 
 type HomeProfile = {
     first_name: string | null;
@@ -42,6 +43,44 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
     const router = useRouter();
     const container = useRef<HTMLDivElement>(null);
     const hasReadings = recentSearches.length > 0;
+
+    useEffect(() => {
+        captureAnalyticsEvent("dashboard_viewed", {
+            has_readings: hasReadings,
+            readings_count: recentSearches.length,
+            has_subscription: access?.hasSubscription ?? false,
+            free_used: access?.freeUsed ?? false,
+            can_read: access?.canRead ?? false,
+        });
+    }, [access, hasReadings, recentSearches.length]);
+
+    const startReading = (source: string, path = "/reading/new") => {
+        captureAnalyticsEvent("dashboard_new_reading_clicked", {
+            source,
+            has_readings: hasReadings,
+            has_subscription: access?.hasSubscription ?? false,
+            free_used: access?.freeUsed ?? false,
+            can_read: access?.canRead ?? false,
+        });
+        router.push(path);
+    };
+
+    const openExplore = (target: string, path: string) => {
+        captureAnalyticsEvent("dashboard_explore_clicked", { target });
+        router.push(path);
+    };
+
+    const openReading = (reading: RecentSearch) => {
+        const isWeather = reading.category === 'geodetic-weather';
+        captureAnalyticsEvent("dashboard_reading_opened", {
+            reading_id: reading.id,
+            reading_category: reading.category ?? "astrocartography",
+            destination: reading.destination,
+            source: "recent_readings",
+        });
+        router.push(`/reading/${reading.id}${isWeather ? '?type=weather' : ''}`);
+    };
+
     const activationCard = (
         <div className={styles.activationCard}>
             <svg className={styles.activationWave} viewBox="0 0 800 120" preserveAspectRatio="none" aria-hidden="true">
@@ -80,7 +119,7 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
                     Choose a city. See timing, fit, and what it activates.
                 </p>
                 <div className={styles.activationActions}>
-                    <button className={styles.activationPrimary} onClick={() => router.push("/reading/new")}>
+                    <button className={styles.activationPrimary} onClick={() => startReading("activation_card")}>
                         Start reading <ArrowRight size={14} />
                     </button>
                 </div>
@@ -158,14 +197,14 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
                                 </div>
                             )}
                             <div className={styles.featuredExploreItem}>
-                                <MyChartButton onClick={() => router.push("/chart")} />
+                                <MyChartButton onClick={() => openExplore("chart", "/chart")} />
                             </div>
                             {/* <LifeGoalsButton onClick={() => router.push("/goals?demo=true")} /> */}
-                            <CouplesButton onClick={() => router.push("/couples")} />
-                            <WorldChartsButton onClick={() => router.push("/mundane")} />
+                            <CouplesButton onClick={() => openExplore("couples", "/couples")} />
+                            <WorldChartsButton onClick={() => openExplore("mundane", "/mundane")} />
                             {/* <TransitsButton onClick={() => router.push("/reading/new?type=transits")} /> */}
-                            <SkyWeatherButton onClick={() => router.push("/reading/new?type=weather")} />
-                            <LearnButton onClick={() => router.push("/learn")} />
+                            <SkyWeatherButton onClick={() => startReading("sky_weather_card", "/reading/new?type=weather")} />
+                            <LearnButton onClick={() => openExplore("learn", "/learn")} />
                         </div>
                     </section>
                     <section className={`${styles.readingsSection} ${!hasReadings ? styles.emptyReadingsSection : ""}`}>
@@ -230,13 +269,17 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
                                         </div>
                                         <button className={styles.viewBtn} onClick={(e) => {
                                             e.stopPropagation();
-                                            const suffix = isWeather ? '?type=weather' : '';
-                                            router.push(`/reading/${s.id}${suffix}`);
+                                            openReading(s);
                                         }}>View &rsaquo;</button>
                                     </div>
                                     );
                                 })}
-                                <button className={styles.viewAllBtn} onClick={() => router.push("/readings")}>View all readings &rarr;</button>
+                                <button className={styles.viewAllBtn} onClick={() => {
+                                    captureAnalyticsEvent("dashboard_readings_all_clicked", {
+                                        readings_count: recentSearches.length,
+                                    });
+                                    router.push("/readings");
+                                }}>View all readings &rarr;</button>
                                 </>
                             ) : (
                                 <div className={styles.emptyState}>
@@ -251,7 +294,7 @@ export default function HomeClient({ profile, sunSignData, recentSearches, acces
             {/* Floating CTA */}
             <button
                 className="dashboard-fab"
-                onClick={() => router.push("/reading/new")}
+                onClick={() => startReading("dashboard_fab")}
             >
                 + New Reading
             </button>

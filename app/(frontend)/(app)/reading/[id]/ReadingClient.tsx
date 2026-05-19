@@ -1,10 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import posthog from "posthog-js";
 import { useEffect, useState, type ReactElement } from "react";
 import { hasV4TeacherReading } from "@/app/lib/reading-viewmodel";
 import { AstroAppLoader } from "@/app/components/ui/app-loader-shell";
+import { captureAnalyticsEvent } from "@/lib/analytics/client";
 
 function LoadingWeatherReading(): ReactElement {
   return <AstroAppLoader label="Loading weather reading..." />;
@@ -65,7 +65,7 @@ export function ReadingClient({ reading, readingId, isDemo, showUpsell }: Props)
     const destination = typeof reading.destination === "string" ? reading.destination : "Unknown Destination";
     const macroScore = typeof reading.macroScore === "number" ? reading.macroScore : 0;
     const travelType = typeof reading.travelType === "string" ? reading.travelType : "trip";
-    posthog.capture("reading_viewed", {
+    captureAnalyticsEvent("reading_viewed", {
       reading_id: readingId,
       category: (reading.category as string) || "astrocartography",
       destination,
@@ -75,7 +75,7 @@ export function ReadingClient({ reading, readingId, isDemo, showUpsell }: Props)
   }, [isDemo, isGenerating, generationStatus, readingId, reading]);
 
   useEffect(() => {
-    if (showUpsell) posthog.capture("upsell_shown", { reading_id: readingId });
+    if (showUpsell) captureAnalyticsEvent("upsell_shown", { reading_id: readingId });
   }, [showUpsell, readingId]);
 
   // Stream the narrative client-side. Server gives us the reading row up
