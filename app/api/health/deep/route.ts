@@ -5,6 +5,7 @@ import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { captureServerError } from "@/lib/monitoring/sentry";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   if (!hasInternalSecret(request)) {
