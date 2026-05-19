@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { geocodeCity, searchCitySuggestions } from "@/lib/geo/geocode";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { captureServerError } from "@/lib/monitoring/sentry";
 
 export async function GET(req: NextRequest) {
     try {
+        const limited = await enforceRateLimit(req, "geocode");
+        if (limited) return limited;
+
         const { searchParams } = new URL(req.url);
         const city = searchParams.get("city");
         const autocomplete = searchParams.get("autocomplete") === "true";
@@ -27,6 +32,7 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json(geo);
     } catch (err) {
+        captureServerError(err, { route: "/api/geocode", method: "GET" });
         console.error("[/api/geocode] error:", err);
         return NextResponse.json({ error: "Geocoding failed" }, { status: 500 });
     }

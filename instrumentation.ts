@@ -1,6 +1,16 @@
+import * as Sentry from "@sentry/nextjs";
+
 export async function register() {
-  // Only run on Node.js server runtime — not Edge
-  if (process.env.NEXT_RUNTIME !== "nodejs") return;
+  if (process.env.NEXT_RUNTIME === "edge") {
+    await import("./sentry.edge.config");
+    return;
+  }
+
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    await import("./sentry.server.config");
+  } else {
+    return;
+  }
 
   // Skip OTel/PostHog instrumentation when no token is configured. Without
   // this guard, PostHogSpanProcessor throws "PostHogSpanProcessor requires
@@ -27,3 +37,5 @@ export async function register() {
 
   sdk.start();
 }
+
+export const onRequestError = Sentry.captureRequestError;

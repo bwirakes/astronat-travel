@@ -1,22 +1,27 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileFresh, getNatalChart, saveNatalChart } from "@/lib/db";
 import { SwissEphSingleton, getHouse, ZODIAC_SIGNS, computeRealtimePositions } from "@/lib/astro/transits";
 import { natalCacheMatchesProfile } from "@/lib/astro/chart-cache";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { captureServerError } from "@/lib/monitoring/sentry";
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Support demo mode directly via API if needed, or fallback
     const { searchParams } = new URL(request.url);
-    const userId = user?.id || searchParams.get("userId");
     const refresh = searchParams.get("refresh") === "1";
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const userId = user.id;
+
+    const limited = await enforceRateLimit(request, "astroCompute", userId);
+    if (limited) return limited;
 
     // 1. Fetch user profile first — birth metadata is always served from the
     //    profile (source of truth), not from the cached ephemeris blob, because
@@ -238,6 +243,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ...resultData, ...birthMeta });
 
   } catch (err: any) {
+    captureServerError(err, { route: "/api/natal", method: "GET" });
     console.error("[/api/natal] Error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

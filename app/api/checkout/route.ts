@@ -3,6 +3,8 @@ import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { capturePostHogEvent } from '@/lib/posthog-server'
+import { enforceRateLimit } from '@/lib/security/rate-limit'
+import { captureServerError } from '@/lib/monitoring/sentry'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_fallback', {
   apiVersion: '2026-03-25.dahlia', 
@@ -15,15 +17,15 @@ const MONTHLY_PRICE_FALLBACK = 'price_1TGqfnDCYzkth9F1V1O7ov0d'
 const CHECKOUT_OFFERS: Record<CheckoutOffer, { mode: 'payment' | 'subscription'; priceId?: string }> = {
   single: {
     mode: 'payment',
-    priceId: process.env.STRIPE_SINGLE_PRICE_ID,
+    priceId: process.env.STRIPE_SINGLE_PRICE_ID || process.env.STRIPE_PRICE_SINGLE_READING,
   },
   monthly: {
     mode: 'subscription',
-    priceId: process.env.STRIPE_MONTHLY_PRICE_ID || MONTHLY_PRICE_FALLBACK,
+    priceId: process.env.STRIPE_MONTHLY_PRICE_ID || process.env.STRIPE_PRICE_EXPLORER_MONTHLY || MONTHLY_PRICE_FALLBACK,
   },
   lifetime: {
     mode: 'payment',
-    priceId: process.env.STRIPE_LIFETIME_PRICE_ID,
+    priceId: process.env.STRIPE_LIFETIME_PRICE_ID || process.env.STRIPE_PRICE_FOUNDER_LIFETIME,
   },
 }
 
@@ -57,6 +59,9 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const limited = await enforceRateLimit(req, 'checkout', user.id)
+    if (limited) return limited
 
     // Attempt to read stripe_customer_id from profiles - silently ignore DB errors
     // (e.g. column not yet migrated in production) and fall through to create a new customer
@@ -190,6 +195,7 @@ export async function POST(req: Request) {
 
   } catch (error: unknown) {
     const message = getErrorMessage(error)
+    captureServerError(error, { route: '/api/checkout', method: 'POST' })
     console.error('[checkout] Fatal error:', message, error)
     return NextResponse.json({ error: message }, { status: 500 })
   }

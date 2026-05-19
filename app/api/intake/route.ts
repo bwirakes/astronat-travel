@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * POST /api/intake
  * Handles corporate intake form submissions.
@@ -12,105 +13,13 @@ import { NextResponse } from "next/server";
 import { Client } from "@notionhq/client";
 import { Resend } from "resend";
 import { INTAKE_FORM_SECTIONS } from "@/lib/marketing/data/intake-form";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { captureServerError } from "@/lib/monitoring/sentry";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const NOTION_INTAKE_DB_ID = process.env.NOTION_INTAKE_DB_ID!;
-const NOTIFICATION_EMAIL = process.env.INTAKE_NOTIFICATION_EMAIL!;
-
-// ─── Property schema for idempotent DB update ─────────────────────────────────
-// Name/title is excluded — Notion rejects redeclaring the title property via update.
-const DB_CREATE_PROPERTIES = {
-  Status: {
-    select: {
-      options: [
-        { name: "New", color: "blue" },
-        { name: "In Review", color: "yellow" },
-        { name: "Contacted", color: "orange" },
-        { name: "Qualified", color: "green" },
-        { name: "Not a Fit", color: "red" },
-      ],
-    },
-  },
-  "Submitted At": { date: {} },
-  // ── Contact ──
-  "Contact Name": { rich_text: {} },
-  "Contact Email": { email: {} },
-  "Contact Phone": { phone_number: {} },
-  "Contact Title": { rich_text: {} },
-  "Preferred Contact": { select: {} },
-  "Referral Source": { select: {} },
-  // ── Company ──
-  "Company Legal Name": { rich_text: {} },
-  "Trading Name": { rich_text: {} },
-  "Incorporation Country": { rich_text: {} },
-  "Incorporation City": { rich_text: {} },
-  "Incorporation Date": { rich_text: {} },
-  "Incorporation Time": { rich_text: {} },
-  "Business Stage": { select: {} },
-  "Industry Sectors": { multi_select: {} },
-  // ── Expansion ──
-  "Target Markets": { multi_select: {} },
-  "Expansion Purpose": { multi_select: {} },
-  "First International": { select: {} },
-  "Decision Timeline": { select: {} },
-  // ── Navigating ──
-  "Key Decisions": { multi_select: {} },
-  "Territories Leaning Toward": { rich_text: {} },
-  "Territories Cautious About": { rich_text: {} },
-  // ── Leadership ──
-  "Exec Chart Mapping": { select: {} },
-  "Team Size": { select: {} },
-  "Exec Relocation": { select: {} },
-  // ── Financial ──
-  "Service Tier": { select: {} },
-  "Budget One-Time": { select: {} },
-  "Budget Monthly": { select: {} },
-  "Budget Annual": { select: {} },
-  "Budget Approved": { select: {} },
-  "Decision Maker": { select: {} },
-  "Finance Requirements": { multi_select: {} },
-  // ── Working Style ──
-  "Prior Astrology Experience": { select: {} },
-  "Internal Usage": { multi_select: {} },
-  "NDA Requirements": { select: {} },
-} as const;
-
-// ─── Properties for idempotent update (excludes title/Name — can't re-declare) ─
-const DB_UPDATE_PROPERTIES = DB_CREATE_PROPERTIES;
-
-// ─── Notion helpers ──────────────────────────────────────────────────────────
-
-async function ensureDbSchema(notion: Client): Promise<void> {
-  // Ensure all required properties exist on the target database.
-  // Name/title cannot be redeclared via update so it's excluded (DB_UPDATE_PROPERTIES).
-  await notion.databases.update({
-    database_id: NOTION_INTAKE_DB_ID,
-    properties: DB_UPDATE_PROPERTIES as any,
-  });
-}
-
-// ─── Value helpers ────────────────────────────────────────────────────────────
-
-function richText(value: unknown): { rich_text: Array<{ text: { content: string } }> } {
-  const str = Array.isArray(value) ? value.join(", ") : String(value ?? "");
-  return { rich_text: [{ text: { content: str.slice(0, 2000) } }] };
-}
-
-function selectProp(value: unknown): { select: { name: string } | null } {
-  const str = Array.isArray(value) ? value[0] : String(value ?? "");
-  if (!str) return { select: null };
-  return { select: { name: str.slice(0, 100) } };
-}
-
-function multiSelectProp(value: unknown): { multi_select: Array<{ name: string }> } {
-  const arr = Array.isArray(value) ? value : [String(value ?? "")];
-  return {
-    multi_select: arr
-      .filter(Boolean)
-      .map((v: string) => ({ name: v.slice(0, 100) })),
-  };
-}
+const NOTION_INTAKE_DB_ID = process.env.NOTION_INTAKE_DB_ID ?? "";
+const NOTIFICATION_EMAIL = process.env.INTAKE_NOTIFICATION_EMAIL ?? "";
 
 // ─── Email HTML builder ───────────────────────────────────────────────────────
 
@@ -262,17 +171,32 @@ async function verifyCaptcha(token: string): Promise<boolean> {
 
 export async function POST(req: Request) {
   try {
+    const limited = await enforceRateLimit(req, "intake");
+    if (limited) return limited;
+
     const data: Record<string, unknown> = await req.json();
 
     // ── CAPTCHA verification ──────────────────────────────────────────────────
     const captchaToken = data._captcha as string | undefined;
     const hasSecret = !!process.env.RECAPTCHA_SECRET_KEY;
-    const isBypass = !hasSecret || (captchaToken === "test-bypass" || captchaToken === "dev-bypass" || captchaToken === "no-captcha");
-    if (captchaToken && !isBypass) {
+    const isBypass =
+      !hasSecret ||
+      (process.env.NODE_ENV !== "production" &&
+        (captchaToken === "test-bypass" ||
+          captchaToken === "dev-bypass" ||
+          captchaToken === "no-captcha"));
+    if (hasSecret && !isBypass) {
+      if (!captchaToken) {
+        return NextResponse.json({ error: "CAPTCHA verification failed. Please try again." }, { status: 400 });
+      }
       const captchaValid = await verifyCaptcha(captchaToken);
       if (!captchaValid) {
         return NextResponse.json({ error: "CAPTCHA verification failed. Please try again." }, { status: 400 });
       }
+    }
+
+    if (!NOTION_INTAKE_DB_ID || !NOTIFICATION_EMAIL) {
+      return NextResponse.json({ error: "Intake is not configured." }, { status: 500 });
     }
 
     const notion = new Client({ auth: process.env.NOTION_API_KEY });
@@ -397,6 +321,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
+    captureServerError(err, { route: "/api/intake", method: "POST" });
     console.error("[intake] Error:", err);
     return NextResponse.json(
       { error: err.message ?? "Internal server error" },

@@ -1,67 +1,74 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getNatalChart } from "@/lib/db";
 import { findAllAspects, PlanetPosition } from "@/lib/astro/aspects";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { captureServerError } from "@/lib/monitoring/sentry";
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const userId = searchParams.get("userId");
-  const startDate = searchParams.get("startDate") || new Date().toISOString().split("T")[0];
-  const months = parseInt(searchParams.get("months") || "12");
+  try {
+    const supabaseAuth = await createClient();
+    const {
+      data: { user },
+    } = await supabaseAuth.auth.getUser();
 
-  if (!userId) {
-    return NextResponse.json({ error: "userId is required" }, { status: 400 });
-  }
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const supabase = createAdminClient();
-  
-  // 1. Fetch user profile
-  const { data: profile, error: profileErr } = await supabase
-    .from("profiles")
-    .select("user_id, display_name, natal_chart")
-    .eq("user_id", userId)
-    .single();
+    const limited = await enforceRateLimit(request, "astroCompute", user.id);
+    if (limited) return limited;
 
-  if (profileErr || !profile) {
-    return NextResponse.json({ error: "User profile not found" }, { status: 404 });
-  }
+    const { searchParams } = new URL(request.url);
+    const startDate = searchParams.get("startDate") || new Date().toISOString().split("T")[0];
+    const months = Math.min(parseInt(searchParams.get("months") || "12", 10), 24);
 
-  const natalPlanets: PlanetPosition[] = typeof profile.natal_chart === 'string' ? JSON.parse(profile.natal_chart) : profile.natal_chart;
+    const chart = await getNatalChart(user.id);
+    const natalPlanets = (chart?.ephemeris_data as { planets?: PlanetPosition[] } | null | undefined)?.planets;
+    if (!natalPlanets?.length) {
+      return NextResponse.json({ error: "Natal chart not found" }, { status: 404 });
+    }
 
-  // 2. Fetch daily transit positions from Supabase for the next X months
-  const start = new Date(startDate);
-  const end = new Date(startDate);
-  end.setMonth(end.getMonth() + months);
+    const supabase = createAdminClient();
+    const start = new Date(startDate);
+    const end = new Date(startDate);
+    end.setMonth(end.getMonth() + months);
 
-  const { data: transitRows, error: transitErr } = await supabase
-    .from("ephemeris_daily")
-    .select("date_ut, planet_name, longitude")
-    .gte("date_ut", start.toISOString().split("T")[0])
-    .lte("date_ut", end.toISOString().split("T")[0])
-    .order("date_ut", { ascending: true });
+    const { data: transitRows, error: transitErr } = await supabase
+      .from("ephemeris_daily")
+      .select("date_ut, planet_name, longitude")
+      .gte("date_ut", start.toISOString().split("T")[0])
+      .lte("date_ut", end.toISOString().split("T")[0])
+      .order("date_ut", { ascending: true });
 
-  if (transitErr || !transitRows) {
-    return NextResponse.json({ error: "No transit data found for this range" }, { status: 500 });
-  }
+    if (transitErr || !transitRows) {
+      return NextResponse.json({ error: "No transit data found for this range" }, { status: 500 });
+    }
 
-  // 3. Group transit data by date and calculate aspects vs natal
-  const transitsByDate: Record<string, PlanetPosition[]> = {};
-  transitRows.forEach(row => {
-    if (!transitsByDate[row.date_ut]) transitsByDate[row.date_ut] = [];
-    transitsByDate[row.date_ut].push({
-      name: row.planet_name,
-      longitude: row.longitude
+    const transitsByDate: Record<string, PlanetPosition[]> = {};
+    transitRows.forEach((row) => {
+      if (!transitsByDate[row.date_ut]) transitsByDate[row.date_ut] = [];
+      transitsByDate[row.date_ut].push({
+        name: row.planet_name,
+        longitude: row.longitude,
+      });
     });
-  });
 
-  // 4. Calculate aspects for each day (filtering only for tight orbs/exacts)
-  const results = Object.entries(transitsByDate).map(([date, planets]) => {
-    const hits = findAllAspects(planets, natalPlanets);
-    // Return only exact or close aspects to reduce data size
-    return {
-      date,
-      aspects: hits.filter(h => h.orb <= 1.5) // 1.5° orb for transits
-    };
-  }).filter(day => day.aspects.length > 0);
+    const results = Object.entries(transitsByDate)
+      .map(([date, planets]) => {
+        const hits = findAllAspects(planets, natalPlanets);
+        return {
+          date,
+          aspects: hits.filter((h) => h.orb <= 1.5),
+        };
+      })
+      .filter((day) => day.aspects.length > 0);
 
-  return NextResponse.json(results);
+    return NextResponse.json(results);
+  } catch (error) {
+    captureServerError(error, { route: "/api/astro/transits", method: "GET" });
+    console.error("[/api/astro/transits]", error);
+    return NextResponse.json({ error: "Transit computation failed" }, { status: 500 });
+  }
 }

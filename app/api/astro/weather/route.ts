@@ -1,42 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { computeDailyWeather } from "@/lib/astro/transits";
+import { getNatalChart, getProfileFresh } from "@/lib/db";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { captureServerError } from "@/lib/monitoring/sentry";
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const userId = searchParams.get("userId");
-  const date = searchParams.get("date") || new Date().toISOString().split("T")[0];
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (!userId) {
-    return NextResponse.json({ error: "userId is required" }, { status: 400 });
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const limited = await enforceRateLimit(request, "astroCompute", user.id);
+    if (limited) return limited;
+
+    const { searchParams } = new URL(request.url);
+    const date = searchParams.get("date") || new Date().toISOString().split("T")[0];
+
+    const [profile, chart] = await Promise.all([getProfileFresh(user.id), getNatalChart(user.id)]);
+    const ephemeris = chart?.ephemeris_data as { planets?: unknown[]; cusps?: number[] } | null | undefined;
+
+    if (!profile || !ephemeris?.planets || !ephemeris?.cusps) {
+      return NextResponse.json({ error: "Natal chart not found" }, { status: 404 });
+    }
+
+    const weather = await computeDailyWeather(
+      {
+        user_id: user.id,
+        display_name: [profile.first_name, profile.last_name].filter(Boolean).join(" ") || "AstroNat user",
+        natal_planets: ephemeris.planets,
+        house_cusps: ephemeris.cusps,
+      },
+      date,
+    );
+
+    return NextResponse.json(weather);
+  } catch (error) {
+    captureServerError(error, { route: "/api/astro/weather", method: "GET" });
+    console.error("[/api/astro/weather]", error);
+    return NextResponse.json({ error: "Weather computation failed" }, { status: 500 });
   }
-
-  const supabase = createAdminClient();
-  
-  // Fetch user profile (assuming profile stores natal_planets and house_cusps)
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("user_id, display_name, natal_chart, house_cusps")
-    .eq("user_id", userId)
-    .single();
-
-  if (error || !profile) {
-    return NextResponse.json({ error: "User profile not found" }, { status: 404 });
-  }
-
-  // Parse natal charts from the profile
-  const natalPlanets = typeof profile.natal_chart === 'string' ? JSON.parse(profile.natal_chart) : profile.natal_chart;
-  const houseCusps = typeof profile.house_cusps === 'string' ? JSON.parse(profile.house_cusps) : profile.house_cusps;
-
-  const weather = await computeDailyWeather(
-    { 
-      user_id: profile.user_id, 
-      display_name: profile.display_name, 
-      natal_planets: natalPlanets, 
-      house_cusps: houseCusps 
-    },
-    date
-  );
-
-  return NextResponse.json(weather);
 }

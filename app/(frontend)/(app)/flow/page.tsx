@@ -110,7 +110,7 @@ function FlowPageInner() {
     if (error) {
       setAuthMessage(`Error: ${error.message}`);
     } else {
-      posthog.capture("user_signed_up", { method: "magic_link", email });
+      posthog.capture("user_signed_up", { method: "magic_link" });
       setAuthMessage("Check your email ✨");
     }
     setAuthLoading(false);
@@ -185,11 +185,7 @@ function FlowPageInner() {
       throw new Error(natalData?.error ? `Chart calculation failed: ${natalData.error}` : "Chart calculation failed. Please try again.");
     }
 
-    posthog.identify(user.id, {
-      email: user.email,
-      first_name: store.firstName || undefined,
-      birth_city: store.birthCity || undefined,
-    });
+    posthog.identify(user.id);
 
     return user;
   };

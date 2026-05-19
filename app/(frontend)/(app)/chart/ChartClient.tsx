@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -171,7 +172,7 @@ export default function ChartPage({
     if (!initialNatalData?.planets) return;
     posthog.capture("chart_viewed", {
       chart_type: isMundane ? "mundane" : "natal",
-      birth_city: initialNatalData.birth_city ?? null,
+      has_birth_city: Boolean(initialNatalData.birth_city),
       country_slug: countrySlug ?? null,
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -241,7 +242,7 @@ export default function ChartPage({
         setRealNatal(formatNatal);
         posthog.capture("chart_viewed", {
           chart_type: isMundane ? "mundane" : "natal",
-          birth_city: data.birth_city ?? null,
+          has_birth_city: Boolean(data.birth_city),
           country_slug: countrySlug ?? null,
         });
       } catch (err: any) {
@@ -847,7 +848,7 @@ export default function ChartPage({
                         <MonocleSectionHeader
                           index="05"
                           title={(interpretation.chartStructureNote as { title?: string; content?: string }).title ?? "The Structure"}
-                          sub={<>The chart's organising structure — stelliums, dispositors, and aspect patterns — synthesised in one place.</>}
+                          sub={<>The chart&apos;s organising structure — stelliums, dispositors, and aspect patterns — synthesised in one place.</>}
                         />
                         <div className="flex flex-col gap-6 mt-6">
                           {splitChartEssence(
