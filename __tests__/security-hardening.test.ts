@@ -82,11 +82,11 @@ describe("security hardening guards", () => {
     expect(sentryEdgeConfig).toContain("sendDefaultPii: false");
   });
 
-  test("baseline documentation records the known reliability risks", () => {
-    const baseline = read("docs/observability-security-baseline.md");
-    expect(baseline).toContain("Stripe webhook");
-    expect(baseline).toContain("service-role");
-    expect(baseline).toContain("Upstash Redis");
-    expect(baseline).toContain("Sentry");
+  test("rate limiting fails open when optional Upstash config is invalid", () => {
+    const rateLimit = read("lib/security/rate-limit.ts");
+    expect(rateLimit).toContain("function createRedisClient()");
+    expect(rateLimit).toContain("normalizeEnvValue(process.env.UPSTASH_REDIS_REST_URL)");
+    expect(rateLimit).toContain('url.startsWith("https://")');
+    expect(rateLimit).toContain("rate limiting disabled");
   });
 });

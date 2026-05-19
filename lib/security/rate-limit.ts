@@ -29,13 +29,36 @@ const POLICIES: Record<RateLimitPolicy, PolicyConfig> = {
   healthDeep: { limit: 30, window: "1 m" },
 };
 
-const redis =
-  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-    ? new Redis({
-        url: process.env.UPSTASH_REDIS_REST_URL,
-        token: process.env.UPSTASH_REDIS_REST_TOKEN,
-      })
-    : null;
+function normalizeEnvValue(value: string | undefined): string {
+  let normalized = value?.trim() ?? "";
+  while (
+    (normalized.startsWith('"') && normalized.endsWith('"')) ||
+    (normalized.startsWith("'") && normalized.endsWith("'"))
+  ) {
+    normalized = normalized.slice(1, -1).trim();
+  }
+  return normalized;
+}
+
+function createRedisClient(): Redis | null {
+  const url = normalizeEnvValue(process.env.UPSTASH_REDIS_REST_URL);
+  const token = normalizeEnvValue(process.env.UPSTASH_REDIS_REST_TOKEN);
+
+  if (!url || !token) return null;
+  if (!url.startsWith("https://")) {
+    console.warn("[rate-limit] Ignoring invalid UPSTASH_REDIS_REST_URL; rate limiting disabled.");
+    return null;
+  }
+
+  try {
+    return new Redis({ url, token });
+  } catch (error) {
+    console.warn("[rate-limit] Failed to initialize Upstash Redis; rate limiting disabled.", error);
+    return null;
+  }
+}
+
+const redis = createRedisClient();
 
 const limiters = new Map<RateLimitPolicy, Ratelimit>();
 
